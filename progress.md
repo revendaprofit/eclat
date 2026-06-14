@@ -280,4 +280,11 @@ HALT: aguardando OK para iniciar a Fase 0 (shell do cockpit + conexões testáve
 - Breakpoint `small:` não existe no cockpit (era da vitrine) → Kanban caía em 2 colunas. Trocado por flex horizontal (5 lado a lado).
 
 ### COCKPIT Fase 2 — ✅ (drag validado; convert/novo lead a confirmar no navegador).
-HALT: confirmar Fase 2 OU seguir para Fase 3 (Produtos & Estoque) / Fase 4 / 5 / 6.
+
+## 2026-06-14 — Fase 2+: IA detecta estágio do lead (modo sugestão)
+- Decisão do usuário: a IA SUGERE o estágio e o operador confirma antes de mover (não move sozinha).
+- Rota /api/leads/[id]/classify: Gemini (gemini-2.5-flash) com saída JSON estruturada (responseSchema:
+  {estagio: enum 5 estágios, motivo}) a partir da transcrição da conversa do lead. NÃO altera o lead.
+- Ficha: botão "✨ Detectar estágio (IA)" → mostra sugestão + motivo → "Mover para X" (confirma) / "Ignorar".
+- Validado: Gemini estruturado retorna {estagio:"negociando",...} para conversa com pergunta de pix/frete.
+HALT: confirmar no navegador OU seguir para Fase 3 (Produtos & Estoque) / 4 / 5 / 6.

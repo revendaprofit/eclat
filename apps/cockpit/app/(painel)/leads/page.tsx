@@ -33,6 +33,11 @@ export default function LeadsPage() {
   const [novo, setNovo] = useState({ nome: "", whatsapp: "", email: "", origem: "" })
   const [dragId, setDragId] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const [classifying, setClassifying] = useState(false)
+  const [stageSuggestion, setStageSuggestion] = useState<{
+    estagio: string
+    motivo: string
+  } | null>(null)
 
   const load = useCallback(async () => {
     const r = await fetch("/api/leads", { cache: "no-store" })
@@ -42,6 +47,11 @@ export default function LeadsPage() {
   useEffect(() => {
     load()
   }, [load])
+
+  // limpa a sugestão de estágio ao trocar de lead
+  useEffect(() => {
+    setStageSuggestion(null)
+  }, [selected?.id])
 
   async function moveTo(leadId: string, status: string) {
     setLeads((prev) =>
@@ -89,6 +99,27 @@ export default function LeadsPage() {
     } finally {
       setBusy(false)
     }
+  }
+
+  async function classify() {
+    if (!selected) return
+    setClassifying(true)
+    try {
+      const r = await fetch(`/api/leads/${selected.id}/classify`, { method: "POST" })
+      const data = await r.json()
+      if (r.ok) setStageSuggestion({ estagio: data.estagio, motivo: data.motivo })
+      else alert(data.error || "Não foi possível detectar o estágio.")
+    } finally {
+      setClassifying(false)
+    }
+  }
+
+  async function aplicarEstagio() {
+    if (!selected || !stageSuggestion) return
+    const estagio = stageSuggestion.estagio
+    await moveTo(selected.id, estagio)
+    setSelected((s) => (s ? { ...s, status: estagio } : s))
+    setStageSuggestion(null)
   }
 
   async function criarLead(e: React.FormEvent) {
@@ -222,6 +253,50 @@ export default function LeadsPage() {
                 <dd>{STAGES.find((s) => s.key === selected.status)?.label || selected.status}</dd>
               </div>
             </dl>
+
+            {/* IA: detectar estágio (modo sugestão) */}
+            <div className="flex flex-col gap-2">
+              <button
+                onClick={classify}
+                disabled={classifying}
+                className="self-start border border-eclat-dourado/60 text-eclat-grafite text-xs px-3 py-1.5 rounded-md hover:bg-eclat-dourado/15 transition-colors disabled:opacity-50"
+              >
+                {classifying ? "Analisando…" : "✨ Detectar estágio (IA)"}
+              </button>
+              {stageSuggestion && (
+                <div className="border border-eclat-dourado/50 bg-eclat-dourado/10 rounded-md p-3 text-sm flex flex-col gap-2">
+                  <div>
+                    Sugestão:{" "}
+                    <strong>
+                      {STAGES.find((s) => s.key === stageSuggestion.estagio)?.label ||
+                        stageSuggestion.estagio}
+                    </strong>
+                  </div>
+                  {stageSuggestion.motivo && (
+                    <div className="text-xs text-eclat-grafite/60">{stageSuggestion.motivo}</div>
+                  )}
+                  {stageSuggestion.estagio === selected.status ? (
+                    <div className="text-xs text-eclat-grafite/50">Já está neste estágio.</div>
+                  ) : (
+                    <div className="flex gap-2">
+                      <button
+                        onClick={aplicarEstagio}
+                        className="bg-eclat-grafite text-eclat-luz text-xs uppercase tracking-widest px-3 py-1.5 rounded-md hover:bg-eclat-dourado hover:text-eclat-grafite transition-colors"
+                      >
+                        Mover para{" "}
+                        {STAGES.find((s) => s.key === stageSuggestion.estagio)?.label}
+                      </button>
+                      <button
+                        onClick={() => setStageSuggestion(null)}
+                        className="text-xs text-eclat-grafite/60 px-2"
+                      >
+                        Ignorar
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
 
             <label className="flex flex-col gap-1 text-sm">
               <span className="text-eclat-grafite/60">Notas</span>

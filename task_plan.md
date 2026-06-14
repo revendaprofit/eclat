@@ -105,6 +105,8 @@ Modelagem do catálogo da Éclat no Medusa.
 - [x] **Fase 2 — Leads (Kanban)**: 5 colunas (status) com drag-and-drop nativo; ficha do lead (notas, abrir
       conversa via ?c=, converter); captação (+ Novo lead); conversão → cria cliente no Medusa (Admin API) +
       vincula medusa_customer_id + cliente_rel. Rotas /api/leads (+/[id], /[id]/convert), lib/medusa.
+      + IA detecta estágio (modo sugestão): /api/leads/[id]/classify (Gemini, saída JSON estruturada) →
+        botão "✨ Detectar estágio" na ficha sugere estágio+motivo; operador confirma "Mover para X".
 - [ ] **Fase 3 — Produtos & Estoque**: CRUD via Medusa Admin API + alertas de estoque.
 - [ ] **Fase 4 — Clientes / Pedidos / Envios**: ficha 360°, fila de envio, follow-up, segmentos.
 - [ ] **Fase 5 — Financeiro (P&L)**: receita Medusa + despesas/COGS Supabase → DRE.
