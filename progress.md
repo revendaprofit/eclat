@@ -171,5 +171,15 @@ Todos os critérios de aceite batidos.
 - GET /admin/cockpit (com token admin) → 200. Comércio: 4 produtos, 1 cliente, pedido #1 pending, R$ 424,70.
   Relacionamento: 0 leads/conversas (CRM vazio). Admin /app responde 200, sem erros de build.
 
-### PARTE 7 — ✅ CONCLUÍDA (cockpit lê e consolida; respeita invariante "ninguém de fora escreve").
-HALT: escolher próximo (conectar WhatsApp/Parte 6, produtos reais, polir vitrine, ou Parte 8/9/10).
+### PARTE 7 (v0) — página read-only no admin do Medusa: feita, mas SUPERADA pela redefinição abaixo.
+
+## 2026-06-14 — COCKPIT REDEFINIDO (plano completo & faseado)
+- Usuário enviou plano completo. Cockpit passa a ser um **app Next.js SEPARADO** (apps/cockpit) que opera
+  via APIs donas (Medusa Admin API, Supabase, Evolution). Plano canônico: architecture/cockpit.md.
+- Emenda na constituição (CLAUDE.md, invariante 2): Cockpit lê E ESCREVE pelas APIs donas; nunca escreve
+  comércio fora do Medusa. Stack ganhou linha do app cockpit.
+- task_plan: Parte 7 reescrita com Fases 0–6 (Shell, Conversas, Leads, Produtos&Estoque, Clientes/Pedidos/Envios,
+  Financeiro, Dashboard). Modelo de dados novo (conversation/message, lead+lead_stage, crm_customer, finance_*,
+  product_cost) — evolui Parte 5 e fará migração; webhook da Parte 6 será reescrito na Fase 1.
+- Registro apenas: NADA construído. Próximo: Fase 0 mediante aprovação.
+HALT: aguardando OK para iniciar a Fase 0 (shell do cockpit + conexões testáveis).

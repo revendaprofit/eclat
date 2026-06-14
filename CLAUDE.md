@@ -10,13 +10,16 @@ Nunca vincular a Éclat a nenhuma outra marca.
 - Vitrine: Next.js (PWA) consumindo a Store API do Medusa
 - Core de loja: Medusa v2 (Node/TypeScript + Postgres)
 - Relacionamento: Supabase (CRM, leads, conversas). WhatsApp via Evolution API (self-hosted).
+- Cockpit: app Next.js SEPARADO (apps/cockpit) operando via APIs donas. Plano: architecture/cockpit.md.
 - Pagamento: Mercado Pago (cartão + Pix), em fase futura
 
 ## Invariantes de arquitetura (inegociáveis)
 1. A Éclat é UM sistema, internamente modular. Sem segundo sistema independente.
 2. Fonte da verdade: Medusa = comércio (produto, estoque, pedido, pagamento);
-   Supabase = relacionamento (cliente, lead, conversa, ciclo do consumível).
-   O Cockpit (módulo) apenas lê os dois e orquestra. Nenhum terceiro escritor.
+   Supabase = relacionamento/financeiro próprio (cliente, lead, conversa, despesas, COGS).
+   O Cockpit (app separado) lê e escreve SOMENTE pelas APIs donas (Medusa Admin API = comércio;
+   Supabase = relacionamento/financeiro; Evolution = WhatsApp). Não duplica dado de comércio;
+   Medusa é a fonte da verdade do comércio. Ver architecture/cockpit.md (plano canônico do Cockpit).
 3. Dinheiro sempre em centavos inteiros (BRL). Nunca float.
 4. Pagamento sempre via SDK do gateway (Mercado Pago). Nunca processar cartão na mão.
 5. RLS (Row Level Security) no Supabase desde o início.
@@ -47,6 +50,7 @@ Nunca vincular a Éclat a nenhuma outra marca.
   Tabelas lead/cliente_rel/conversa com RLS (anon negado, backend via service_role). SUPABASE_DB_URL no .env.
 - Parte 6 — WhatsApp via Evolution API (instância eclat): integração montada (lib/evolution, lib/supabase,
   api/webhooks/whatsapp) + webhook configurado. FALTA conectar o WhatsApp (QR) e testar. SOP: architecture/whatsapp.md.
-- Parte 7 — Cockpit: CONCLUÍDA. Página admin (src/admin/routes/cockpit) + rota /admin/cockpit (só leitura)
-  consolidam Medusa + Supabase. SOP: architecture/cockpit.md.
-- Próxima decisão: conectar WhatsApp (retomar P6), produtos reais, polir vitrine, ou Parte 8 (ciclo)/9/10.
+- Cockpit: REDEFINIDO como app Next.js separado (apps/cockpit), plano completo e faseado registrado em
+  architecture/cockpit.md (Fases 0–6). A página read-only no admin do Medusa (antiga "Parte 7" v0) está superada.
+  Build por fase, com Halt. Nada construído ainda além do registro do plano.
+- Próxima ação: Fase 0 do Cockpit (shell + conexões), quando o usuário aprovar.

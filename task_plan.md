@@ -83,13 +83,21 @@ Modelagem do catálogo da Éclat no Medusa.
 **Aceite:** mensagem enviada e recebida registrada no relacionamento.
 **Retomar:** ver "Como RETOMAR" em architecture/whatsapp.md (subir túnel → re-set webhook → conectar QR → testar).
 
-## Parte 7 — Cockpit (módulo de orquestração)  [x] CONCLUÍDA
-- [x] Página no Admin do Medusa (src/admin/routes/cockpit) + rota agregadora /admin/cockpit (SOMENTE leitura)
-- [x] Lê Medusa via query.graph (produtos, clientes, pedidos, receita, status) + Supabase via service_role
-      (leads, funil, clientes_rel, conversas) — nenhuma escrita nas fontes
-- [x] Painéis: comércio (cards + pedidos por status + recentes) e relacionamento (cards + funil + conversas)
-- SOP: architecture/cockpit.md
-**Aceite:** ✅ cockpit consolida comércio + relacionamento em leitura (validado: GET /admin/cockpit 200 com dados reais).
+## Parte 7 — Cockpit (app separado, plano faseado)  [~] plano registrado; build por fase
+> REDEFINIDO em 2026-06-14: Cockpit é um app Next.js SEPARADO (apps/cockpit) que opera via APIs donas.
+> Plano canônico completo em architecture/cockpit.md. A página read-only no admin do Medusa (v0) está superada.
+> Construir UMA fase por vez, com Halt e critério de aceite.
+- [x] Plano registrado (architecture/cockpit.md), referenciado no CLAUDE.md (invariante 2 emendado).
+- [ ] **Fase 0 — Shell**: app Next.js + auth + menu completo (placeholders) + identidade Éclat +
+      conexões testáveis (Medusa Admin API, Supabase, Evolution). Aceite: logar, ver menu, 3 conexões respondem.
+- [ ] **Fase 1 — Conversas (Chat WhatsApp)**: A) chat funcional (texto/áudio/mídia, tempo real, vínculo
+      lead/cliente, idempotência; reescreve webhook P6 para conversation/message) → B) IA modo sugestão.
+- [ ] **Fase 2 — Leads (Kanban)**: funil arrastável, ficha, captação, conversão→cria cliente no Medusa.
+- [ ] **Fase 3 — Produtos & Estoque**: CRUD via Medusa Admin API + alertas de estoque.
+- [ ] **Fase 4 — Clientes / Pedidos / Envios**: ficha 360°, fila de envio, follow-up, segmentos.
+- [ ] **Fase 5 — Financeiro (P&L)**: receita Medusa + despesas/COGS Supabase → DRE.
+- [ ] **Fase 6 — Dashboard inteligente**: filas de ação consolidadas.
+**Aceite global:** cockpit opera leads/clientes/compras/financeiro/chat via APIs donas, fase a fase.
 
 ## Parte 8 — Ciclo do consumível / Recompra  [ ]
 - [ ] Modelagem do ciclo de recompra/recorrência
