@@ -28,31 +28,38 @@ export default async function Nav() {
           <div className="flex items-center h-full">
             <LocalizedClientLink
               href="/"
-              className="txt-compact-xlarge-plus hover:text-ui-fg-base uppercase"
+              className="font-serif text-2xl leading-none tracking-wide text-eclat-grafite hover:text-eclat-dourado transition-colors"
               data-testid="nav-store-link"
             >
-              Medusa Store
+              use.ÉCLAT
             </LocalizedClientLink>
           </div>
 
           <div className="flex items-center gap-x-6 h-full flex-1 basis-0 justify-end">
             <div className="hidden small:flex items-center gap-x-6 h-full">
               <LocalizedClientLink
-                className="hover:text-ui-fg-base"
+                className="hover:text-eclat-dourado transition-colors"
+                href="/store"
+                data-testid="nav-store-all-link"
+              >
+                Loja
+              </LocalizedClientLink>
+              <LocalizedClientLink
+                className="hover:text-eclat-dourado transition-colors"
                 href="/account"
                 data-testid="nav-account-link"
               >
-                Account
+                Conta
               </LocalizedClientLink>
             </div>
             <Suspense
               fallback={
                 <LocalizedClientLink
-                  className="hover:text-ui-fg-base flex gap-2"
+                  className="hover:text-eclat-dourado transition-colors flex gap-2"
                   href="/cart"
                   data-testid="nav-cart-link"
                 >
-                  Cart (0)
+                  Sacola (0)
                 </LocalizedClientLink>
               }
             >

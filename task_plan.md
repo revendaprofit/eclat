@@ -32,12 +32,16 @@ Modelagem do catálogo da Éclat no Medusa.
 **Aceite (parcial):** ✅ catálogo navegável no admin e Store API (BRL); produto renderiza na vitrine com R$ pt-BR.
 **Halt:** abrir a substituição por dados reais quando a marca enviar catálogo + fotos.
 
-## Parte 2 — Vitrine / Storefront  [ ]
-- [ ] Home editorial, listagem por coleção/categoria
-- [ ] Página de produto (galeria, variantes, descrição)
-- [ ] Navegação, busca, responsividade
-- [ ] SEO básico + performance
-**Aceite:** jornada de navegação completa e fiel à marca.
+## Parte 2 — Vitrine / Storefront  [~] (shell de marca pronto)
+- [x] Home editorial: hero da marca + manifesto + faixa de categorias + coleções em destaque
+- [x] Listagem por coleção (/collections/[handle]) e categoria (/categories) — validadas
+- [x] Página de produto renderiza com a marca (tokens globais; preço pt-BR R$)
+- [x] Navegação pt-BR: nav (logo use.ÉCLAT, Loja/Conta/Sacola) + menu lateral mobile
+- [x] Footer Éclat (Categorias/Coleções/A Éclat), sem branding Medusa
+- [x] Metadados pt-BR na home
+- [ ] Busca, SEO por página (título de produto/categoria ainda usa template padrão), performance/Lighthouse
+- [ ] Copy pt-BR de superfícies secundárias (cart dropdown, conta) — parte virá com Parte 3
+**Aceite (parcial):** ✅ jornada home → categoria/coleção → produto fiel à marca, em pt-BR/BRL.
 
 ## Parte 3 — Carrinho & Checkout  [ ]
 - [ ] Carrinho (add/remover/quantidade) persistente

@@ -75,4 +75,20 @@ Todos os critérios de aceite batidos.
 - Vitrine: /br/products/legging-resplendor → HTTP 200, título, ficha técnica e R$ 199,90 (pt-BR).
 
 ### PARTE 1 — parcial ✅ (estrutura + exemplos). PENDENTE: produtos reais + imagens.
-HALT: aguardar catálogo real da marca OU decisão de avançar para a Parte 2 (Vitrine).
+
+## 2026-06-14 — PARTE 2 (Vitrine/Storefront)
+
+### Feito (shell de marca)
+- Nav: logo serif "use.ÉCLAT", links pt-BR (Loja/Conta/Sacola), hover dourado.
+- Hero editorial: gradiente luz→areia, "A luz da mulher inteira", CTA "Explorar a coleção" → /store.
+- Home: manifesto da marca + faixa "Navegue por categoria" (8 categorias) + coleções em destaque (rails).
+- Footer: marca Éclat, Categorias/Coleções/A Éclat em pt-BR, removido branding/CTA Medusa.
+- Menu lateral mobile: itens pt-BR (Início/Loja/Conta/Sacola) + copyright Éclat.
+- Metadados pt-BR na home; locale de preço já pt-BR (R$).
+
+### Testes
+- /br (home) HTTP 200: hero, manifesto, categorias e rails com os 4 produtos; zero "Medusa Store"/"Powered by Medusa".
+- /br/collections/resplendor HTTP 200: mostra Legging Resplendor + Top Aurora (peças da coleção). Sem erros de compile.
+
+### PARTE 2 — parcial ✅ (shell de marca). PENDENTE: busca, SEO por página, perf, copy de cart/conta.
+HALT: revisar a vitrine OU avançar (Parte 3 — Carrinho & Checkout).
