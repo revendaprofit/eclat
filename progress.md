@@ -265,4 +265,19 @@ HALT: aguardando OK para iniciar a Fase 0 (shell do cockpit + conexões testáve
 - Fix multi-linha: textarea cresce até 200px com scroll.
 
 ### COCKPIT Fase 1 — ✅ COMPLETA (texto + mídia + IA sugestão).
-HALT: seguir para Fase 2 (Leads/Kanban), Fase 3 (Produtos), ou outra — a combinar.
+
+## 2026-06-14 — COCKPIT Fase 2 (Leads / Kanban)
+
+### Feito
+- Usa a coluna lead.status existente (Parte 5) como estágios do Kanban (novo→contatado→negociando→convertido→perdido) — sem migração.
+- Backend: lib/medusa (token admin em cache + criar cliente). Rotas: /api/leads (GET lista c/ conversation embutida + POST captação),
+  /api/leads/[id] (PATCH status/notas), /api/leads/[id]/convert (cria cliente no Medusa + vincula medusa_customer_id + status convertido + upsert cliente_rel).
+- UI: Kanban com drag-and-drop NATIVO (HTML5, sem libs) — colunas lado a lado (flex). Ficha (drawer): notas, "Abrir conversa" (→ /conversas?c=), "Converter em cliente".
+- Conversas: lê ?c=<id> para preselecionar a conversa do lead.
+- Contrato Medusa validado (POST/DELETE /admin/customers). Embed lead→conversation validado.
+
+### Correção
+- Breakpoint `small:` não existe no cockpit (era da vitrine) → Kanban caía em 2 colunas. Trocado por flex horizontal (5 lado a lado).
+
+### COCKPIT Fase 2 — ✅ (drag validado; convert/novo lead a confirmar no navegador).
+HALT: confirmar Fase 2 OU seguir para Fase 3 (Produtos & Estoque) / Fase 4 / 5 / 6.

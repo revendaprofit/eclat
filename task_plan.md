@@ -102,7 +102,9 @@ Modelagem do catálogo da Éclat no Medusa.
             Provedor: Google Gemini (gemini-2.5-flash via REST). Rota /api/conversations/[id]/suggest.
             Composer = textarea com auto-resize (Enter envia, Shift+Enter quebra). Validado real.
 **Fase 1 — COMPLETA** (texto + mídia + IA sugestão).
-- [ ] **Fase 2 — Leads (Kanban)**: funil arrastável, ficha, captação, conversão→cria cliente no Medusa.
+- [x] **Fase 2 — Leads (Kanban)**: 5 colunas (status) com drag-and-drop nativo; ficha do lead (notas, abrir
+      conversa via ?c=, converter); captação (+ Novo lead); conversão → cria cliente no Medusa (Admin API) +
+      vincula medusa_customer_id + cliente_rel. Rotas /api/leads (+/[id], /[id]/convert), lib/medusa.
 - [ ] **Fase 3 — Produtos & Estoque**: CRUD via Medusa Admin API + alertas de estoque.
 - [ ] **Fase 4 — Clientes / Pedidos / Envios**: ficha 360°, fila de envio, follow-up, segmentos.
 - [ ] **Fase 5 — Financeiro (P&L)**: receita Medusa + despesas/COGS Supabase → DRE.

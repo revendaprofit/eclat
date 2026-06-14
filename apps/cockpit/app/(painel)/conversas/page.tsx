@@ -108,6 +108,12 @@ export default function ConversasPage() {
     loadConvs()
   }, [loadConvs])
 
+  // abrir conversa específica via ?c=<id> (ex.: vindo da ficha do lead)
+  useEffect(() => {
+    const c = new URLSearchParams(window.location.search).get("c")
+    if (c) openConv(c)
+  }, [openConv])
+
   const refetchMessages = useCallback(async (id: string) => {
     const r = await fetch(`/api/conversations/${id}/messages`, { cache: "no-store" })
     if (r.ok) setMessages(await r.json())
