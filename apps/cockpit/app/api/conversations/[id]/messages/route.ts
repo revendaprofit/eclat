@@ -9,7 +9,7 @@ export async function GET(
   const { id } = await params
 
   const res = await sb(
-    `message?conversation_id=eq.${id}&select=id,direcao,tipo,texto,media_mime,timestamp,origem,status&order=timestamp.asc`
+    `message?conversation_id=eq.${id}&select=id,direcao,tipo,texto,media_url,media_mime,timestamp,origem,status&order=timestamp.asc`
   )
   if (!res.ok) {
     return NextResponse.json({ error: await res.text() }, { status: 500 })

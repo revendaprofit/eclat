@@ -3,8 +3,29 @@ import {
   getOrCreateConversation,
   getOrCreateLeadByWhatsapp,
   insertMessageIdempotent,
+  setMessageMedia,
   supabaseConfigured,
+  uploadToStorage,
 } from "../../../lib/supabase"
+import { getMediaBase64 } from "../../../lib/evolution"
+
+const MEDIA_TIPOS = new Set(["audio", "imagem", "video", "doc"])
+
+function extFromMime(mime?: string | null): string {
+  if (!mime) return "bin"
+  const m = mime.split(";")[0].trim()
+  const map: Record<string, string> = {
+    "audio/ogg": "ogg",
+    "audio/mpeg": "mp3",
+    "audio/mp4": "m4a",
+    "image/jpeg": "jpg",
+    "image/png": "png",
+    "image/webp": "webp",
+    "video/mp4": "mp4",
+    "application/pdf": "pdf",
+  }
+  return map[m] || m.split("/")[1] || "bin"
+}
 
 // Webhook da Evolution API (inbound). Recebe eventos do WhatsApp e grava em
 // conversation + message no Supabase (Cockpit Fase 1A). Idempotente por evolution_msg_id.
@@ -102,6 +123,21 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
         timestamp: ts,
         evolution_msg_id: key.id,
       })
+
+      // Mídia: baixa da Evolution, guarda no Storage e atualiza a mensagem (best-effort).
+      if (MEDIA_TIPOS.has(tipo) && key.id) {
+        try {
+          const media = await getMediaBase64(m)
+          if (media?.base64) {
+            const mime = media.mimetype || media_mime || "application/octet-stream"
+            const path = `${conversationId}/${key.id}.${extFromMime(mime)}`
+            await uploadToStorage("whatsapp", path, Buffer.from(media.base64, "base64"), mime)
+            await setMessageMedia(key.id, path, mime)
+          }
+        } catch (e) {
+          logger.warn(`[whatsapp] mídia não baixada (${key.id}): ${(e as Error).message}`)
+        }
+      }
     }
 
     return res.status(200).json({ received: true })

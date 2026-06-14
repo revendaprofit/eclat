@@ -17,8 +17,62 @@ type Message = {
   direcao: "in" | "out"
   tipo: string
   texto: string | null
+  media_url: string | null
+  media_mime: string | null
   timestamp: string
   origem: string
+}
+
+const baixarLink = (src: string) => (
+  <a href={src} download className="text-[10px] underline text-eclat-grafite/50">
+    baixar
+  </a>
+)
+
+function MediaView({
+  m,
+  onOpenImage,
+}: {
+  m: Message
+  onOpenImage: (src: string) => void
+}) {
+  if (!m.media_url) {
+    // mídia ainda não baixada/armazenada
+    return <span className="italic text-eclat-grafite/50">{m.texto}</span>
+  }
+  const src = `/api/media?path=${encodeURIComponent(m.media_url)}`
+  if (m.tipo === "imagem")
+    return (
+      <div className="flex flex-col gap-1">
+        <button type="button" onClick={() => onOpenImage(src)}>
+          <img
+            src={src}
+            alt="imagem"
+            className="rounded-md max-w-full max-h-72 cursor-zoom-in"
+          />
+        </button>
+        {baixarLink(src)}
+      </div>
+    )
+  if (m.tipo === "audio")
+    return (
+      <div className="flex flex-col gap-1">
+        <audio controls src={src} className="max-w-full" />
+        {baixarLink(src)}
+      </div>
+    )
+  if (m.tipo === "video")
+    return (
+      <div className="flex flex-col gap-1">
+        <video controls src={src} className="rounded-md max-w-full max-h-72" />
+        {baixarLink(src)}
+      </div>
+    )
+  return (
+    <a href={src} target="_blank" rel="noreferrer" className="underline text-eclat-grafite">
+      {m.texto || "Baixar documento"}
+    </a>
+  )
 }
 
 const hora = (iso: string) =>
@@ -30,6 +84,7 @@ export default function ConversasPage() {
   const [messages, setMessages] = useState<Message[]>([])
   const [text, setText] = useState("")
   const [sending, setSending] = useState(false)
+  const [lightbox, setLightbox] = useState<string | null>(null)
   const selectedRef = useRef<string | null>(null)
   const endRef = useRef<HTMLDivElement>(null)
 
@@ -51,33 +106,66 @@ export default function ConversasPage() {
     loadConvs()
   }, [loadConvs])
 
-  // realtime: novas mensagens
+  const refetchMessages = useCallback(async (id: string) => {
+    const r = await fetch(`/api/conversations/${id}/messages`, { cache: "no-store" })
+    if (r.ok) setMessages(await r.json())
+  }, [])
+
+  // realtime: novas mensagens (autentica a conexão com a sessão do operador)
   useEffect(() => {
     const supabase = createSupabaseBrowser()
-    const channel = supabase
-      .channel("chat-eclat")
-      .on(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: "message" },
-        (payload) => {
-          const msg = payload.new as Message & { conversation_id: string }
-          if (msg.conversation_id === selectedRef.current) {
+    const channel = supabase.channel("chat-eclat")
+
+    supabase.auth.getSession().then(({ data }) => {
+      if (data.session) supabase.realtime.setAuth(data.session.access_token)
+      channel
+        .on(
+          "postgres_changes",
+          { event: "INSERT", schema: "public", table: "message" },
+          (payload) => {
+            const msg = payload.new as Message & { conversation_id: string }
+            if (msg.conversation_id === selectedRef.current) {
+              setMessages((prev) =>
+                prev.some((m) => m.id === msg.id) ? prev : [...prev, msg]
+              )
+            }
+            loadConvs()
+          }
+        )
+        .on(
+          "postgres_changes",
+          { event: "UPDATE", schema: "public", table: "message" },
+          (payload) => {
+            const msg = payload.new as Message
             setMessages((prev) =>
-              prev.some((m) => m.id === msg.id) ? prev : [...prev, msg]
+              prev.map((m) => (m.id === msg.id ? { ...m, ...msg } : m))
             )
           }
-          loadConvs()
-        }
-      )
-      .subscribe()
+        )
+        .subscribe()
+    })
+
     return () => {
       supabase.removeChannel(channel)
     }
   }, [loadConvs])
 
-  // scroll para o fim
+  // polling de segurança (caso o realtime não entregue): atualiza lista e thread aberta
   useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: "smooth" })
+    const t = setInterval(() => {
+      loadConvs()
+      if (selectedRef.current) refetchMessages(selectedRef.current)
+    }, 3000)
+    return () => clearInterval(t)
+  }, [loadConvs, refetchMessages])
+
+  // scroll para o fim apenas quando chega mensagem nova (evita pular durante o polling)
+  const lastCount = useRef(0)
+  useEffect(() => {
+    if (messages.length > lastCount.current) {
+      endRef.current?.scrollIntoView({ behavior: "smooth" })
+    }
+    lastCount.current = messages.length
   }, [messages])
 
   async function send() {
@@ -161,9 +249,14 @@ export default function ConversasPage() {
                         : "self-start bg-white border border-eclat-pedra/30"
                     }`}
                   >
-                    <div className="whitespace-pre-wrap break-words">{m.texto}</div>
+                    <div className="whitespace-pre-wrap break-words">
+                      {m.tipo === "texto" ? (
+                        m.texto
+                      ) : (
+                        <MediaView m={m} onOpenImage={setLightbox} />
+                      )}
+                    </div>
                     <div className="text-[10px] text-eclat-grafite/40 mt-1 text-right">
-                      {m.tipo !== "texto" ? `[${m.tipo}] ` : ""}
                       {hora(m.timestamp)}
                       {m.origem === "ia" ? " · IA" : ""}
                     </div>
@@ -191,6 +284,40 @@ export default function ConversasPage() {
           )}
         </div>
       </div>
+
+      {lightbox && (
+        <div
+          className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-6"
+          onClick={() => setLightbox(null)}
+        >
+          <div
+            className="flex flex-col items-center gap-3"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <img
+              src={lightbox}
+              alt="imagem ampliada"
+              className="max-h-[80vh] max-w-[90vw] rounded-md"
+            />
+            <div className="flex gap-6">
+              <a
+                href={lightbox}
+                download
+                className="bg-eclat-luz text-eclat-grafite px-4 py-2 rounded-md text-sm"
+              >
+                Baixar
+              </a>
+              <button
+                type="button"
+                onClick={() => setLightbox(null)}
+                className="text-eclat-luz text-sm underline"
+              >
+                Fechar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

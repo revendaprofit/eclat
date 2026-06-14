@@ -136,3 +136,40 @@ export async function insertMessageIdempotent(fields: Record<string, unknown>): 
   })
   if (!res.ok) throw new Error(`insertMessage falhou: ${res.status} ${await res.text()}`)
 }
+
+// Faz upload de bytes para o Supabase Storage (bucket privado). Retorna o path salvo.
+export async function uploadToStorage(
+  bucket: string,
+  path: string,
+  bytes: Buffer | Uint8Array,
+  contentType: string
+): Promise<string> {
+  const res = await fetch(
+    `${SUPABASE_URL}/storage/v1/object/${bucket}/${path}`,
+    {
+      method: "POST",
+      headers: {
+        apikey: SERVICE_KEY as string,
+        Authorization: `Bearer ${SERVICE_KEY}`,
+        "Content-Type": contentType,
+        "x-upsert": "true",
+      },
+      body: bytes as unknown as BodyInit,
+    }
+  )
+  if (!res.ok) throw new Error(`upload storage falhou: ${res.status} ${await res.text()}`)
+  return path
+}
+
+// Atualiza a mídia de uma mensagem (após upload no Storage).
+export async function setMessageMedia(
+  evolutionMsgId: string,
+  mediaPath: string,
+  mediaMime: string | null
+): Promise<void> {
+  await fetch(rest(`message?evolution_msg_id=eq.${encodeURIComponent(evolutionMsgId)}`), {
+    method: "PATCH",
+    headers: headers({ Prefer: "return=minimal" }),
+    body: JSON.stringify({ media_url: mediaPath, media_mime: mediaMime }),
+  })
+}

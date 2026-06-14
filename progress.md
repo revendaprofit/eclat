@@ -232,4 +232,19 @@ HALT: aguardando OK para iniciar a Fase 0 (shell do cockpit + conexões testáve
 - Túnel efêmero: para produção, host/túnel fixo. Se cair, re-subir e reapontar webhook (ver architecture/whatsapp.md).
 
 ### COCKPIT Fase 1A (texto) — ✅ validada.
-HALT: seguir para 1A.2 (mídia/áudio), 1B (IA), ou outra fase — a combinar.
+
+## 2026-06-14 — COCKPIT Fase 1A.2 (áudio & mídia) + correção de realtime
+
+### Feito
+- Realtime não empurrava (RLS bloqueava conexão anon): corrigido com supabase.realtime.setAuth(token da sessão)
+  + POLLING de segurança (3s) na lista e na thread aberta. Auto-scroll só quando chega msg nova.
+- Mídia: bucket privado 'whatsapp' no Supabase Storage. Webhook baixa da Evolution
+  (getBase64FromMediaMessage, passando a mensagem completa) → upload no Storage → setMessageMedia(media_url).
+- Cockpit: proxy /api/media (service_role, autenticado) serve a mídia; UI renderiza imagem (clique amplia em
+  lightbox + baixar), áudio/vídeo (player + baixar), doc (link). Realtime UPDATE atualiza a msg quando a mídia chega.
+
+### Testes (reais, pelo celular)
+- Texto chega sozinho (realtime/polling). Imagem renderiza, áudio toca. Lightbox + baixar adicionados.
+
+### COCKPIT Fase 1A (texto+mídia) — ✅ COMPLETA.
+HALT: seguir para 1B (IA modo sugestão), Fase 2 (Leads/Kanban), ou outra — a combinar.
