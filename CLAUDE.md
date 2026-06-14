@@ -47,4 +47,6 @@ Nunca vincular a Éclat a nenhuma outra marca.
   Tabelas lead/cliente_rel/conversa com RLS (anon negado, backend via service_role). SUPABASE_DB_URL no .env.
 - Parte 6 — WhatsApp via Evolution API (instância eclat): integração montada (lib/evolution, lib/supabase,
   api/webhooks/whatsapp) + webhook configurado. FALTA conectar o WhatsApp (QR) e testar. SOP: architecture/whatsapp.md.
-- Próxima decisão: conectar WhatsApp (retomar P6), Parte 7 (Cockpit), produtos reais, ou polir vitrine.
+- Parte 7 — Cockpit: CONCLUÍDA. Página admin (src/admin/routes/cockpit) + rota /admin/cockpit (só leitura)
+  consolidam Medusa + Supabase. SOP: architecture/cockpit.md.
+- Próxima decisão: conectar WhatsApp (retomar P6), produtos reais, polir vitrine, ou Parte 8 (ciclo)/9/10.

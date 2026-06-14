@@ -83,10 +83,13 @@ Modelagem do catálogo da Éclat no Medusa.
 **Aceite:** mensagem enviada e recebida registrada no relacionamento.
 **Retomar:** ver "Como RETOMAR" em architecture/whatsapp.md (subir túnel → re-set webhook → conectar QR → testar).
 
-## Parte 7 — Cockpit (módulo de orquestração)  [ ]
-- [ ] Módulo que LÊ Medusa + Supabase e orquestra (nenhuma escrita de terceiro)
-- [ ] Painéis operacionais
-**Aceite:** cockpit consolida comércio + relacionamento em leitura.
+## Parte 7 — Cockpit (módulo de orquestração)  [x] CONCLUÍDA
+- [x] Página no Admin do Medusa (src/admin/routes/cockpit) + rota agregadora /admin/cockpit (SOMENTE leitura)
+- [x] Lê Medusa via query.graph (produtos, clientes, pedidos, receita, status) + Supabase via service_role
+      (leads, funil, clientes_rel, conversas) — nenhuma escrita nas fontes
+- [x] Painéis: comércio (cards + pedidos por status + recentes) e relacionamento (cards + funil + conversas)
+- SOP: architecture/cockpit.md
+**Aceite:** ✅ cockpit consolida comércio + relacionamento em leitura (validado: GET /admin/cockpit 200 com dados reais).
 
 ## Parte 8 — Ciclo do consumível / Recompra  [ ]
 - [ ] Modelagem do ciclo de recompra/recorrência

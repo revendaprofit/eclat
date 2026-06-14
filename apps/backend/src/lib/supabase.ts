@@ -64,3 +64,25 @@ export async function insertConversa(fields: Record<string, unknown>): Promise<v
   })
   if (!res.ok) throw new Error(`insertConversa falhou: ${res.status} ${await res.text()}`)
 }
+
+// ---------- LEITURA (para o Cockpit — somente leitura) ----------
+
+// Contagem exata de uma tabela (usa Content-Range do PostgREST).
+export async function sbCount(table: string): Promise<number> {
+  const res = await fetch(rest(`${table}?select=id`), {
+    method: "HEAD",
+    headers: headers({ Prefer: "count=exact", Range: "0-0" }),
+  })
+  const cr = res.headers.get("content-range") || ""
+  const total = cr.split("/")[1]
+  return total && total !== "*" ? parseInt(total, 10) : 0
+}
+
+export async function sbSelect<T = Record<string, unknown>>(
+  table: string,
+  qs = ""
+): Promise<T[]> {
+  const res = await fetch(rest(`${table}${qs ? "?" + qs : ""}`), { headers: headers() })
+  if (!res.ok) throw new Error(`sbSelect ${table} falhou: ${res.status} ${await res.text()}`)
+  return (await res.json()) as T[]
+}

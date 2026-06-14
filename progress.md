@@ -157,4 +157,19 @@ Todos os critérios de aceite batidos.
 - Ao retomar: subir túnel (URL muda) → re-set webhook → conectar QR → testar. Passo a passo em architecture/whatsapp.md.
 
 ### PARTE 6 — ~ integração pronta; falta conectar+testar.
-HALT: retomar Parte 6 quando quiser conectar o WhatsApp, OU seguir para outra parte.
+
+## 2026-06-14 — PARTE 7 (Cockpit)
+
+### Feito
+- Página no Admin: src/admin/routes/cockpit/page.tsx (menu lateral, ícone ChartBar).
+- Rota agregadora: src/api/admin/cockpit/route.ts (GET, sessão admin) — SOMENTE leitura.
+- Lê Medusa (query.graph: produtos/clientes/pedidos/receita/status/recentes) + Supabase
+  (lib/supabase: sbCount/sbSelect → leads, funil, clientes_rel, conversas). Erros isolados por seção.
+- SOP: architecture/cockpit.md.
+
+### Testes
+- GET /admin/cockpit (com token admin) → 200. Comércio: 4 produtos, 1 cliente, pedido #1 pending, R$ 424,70.
+  Relacionamento: 0 leads/conversas (CRM vazio). Admin /app responde 200, sem erros de build.
+
+### PARTE 7 — ✅ CONCLUÍDA (cockpit lê e consolida; respeita invariante "ninguém de fora escreve").
+HALT: escolher próximo (conectar WhatsApp/Parte 6, produtos reais, polir vitrine, ou Parte 8/9/10).
