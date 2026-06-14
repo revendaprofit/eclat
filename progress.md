@@ -136,4 +136,25 @@ Todos os critérios de aceite batidos.
 - Captura real de leads (formulário/BotConversa) e sync de leitura Medusa fica nas Partes 6/7.
 
 ### PARTE 5 — ✅ schema + RLS aplicados.
-HALT: escolher próximo (Parte 6 WhatsApp/captura, Parte 7 Cockpit, produtos reais, ou polir vitrine).
+
+## 2026-06-14 — PARTE 6 (WhatsApp via Evolution API)
+
+### Decisão
+- WhatsApp via **Evolution API** (self-hosted no Railway, deployment já existente), instância dedicada `eclat`.
+  No lugar do BotConversa. SOP: architecture/whatsapp.md.
+
+### Feito (integração montada)
+- Evolution v2.3.7 validada; instância `eclat` criada (token próprio).
+- Backend: lib/supabase.ts (getOrCreateLeadByWhatsapp, insertConversa via service_role),
+  lib/evolution.ts (sendWhatsappText), src/api/webhooks/whatsapp/route.ts (recebe messages.upsert →
+  lead+conversa; valida ?token; ignora grupos/status; healthcheck GET).
+- .env: EVOLUTION_API_URL/KEY/INSTANCE/INSTANCE_TOKEN + WHATSAPP_WEBHOOK_SECRET.
+- Túnel cloudflared (instalado via winget) → backend; webhook da instância eclat configurado p/ MESSAGES_UPSERT.
+- Testes parciais: GET /webhooks/whatsapp 200 (local e via túnel). Webhook salvo e confirmado na Evolution.
+
+### Adiado pelo usuário
+- Conectar o WhatsApp da marca (QR) e testar inbound/outbound. Túnel parado e QR temporário removido.
+- Ao retomar: subir túnel (URL muda) → re-set webhook → conectar QR → testar. Passo a passo em architecture/whatsapp.md.
+
+### PARTE 6 — ~ integração pronta; falta conectar+testar.
+HALT: retomar Parte 6 quando quiser conectar o WhatsApp, OU seguir para outra parte.

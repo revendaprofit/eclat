@@ -9,7 +9,7 @@ Nunca vincular a Éclat a nenhuma outra marca.
 ## Stack
 - Vitrine: Next.js (PWA) consumindo a Store API do Medusa
 - Core de loja: Medusa v2 (Node/TypeScript + Postgres)
-- Relacionamento: Supabase (CRM, leads, WhatsApp/BotConversa)
+- Relacionamento: Supabase (CRM, leads, conversas). WhatsApp via Evolution API (self-hosted).
 - Pagamento: Mercado Pago (cartão + Pix), em fase futura
 
 ## Invariantes de arquitetura (inegociáveis)
@@ -45,4 +45,6 @@ Nunca vincular a Éclat a nenhuma outra marca.
 - Parte 4 — Pagamento (Mercado Pago): ADIADA (retomar com Access Token do MP).
 - Parte 5 — CRM/Supabase: architecture/crm.md + supabase/migrations/0001_crm_init.sql aplicados.
   Tabelas lead/cliente_rel/conversa com RLS (anon negado, backend via service_role). SUPABASE_DB_URL no .env.
-- Próxima decisão: Parte 6 (WhatsApp/captura de leads), Parte 7 (Cockpit), produtos reais, ou polir vitrine.
+- Parte 6 — WhatsApp via Evolution API (instância eclat): integração montada (lib/evolution, lib/supabase,
+  api/webhooks/whatsapp) + webhook configurado. FALTA conectar o WhatsApp (QR) e testar. SOP: architecture/whatsapp.md.
+- Próxima decisão: conectar WhatsApp (retomar P6), Parte 7 (Cockpit), produtos reais, ou polir vitrine.

@@ -70,10 +70,18 @@ Modelagem do catálogo da Éclat no Medusa.
 - [ ] Captura real de leads (formulário na vitrine / webhook BotConversa) — Parte 6
 **Aceite:** ✅ CRM com RLS funcionando; leads registráveis via service_role (backend).
 
-## Parte 6 — WhatsApp / BotConversa  [ ]
-- [ ] Integração de mensageria
-- [ ] Automações de relacionamento
-**Aceite:** mensagem disparada e registrada no relacionamento.
+## Parte 6 — WhatsApp via Evolution API  [~] (integração montada; falta conectar+testar)
+> Decisão 2026-06-14: usar **Evolution API** (self-hosted no Railway), instância dedicada `eclat`.
+> SOP completo em architecture/whatsapp.md.
+- [x] Instância `eclat` criada na Evolution (v2.3.7)
+- [x] Backend: serviço de envio (lib/evolution.ts — sendWhatsappText)
+- [x] Backend: webhook lib/supabase.ts + src/api/webhooks/whatsapp/route.ts (grava lead+conversa, valida token)
+- [x] Config em .env: EVOLUTION_API_URL/KEY/INSTANCE/INSTANCE_TOKEN + WHATSAPP_WEBHOOK_SECRET
+- [x] Túnel cloudflared + webhook da instância configurado (testado: túnel→backend 200)
+- [ ] Conectar o WhatsApp da marca via QR (ADIADO pelo usuário 2026-06-14)
+- [ ] Testar inbound (mensagem recebida) e outbound (envio) → conversa/lead no Supabase
+**Aceite:** mensagem enviada e recebida registrada no relacionamento.
+**Retomar:** ver "Como RETOMAR" em architecture/whatsapp.md (subir túnel → re-set webhook → conectar QR → testar).
 
 ## Parte 7 — Cockpit (módulo de orquestração)  [ ]
 - [ ] Módulo que LÊ Medusa + Supabase e orquestra (nenhuma escrita de terceiro)
