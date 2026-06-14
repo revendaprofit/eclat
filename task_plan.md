@@ -53,17 +53,22 @@ Modelagem do catálogo da Éclat no Medusa.
 - [ ] Copy pt-BR de telas de conta (login/perfil/pedidos) — pendente
 **Aceite:** ✅ pedido criado no Medusa a partir do fluxo da vitrine (sem pagamento real ainda).
 
-## Parte 4 — Pagamento (Mercado Pago)  [ ]
+## Parte 4 — Pagamento (Mercado Pago)  [ADIADA por decisão do usuário em 2026-06-14]
+> Pulada por enquanto. Checkout opera com provider manual/sistema até retomarmos.
 - [ ] Integração via SDK oficial (cartão + Pix). Nunca processar cartão na mão
 - [ ] Webhooks de status de pagamento
 - [ ] Ambiente de sandbox e testes
 **Aceite:** pagamento sandbox aprovado reflete no pedido Medusa.
+**Retomar quando:** o usuário fornecer o Access Token do Mercado Pago.
 
-## Parte 5 — Relacionamento / CRM (Supabase)  [ ]
-- [ ] Schema de cliente, lead, conversa (Data-First, aprovado)
-- [ ] RLS habilitado desde o início
-- [ ] Sincronização de leitura com Medusa (sem terceiro escritor)
-**Aceite:** CRM com RLS funcionando e leads registráveis.
+## Parte 5 — Relacionamento / CRM (Supabase)  [~] (schema + RLS aplicados)
+- [x] Schema cliente_rel, lead, conversa (Data-First, aprovado) — architecture/crm.md
+- [x] SQL versionado: supabase/migrations/0001_crm_init.sql (aplicado via psql/session pooler)
+- [x] RLS habilitado desde o início; 0 policies (anon negado, service_role bypass) — provado: anon INSERT 401, service_role 201
+- [x] Funil: novo→contatado→negociando→convertido→perdido; origens: instagram/whatsapp/indicacao/anuncio/site/pagina_eclat
+- [ ] Sincronização de leitura com Medusa (sem terceiro escritor) — vai no Cockpit (Parte 7)
+- [ ] Captura real de leads (formulário na vitrine / webhook BotConversa) — Parte 6
+**Aceite:** ✅ CRM com RLS funcionando; leads registráveis via service_role (backend).
 
 ## Parte 6 — WhatsApp / BotConversa  [ ]
 - [ ] Integração de mensageria

@@ -111,4 +111,29 @@ Todos os critérios de aceite batidos.
 - /br/cart HTTP 200 em pt-BR (Sacola, Explorar peças). Sem erros de compilação. Resíduo só em testid/meta (corrigido meta).
 
 ### PARTE 3 — ✅ fluxo validado + pt-BR. PENDENTE: clicar a compra pela vitrine; telas de conta em pt-BR.
-HALT: revisar/testar a compra no navegador OU avançar (Parte 4 — Pagamento Mercado Pago).
+
+## 2026-06-14 — PARTE 4: ADIADA (decisão do usuário). Retomar com Access Token do Mercado Pago.
+
+## 2026-06-14 — PARTE 5 (CRM/Supabase)
+
+### Decisões (Data-First)
+- Funil de leads: novo → contatado → negociando → convertido → perdido.
+- Origens: instagram, whatsapp, indicacao, anuncio, site, pagina_eclat.
+- Operação: uma operadora → RLS simples (só backend/service_role; sem login de equipe ainda).
+
+### Feito
+- SOP architecture/crm.md (schema de referência). SQL versionado: supabase/migrations/0001_crm_init.sql.
+- Tabelas criadas no Supabase via psql (Session Pooler): lead, cliente_rel, conversa + 6 índices +
+  trigger updated_at. RLS ligado nas 3 (rowsecurity=t), 0 policies (anon/authenticated negados, service_role bypass).
+- SUPABASE_DB_URL adicionada ao .env do backend (gitignored) para migrações futuras.
+
+### Testes
+- Conexão psql OK (PostgreSQL 17.6). Migração EXIT=0.
+- RLS provado via REST: anon INSERT → 401 (negado); service_role INSERT → 201; SELECT OK. Lead de teste removido.
+
+### Pendências / segurança
+- ROTACIONAR a senha do banco Supabase (trafegou pelo chat). Database → Reset password → atualizar SUPABASE_DB_URL.
+- Captura real de leads (formulário/BotConversa) e sync de leitura Medusa fica nas Partes 6/7.
+
+### PARTE 5 — ✅ schema + RLS aplicados.
+HALT: escolher próximo (Parte 6 WhatsApp/captura, Parte 7 Cockpit, produtos reais, ou polir vitrine).
