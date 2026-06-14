@@ -208,4 +208,28 @@ HALT: aguardando OK para iniciar a Fase 0 (shell do cockpit + conexões testáve
 ## 2026-06-14 — WhatsApp da marca CONECTADO
 - Instância eclat agora em estado `open`; número conectado +55 31 91184431.
 - Próximo: Fase 1A (chat) — subir túnel, reapontar webhook, migrar conversa→conversation/message, reescrever webhook, testar.
-HALT: aguardando OK para iniciar a Fase 1A.
+
+## 2026-06-14 — COCKPIT Fase 1A (Chat WhatsApp — texto)
+
+### Feito
+- Schema: supabase/migrations/0002_chat.sql — conversation + message (idempotência por evolution_msg_id),
+  trigger bump (ultima_msg_em + nao_lidas), RLS (authenticated SELECT; escrita via service_role),
+  realtime publication (conversation+message). Tabela 'conversa' (Parte 5) fica deprecada.
+- Backend: lib/supabase.ts (getOrCreateConversation, insertMessageIdempotent). Webhook reescrito
+  (apps/backend/src/api/webhooks/whatsapp/route.ts) → grava conversation/message + cria/vincula lead.
+- Cockpit: lib/sb-admin.ts (service_role server), lib/evolution.ts (sendText), API routes
+  (/api/conversations, /[id]/messages com mark-read, /[id]/send), e tela Conversas (lista+thread+composer)
+  com Supabase Realtime (browser autenticado). Fix de tipos em server.ts/middleware (typecheck limpo).
+- Túnel cloudflared (URL efêmera: muda a cada execução) + webhook da instância eclat (MESSAGES_UPSERT).
+
+### Testes
+- Pipeline (simulado): webhook → conversation+message+lead. OK.
+- Real: "ok" enviada PELO COCKPIT (sendText + insert, timestamp c/ ms) entregue; "Oi" capturada pelo webhook.
+  Conversa "Team WOD Brasil - Atendimento" (553191184431) criada; realtime exibiu na tela.
+
+### Pendências da fase
+- 1A.2: áudio/mídia (download da Evolution + storage + player). 1B: IA modo sugestão.
+- Túnel efêmero: para produção, host/túnel fixo. Se cair, re-subir e reapontar webhook (ver architecture/whatsapp.md).
+
+### COCKPIT Fase 1A (texto) — ✅ validada.
+HALT: seguir para 1A.2 (mídia/áudio), 1B (IA), ou outra fase — a combinar.

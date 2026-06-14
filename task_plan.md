@@ -91,8 +91,12 @@ Modelagem do catálogo da Éclat no Medusa.
 - [x] **Fase 0 — Shell**: apps/cockpit (Next 15.5 + Tailwind v4), login Supabase Auth (operador@eclat.local),
       middleware de proteção, menu lateral das 7 áreas (placeholders), identidade Éclat, /api/health.
       Validado: /login 200, / →307 /login, 3 conexões verdes (Medusa/Supabase/Evolution). Porta 7001.
-- [ ] **Fase 1 — Conversas (Chat WhatsApp)**: A) chat funcional (texto/áudio/mídia, tempo real, vínculo
-      lead/cliente, idempotência; reescreve webhook P6 para conversation/message) → B) IA modo sugestão.
+- [~] **Fase 1 — Conversas (Chat WhatsApp)**:
+      - [x] 1A (texto): schema conversation/message (migration 0002) + RLS + realtime; webhook reescrito
+            (idempotente, cria/vincula lead); cockpit Conversas (lista+thread+envio) com Supabase Realtime.
+            Validado real: enviar pelo cockpit ("ok") e receber via webhook. Túnel cloudflared (efêmero).
+      - [ ] 1A.2: áudio/mídia (download + storage + player).
+      - [ ] 1B: IA modo sugestão (redige na voz da Éclat; operador aprova/envia).
 - [ ] **Fase 2 — Leads (Kanban)**: funil arrastável, ficha, captação, conversão→cria cliente no Medusa.
 - [ ] **Fase 3 — Produtos & Estoque**: CRUD via Medusa Admin API + alertas de estoque.
 - [ ] **Fase 4 — Clientes / Pedidos / Envios**: ficha 360°, fila de envio, follow-up, segmentos.

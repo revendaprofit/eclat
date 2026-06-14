@@ -86,3 +86,53 @@ export async function sbSelect<T = Record<string, unknown>>(
   if (!res.ok) throw new Error(`sbSelect ${table} falhou: ${res.status} ${await res.text()}`)
   return (await res.json()) as T[]
 }
+
+// ---------- CHAT (conversation + message) ----------
+
+// Acha a conversa pelo contato+instância ou cria. Retorna o id.
+export async function getOrCreateConversation(
+  contatoE164: string,
+  instancia: string,
+  defaults: Record<string, unknown>
+): Promise<string> {
+  const found = await sbSelect<{ id: string }>(
+    "conversation",
+    `contato_e164=eq.${encodeURIComponent(contatoE164)}&instancia_evolution=eq.${encodeURIComponent(
+      instancia
+    )}&select=id&limit=1`
+  )
+  if (found[0]?.id) return found[0].id
+
+  const res = await fetch(rest("conversation"), {
+    method: "POST",
+    headers: headers({ Prefer: "return=representation" }),
+    body: JSON.stringify({
+      contato_e164: contatoE164,
+      instancia_evolution: instancia,
+      ...defaults,
+    }),
+  })
+  if (res.status === 409) {
+    // corrida: já existe — busca de novo
+    const again = await sbSelect<{ id: string }>(
+      "conversation",
+      `contato_e164=eq.${encodeURIComponent(contatoE164)}&instancia_evolution=eq.${encodeURIComponent(
+        instancia
+      )}&select=id&limit=1`
+    )
+    if (again[0]?.id) return again[0].id
+  }
+  if (!res.ok) throw new Error(`getOrCreateConversation falhou: ${res.status} ${await res.text()}`)
+  const data = (await res.json()) as Array<{ id: string }>
+  return data[0].id
+}
+
+// Insere mensagem de forma idempotente (ignora duplicata por evolution_msg_id).
+export async function insertMessageIdempotent(fields: Record<string, unknown>): Promise<void> {
+  const res = await fetch(rest("message?on_conflict=evolution_msg_id"), {
+    method: "POST",
+    headers: headers({ Prefer: "resolution=ignore-duplicates,return=minimal" }),
+    body: JSON.stringify(fields),
+  })
+  if (!res.ok) throw new Error(`insertMessage falhou: ${res.status} ${await res.text()}`)
+}
