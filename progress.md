@@ -39,4 +39,12 @@
   A anon deve ser validada em /auth/v1/settings. Script test-supabase.mjs ajustado para o endpoint correto por chave.
 
 ### FUNDAÇÃO (Parte 0) — CONCLUÍDA ✅
-Todos os critérios de aceite batidos. HALT: aguardar aprovação para iniciar a Parte 1 — Catálogo (Data-First).
+Todos os critérios de aceite batidos.
+
+### Versionamento
+- Repositório: https://github.com/revendaprofit/eclat (branch main).
+- Estrutura achatada: o monorepo é a RAIZ do repo (constituição + apps/ no topo).
+- .env / .env.local NÃO versionados (.gitignore com **/.env). Confirmado: nenhum segredo no commit inicial (252 arquivos).
+- Autor: leobergconsultoria@gmail.com / revendaprofit. Auth via Git Credential Manager.
+
+HALT: aguardar aprovação para iniciar a Parte 1 — Catálogo (Data-First).
