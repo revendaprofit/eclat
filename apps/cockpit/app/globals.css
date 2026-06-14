@@ -1,0 +1,21 @@
+@import "tailwindcss";
+
+/* === Identidade use.ÉCLAT — Cockpit === */
+@theme {
+  --color-eclat-luz: #faf8f3;
+  --color-eclat-areia: #ede3d1;
+  --color-eclat-pedra: #c9bfae;
+  --color-eclat-grafite: #2b2a28;
+  --color-eclat-dourado: #c2a36b;
+  --color-eclat-dourado-claro: #d9c49b;
+
+  --font-sans: var(--font-inter), system-ui, sans-serif;
+  --font-serif: var(--font-cormorant), Georgia, serif;
+}
+
+html,
+body {
+  background-color: var(--color-eclat-luz);
+  color: var(--color-eclat-grafite);
+  font-family: var(--font-sans);
+}

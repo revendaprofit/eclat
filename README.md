@@ -54,6 +54,15 @@ npm run dev
 ```
 - Loja: http://localhost:8000 (lista os produtos de exemplo do Medusa)
 
+### Cockpit (Next.js) — porta 7001
+Painel de gestão (app separado). Plano completo: `architecture/cockpit.md`.
+```bash
+cd apps/cockpit
+npm run dev
+```
+- Cockpit: http://localhost:7001 · **Login:** `operador@eclat.local` (Supabase Auth)
+- Requer `apps/cockpit/.env.local` (Supabase, Medusa admin, Evolution).
+
 > A partir da raiz você também pode usar `npm run backend:dev` e `npm run storefront:dev` (Turbo).
 
 ## Variáveis de ambiente

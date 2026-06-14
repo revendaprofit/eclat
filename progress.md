@@ -183,3 +183,25 @@ Todos os critérios de aceite batidos.
   product_cost) — evolui Parte 5 e fará migração; webhook da Parte 6 será reescrito na Fase 1.
 - Registro apenas: NADA construído. Próximo: Fase 0 mediante aprovação.
 HALT: aguardando OK para iniciar a Fase 0 (shell do cockpit + conexões testáveis).
+
+## 2026-06-14 — COCKPIT Fase 0 (Shell)
+
+### Feito
+- apps/cockpit: Next.js 15.5 (fixado; descartado o Next 16 do scaffold por breaking changes) + Tailwind v4 + App Router.
+- Identidade Éclat (tokens no globals.css), fontes Inter/Cormorant.
+- Login via Supabase Auth (@supabase/ssr): página /login, clients browser/server, middleware (renova sessão + protege rotas).
+- Operador criado: operador@eclat.local (Supabase Auth, email_confirm). Senha definida e guardada localmente — fora do repo.
+- Layout protegido (painel) com menu lateral das 7 áreas (Dashboard/Conversas/Clientes/Leads/Produtos/Financeiro/Configurações)
+  — 6 como placeholders por fase.
+- /api/health: testa Medusa (login admin programático), Supabase (service_role), Evolution (connectionState).
+- Acesso ao Medusa pelo jeito simples: login programático com admin@eclat.local guardado no .env.local do cockpit.
+
+### Testes
+- /login → 200 (renderiza marca/Entrar). / sem login → 307 → /login (middleware).
+- Smoke test das 3 conexões com o .env.local: Medusa OK (4 produtos), Supabase OK (lead), Evolution OK (estado close).
+
+### Config / segredos
+- apps/cockpit/.env.local (gitignored): NEXT_PUBLIC_SUPABASE_URL/ANON, SERVICE_ROLE, MEDUSA_ADMIN_*, EVOLUTION_*.
+
+### COCKPIT Fase 0 — ✅ CONCLUÍDA (aceite batido).
+HALT: aguardando OK para a Fase 1 (Conversas / Chat WhatsApp).

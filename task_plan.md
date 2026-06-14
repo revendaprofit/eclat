@@ -88,8 +88,9 @@ Modelagem do catálogo da Éclat no Medusa.
 > Plano canônico completo em architecture/cockpit.md. A página read-only no admin do Medusa (v0) está superada.
 > Construir UMA fase por vez, com Halt e critério de aceite.
 - [x] Plano registrado (architecture/cockpit.md), referenciado no CLAUDE.md (invariante 2 emendado).
-- [ ] **Fase 0 — Shell**: app Next.js + auth + menu completo (placeholders) + identidade Éclat +
-      conexões testáveis (Medusa Admin API, Supabase, Evolution). Aceite: logar, ver menu, 3 conexões respondem.
+- [x] **Fase 0 — Shell**: apps/cockpit (Next 15.5 + Tailwind v4), login Supabase Auth (operador@eclat.local),
+      middleware de proteção, menu lateral das 7 áreas (placeholders), identidade Éclat, /api/health.
+      Validado: /login 200, / →307 /login, 3 conexões verdes (Medusa/Supabase/Evolution). Porta 7001.
 - [ ] **Fase 1 — Conversas (Chat WhatsApp)**: A) chat funcional (texto/áudio/mídia, tempo real, vínculo
       lead/cliente, idempotência; reescreve webhook P6 para conversation/message) → B) IA modo sugestão.
 - [ ] **Fase 2 — Leads (Kanban)**: funil arrastável, ficha, captação, conversão→cria cliente no Medusa.

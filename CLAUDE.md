@@ -52,5 +52,7 @@ Nunca vincular a Éclat a nenhuma outra marca.
   api/webhooks/whatsapp) + webhook configurado. FALTA conectar o WhatsApp (QR) e testar. SOP: architecture/whatsapp.md.
 - Cockpit: REDEFINIDO como app Next.js separado (apps/cockpit), plano completo e faseado registrado em
   architecture/cockpit.md (Fases 0–6). A página read-only no admin do Medusa (antiga "Parte 7" v0) está superada.
-  Build por fase, com Halt. Nada construído ainda além do registro do plano.
-- Próxima ação: Fase 0 do Cockpit (shell + conexões), quando o usuário aprovar.
+  Build por fase, com Halt.
+  - Fase 0 (Shell): CONCLUÍDA. apps/cockpit (Next 15.5), login Supabase Auth (operador@eclat.local),
+    menu das 7 áreas (placeholders), /api/health (Medusa+Supabase+Evolution OK). Porta 7001.
+- Próxima ação: Fase 1 do Cockpit (Conversas/Chat WhatsApp) quando o usuário aprovar.
