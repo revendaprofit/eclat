@@ -204,4 +204,8 @@ HALT: aguardando OK para iniciar a Fase 0 (shell do cockpit + conexões testáve
 - apps/cockpit/.env.local (gitignored): NEXT_PUBLIC_SUPABASE_URL/ANON, SERVICE_ROLE, MEDUSA_ADMIN_*, EVOLUTION_*.
 
 ### COCKPIT Fase 0 — ✅ CONCLUÍDA (aceite batido).
-HALT: aguardando OK para a Fase 1 (Conversas / Chat WhatsApp).
+
+## 2026-06-14 — WhatsApp da marca CONECTADO
+- Instância eclat agora em estado `open`; número conectado +55 31 91184431.
+- Próximo: Fase 1A (chat) — subir túnel, reapontar webhook, migrar conversa→conversation/message, reescrever webhook, testar.
+HALT: aguardando OK para iniciar a Fase 1A.

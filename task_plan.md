@@ -78,8 +78,8 @@ Modelagem do catálogo da Éclat no Medusa.
 - [x] Backend: webhook lib/supabase.ts + src/api/webhooks/whatsapp/route.ts (grava lead+conversa, valida token)
 - [x] Config em .env: EVOLUTION_API_URL/KEY/INSTANCE/INSTANCE_TOKEN + WHATSAPP_WEBHOOK_SECRET
 - [x] Túnel cloudflared + webhook da instância configurado (testado: túnel→backend 200)
-- [ ] Conectar o WhatsApp da marca via QR (ADIADO pelo usuário 2026-06-14)
-- [ ] Testar inbound (mensagem recebida) e outbound (envio) → conversa/lead no Supabase
+- [x] Conectar o WhatsApp da marca via QR — CONECTADO (instância eclat = open; nº +55 31 91184431)
+- [ ] Testar inbound/outbound → será feito na Fase 1A do Cockpit (com o novo modelo conversation/message)
 **Aceite:** mensagem enviada e recebida registrada no relacionamento.
 **Retomar:** ver "Como RETOMAR" em architecture/whatsapp.md (subir túnel → re-set webhook → conectar QR → testar).
 
