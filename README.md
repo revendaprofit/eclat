@@ -28,8 +28,10 @@ Crie o banco e rode migrações/seed:
 ```bash
 # banco
 createdb -U postgres -h localhost eclat_medusa
-# migrações + seed (a partir de apps/backend)
-cd apps/backend && npx medusa db:migrate && npm run seed
+# migrações (a partir de apps/backend)
+cd apps/backend && npx medusa db:migrate
+# seed do catálogo Éclat (região Brasil/BRL + categorias/coleções + produtos-exemplo). Reexecutável.
+npx medusa exec ./src/scripts/seed-eclat.ts
 # usuário admin
 npx medusa user -e admin@eclat.local -p "<sua-senha>"
 ```
@@ -71,7 +73,7 @@ npm run dev
 |---|---|
 | `NEXT_PUBLIC_MEDUSA_BACKEND_URL` | URL do backend Medusa (`http://localhost:9000`) |
 | `NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY` | Publishable API key da Store API |
-| `NEXT_PUBLIC_DEFAULT_REGION` | Região default (`dk` no seed; trocar para Brasil/BRL na Parte 1) |
+| `NEXT_PUBLIC_DEFAULT_REGION` | Região default — `br` (Brasil/BRL) |
 
 > Segredos vivem **apenas** em `.env` / `.env.local` (ignorados pelo git).
 

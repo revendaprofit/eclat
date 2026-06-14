@@ -20,13 +20,17 @@ Infra base, scaffold e memória do projeto. Sem catálogo real, pagamento, cockp
 - [x] README curto (como rodar + variáveis de ambiente)
 **Aceite:** ✅ backend sobe, admin loga com produtos de exemplo; vitrine lista produtos com a cara da Éclat; Supabase com conexão testável.
 
-## Parte 1 — Catálogo  [ ]
-Modelagem real de produtos da Éclat no Medusa.
-- [ ] Registrar/expandir o Data Schema do catálogo (APROVADO) em architecture/catalog.md
-- [ ] Produtos, variantes (tamanho/cor), coleções e categorias
-- [ ] Estoque e níveis por variante
-- [ ] Imagens e mídia de produto
-**Aceite:** catálogo real navegável no admin e na Store API.
+## Parte 1 — Catálogo  [~] (estrutura + exemplos prontos; dados reais pendentes)
+Modelagem do catálogo da Éclat no Medusa.
+- [x] Data Schema registrado em architecture/catalog.md (APROVADO 2026-06-13)
+- [x] Região Brasil/BRL criada; demo Europe/EUR + produtos demo removidos; vitrine em pt-BR (br)
+- [x] Opções Tamanho (P/M/G/GG) e Cor; 8 categorias por tipo; 2 coleções (Resplendor, Luz Primeira)
+- [x] 4 produtos-exemplo on-brand com variantes, preços BRL, ficha técnica (metadata) e estoque
+- [x] Seed reproduzível: apps/backend/src/scripts/seed-eclat.ts (npx medusa exec)
+- [ ] Imagens/mídia reais dos produtos (aguardando material da marca)
+- [ ] Substituir produtos-exemplo pelos produtos REAIS (nomes, cores, preços, fotos)
+**Aceite (parcial):** ✅ catálogo navegável no admin e Store API (BRL); produto renderiza na vitrine com R$ pt-BR.
+**Halt:** abrir a substituição por dados reais quando a marca enviar catálogo + fotos.
 
 ## Parte 2 — Vitrine / Storefront  [ ]
 - [ ] Home editorial, listagem por coleção/categoria

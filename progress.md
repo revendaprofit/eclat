@@ -47,4 +47,32 @@ Todos os critérios de aceite batidos.
 - .env / .env.local NÃO versionados (.gitignore com **/.env). Confirmado: nenhum segredo no commit inicial (252 arquivos).
 - Autor: leobergconsultoria@gmail.com / revendaprofit. Auth via Git Credential Manager.
 
-HALT: aguardar aprovação para iniciar a Parte 1 — Catálogo (Data-First).
+---
+
+## 2026-06-14 — PARTE 1 (Catálogo)
+
+### Feito
+- Schema do catálogo registrado em architecture/catalog.md (Data-First, aprovado via decisões do usuário).
+- Decisões: tamanhos P/M/G/GG; categorias por tipo (8); região Brasil/BRL (remover Europe);
+  ficha técnica = composição + compressão/caimento + cuidados + modelo veste/guia de medidas.
+- Seed reproduzível apps/backend/src/scripts/seed-eclat.ts: limpa demo (produtos, Europa, tax, categorias,
+  coleções, fulfillment, stock) e cria Brasil/BRL + CD Brasil + frete padrão + 8 categorias + 2 coleções
+  (Resplendor, Luz Primeira) + 4 produtos-exemplo (Legging Resplendor, Top Aurora, Short Solene, Conjunto Luz)
+  com variantes Tamanho×Cor, preços BRL, metadata de ficha técnica e estoque 100.
+- Loja configurada para BRL default; vitrine NEXT_PUBLIC_DEFAULT_REGION=br; locale de preço → pt-BR (R$ 199,90).
+
+### Erros encontrados e resolvidos (auto-reparo)
+- Re-run do seed falhava: tax region "br" duplicada. Causa: deleteTaxRegionsWorkflow espera { ids } (passei array puro).
+  Fix: { ids: [...] }. (deleteProductCategoriesWorkflow, ao contrário, espera array puro.) Seed agora idempotente.
+- Categorias demo (Shirts/Sweatshirts/Pants/Merch) não eram removidas: faltava deletar categorias/coleções na limpeza.
+- Página de produto na vitrine dava 404 após trocar região: cache em disco .next servia dados antigos (dk/demo).
+  Fix: parar vitrine, remover apps/storefront/.next, reiniciar. SOP: ao trocar região/dados, limpar .next.
+- Preço aparecia "R$199.90" (en-US). Fix: convertToLocale default locale → pt-BR.
+
+### Testes / resultados
+- DB ativo: 4 produtos, 8 categorias, 2 coleções, região Brasil/brl (única), tax br, 24 variantes, preço 199.9 brl.
+- Store API (region Brasil): 4 produtos com preços BRL (Conjunto 329,90; Legging 199,90; Short 149,90; Top 129,90).
+- Vitrine: /br/products/legging-resplendor → HTTP 200, título, ficha técnica e R$ 199,90 (pt-BR).
+
+### PARTE 1 — parcial ✅ (estrutura + exemplos). PENDENTE: produtos reais + imagens.
+HALT: aguardar catálogo real da marca OU decisão de avançar para a Parte 2 (Vitrine).

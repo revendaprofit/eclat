@@ -37,5 +37,8 @@ Nunca vincular a Éclat a nenhuma outra marca.
 - architecture/ -> SOPs técnicos (ex.: catalog.md)
 
 ## Estado atual
-- Data Schema do catálogo: APROVADO (a registrar/expandir na Parte 1).
-- Próxima parte após a Fundação: Parte 1 — Catálogo.
+- Fundação (Parte 0): CONCLUÍDA. Repo: github.com/revendaprofit/eclat.
+- Parte 1 — Catálogo: schema registrado em architecture/catalog.md. Região Brasil/BRL, vitrine pt-BR.
+  Estrutura + 4 produtos-exemplo on-brand prontos (seed: apps/backend/src/scripts/seed-eclat.ts).
+  PENDENTE: substituir exemplos pelos produtos REAIS + imagens (aguardando material da marca).
+- Próxima decisão: receber catálogo real OU avançar para a Parte 2 (Vitrine/Storefront).
