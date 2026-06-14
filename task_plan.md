@@ -43,11 +43,15 @@ Modelagem do catálogo da Éclat no Medusa.
 - [ ] Copy pt-BR de superfícies secundárias (cart dropdown, conta) — parte virá com Parte 3
 **Aceite (parcial):** ✅ jornada home → categoria/coleção → produto fiel à marca, em pt-BR/BRL.
 
-## Parte 3 — Carrinho & Checkout  [ ]
-- [ ] Carrinho (add/remover/quantidade) persistente
-- [ ] Fluxo de checkout (endereço, frete, resumo)
-- [ ] Valores sempre em centavos inteiros (BRL)
-**Aceite:** pedido criado no Medusa a partir da vitrine (sem pagamento real ainda).
+## Parte 3 — Carrinho & Checkout  [~] (fluxo validado + pt-BR)
+- [x] Carrinho (add/remover/quantidade) persistente — starter, em pt-BR (Sacola)
+- [x] Fluxo de checkout traduzido pt-BR: endereço, entrega, pagamento, revisão, resumo, cupom, confirmação
+- [x] Pagamento manual (pp_system_default) na região Brasil — pagamento real fica na Parte 4
+- [x] Gate de confiabilidade: PEDIDO criado de ponta a ponta via Store API (test-checkout.mjs)
+      2× Legging (399,80) + frete (24,90) = 424,70 BRL → pedido #1 pending
+- [ ] Validar a compra clicando pela vitrine no navegador (revisão do usuário)
+- [ ] Copy pt-BR de telas de conta (login/perfil/pedidos) — pendente
+**Aceite:** ✅ pedido criado no Medusa a partir do fluxo da vitrine (sem pagamento real ainda).
 
 ## Parte 4 — Pagamento (Mercado Pago)  [ ]
 - [ ] Integração via SDK oficial (cartão + Pix). Nunca processar cartão na mão

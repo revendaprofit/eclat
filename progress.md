@@ -91,4 +91,24 @@ Todos os critérios de aceite batidos.
 - /br/collections/resplendor HTTP 200: mostra Legging Resplendor + Top Aurora (peças da coleção). Sem erros de compile.
 
 ### PARTE 2 — parcial ✅ (shell de marca). PENDENTE: busca, SEO por página, perf, copy de cart/conta.
-HALT: revisar a vitrine OU avançar (Parte 3 — Carrinho & Checkout).
+
+## 2026-06-14 — PARTE 3 (Carrinho & Checkout)
+
+### Gate de confiabilidade (Store API)
+- test-checkout.mjs (apps/backend): cria carrinho → item → endereço (SP) → frete → pagamento manual → completa.
+- Resultado: PEDIDO #1 criado. 2× Legging (399,80) + Entrega Padrão (24,90) = 424,70 BRL, status pending. Conta bate.
+- Confirma: carrinho, endereço, frete, pagamento (pp_system_default) e criação de pedido OK no Brasil/BRL.
+  (Obs.: ficou 1 pedido de teste no banco; inofensivo em dev.)
+
+### Tradução pt-BR (caminho de compra)
+- Carrinho: items, summary, empty-cart, sign-in-prompt, cart-totals (Subtotal/Frete/Desconto/Impostos/Total).
+- Checkout: addresses, shipping-address, billing_address (labels: Nome/Sobrenome/Endereço/CEP/Cidade/Estado/Telefone),
+  shipping (Entrega), payment (Pagamento), review (Revisão + termos), payment-button (Finalizar pedido),
+  discount-code (cupom), country-select (País), checkout-summary (Na sua sacola).
+- Confirmação: order-completed (Obrigada!), order-summary, help (Precisa de ajuda?). Metadado do carrinho.
+
+### Testes
+- /br/cart HTTP 200 em pt-BR (Sacola, Explorar peças). Sem erros de compilação. Resíduo só em testid/meta (corrigido meta).
+
+### PARTE 3 — ✅ fluxo validado + pt-BR. PENDENTE: clicar a compra pela vitrine; telas de conta em pt-BR.
+HALT: revisar/testar a compra no navegador OU avançar (Parte 4 — Pagamento Mercado Pago).
