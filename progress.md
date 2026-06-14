@@ -247,4 +247,22 @@ HALT: aguardando OK para iniciar a Fase 0 (shell do cockpit + conexões testáve
 - Texto chega sozinho (realtime/polling). Imagem renderiza, áudio toca. Lightbox + baixar adicionados.
 
 ### COCKPIT Fase 1A (texto+mídia) — ✅ COMPLETA.
-HALT: seguir para 1B (IA modo sugestão), Fase 2 (Leads/Kanban), ou outra — a combinar.
+
+## 2026-06-14 — COCKPIT Fase 1B (IA modo sugestão)
+
+### Decisão de provedor
+- IA do chat usa **Google Gemini** (gemini-2.5-flash), via REST (sem SDK), NÃO Claude/Anthropic — escolha do usuário.
+- @anthropic-ai/sdk foi instalado antes da virada e ficou sem uso (reservado; remover em limpeza futura).
+
+### Feito
+- Rota apps/cockpit/app/api/conversations/[id]/suggest: monta voz da Éclat (system) + transcrição da conversa →
+  Gemini generateContent → devolve sugestão. GEMINI_API_KEY no .env.local (gitignored).
+- UI: botão ✨ IA no composer preenche o campo com a sugestão (operador aprova/edita/envia — nada automático).
+- Composer virou textarea com auto-resize (Enter envia, Shift+Enter quebra) — corrige sugestões multi-linha cortadas.
+
+### Testes
+- Chamada Gemini direta validada (resposta na voz da Éclat). Botão ✨ IA testado no navegador: sugere e preenche.
+- Fix multi-linha: textarea cresce até 200px com scroll.
+
+### COCKPIT Fase 1 — ✅ COMPLETA (texto + mídia + IA sugestão).
+HALT: seguir para Fase 2 (Leads/Kanban), Fase 3 (Produtos), ou outra — a combinar.

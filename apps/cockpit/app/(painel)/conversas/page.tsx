@@ -85,8 +85,10 @@ export default function ConversasPage() {
   const [text, setText] = useState("")
   const [sending, setSending] = useState(false)
   const [lightbox, setLightbox] = useState<string | null>(null)
+  const [suggesting, setSuggesting] = useState(false)
   const selectedRef = useRef<string | null>(null)
   const endRef = useRef<HTMLDivElement>(null)
+  const composerRef = useRef<HTMLTextAreaElement>(null)
 
   const loadConvs = useCallback(async () => {
     const r = await fetch("/api/conversations", { cache: "no-store" })
@@ -189,6 +191,30 @@ export default function ConversasPage() {
     }
   }
 
+  // auto-resize do campo de mensagem conforme o texto (ex.: sugestões da IA com várias linhas)
+  useEffect(() => {
+    const el = composerRef.current
+    if (el) {
+      el.style.height = "auto"
+      el.style.height = Math.min(el.scrollHeight, 200) + "px"
+    }
+  }, [text])
+
+  async function suggest() {
+    if (!selected) return
+    setSuggesting(true)
+    try {
+      const r = await fetch(`/api/conversations/${selected}/suggest`, {
+        method: "POST",
+      })
+      const data = await r.json()
+      if (r.ok && data.suggestion) setText(data.suggestion)
+      else alert(data.error || "Não foi possível gerar a sugestão.")
+    } finally {
+      setSuggesting(false)
+    }
+  }
+
   const atual = convs.find((c) => c.id === selected)
 
   return (
@@ -264,18 +290,33 @@ export default function ConversasPage() {
                 ))}
                 <div ref={endRef} />
               </div>
-              <div className="border-t border-eclat-pedra/30 p-3 flex gap-2">
-                <input
+              <div className="border-t border-eclat-pedra/30 p-3 flex gap-2 items-end">
+                <button
+                  onClick={suggest}
+                  disabled={suggesting}
+                  title="Sugerir resposta na voz da Éclat (IA)"
+                  className="shrink-0 h-10 border border-eclat-dourado/60 text-eclat-grafite text-xs px-3 rounded-md hover:bg-eclat-dourado/15 transition-colors disabled:opacity-50"
+                >
+                  {suggesting ? "…" : "✨ IA"}
+                </button>
+                <textarea
+                  ref={composerRef}
                   value={text}
                   onChange={(e) => setText(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && send()}
-                  placeholder="Escreva uma mensagem…"
-                  className="flex-1 border border-eclat-pedra/50 rounded-md px-3 py-2 text-sm bg-white focus:outline-none focus:border-eclat-dourado"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault()
+                      send()
+                    }
+                  }}
+                  rows={1}
+                  placeholder="Escreva uma mensagem… (Enter envia, Shift+Enter quebra linha)"
+                  className="flex-1 resize-none max-h-[200px] overflow-y-auto border border-eclat-pedra/50 rounded-md px-3 py-2 text-sm bg-white focus:outline-none focus:border-eclat-dourado leading-snug"
                 />
                 <button
                   onClick={send}
                   disabled={sending || !text.trim()}
-                  className="bg-eclat-grafite text-eclat-luz uppercase tracking-widest text-xs px-5 rounded-md hover:bg-eclat-dourado hover:text-eclat-grafite transition-colors disabled:opacity-50"
+                  className="shrink-0 h-10 bg-eclat-grafite text-eclat-luz uppercase tracking-widest text-xs px-5 rounded-md hover:bg-eclat-dourado hover:text-eclat-grafite transition-colors disabled:opacity-50"
                 >
                   {sending ? "…" : "Enviar"}
                 </button>

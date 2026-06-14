@@ -54,7 +54,8 @@ Nunca vincular a Éclat a nenhuma outra marca.
   architecture/cockpit.md (Fases 0–6). A página read-only no admin do Medusa (antiga "Parte 7" v0) está superada.
   Build por fase, com Halt.
   - Fase 0 (Shell): CONCLUÍDA. apps/cockpit (Next 15.5), login Supabase Auth (operador@eclat.local), porta 7001.
-  - Fase 1A (Chat texto): CONCLUÍDA. Schema conversation/message (migration 0002), webhook reescrito,
-    tela Conversas com Supabase Realtime, envio via Evolution. WhatsApp da marca conectado (eclat=open).
+  - Fase 1 (Conversas): COMPLETA. Chat WhatsApp texto+mídia (conversation/message, realtime, Storage) +
+    IA modo sugestão. IA usa **Google Gemini** (gemini-2.5-flash, REST), não Claude — decisão do usuário
+    (@anthropic-ai/sdk instalado mas sem uso). WhatsApp da marca conectado (eclat=open).
     Túnel cloudflared é efêmero (re-subir + reapontar webhook ao retomar — ver architecture/whatsapp.md).
-- Próxima ação: Fase 1A.2 (áudio/mídia), Fase 1B (IA sugestão), ou outra fase.
+- Próxima ação: Fase 2 (Leads/Kanban), Fase 3 (Produtos & Estoque), ou outra fase.

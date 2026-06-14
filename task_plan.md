@@ -98,7 +98,10 @@ Modelagem do catálogo da Éclat no Medusa.
       - [x] 1A.2: áudio/mídia — webhook baixa da Evolution (getBase64) → Supabase Storage (bucket privado
             'whatsapp') → cockpit serve via proxy autenticado (/api/media). UI: imagem (clique amplia +
             baixar), áudio/vídeo (player + baixar), doc (link). Validado real (foto + áudio).
-      - [ ] 1B: IA modo sugestão (redige na voz da Éclat; operador aprova/envia).
+      - [x] 1B: IA modo sugestão — botão ✨ IA gera resposta na voz da Éclat; operador aprova/edita/envia.
+            Provedor: Google Gemini (gemini-2.5-flash via REST). Rota /api/conversations/[id]/suggest.
+            Composer = textarea com auto-resize (Enter envia, Shift+Enter quebra). Validado real.
+**Fase 1 — COMPLETA** (texto + mídia + IA sugestão).
 - [ ] **Fase 2 — Leads (Kanban)**: funil arrastável, ficha, captação, conversão→cria cliente no Medusa.
 - [ ] **Fase 3 — Produtos & Estoque**: CRUD via Medusa Admin API + alertas de estoque.
 - [ ] **Fase 4 — Clientes / Pedidos / Envios**: ficha 360°, fila de envio, follow-up, segmentos.
