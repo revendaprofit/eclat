@@ -58,4 +58,25 @@ Nunca vincular a Éclat a nenhuma outra marca.
     IA modo sugestão. IA usa **Google Gemini** (gemini-2.5-flash, REST), não Claude — decisão do usuário
     (@anthropic-ai/sdk instalado mas sem uso). WhatsApp da marca conectado (eclat=open).
     Túnel cloudflared é efêmero (re-subir + reapontar webhook ao retomar — ver architecture/whatsapp.md).
-- Próxima ação: Fase 2 (Leads/Kanban), Fase 3 (Produtos & Estoque), ou outra fase.
+  - Fase 2 (Leads/Kanban): COMPLETA. Kanban 5 colunas (drag-and-drop nativo), ficha, captação, conversão →
+    cliente Medusa; IA (Gemini) detecta estágio em modo sugestão.
+  - Fase 3 (Produtos & Estoque): COMPLETA. Painel avançado via Medusa Admin API (comércio = fonte da verdade):
+    lista com edição POR CÉLULA de preço/estoque; filtros+ordenação+busca; exportar CSV + ações em massa
+    (/api/products/bulk); criar/editar/excluir produto (variantes, estoque inicial, imagem upload, ficha técnica);
+    CRUD de categorias (com SUBCATEGORIAS em árvore), coleções e tags (/api/taxonomy/*, components/taxonomy-manager.tsx).
+    Endpoints-chave: POST /admin/products (handle URL-safe; categorias via `categories:[{id}]`); preço
+    POST /admin/products/{id}/variants/{vid} {prices:[{amount,currency_code:"brl"}]}; estoque CRIAR/ATUALIZAR nível
+    POST /admin/inventory-items/{iid}/location-levels {location_id,stocked_quantity}; upload POST /admin/uploads (multipart "files").
+    Stock location única: sloc (CD Brasil). DEFERIDO: editar estrutura de variantes existente; "avise-me".
+  - Fase 4 (Clientes/Pedidos/Envios): COMPLETA. Clientes + Ficha 360° (pedidos/conversa/CRM); Pedidos (lista+detalhe);
+    Envios (fila + Despachar: fulfillment+shipment+rastreio + aviso WhatsApp; transportadora Melhor Envio PREPARADA
+    em lib/shipping.ts, SOP architecture/envios.md — manual já funciona); Segmentos + follow-up WhatsApp.
+    Rotas /api/customers* e /api/orders* (dispatch). COGS por variação no Supabase (produto_custo).
+  - Fase 5 (Financeiro/DRE): COMPLETA. Despesas (finance_expense + categorias, migration 0004) CRUD; DRE do período
+    (/api/finance/dre, centavos): Receita (pedidos pagos/autorizados) + Frete separado − COGS (produto_custo×itens) − Despesas
+    = Resultado, com margem e alerta de itens sem custo. Tela Financeiro.
+  - Fase 6 (Dashboard inteligente): COMPLETA. Home /api/dashboard: vendas de hoje + filas de ação clicáveis
+    (a enviar, conversas pendentes, leads novos, estoque baixo c/ lista, reativação). 
+  - **COCKPIT COMPLETO (Fases 0–6).** Pendências: validações finais no navegador; integrações externas futuras
+    (transportadora real via Melhor Envio — credenciais; Mercado Pago Parte 4 — inclui taxas no DRE).
+- Próxima ação: validações no navegador OU retomar Parte 4 (Mercado Pago) / Parte 1 (produtos reais) / Partes 8-10.

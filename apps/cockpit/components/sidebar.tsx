@@ -8,8 +8,10 @@ const ITEMS = [
   { href: "/", label: "Dashboard" },
   { href: "/conversas", label: "Conversas" },
   { href: "/clientes", label: "Clientes" },
+  { href: "/pedidos", label: "Pedidos" },
   { href: "/leads", label: "Leads" },
   { href: "/produtos", label: "Produtos & Estoque" },
+  { href: "/vitrine", label: "Vitrine (site)" },
   { href: "/financeiro", label: "Financeiro" },
   { href: "/configuracoes", label: "Configurações" },
 ]

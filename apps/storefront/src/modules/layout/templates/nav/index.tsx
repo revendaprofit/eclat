@@ -7,6 +7,7 @@ import { StoreRegion } from "@medusajs/types"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import CartButton from "@modules/layout/components/cart-button"
 import SideMenu from "@modules/layout/components/side-menu"
+import SearchBar from "@modules/layout/components/search-bar"
 
 export default async function Nav() {
   const [regions, locales, currentLocale] = await Promise.all([
@@ -52,14 +53,19 @@ export default async function Nav() {
                 Conta
               </LocalizedClientLink>
             </div>
+            <SearchBar />
             <Suspense
               fallback={
                 <LocalizedClientLink
-                  className="hover:text-eclat-dourado transition-colors flex gap-2"
+                  className="hover:text-eclat-dourado transition-colors flex items-center"
                   href="/cart"
                   data-testid="nav-cart-link"
+                  aria-label="Sacola"
                 >
-                  Sacola (0)
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
+                    <path d="M6 8h12l-1 12H7L6 8z" />
+                    <path d="M9 8V6a3 3 0 0 1 6 0v2" />
+                  </svg>
                 </LocalizedClientLink>
               }
             >

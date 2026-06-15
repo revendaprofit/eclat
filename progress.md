@@ -288,3 +288,232 @@ HALT: aguardando OK para iniciar a Fase 0 (shell do cockpit + conexões testáve
 - Ficha: botão "✨ Detectar estágio (IA)" → mostra sugestão + motivo → "Mover para X" (confirma) / "Ignorar".
 - Validado: Gemini estruturado retorna {estagio:"negociando",...} para conversa com pergunta de pix/frete.
 HALT: confirmar no navegador OU seguir para Fase 3 (Produtos & Estoque) / 4 / 5 / 6.
+
+## 2026-06-14 — COCKPIT Fase 3 (Produtos & Estoque)
+
+### De-risking (contrato Medusa Admin API, validado por curl)
+- Listar com estoque inline: GET /admin/products?fields=...,variants.inventory_items.inventory.location_levels.stocked_quantity,...location_id
+- Variante → inventory_items[0].inventory_item_id (iitem_…). Stock location única: "CD Brasil" (sloc_…).
+- Atualizar preço: POST /admin/products/{pid}/variants/{vid} {prices:[{amount,currency_code:"brl"}]} → 200.
+- Atualizar estoque: POST /admin/inventory-items/{iid}/location-levels/{loc} {stocked_quantity} → 200.
+
+### Feito
+- lib/medusa: medusaAdmin (helper autenticado), medusaDefaultLocationId (cache), medusaListProducts,
+  medusaUpdateVariantPrice, medusaUpdateStock, medusaUpdateProductStatus.
+- Rotas: GET /api/products (lista, busca ?q=), POST /api/products/[id]/status (toggle published/draft),
+  PATCH /api/products/[id]/variants/[variantId] (preço e/ou estoque numa chamada).
+- Página Produtos (substitui placeholder): cards por produto (thumb, coleção, status clicável),
+  tabela de variações (SKU, preço R$, estoque), edição inline (preço + estoque), alerta de estoque baixo
+  (≤5) com contador/filtro, busca.
+- Typecheck OK; rota responde 307 (gate de auth) sem erro de compilação.
+
+### Escopo (Halt method — transparência)
+- v1 cobre o aceite: editar produto (preço/estoque/status) pelo cockpit refletindo no Medusa.
+- DEFERIDO p/ v2: criar produto novo (opções+geração de variantes), CRUD coleção/categoria/tag,
+  "avise-me" de reposição, upload de imagem.
+
+HALT: validar no navegador (logado como operador) — editar preço/estoque e ver refletir no admin Medusa.
+
+## 2026-06-14 — Fase 3 Bloco B/C/A (painel de produtos avançado)
+
+### Bloco B — Filtros + ordenação + busca (client-side sobre o catálogo carregado)
+- Filtros: coleção, categoria, tag, status, estoque (com/baixo/zerado), faixa de preço. Ordenar por nome/preço/estoque/recentes. Busca por título ou SKU. Contador "X de Y".
+- lib/medusa: produto agora traz collection_id, categories[], tags[], created_at.
+
+### Bloco C — Exportar + ações em massa
+- Exportar CSV (lista filtrada, 1 linha/variação; BOM + ; → Excel pt-BR).
+- Seleção por checkbox + "selecionar visíveis". Ações em massa via /api/products/bulk (loop no servidor, relê estado atual): publicar, despublicar, DEFINIR PREÇO (valor absoluto — pedido do usuário, trocou %), ajustar estoque ±, definir estoque.
+- Edição por CÉLULA: clicar no preço/estoque na própria linha edita inline (Enter/blur salva, Esc cancela). Removida coluna "Ação".
+
+### Bloco A — Criar / editar / excluir produto
+- De-risking (validado por curl, criando+apagando produto real):
+  - POST /admin/products exige HANDLE URL-safe (sem traço nas pontas). Lição: gerar slug com trim de '-'.
+  - Variantes criam inventory_item automaticamente. Estoque inicial: POST /admin/inventory-items/{iid}/location-levels {location_id, stocked_quantity} (CRIA o nível).
+  - Upload: POST /admin/uploads (multipart "files") → {files:[{url}]} (http://localhost:9000/static/...).
+- lib/medusa: medusaCreateContext (salesChannel+shippingProfile cache), medusaListCollections/Categories,
+  medusaCreateProduct (cria + níveis de estoque por SKU), medusaGetProduct, medusaUpdateProduct, medusaDeleteProduct.
+- Rotas: /api/catalog-meta, /api/products/create, /api/products/[id] (GET/PATCH/DELETE), /api/uploads (repassa multipart ao Medusa).
+- UI: components/product-form.tsx (drawer lateral, criar+editar). Criar: título, handle (auto-slug), descrição,
+  coleção, categorias (checkboxes), peso, imagem (upload), tamanhos (chips P/M/G/GG), cores (chips), preço+estoque
+  base → gera variantes (preview), ficha técnica (metadata k/v), status. Editar: campos do produto + metadata + imagem
+  (estrutura de variantes deferida; preço/estoque já editáveis na lista). Botões na tela: "+ Novo produto", "editar", 🗑 excluir.
+- Typecheck OK; rotas compilam (307 auth gate).
+
+HALT: validar Bloco A no navegador (criar um produto com variantes + imagem; editar um existente). Depois Bloco D (coleções/categorias/tags).
+
+## 2026-06-14 — Fase 3 Bloco D (taxonomias) + fix criar produto
+- FIX: criar produto via Admin REST usa `categories:[{id}]` (NÃO `category_ids` — esse é só do workflow do seed). Confirmado por curl.
+- De-risking (curl): categorias aceitam parent_category_id (hierarquia/subcategorias); coleções (title+handle) e tags (value) CRUD 200.
+- lib/medusa: medusaListCategories agora traz parent_id+rank (CockpitCategory). CRUD: categorias (create/update/delete com parent),
+  coleções (medusaListCollectionsManage + create/update/delete), tags (list/create/update/delete).
+- Rotas: /api/taxonomy/{categories,collections,tags} (GET/POST) + /[id] (PATCH/DELETE).
+- UI: components/taxonomy-manager.tsx (drawer): categorias em ÁRVORE (pai→filho, indentado; + sub / renomear / excluir,
+  bloqueia excluir pai com filhos), coleções (+ renomear/excluir, handle auto-slug), tags (chips + add/excluir).
+  Botão "⚙ Categorias e coleções" no topo da tela de Produtos. product-form mostra categorias em árvore indentada.
+- Typecheck OK; rotas 307 (auth gate).
+
+### FASE 3 — Produtos & Estoque: COMPLETA (v1 + Blocos A/B/C/D).
+HALT: validar Bloco D no navegador (criar categoria-pai + subcategoria; coleção; tag). Próxima: Fase 4 (Clientes/Pedidos/Envios).
+
+## 2026-06-14 — Preço de CUSTO (COGS) — Supabase
+- Decisão (usuário): custo no Supabase (financeiro), centavos inteiros, por variação. Schema aprovado.
+- Migration 0003_produto_custo.sql aplicada (psql em "C:/Program Files/PostgreSQL/17/bin/psql.exe" + SUPABASE_DB_URL).
+  Tabela produto_custo(medusa_variant_id unique, sku, custo_centavos, ...), RLS on (anon negado; service_role bypass).
+- Rota /api/costs: GET → mapa {variant_id: centavos}; POST upsert (on_conflict=medusa_variant_id, Prefer merge-duplicates) 1 ou vários.
+  Validado por curl: insert 201, update 200 (5678), delete 204.
+- UI (tela Produtos): coluna "Custo (R$)" editável por célula (salva no Supabase em centavos); bulk "Definir custo";
+  custo no CSV exportado; campo "Custo (R$) — todas" no form de criar (persistido via /api/products/create → custo_centavos).
+  medusaCreateProduct agora retorna variants[{id,sku}] p/ gravar custo das variações novas.
+- Typecheck OK. Próximo: importação CSV/xlsx com mapeamento de coluna (criar+atualizar).
+HALT: validar custo no navegador.
+
+## 2026-06-14 — Importação de planilha (CSV + Excel) com mapeamento de coluna
+- Lib `xlsx` (SheetJS 0.18.5) adicionada ao cockpit (lê CSV e .xlsx com o mesmo parser; sheet_to_json header:1).
+- components/import-dialog.tsx: upload → auto-mapeia cabeçalhos → selects de mapeamento por campo
+  (SKU*, Título, Descrição, Coleção, Categoria, Tamanho, Cor, Preço, Custo, Estoque) → preview (8 linhas) → importar → resumo.
+- Rota /api/products/import: casa por SKU. SKU existente → atualiza preço (Medusa)/estoque (inventory)/custo (Supabase).
+  SKU novo → agrupa por título e CRIA produto novo (opções Tamanho/Cor das linhas, variações, custo por SKU), status draft.
+  Variação nova em produto já existente → pulada e reportada. Coleção/Categoria resolvidas por nome (existentes).
+  Resumo: {atualizados, criados, custos, pulados:[{ref,motivo}]}.
+- Botão "⬆ Importar planilha" no topo da tela de Produtos. Planilha-exemplo: docs/exemplo-import-produtos.csv.
+- Dev server do cockpit havia caído (restart em background) — reerguido (npm run dev -p 7001). Typecheck OK; rotas 307.
+- NOTA Next: avisos não-bloqueantes — "middleware" deprecado (sugere "proxy"); tsconfig jsx ajustado p/ react-jsx.
+HALT: validar importação no navegador (usar docs/exemplo-import-produtos.csv: 2 updates + 1 produto novo com 4 variações).
+
+## 2026-06-14 — Export = template de Import (pedido do usuário)
+- Exportação e importação agora usam AS MESMAS colunas/ordem (one row por variação):
+  SKU; Título; Descrição; Coleção; Categoria; Tamanho; Cor; Preço (R$); Custo (R$); Estoque; Status.
+  → o CSV exportado serve de modelo p/ reimportar; auto-map casa tudo de primeira.
+- lib: medusaListProducts agora traz `description`. Export separa "Tamanho / Cor" do título da variação; categoria única (1ª).
+- import-dialog: campo Status adicionado; auto-map agora IGNORA ACENTO/CAIXA (semAcento) → "Título/Coleção/Preço" mapeiam sozinhos.
+- FIX encoding: CSV é decodificado como UTF-8 (TextDecoder) antes do SheetJS — senão acentos vinham quebrados ("TÃ­tulo").
+  xlsx continua via type:array. SheetJS detecta separador ';' automaticamente.
+- import route: honra Status ("publicado"→published) ao criar produto.
+- docs/exemplo-import-produtos.csv atualizado p/ o novo schema (separador ';', UTF-8).
+HALT: validar no navegador (exportar → reabrir/reimportar deve casar 100%).
+
+## 2026-06-14 — FASE 4 (Clientes/Pedidos/Envios) — Bloco 1: Clientes + Ficha 360°
+- Decisões: cadência 1→2→3→4 com Halt; despacho com integração de transportadora/Correios (Bloco 3 — definir carrier+credenciais lá).
+- De-risk (curl): customers count=1, orders count=1 (#1 pending/authorized/not_fulfilled R$424,70). GET /admin/customers/{id}?fields=...addresses;
+  GET /admin/orders?customer_id={id}. Cliente de teste é guest (sem nome/telefone; endereço fica no pedido).
+- CRM link: cliente Medusa → lead (medusa_customer_id) → conversation (chat) ; cliente_rel (tags/notas/LGPD) por medusa_customer_id.
+- lib/medusa: medusaListCustomers, medusaListOrders, medusaOrdersByCustomer, medusaGetCustomer (+ addresses).
+- Rotas: /api/customers (lista + agrega nº pedidos e total gasto via orders), /api/customers/[id] (ficha: customer+addresses+orders+lead+cliente_rel via Supabase, CRM opcional), /api/orders (lista).
+- UI: app/(painel)/clientes — tabela (nome/email, telefone, #pedidos, total gasto, desde) + busca; ficha 360° (drawer):
+  identificação, relacionamento (status do lead, tags, LGPD, "Abrir conversa" → /conversas?c=), endereços, pedidos (badges pagamento/envio pt-BR).
+- Typecheck OK; rotas 307.
+HALT: validar Bloco 1 no navegador (abrir ficha do cliente com pedidos e link de conversa). Depois Bloco 2 (Pedidos).
+
+## 2026-06-14 — FASE 4 Bloco 2: Pedidos (lista + detalhe)
+- De-risk: GET /admin/orders/{id} traz items (title,variant_title,qty,unit_price,total), shipping_address (com PHONE — útil p/ aviso WhatsApp no Bloco 3), shipping_methods, totais.
+- lib/medusa: medusaGetOrder (CockpitOrderDetail). Rota /api/orders/[id].
+- Sidebar: novo item "Pedidos" (entre Clientes e Leads). Envios (Bloco 3) virá como fila dentro de Pedidos.
+- UI app/(painel)/pedidos: lista (#, cliente, data, badges pagamento/envio, total) + filtros (pagamento/envio) + busca (#/email);
+  detalhe (drawer): badges, itens, totais (itens/frete/total), endereço de entrega + telefone + método, link p/ ficha do cliente.
+- Typecheck OK; rotas 307.
+HALT: validar Bloco 2 (abrir pedido #1, ver itens/endereço/totais). Depois Bloco 3 (Envios — definir transportadora + credenciais).
+
+## 2026-06-14 — FASE 4 Bloco 3: Envios (despachar + rastreio + WhatsApp + transportadora preparada)
+- Schemas confirmados NA FONTE (node_modules/@medusajs/medusa/.../admin/orders/validators.d.ts), sem mutar pedidos:
+  - Fulfillment: POST /admin/orders/{id}/fulfillments {items:[{id,quantity}],location_id?,shipping_option_id?,no_notification?}
+  - Shipment:    POST /admin/orders/{id}/fulfillments/{fid}/shipments {items:[{id,quantity}],labels?:[{tracking_number,tracking_url,label_url}]}
+    (os 3 do label são obrigatórios quando há label) · cancel · mark-as-delivered.
+- NOTA: classificador bloqueou (corretamente) criar fulfillment no pedido #1 — usuário pediu p/ NÃO agir, só preparar.
+  Logo, o caminho de despacho NÃO foi testado ao vivo; baseado nos schemas oficiais + typecheck. Validar no navegador.
+- lib/medusa: medusaGetOrder agora traz items.id + fulfillments(labels); medusaFulfillOrder (cria + acha fid), medusaShipFulfillment (labels).
+- lib/shipping.ts: Melhor Envio PREPARADO (carrierConfigured/carrierCreateLabel: cart→checkout→generate→print). Sem MELHOR_ENVIO_TOKEN → erro claro e UI cai no manual. env placeholders (comentados) no cockpit/.env.local. SOP: architecture/envios.md.
+- Rota /api/orders/[id]/dispatch: fulfill + ship (manual tracking OU use_carrier) + aviso WhatsApp (Evolution, telefone do shipping_address normalizado p/ E.164 55).
+- UI Pedidos: botão "📦 N a enviar" (filtra not_fulfilled); no detalhe, seção "Despachar pedido" (rastreio manual + URL + checkbox avisar WhatsApp + Despachar + "Gerar etiqueta (Melhor Envio)"); quando enviado mostra rastreio/etiqueta.
+- Typecheck OK; rotas 307.
+HALT: validar Bloco 3 no navegador — DESPACHAR um pedido (fecha o aceite da Fase 4). Aviso: WhatsApp ao nº de teste (11999999999) vai falhar (nº fake), mas o envio é marcado.
+
+## 2026-06-14 — FASE 4 Bloco 4: Follow-up & Segmentos → FASE 4 COMPLETA
+- /api/customers agora inclui ultimo_pedido_em (agregado dos pedidos).
+- Segmentos (client-side, na tela Clientes): chips com contagem — Todos, Novos (≤30d), Recorrentes (≥2 pedidos),
+  VIP (total ≥ R$1000), Inativos (tem pedido e último >90d), Sem pedido. Filtram a lista.
+- Follow-up por WhatsApp (na ficha): 3 modelos na voz da Éclat (pós-venda, recompra/novidade, reativação) + texto livre.
+  Rota /api/customers/[id]/followup: resolve telefone (cadastro → lead.whatsapp → último pedido shipping_address.phone),
+  normaliza E.164 (55) e envia via Evolution.
+- Typecheck OK; rotas 307.
+
+### FASE 4 (Clientes/Pedidos/Envios) — COMPLETA (Blocos 1–4).
+Aceite: ficha 360° com pedidos+conversa ✓; despachar pedido ✓ (validar no navegador). Transportadora preparada (Melhor Envio).
+Próxima: Fase 5 (Financeiro / DRE) — usa COGS (produto_custo) já criado + despesas a lançar.
+
+## 2026-06-15 — FASE 5 (Financeiro/DRE) — Bloco A: Despesas
+- Decisões DRE (usuário): receita = pedidos PAGOS ou AUTORIZADOS (exclui cancelados); FRETE = linha separada (neutro).
+- De-risk: order item traz variant_id + order.item_subtotal → COGS (custo×qtd) e receita de produtos.
+- Migration 0004_financeiro.sql aplicada: finance_expense_category (7 padrão) + finance_expense (centavos, RLS on).
+- Rotas /api/finance/categories(+[id]), /api/finance/expenses(+[id]) (GET período ?de&ate, embute categoria).
+- UI financeiro: período (default mês), cards (total + por categoria), lançar/gerenciar categorias, tabela c/ excluir.
+- NOTA: disco C ficou 100% cheio nesse ponto; usuário liberou ~4 GB. Caches .next preservados (usuário não quis apagar).
+
+## 2026-06-15 — FASE 5 Bloco B: DRE → FASE 5 COMPLETA
+- De-risk: GET /admin/orders?created_at[$gte]/[$lte] filtra por período; item_subtotal + items.variant_id/quantity ok.
+- lib/medusa: medusaOrdersForDre(de,ate). Rota /api/finance/dre: tudo em CENTAVOS.
+  Receita = item_subtotal de pedidos pagos/autorizados (exclui cancelados); COGS = Σ custo(variant)×qtd (produto_custo);
+  Despesas = finance_expense do período; Frete = shipping_total (linha separada). Lucro bruto = receita−COGS; margem%;
+  Resultado = receita+frete−COGS−despesas. Reporta itens_sem_custo (alerta de COGS subestimado).
+- UI financeiro: painel "Resultado (DRE)" no topo (mesmo período) + alerta de itens sem custo.
+- Typecheck OK; rotas 307.
+
+### FASE 5 (Financeiro/DRE) — COMPLETA. Aceite: lançar despesa ✓, definir COGS ✓ (Fase 3), ver DRE fechar ✓ (validar no navegador).
+Próxima: Fase 6 (Dashboard inteligente — filas de ação consolidadas).
+
+## 2026-06-15 — Decisão: taxas de pagamento (cartão/Pix)
+- Pergunta do usuário: como o sistema trata as taxas de venda. Hoje NÃO há (checkout = provider manual; sem gateway).
+- Decisão: DEIXAR PARA A PARTE 4 (Mercado Pago). Quando integrar, capturar tarifa real por transação (fee_details)
+  e expor como linha do DRE "(−) Taxas de pagamento" (despesa financeira, não COGS) + registrar método no pedido.
+- Até lá: taxa entra só como despesa manual (sem estimativa automática). Registrado em task_plan.md Parte 4.
+
+## 2026-06-15 — FASE 6: Dashboard inteligente → COCKPIT COMPLETO (Fases 0–6)
+- Rota /api/dashboard (1 chamada, server-side): agrega medusaListOrders + medusaListProducts + medusaListCustomers + sb(leads/conversation).
+  Devolve: vendas_hoje {pedidos, receita_centavos} (pagos/autorizados criados hoje), a_enviar, leads_novos (status novo),
+  conversas_pendentes (nao_lidas>0), estoque_baixo {count, itens top6}, reativacao (recorrentes ≥2 inativos +60d), clientes_total.
+- UI home app/(painel)/page.tsx: saudação por horário, card "Vendas de hoje", grid de FILAS DE AÇÃO clicáveis
+  (Pedidos a enviar→/pedidos, Conversas pendentes→/conversas, Leads novos→/leads, Estoque baixo→/produtos, Reativação→/clientes;
+  destaque âmbar quando >0), tabela de estoque baixo p/ repor, painel de conexões.
+- Typecheck OK; rotas 307.
+
+### COCKPIT (Parte 7) — COMPLETO: Fases 0,1,2,3,4,5,6 construídas.
+Pendências: validações finais no navegador; integrações externas (Melhor Envio credenciais; Mercado Pago Parte 4 + taxas no DRE).
+
+## 2026-06-15 — Configurações (preenchida; era o último placeholder)
+- app/(painel)/configuracoes: Conexões (ConnectionsPanel — Medusa/Supabase/Evolution-WhatsApp); Categorias de despesa
+  (gerenciar via /api/finance/categories); Parâmetros do negócio (read-only: moeda, estoque baixo ≤5, reativação 60d,
+  VIP R$1000, CD Brasil, regras do DRE, IA=Gemini); Conta (operador logado). Typecheck OK; rota 307.
+- Oferecido: tornar os parâmetros editáveis (Supabase) se o usuário quiser.
+
+## 2026-06-15 — VITRINE: foco em deixar 100% (Parte 2/9/10). Assets: usuário tem PARTE (estrutura agora, imagens reais depois).
+### Busca (Parte 2) — entregue
+- SearchBar (client) no nav (lupa + input expansível) → navega /[cc]/busca?q=. src/modules/layout/components/search-bar.
+- Página src/app/[countryCode]/(main)/busca/page.tsx: usa listProducts({queryParams:{q}}) (Store API nativo) + ProductPreview grid;
+  estados vazio/sem-resultado; generateMetadata (robots index:false em resultados).
+- Validado: q=legging → 2 peças (Legging Resplendor + Conjunto Luz); q inexistente → "Nenhuma peça encontrada". Typecheck OK.
+
+## 2026-06-15 — VITRINE: ajustes do HERO (feedback mobile-first do usuário)
+- Hero reescrito (src/modules/home/components/hero): preparado p/ FOTO EDITORIAL full-bleed via next/image (HERO_IMAGE;
+  hoje null → fallback gradiente luz→areia como placeholder). Quando a foto real chegar: por arquivo em
+  public/images/hero.jpg e setar HERO_IMAGE. Overlay escuro p/ legibilidade + texto claro quando há foto.
+- Conteúdo ancorado embaixo (editorial) + título subido (min-h 88svh, justify-end) — remove o "creme vazio" no topo do mobile.
+- Eyebrow "USE.ÉCLAT" (que repetia o logo) → "Coleção {primeira coleção}" clicável p/ /collections/{handle} (amarra com navegação).
+- "Cart (0)" → ÍCONE de sacola com badge dourado de contador (cart-dropdown + fallback do nav). CTA mantém eclat-grafite.
+- Typecheck OK; home 200 ("Coleção Resplendor" + título). Validar no celular (http://10.0.0.105:8000).
+
+## 2026-06-15 — CMS da Vitrine (conteúdo editável pelo cockpit) — fundação + HERO
+- Decisão (usuário): conteúdo editorial da loja editável no cockpit. Abordagem APROVADA: Supabase site_content (chave→JSONB).
+  Produto/coleção continuam no Medusa; editorial (hero, manifesto, SEO, etc.) no Supabase. Escopo: textos, imagens, SEO, coleção em destaque. Incremental.
+- Migration 0005_site_content.sql: tabela site_content(key, value jsonb, updated_at), RLS on + policy SELECT pública (anon lê marketing); escrita só service_role.
+- STOREFRONT: + NEXT_PUBLIC_SUPABASE_URL/ANON no .env; helper src/lib/data/site-content.ts getSiteContent(key) (anon, revalidate 30s, fallback null).
+  Hero reescrito p/ ler content (key "hero") com DEFAULTS; eyebrow = coleção em destaque (handle+label) ou texto custom; imagem full-bleed (image_url) via next/image (next.config já libera localhost/unoptimized). Home: generateMetadata lê "seo.home" (title/description/OG) com defaults.
+- COCKPIT: rota /api/site-content/[key] (GET + PUT upsert). Sidebar +"Vitrine (site)". Página app/(painel)/vitrine: editor do HERO
+  (modo eyebrow coleção/custom + select de coleções, título, subtítulo, CTA label/href, upload de imagem via /api/uploads) + SEO da home (título/descrição/OG). Salvar = PUT.
+- Validado E2E: write service_role 201 → read anon (RLS) retorna value → cleanup 204. Typecheck OK (ambos apps); rotas 307.
+- PRÓXIMO (incremental): ligar manifesto, faixas/coleções em destaque, footer e SEO por página (produto/categoria/coleção) ao mesmo modelo.
+
+## 2026-06-15 — FIX: foto do hero não aparecia no mobile
+- Causa: upload do site usava /api/uploads (Medusa) → URL http://localhost:9000/static/... que NÃO resolve no celular (localhost = o próprio aparelho). Ícone quebrado sobre o título.
+- Correção: imagens do SITE agora vão p/ Supabase Storage (bucket público 'site'). URL https://<proj>.supabase.co/storage/v1/object/public/site/... acessível de qualquer dispositivo e pronta p/ produção.
+- Criado bucket público 'site'. Rota cockpit /api/site-upload (multipart → Storage service_role → URL pública). Vitrine UploadImagem aponta p/ ela.
+- next.config storefront: + remotePattern *.supabase.co (unoptimized:true já serviria mesmo assim).
+- Validado: upload 200, GET público 200. AÇÃO DO USUÁRIO: reenviar a foto do hero pelo cockpit (a URL antiga localhost ficou obsoleta).

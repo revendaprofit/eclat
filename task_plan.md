@@ -58,6 +58,10 @@ Modelagem do catálogo da Éclat no Medusa.
 - [ ] Integração via SDK oficial (cartão + Pix). Nunca processar cartão na mão
 - [ ] Webhooks de status de pagamento
 - [ ] Ambiente de sandbox e testes
+- [ ] **Taxas de pagamento → DRE** (decidido 2026-06-15): capturar a tarifa REAL por transação (MP `fee_details`)
+      e expor como linha própria do DRE "(−) Taxas de pagamento" (e/ou lançar despesa por pedido). É despesa
+      financeira, NÃO é COGS. Também passar a registrar o MÉTODO (cartão/Pix/boleto) no pedido p/ relatórios.
+      Até o MP entrar, taxa é só despesa manual (sem estimativa automática — escolha do usuário).
 **Aceite:** pagamento sandbox aprovado reflete no pedido Medusa.
 **Retomar quando:** o usuário fornecer o Access Token do Mercado Pago.
 
@@ -107,11 +111,35 @@ Modelagem do catálogo da Éclat no Medusa.
       vincula medusa_customer_id + cliente_rel. Rotas /api/leads (+/[id], /[id]/convert), lib/medusa.
       + IA detecta estágio (modo sugestão): /api/leads/[id]/classify (Gemini, saída JSON estruturada) →
         botão "✨ Detectar estágio" na ficha sugere estágio+motivo; operador confirma "Mover para X".
-- [ ] **Fase 3 — Produtos & Estoque**: CRUD via Medusa Admin API + alertas de estoque.
-- [ ] **Fase 4 — Clientes / Pedidos / Envios**: ficha 360°, fila de envio, follow-up, segmentos.
-- [ ] **Fase 5 — Financeiro (P&L)**: receita Medusa + despesas/COGS Supabase → DRE.
-- [ ] **Fase 6 — Dashboard inteligente**: filas de ação consolidadas.
-**Aceite global:** cockpit opera leads/clientes/compras/financeiro/chat via APIs donas, fase a fase.
+- [x] **Fase 3 — Produtos & Estoque**: COMPLETA. Painel avançado via Medusa Admin API (Medusa = fonte da verdade).
+      - v1: lista com variações (SKU/preço BRL/estoque); EDIÇÃO POR CÉLULA (clica no preço/estoque e edita inline);
+        alternar status; alerta de estoque baixo (≤5).
+      - Bloco B: filtros (coleção/categoria/tag/status/estoque/faixa de preço) + ordenação + busca; contador.
+      - Bloco C: exportar CSV (Excel pt-BR) da lista filtrada; ações em massa (publicar/despublicar, definir preço,
+        ajustar/definir estoque) via /api/products/bulk.
+      - Bloco A: criar produto (opções tamanho/cor → variantes, estoque inicial, imagem upload, ficha técnica),
+        editar campos do produto, excluir. Lição: handle URL-safe; criar usa `categories:[{id}]`.
+      - Bloco D: CRUD de categorias (com SUBCATEGORIAS/hierarquia em árvore), coleções e tags
+        (components/taxonomy-manager.tsx, rotas /api/taxonomy/*).
+      DEFERIDO: editar estrutura de variantes de produto existente (add/remover tamanho/cor); "avise-me" de reposição.
+      - [ ] Validação final no navegador dos Blocos A/D (criar produto, criar subcategoria/coleção/tag).
+- [x] **Fase 4 — Clientes / Pedidos / Envios**: COMPLETA (Blocos 1–4).
+      - B1 Clientes + Ficha 360° (pedidos + conversa/CRM + endereços).
+      - B2 Pedidos (lista + filtros + detalhe com itens/totais/entrega).
+      - B3 Envios: fila "a enviar" + Despachar (fulfillment+shipment+rastreio) + aviso WhatsApp; transportadora
+        Melhor Envio PREPARADA (lib/shipping.ts, env placeholders, SOP architecture/envios.md) — manual funciona já.
+      - B4 Segmentos (novos/recorrentes/VIP/inativos/sem pedido) + follow-up WhatsApp (modelos na voz da Éclat).
+      Rotas: /api/customers(+[id], [id]/followup), /api/orders(+[id], [id]/dispatch). Schemas de fulfillment/shipment
+      confirmados na fonte do Medusa. DEFERIDO: validar despacho ao vivo (no navegador); credenciais da transportadora.
+- [x] **Fase 5 — Financeiro (P&L)**: COMPLETA. Despesas (finance_expense + categorias, migration 0004, RLS) com CRUD;
+      DRE do período (/api/finance/dre, em centavos): Receita (pedidos pagos/autorizados) + Frete (linha separada)
+      − COGS (produto_custo × itens vendidos) − Despesas = Resultado; margem bruta + alerta de itens sem custo.
+      Tela Financeiro: período, painel DRE, lançar/gerenciar despesas e categorias. Regras aprovadas pelo usuário.
+- [x] **Fase 6 — Dashboard inteligente**: COMPLETA. Home consolida (1 chamada /api/dashboard): vendas de hoje
+      (faturamento pagos/autorizados), e filas de ação clicáveis → pedidos a enviar, conversas pendentes, leads novos,
+      estoque baixo (com lista p/ repor), reativação (recorrentes inativos +60d). Saudação por horário + conexões.
+**Aceite global:** ✅ cockpit opera leads/clientes/compras/financeiro/chat via APIs donas — TODAS as fases (0–6) construídas.
+**COCKPIT (Parte 7) — COMPLETO** (validações finais no navegador pendentes do usuário; transportadora real + Mercado Pago são integrações externas futuras).
 
 ## Parte 8 — Ciclo do consumível / Recompra  [ ]
 - [ ] Modelagem do ciclo de recompra/recorrência

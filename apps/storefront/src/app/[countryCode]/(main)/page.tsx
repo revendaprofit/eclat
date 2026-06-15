@@ -1,16 +1,30 @@
 import { Metadata } from "next"
 
 import FeaturedProducts from "@modules/home/components/featured-products"
-import Hero from "@modules/home/components/hero"
+import Hero, { HeroContent } from "@modules/home/components/hero"
 import { listCollections } from "@lib/data/collections"
 import { listCategories } from "@lib/data/categories"
 import { getRegion } from "@lib/data/regions"
+import { getSiteContent } from "@lib/data/site-content"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 
-export const metadata: Metadata = {
-  title: "use.ÉCLAT — athleisure da mulher inteira",
-  description:
-    "Moda fitness premium e independente. Leggings, tops e conjuntos que sustentam, valorizam e resplandecem.",
+export async function generateMetadata(): Promise<Metadata> {
+  const seo = await getSiteContent<{ title?: string; description?: string; og_image_url?: string }>(
+    "seo.home"
+  )
+  const title = seo?.title || "use.ÉCLAT — athleisure da mulher inteira"
+  const description =
+    seo?.description ||
+    "Moda fitness premium e independente. Leggings, tops e conjuntos que sustentam, valorizam e resplandecem."
+  return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      images: seo?.og_image_url ? [{ url: seo.og_image_url }] : undefined,
+    },
+  }
 }
 
 export default async function Home(props: {
@@ -28,13 +42,21 @@ export default async function Home(props: {
 
   const categories = await listCategories()
 
+  const heroContent = await getSiteContent<HeroContent>("hero")
+
   if (!collections || !region) {
     return null
   }
 
   return (
     <>
-      <Hero />
+      <Hero
+        content={heroContent}
+        fallbackCollection={{
+          title: collections[0]?.title,
+          handle: collections[0]?.handle,
+        }}
+      />
 
       {/* Manifesto da marca */}
       <section className="content-container py-20 text-center">

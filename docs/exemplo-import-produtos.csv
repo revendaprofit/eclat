@@ -1,0 +1,7 @@
+SKU;Título;Descrição;Coleção;Categoria;Tamanho;Cor;Preço (R$);Custo (R$);Estoque;Status
+ECL-LEG-RESPLENDOR-PRT-P;Legging Resplendor;;Resplendor;Leggings;P;Preto;209,90;72,50;120;publicado
+ECL-LEG-RESPLENDOR-PRT-M;Legging Resplendor;;Resplendor;Leggings;M;Preto;209,90;72,50;120;publicado
+ECL-NOVO-TESTE-P-PRT;Regata Aurora Teste;Regata leve de teste via importacao;Resplendor;Tops & Sutiãs;P;Preto;99,90;38,00;40;rascunho
+ECL-NOVO-TESTE-M-PRT;Regata Aurora Teste;Regata leve de teste via importacao;Resplendor;Tops & Sutiãs;M;Preto;99,90;38,00;40;rascunho
+ECL-NOVO-TESTE-P-ARE;Regata Aurora Teste;Regata leve de teste via importacao;Resplendor;Tops & Sutiãs;P;Areia;99,90;38,00;25;rascunho
+ECL-NOVO-TESTE-M-ARE;Regata Aurora Teste;Regata leve de teste via importacao;Resplendor;Tops & Sutiãs;M;Areia;99,90;38,00;25;rascunho
