@@ -47,7 +47,7 @@ export default function Newsletter({
         )}
 
         {state === "done" ? (
-          <p className="mt-2 text-eclat-dourado text-lg">
+          <p className="mt-2 text-eclat-terracota text-lg">
             Pronto! Você faz parte da Éclat. ✨
           </p>
         ) : (
@@ -62,12 +62,12 @@ export default function Newsletter({
               onChange={(e) => setEmail(e.target.value)}
               placeholder="seu@email.com"
               aria-label="Seu e-mail"
-              className="flex-1 bg-transparent border border-eclat-luz/40 px-4 py-3 text-eclat-luz placeholder:text-eclat-luz/40 focus:outline-none focus:border-eclat-dourado"
+              className="flex-1 bg-transparent border border-eclat-luz/40 px-4 py-3 text-eclat-luz placeholder:text-eclat-luz/40 focus:outline-none focus:border-eclat-terracota"
             />
             <button
               type="submit"
               disabled={state === "loading"}
-              className="bg-eclat-dourado text-eclat-grafite uppercase tracking-widest text-xs px-7 py-3 hover:bg-eclat-luz transition-colors disabled:opacity-60"
+              className="bg-eclat-terracota text-eclat-luz uppercase tracking-widest text-xs px-7 py-3 hover:bg-eclat-terracota-claro transition-colors disabled:opacity-60"
             >
               {state === "loading" ? "Enviando…" : c.button_label}
             </button>

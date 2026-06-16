@@ -39,7 +39,7 @@ export default async function BuscaPage(props: Props) {
   return (
     <div className="content-container py-10">
       <div className="mb-8">
-        <p className="uppercase tracking-[0.25em] text-[11px] text-eclat-dourado">Busca</p>
+        <p className="uppercase tracking-[0.25em] text-[11px] text-eclat-terracota">Busca</p>
         <h1 className="font-serif text-3xl text-eclat-grafite mt-1">
           {termo ? <>Resultados para “{termo}”</> : "O que você procura?"}
         </h1>
@@ -57,7 +57,7 @@ export default async function BuscaPage(props: Props) {
       ) : produtos.length === 0 ? (
         <div className="text-sm text-eclat-grafite/70">
           <p>Não encontramos peças para “{termo}”.</p>
-          <LocalizedClientLink href="/store" className="text-eclat-dourado underline mt-2 inline-block">
+          <LocalizedClientLink href="/store" className="text-eclat-terracota underline mt-2 inline-block">
             Ver toda a loja
           </LocalizedClientLink>
         </div>

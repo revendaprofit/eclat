@@ -48,7 +48,7 @@ export default function FeaturedLines({
                   {item.caption}
                 </p>
               )}
-              <span className="mt-3 inline-block uppercase tracking-widest text-xs border-b border-eclat-dourado pb-0.5 group-hover:text-eclat-dourado transition-colors">
+              <span className="mt-3 inline-block uppercase tracking-widest text-xs border-b border-eclat-terracota pb-0.5 group-hover:text-eclat-terracota transition-colors">
                 Explorar →
               </span>
             </div>

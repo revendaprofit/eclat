@@ -42,7 +42,7 @@ export default function EditorialBanner({
           }`}
         >
           {c.eyebrow && (
-            <span className="uppercase tracking-widest text-xs text-eclat-dourado">
+            <span className="uppercase tracking-widest text-xs text-eclat-terracota">
               {c.eyebrow}
             </span>
           )}
@@ -59,7 +59,7 @@ export default function EditorialBanner({
           {c.cta_label && c.cta_href && (
             <LocalizedClientLink
               href={c.cta_href}
-              className="self-start mt-2 bg-eclat-grafite text-eclat-luz uppercase tracking-widest text-xs px-7 py-4 hover:bg-eclat-dourado hover:text-eclat-grafite transition-colors"
+              className="self-start mt-2 bg-eclat-terracota text-eclat-luz uppercase tracking-widest text-xs px-7 py-4 hover:bg-eclat-terracota-escuro transition-colors"
             >
               {c.cta_label}
             </LocalizedClientLink>

@@ -18,7 +18,7 @@ export default async function MainMenu() {
     // fallback: sem hierarquia configurada, mostra só "Loja"
     return (
       <LocalizedClientLink
-        className="hover:text-eclat-dourado transition-colors"
+        className="hover:text-eclat-terracota transition-colors"
         href="/store"
         data-testid="nav-store-all-link"
       >
@@ -36,7 +36,7 @@ export default async function MainMenu() {
         >
           <LocalizedClientLink
             href={`/categories/${line.handle}`}
-            className="hover:text-eclat-dourado transition-colors uppercase tracking-wide"
+            className="hover:text-eclat-terracota transition-colors uppercase tracking-wide"
             data-testid={`nav-line-${line.handle}`}
           >
             {line.name}
@@ -49,7 +49,7 @@ export default async function MainMenu() {
                 <LocalizedClientLink
                   key={child.id}
                   href={`/categories/${child.handle}`}
-                  className="block px-5 py-2 text-eclat-grafite hover:text-eclat-dourado hover:bg-eclat-luz transition-colors whitespace-nowrap"
+                  className="block px-5 py-2 text-eclat-grafite hover:text-eclat-terracota hover:bg-eclat-luz transition-colors whitespace-nowrap"
                 >
                   {child.name}
                 </LocalizedClientLink>
@@ -57,7 +57,7 @@ export default async function MainMenu() {
               <div className="border-t border-ui-border-base mt-1 pt-1">
                 <LocalizedClientLink
                   href={`/categories/${line.handle}`}
-                  className="block px-5 py-2 text-eclat-dourado text-small-regular whitespace-nowrap"
+                  className="block px-5 py-2 text-eclat-terracota text-small-regular whitespace-nowrap"
                 >
                   Ver tudo de {line.name} →
                 </LocalizedClientLink>

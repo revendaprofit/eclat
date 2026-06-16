@@ -22,7 +22,7 @@ export default function Benefits({
         <ul className="grid grid-cols-2 small:grid-cols-4 gap-8 small:gap-6">
           {items.map((item, i) => (
             <li key={i} className="text-center small:text-left">
-              <h3 className="uppercase tracking-widest text-xs text-eclat-dourado mb-2">
+              <h3 className="uppercase tracking-widest text-xs text-eclat-terracota mb-2">
                 {item.title}
               </h3>
               {item.text && (

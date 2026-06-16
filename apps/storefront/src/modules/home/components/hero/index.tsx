@@ -50,7 +50,7 @@ const Hero = ({
   const ctaHref = c.cta_href || DEFAULTS.cta_href
 
   const eyebrowCls = `uppercase tracking-[0.3em] text-[11px] ${
-    hasImage ? "text-eclat-luz/90" : "text-eclat-dourado"
+    hasImage ? "text-eclat-luz/90" : "text-eclat-terracota"
   }`
 
   return (
@@ -88,7 +88,7 @@ const Hero = ({
 
           <LocalizedClientLink
             href={ctaHref}
-            className="inline-flex items-center justify-center px-8 py-3.5 bg-eclat-grafite text-eclat-luz uppercase tracking-widest text-xs hover:bg-eclat-dourado hover:text-eclat-grafite transition-colors duration-200 w-full small:w-auto"
+            className="inline-flex items-center justify-center px-8 py-3.5 bg-eclat-terracota text-eclat-luz uppercase tracking-widest text-xs hover:bg-eclat-terracota-escuro transition-colors duration-200 w-full small:w-auto"
           >
             {ctaLabel}
           </LocalizedClientLink>

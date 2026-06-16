@@ -37,7 +37,7 @@ export default async function Nav() {
           <div className="flex items-center h-full">
             <LocalizedClientLink
               href="/"
-              className="font-serif text-2xl leading-none tracking-wide text-eclat-grafite hover:text-eclat-dourado transition-colors"
+              className="font-serif text-2xl leading-none tracking-wide text-eclat-grafite hover:text-eclat-terracota transition-colors"
               data-testid="nav-store-link"
             >
               use.ÉCLAT
@@ -48,7 +48,7 @@ export default async function Nav() {
             <div className="hidden small:flex items-center gap-x-6 h-full">
               <MainMenu />
               <LocalizedClientLink
-                className="hover:text-eclat-dourado transition-colors"
+                className="hover:text-eclat-terracota transition-colors"
                 href="/account"
                 data-testid="nav-account-link"
               >
@@ -59,7 +59,7 @@ export default async function Nav() {
             <Suspense
               fallback={
                 <LocalizedClientLink
-                  className="hover:text-eclat-dourado transition-colors flex items-center"
+                  className="hover:text-eclat-terracota transition-colors flex items-center"
                   href="/cart"
                   data-testid="nav-cart-link"
                   aria-label="Sacola"

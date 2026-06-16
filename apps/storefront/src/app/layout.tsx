@@ -1,6 +1,6 @@
 import { getBaseURL } from "@lib/util/env"
 import { Metadata } from "next"
-import { Cormorant_Garamond, Inter } from "next/font/google"
+import { Playfair_Display, Inter } from "next/font/google"
 import "styles/globals.css"
 
 // Texto: sans limpa
@@ -10,8 +10,8 @@ const inter = Inter({
   display: "swap",
 })
 
-// Títulos: serif editorial (placeholder elegante da marca)
-const cormorant = Cormorant_Garamond({
+// Títulos: Playfair Display (fonte da marca — espírito do logo)
+const playfair = Playfair_Display({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
   variable: "--font-display",
@@ -33,7 +33,7 @@ export default function RootLayout(props: { children: React.ReactNode }) {
     <html
       lang="pt-BR"
       data-mode="light"
-      className={`${inter.variable} ${cormorant.variable}`}
+      className={`${inter.variable} ${playfair.variable}`}
     >
       <body className="bg-eclat-luz text-eclat-grafite antialiased font-sans">
         <main className="relative">{props.children}</main>

@@ -17,7 +17,7 @@ export default async function Footer() {
           <div>
             <LocalizedClientLink
               href="/"
-              className="font-serif text-2xl tracking-wide text-eclat-grafite hover:text-eclat-dourado transition-colors"
+              className="font-serif text-2xl tracking-wide text-eclat-grafite hover:text-eclat-terracota transition-colors"
             >
               use.ÉCLAT
             </LocalizedClientLink>
@@ -127,7 +127,7 @@ export default async function Footer() {
           <Text className="txt-compact-small">
             © {new Date().getFullYear()} use.ÉCLAT. Todos os direitos reservados.
           </Text>
-          <Text className="txt-compact-small uppercase tracking-widest text-eclat-dourado">
+          <Text className="txt-compact-small uppercase tracking-widest text-eclat-terracota">
             A luz da mulher inteira
           </Text>
         </div>

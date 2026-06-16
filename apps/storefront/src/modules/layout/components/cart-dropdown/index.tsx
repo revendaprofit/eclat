@@ -82,7 +82,7 @@ const CartDropdown = ({
       <Popover className="relative h-full">
         <PopoverButton className="h-full">
           <LocalizedClientLink
-            className="relative flex items-center hover:text-eclat-dourado transition-colors"
+            className="relative flex items-center hover:text-eclat-terracota transition-colors"
             href="/cart"
             data-testid="nav-cart-link"
             aria-label={`Sacola com ${totalItems} item(ns)`}
@@ -93,7 +93,7 @@ const CartDropdown = ({
               <path d="M9 8V6a3 3 0 0 1 6 0v2" />
             </svg>
             {totalItems > 0 && (
-              <span className="absolute -top-1.5 -right-2 min-w-[16px] h-4 px-1 rounded-full bg-eclat-dourado text-eclat-grafite text-[10px] font-medium flex items-center justify-center">
+              <span className="absolute -top-1.5 -right-2 min-w-[16px] h-4 px-1 rounded-full bg-eclat-terracota text-eclat-luz text-[10px] font-medium flex items-center justify-center">
                 {totalItems}
               </span>
             )}

@@ -33,15 +33,20 @@ module.exports = {
           80: "#1F2937",
           90: "#111827",
         },
-        // Paleta de marca use.ÉCLAT — "luz / resplendor"
-        // neutros sofisticados + dourado suave
+        // Paleta de marca use.ÉCLAT — terracota + blush (do logo)
         eclat: {
           luz: "#FAF8F3", // off-white quente (fundo)
           areia: "#EDE3D1", // areia clara (superfícies)
           pedra: "#C9BFAE", // neutro médio (bordas/detalhes)
           grafite: "#2B2A28", // quase-preto quente (texto)
-          dourado: "#C2A36B", // dourado suave (accent)
-          "dourado-claro": "#D9C49B", // dourado claro (hover/realce)
+          terracota: "#7A3B2C", // terracota da marca (accent/primária)
+          "terracota-claro": "#9C5238", // terracota claro (hover/realce)
+          "terracota-escuro": "#5E2C20", // terracota profundo (fundos escuros)
+          blush: "#E8C9B8", // blush/nude (apoio, fundo suave)
+          "blush-claro": "#F3DFD3", // blush claro (superfícies sutis)
+          // alias legado (compat): dourado -> terracota
+          dourado: "#7A3B2C",
+          "dourado-claro": "#9C5238",
         },
       },
       borderRadius: {

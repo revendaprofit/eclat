@@ -26,7 +26,7 @@ export default function SearchBar() {
         onChange={(e) => setQ(e.target.value)}
         placeholder="Buscar peças…"
         aria-label="Buscar produtos"
-        className={`bg-transparent border-b border-ui-border-base focus:border-eclat-dourado outline-none text-small-regular transition-all duration-200 ${
+        className={`bg-transparent border-b border-ui-border-base focus:border-eclat-terracota outline-none text-small-regular transition-all duration-200 ${
           aberta ? "w-40 small:w-48 px-1" : "w-0 px-0"
         } small:w-40 small:px-1`}
         onFocus={() => setAberta(true)}
@@ -36,7 +36,7 @@ export default function SearchBar() {
         type="submit"
         aria-label="Buscar"
         onClick={() => setAberta(true)}
-        className="hover:text-eclat-dourado transition-colors px-1"
+        className="hover:text-eclat-terracota transition-colors px-1"
       >
         {/* lupa */}
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
