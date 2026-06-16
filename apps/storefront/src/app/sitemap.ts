@@ -7,6 +7,11 @@ import { listCategories } from "@lib/data/categories"
 // sitemap.xml dinâmico: home, loja, produtos, coleções e categorias (região br).
 const CC = "br"
 
+// Codifica o handle por segmento para garantir XML válido e URL segura
+// mesmo quando o handle contém "&", acentos ou espaços.
+const enc = (handle: string) =>
+  handle.split("/").map(encodeURIComponent).join("/")
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const base = getBaseURL()
   const now = new Date()
@@ -23,7 +28,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     for (const p of response.products) {
       if (p.handle)
         urls.push({
-          url: `${base}/${CC}/products/${p.handle}`,
+          url: `${base}/${CC}/products/${enc(p.handle)}`,
           lastModified: p.updated_at ? new Date(p.updated_at) : now,
           changeFrequency: "weekly",
           priority: 0.8,
@@ -38,7 +43,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     for (const c of collections ?? []) {
       if (c.handle)
         urls.push({
-          url: `${base}/${CC}/collections/${c.handle}`,
+          url: `${base}/${CC}/collections/${enc(c.handle)}`,
           lastModified: now,
           changeFrequency: "weekly",
           priority: 0.7,
@@ -53,7 +58,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     for (const c of (cats ?? []) as { handle?: string }[]) {
       if (c.handle)
         urls.push({
-          url: `${base}/${CC}/categories/${c.handle}`,
+          url: `${base}/${CC}/categories/${enc(c.handle)}`,
           lastModified: now,
           changeFrequency: "weekly",
           priority: 0.6,
