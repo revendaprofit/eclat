@@ -32,11 +32,10 @@ export default async function Footer() {
                   className="grid grid-cols-1 gap-2"
                   data-testid="footer-categories"
                 >
-                  {productCategories?.slice(0, 6).map((c) => {
-                    if (c.parent_category) {
-                      return;
-                    }
-
+                  {productCategories
+                    ?.filter((c) => !c.parent_category)
+                    .slice(0, 6)
+                    .map((c) => {
                     const children =
                       c.category_children?.map((child) => ({
                         name: child.name,

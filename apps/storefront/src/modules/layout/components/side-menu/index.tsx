@@ -12,20 +12,14 @@ import LanguageSelect from "../language-select"
 import { Locale } from "@lib/data/locales"
 
 
-const SideMenuItems = {
-  "Início": "/",
-  "Loja": "/store",
-  "Conta": "/account",
-  "Sacola": "/cart",
-}
-
 type SideMenuProps = {
   regions: HttpTypes.StoreRegion[] | null
   locales: Locale[] | null
   currentLocale: string | null
+  lines?: HttpTypes.StoreProductCategory[]
 }
 
-const SideMenu = ({ regions, locales, currentLocale }: SideMenuProps) => {
+const SideMenu = ({ regions, locales, currentLocale, lines }: SideMenuProps) => {
   const countryToggleState = useToggleState()
   const languageToggleState = useToggleState()
 
@@ -72,21 +66,64 @@ const SideMenu = ({ regions, locales, currentLocale }: SideMenuProps) => {
                         <XMark />
                       </button>
                     </div>
-                    <ul className="flex flex-col gap-6 items-start justify-start">
-                      {Object.entries(SideMenuItems).map(([name, href]) => {
-                        return (
-                          <li key={name}>
-                            <LocalizedClientLink
-                              href={href}
-                              className="text-3xl leading-10 hover:text-ui-fg-disabled"
-                              onClick={close}
-                              data-testid={`${name.toLowerCase()}-link`}
-                            >
-                              {name}
-                            </LocalizedClientLink>
-                          </li>
-                        )
-                      })}
+                    <ul className="flex flex-col gap-6 items-start justify-start overflow-y-auto">
+                      <li>
+                        <LocalizedClientLink
+                          href="/"
+                          className="text-3xl leading-10 hover:text-ui-fg-disabled"
+                          onClick={close}
+                          data-testid="início-link"
+                        >
+                          Início
+                        </LocalizedClientLink>
+                      </li>
+
+                      {/* Linhas (Treino, Casual…) com subcategorias */}
+                      {lines?.map((line) => (
+                        <li key={line.id} className="w-full">
+                          <LocalizedClientLink
+                            href={`/categories/${line.handle}`}
+                            className="text-3xl leading-10 hover:text-ui-fg-disabled uppercase tracking-wide"
+                            onClick={close}
+                          >
+                            {line.name}
+                          </LocalizedClientLink>
+                          <ul className="flex flex-col gap-1 mt-2 ml-1">
+                            {line.category_children?.map((child) => (
+                              <li key={child.id}>
+                                <LocalizedClientLink
+                                  href={`/categories/${child.handle}`}
+                                  className="text-base leading-7 text-ui-fg-on-color/80 hover:text-ui-fg-on-color"
+                                  onClick={close}
+                                >
+                                  {child.name}
+                                </LocalizedClientLink>
+                              </li>
+                            ))}
+                          </ul>
+                        </li>
+                      ))}
+
+                      <li>
+                        <LocalizedClientLink
+                          href="/store"
+                          className="text-3xl leading-10 hover:text-ui-fg-disabled"
+                          onClick={close}
+                          data-testid="loja-link"
+                        >
+                          Toda a loja
+                        </LocalizedClientLink>
+                      </li>
+                      <li>
+                        <LocalizedClientLink
+                          href="/account"
+                          className="text-3xl leading-10 hover:text-ui-fg-disabled"
+                          onClick={close}
+                          data-testid="conta-link"
+                        >
+                          Conta
+                        </LocalizedClientLink>
+                      </li>
                     </ul>
                     <div className="flex flex-col gap-y-6">
                       {!!locales?.length && (

@@ -3,18 +3,26 @@ import { Suspense } from "react"
 import { listLocales } from "@lib/data/locales"
 import { getLocale } from "@lib/data/locale-actions"
 import { listRegions } from "@lib/data/regions"
-import { StoreRegion } from "@medusajs/types"
+import { listCategories } from "@lib/data/categories"
+import { StoreRegion, HttpTypes } from "@medusajs/types"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import CartButton from "@modules/layout/components/cart-button"
 import SideMenu from "@modules/layout/components/side-menu"
 import SearchBar from "@modules/layout/components/search-bar"
+import MainMenu from "@modules/layout/components/main-menu"
 
 export default async function Nav() {
-  const [regions, locales, currentLocale] = await Promise.all([
+  const [regions, locales, currentLocale, categories] = await Promise.all([
     listRegions().then((regions: StoreRegion[]) => regions),
     listLocales(),
     getLocale(),
+    listCategories().catch(() => [] as HttpTypes.StoreProductCategory[]),
   ])
+
+  // linhas de topo (Treino, Casual…) com subcategorias, para o menu mobile
+  const lines = (categories || []).filter(
+    (c) => !c.parent_category && (c.category_children?.length ?? 0) > 0
+  )
 
   return (
     <div className="sticky top-0 inset-x-0 z-50 group">
@@ -22,7 +30,7 @@ export default async function Nav() {
         <nav className="content-container txt-xsmall-plus text-ui-fg-subtle flex items-center justify-between w-full h-full text-small-regular">
           <div className="flex-1 basis-0 h-full flex items-center">
             <div className="h-full">
-              <SideMenu regions={regions} locales={locales} currentLocale={currentLocale} />
+              <SideMenu regions={regions} locales={locales} currentLocale={currentLocale} lines={lines} />
             </div>
           </div>
 
@@ -38,13 +46,7 @@ export default async function Nav() {
 
           <div className="flex items-center gap-x-6 h-full flex-1 basis-0 justify-end">
             <div className="hidden small:flex items-center gap-x-6 h-full">
-              <LocalizedClientLink
-                className="hover:text-eclat-dourado transition-colors"
-                href="/store"
-                data-testid="nav-store-all-link"
-              >
-                Loja
-              </LocalizedClientLink>
+              <MainMenu />
               <LocalizedClientLink
                 className="hover:text-eclat-dourado transition-colors"
                 href="/account"
