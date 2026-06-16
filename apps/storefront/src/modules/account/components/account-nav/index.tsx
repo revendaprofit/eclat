@@ -35,7 +35,7 @@ const AccountNav = ({
           >
             <>
               <ChevronDown className="transform rotate-90" />
-              <span>Account</span>
+              <span>Conta</span>
             </>
           </LocalizedClientLink>
         ) : (
@@ -54,7 +54,7 @@ const AccountNav = ({
                     <>
                       <div className="flex items-center gap-x-2">
                         <User size={20} />
-                        <span>Profile</span>
+                        <span>Perfil</span>
                       </div>
                       <ChevronDown className="transform -rotate-90" />
                     </>
@@ -69,7 +69,7 @@ const AccountNav = ({
                     <>
                       <div className="flex items-center gap-x-2">
                         <MapPin size={20} />
-                        <span>Addresses</span>
+                        <span>Endereços</span>
                       </div>
                       <ChevronDown className="transform -rotate-90" />
                     </>
@@ -83,7 +83,7 @@ const AccountNav = ({
                   >
                     <div className="flex items-center gap-x-2">
                       <Package size={20} />
-                      <span>Orders</span>
+                      <span>Pedidos</span>
                     </div>
                     <ChevronDown className="transform -rotate-90" />
                   </LocalizedClientLink>
@@ -97,7 +97,7 @@ const AccountNav = ({
                   >
                     <div className="flex items-center gap-x-2">
                       <ArrowRightOnRectangle />
-                      <span>Log out</span>
+                      <span>Sair</span>
                     </div>
                     <ChevronDown className="transform -rotate-90" />
                   </button>
@@ -110,7 +110,7 @@ const AccountNav = ({
       <div className="hidden small:block" data-testid="account-nav">
         <div>
           <div className="pb-4">
-            <h3 className="text-base-semi">Account</h3>
+            <h3 className="text-base-semi">Conta</h3>
           </div>
           <div className="text-base-regular">
             <ul className="flex mb-0 justify-start items-start flex-col gap-y-4">
