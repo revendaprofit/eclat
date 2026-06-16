@@ -517,3 +517,52 @@ Pendências: validações finais no navegador; integrações externas (Melhor En
 - Criado bucket público 'site'. Rota cockpit /api/site-upload (multipart → Storage service_role → URL pública). Vitrine UploadImagem aponta p/ ela.
 - next.config storefront: + remotePattern *.supabase.co (unoptimized:true já serviria mesmo assim).
 - Validado: upload 200, GET público 200. AÇÃO DO USUÁRIO: reenviar a foto do hero pelo cockpit (a URL antiga localhost ficou obsoleta).
+
+## 2026-06-15 — Deploy: preparação + push
+- Decisão: backend Medusa + Postgres no RAILWAY; storefront e cockpit no VERCEL (GitHub já conectado ao Vercel).
+- Artefatos: railway.json (raiz, monorepo-aware: build workspace backend; start cd .medusa/server + predeploy migrate + start; healthcheck /health).
+  package.json backend: + script "predeploy": "medusa db:migrate". SOP completo em architecture/deploy.md.
+- Commit 196d744 (48 arquivos: Fases 3-6, storefront busca/hero/CMS, migrations, deploy) — scan de segredos limpo (sem .env; só a palavra 'service_role' em textos). Push p/ origin main OK.
+- BLOQUEIO p/ a loja no Vercel funcionar: backend precisa estar público (hoje localhost). Ordem: Railway backend → pk/URL → envs Vercel.
+PRÓXIMO (usuário, guiado): Railway (Postgres + serviço do repo, root /, vars, deploy, migrate/admin/seed, pk) → Vercel storefront (root apps/storefront + envs) → Vercel cockpit → CORS finais + webhook WhatsApp.
+
+## 2026-06-15 — Backend Medusa NO AR no Railway 🎉
+- URL: https://endearing-enthusiasm-production-775b.up.railway.app (/health 200). Projeto Railway: loyal-abundance.
+- Jornada do deploy (lições):
+  1. Monorepo: Root Directory do serviço = `apps/backend` (UI) → builda só o backend (sem instalar storefront/cockpit) → resolve OOM/lentidão.
+  2. `apps/backend/railway.json`: build `npm run build`; start `cd .medusa/server && npm install --omit=dev && npm run predeploy && npm run start`; healthcheckTimeout 1200.
+  3. `NPM_CONFIG_PRODUCTION=false` (build precisa das devDeps: typescript/vite p/ medusa build).
+  4. `DISABLE_ADMIN=true` + medusa-config admin.disable (condicional por env) → NÃO builda o painel admin (Vite pesado) → elimina OOM/timeout do build. Cockpit usa a Admin API; admin UI fica off em prod.
+  5. Healthcheck 1200s: o start (npm install do .medusa/server + migrate + boot) leva ~20 min nesse builder lento.
+  6. Deploy via Railway CLI (`railway up` da raiz; GitHub integration estava com incidente). SSH precisou de chave (ssh-keygen) + registro.
+- Pós-deploy (via railway ssh, dentro de .medusa/server): admin `gestor@eclat.local` (senha provisória <senha-definida-no-deploy> — TROCAR depois);
+  seed `npx medusa exec ./src/scripts/seed-eclat.js` (.js em prod!) → Brasil/BRL + 8 cat + 2 col + 4 produtos + estoque.
+- Publishable key criada via Admin API + vinculada ao sales channel: pk_4062109543120c19e78f92cc7fcd44ce3ceb243c1754fd8b23dc5b51052fafaa (pk NÃO é segredo).
+- Store API validada: regions=Brasil/BRL, products count=4.
+- Vars Railway: DATABASE_URL (ref Postgres), JWT/COOKIE/MFA, *CORS (=backend URL por ora), MEDUSA_BACKEND_URL, SUPABASE_*, EVOLUTION_*, NPM_CONFIG_PRODUCTION, DISABLE_ADMIN.
+
+## 2026-06-15 — STOREFRONT NO AR no Vercel 🎉
+- Loja: https://useeclat.vercel.app (projeto Vercel "eclat-loja", Root Directory apps/storefront, Next.js).
+- Envs no Vercel: NEXT_PUBLIC_MEDUSA_BACKEND_URL (Railway), NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY (pk_4062...), NEXT_PUBLIC_DEFAULT_REGION=br, NEXT_PUBLIC_SUPABASE_URL/ANON.
+- Validado em produção (curl): /br hero OK; /br/store lista os 4 produtos do backend Railway. Render server-side → CORS não bloqueia browsing.
+- Deploy automático: push na main → Vercel rebuilda a loja.
+- PENDENTE: validar checkout completo (se CORS for preciso p/ alguma chamada client-side, liberar STORE_CORS/AUTH_CORS no Railway — cuidado: muda env reinicia backend ~15-20min). NEXT_PUBLIC_BASE_URL=https://useeclat.vercel.app (SEO). Cockpit no Vercel. Webhook WhatsApp → backend público.
+
+## 2026-06-15 — ✅ COMPRA DE PONTA A PONTA EM PRODUÇÃO (MARCO)
+- Em https://useeclat.vercel.app: navegar → produto → sacola → checkout → endereço → PEDIDO #1 CRIADO (Top Aurora P/Preto, R$154,80) → página "Obrigada! Pedido realizado".
+- Valida: storefront(Vercel) ↔ backend(Railway) ↔ Postgres ↔ publishable key ↔ região BRL ↔ pagamento manual ↔ checkout. CORS OK (sem alteração).
+- use.ÉCLAT ESTÁ NO AR E VENDENDO. Pendências: Cockpit no Vercel; NEXT_PUBLIC_BASE_URL (SEO); webhook WhatsApp→backend público; polir vitrine (foto hero/CMS); trocar senha admin provisória.
+
+## 2026-06-15 — COCKPIT NO AR no Vercel 🎉
+- Cockpit: https://eclat-cockpit.vercel.app (projeto Vercel "eclat-cockpit", Root Directory apps/cockpit, Next.js). Login 200, raiz 307 (middleware ok).
+- Envs no Vercel (colar .env no campo Key parseia tudo): Supabase URL/ANON/SERVICE_ROLE, MEDUSA_ADMIN_URL=Railway, MEDUSA_ADMIN_EMAIL=gestor@eclat.local, MEDUSA_ADMIN_PASSWORD, EVOLUTION_*, GEMINI.
+- Login UNIFICADO: criado usuário Supabase Auth gestor@eclat.local (mesmo do Medusa admin) → uma credencial só pro operador. Senha redigida do progress.md (vive só em env). ROTACIONAR pós-launch.
+- PILHA 100% NO AR: Loja (useeclat.vercel.app) + Backend (Railway) + Cockpit (eclat-cockpit.vercel.app) + Postgres + Supabase.
+- Pendências: validar cockpit logado; webhook WhatsApp Evolution → backend público (adeus túnel); NEXT_PUBLIC_BASE_URL; polir vitrine (foto hero via Cockpit/Vitrine); rotacionar chaves expostas; excluir projeto Vercel errado "eclat-backend".
+
+## 2026-06-16 — ✅ SISTEMA COMPLETO NO AR E INTEGRADO (MARCO FINAL DO DEPLOY)
+- Cockpit (eclat-cockpit.vercel.app) logado com gestor@eclat.local: 3 conexões VERDES (Medusa 4 produtos / Supabase / Evolution open).
+- Pedido #1 (R$154,80, autorizado, a enviar) feito na loja aparece no Cockpit → Pedidos. Ciclo loja→backend→cockpit fechado.
+- Fix do "fetch failed": MEDUSA_ADMIN_URL no Vercel estava localhost; corrigido p/ URL do Railway + REDEPLOY (env só aplica após redeploy).
+- STACK PRODUÇÃO: Loja useeclat.vercel.app | Cockpit eclat-cockpit.vercel.app | Backend+Postgres Railway | Supabase | Evolution.
+- Pendências (não bloqueiam venda): webhook WhatsApp→backend público; foto hero/vitrine via Cockpit; rotacionar chaves; excluir projeto Vercel "eclat-backend".

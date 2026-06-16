@@ -12,5 +12,11 @@ module.exports = defineConfig({
       jwtSecret: process.env.JWT_SECRET || "supersecret",
       cookieSecret: process.env.COOKIE_SECRET || "supersecret",
     }
-  }
+  },
+  // Em produção (Railway), desabilita o BUILD do painel admin (Vite) — pesado demais
+  // p/ o builder. A Store/Admin API seguem normais; o Cockpit usa a Admin API.
+  // Local continua com admin (DISABLE_ADMIN não definido).
+  admin: {
+    disable: process.env.DISABLE_ADMIN === "true",
+  },
 })

@@ -2,12 +2,12 @@
   "$schema": "https://railway.com/railway.schema.json",
   "build": {
     "builder": "NIXPACKS",
-    "buildCommand": "npm run build --workspace=apps/backend"
+    "buildCommand": "npm run build"
   },
   "deploy": {
-    "startCommand": "cd apps/backend/.medusa/server && npm install && npm run predeploy && npm run start",
+    "startCommand": "cd .medusa/server && npm install --omit=dev && npm run predeploy && npm run start",
     "healthcheckPath": "/health",
-    "healthcheckTimeout": 120,
+    "healthcheckTimeout": 1200,
     "restartPolicyType": "ON_FAILURE",
     "restartPolicyMaxRetries": 3
   }
