@@ -1,4 +1,5 @@
 import { Suspense } from "react"
+import Image from "next/image"
 
 import { listLocales } from "@lib/data/locales"
 import { getLocale } from "@lib/data/locale-actions"
@@ -34,13 +35,16 @@ export default async function Nav() {
             </div>
           </div>
 
+          {/* logo real centralizado (símbolo + wordmark) */}
           <div className="flex items-center h-full">
             <LocalizedClientLink
               href="/"
-              className="font-serif text-2xl leading-none tracking-wide text-eclat-grafite hover:text-eclat-terracota transition-colors"
+              className="flex items-center gap-x-2"
               data-testid="nav-store-link"
+              aria-label="use.ÉCLAT — página inicial"
             >
-              use.ÉCLAT
+              <Image src="/brand/mark.png" alt="" width={27} height={36} priority className="h-9 w-auto" />
+              <Image src="/brand/wordmark.png" alt="use.ÉCLAT" width={75} height={24} priority className="h-[22px] w-auto" />
             </LocalizedClientLink>
           </div>
 
@@ -55,18 +59,25 @@ export default async function Nav() {
                 Conta
               </LocalizedClientLink>
             </div>
-            <SearchBar />
+            <div className="hidden small:block">
+              <SearchBar />
+            </div>
             <Suspense
               fallback={
                 <LocalizedClientLink
-                  className="hover:text-eclat-terracota transition-colors flex items-center"
+                  className="text-eclat-terracota hover:text-eclat-terracota-escuro transition-colors flex items-center"
                   href="/cart"
                   data-testid="nav-cart-link"
                   aria-label="Sacola"
                 >
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
                     <path d="M6 8h12l-1 12H7L6 8z" />
                     <path d="M9 8V6a3 3 0 0 1 6 0v2" />
+                    <path
+                      d="M12 17c-1.5-1-2.4-1.9-2.4-2.9 0-.7.5-1.2 1.2-1.2.5 0 .9.3 1.2.7.3-.4.7-.7 1.2-.7.7 0 1.2.5 1.2 1.2 0 1-.9 1.9-2.4 2.9z"
+                      fill="currentColor"
+                      stroke="none"
+                    />
                   </svg>
                 </LocalizedClientLink>
               }
@@ -76,6 +87,11 @@ export default async function Nav() {
           </div>
         </nav>
       </header>
+
+      {/* busca em destaque (mobile) */}
+      <div className="small:hidden bg-eclat-luz border-b border-ui-border-base px-4 py-3">
+        <SearchBar variant="full" />
+      </div>
     </div>
   )
 }

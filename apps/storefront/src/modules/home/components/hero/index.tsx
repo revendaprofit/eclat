@@ -61,7 +61,19 @@ const Hero = ({
           <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/10 to-transparent" />
         </>
       ) : (
-        <div className="absolute inset-0 bg-gradient-to-b from-eclat-luz via-eclat-areia to-eclat-pedra/50" />
+        <>
+          <div className="absolute inset-0 bg-gradient-to-b from-eclat-luz via-eclat-areia to-eclat-blush-claro" />
+          {/* marca-d'água do símbolo (decorativa) */}
+          <Image
+            src="/brand/mark.png"
+            alt=""
+            aria-hidden
+            width={494}
+            height={660}
+            priority
+            className="pointer-events-none select-none absolute right-[-8%] top-[30%] -translate-y-1/4 w-[58%] max-w-[440px] opacity-[0.13]"
+          />
+        </>
       )}
 
       <div className="relative z-10 flex min-h-[88svh] small:min-h-[82vh] flex-col justify-end">
