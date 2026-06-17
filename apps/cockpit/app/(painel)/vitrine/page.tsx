@@ -3,6 +3,9 @@
 import { useCallback, useEffect, useState } from "react"
 
 type Hero = {
+  banner_mobile_url?: string
+  banner_desktop_url?: string
+  banner_href?: string
   eyebrow_mode?: "collection" | "custom"
   eyebrow_text?: string
   collection_handle?: string
@@ -193,6 +196,32 @@ export default function VitrinePage() {
       {/* HERO */}
       <section className={sectionA}>
         <h2 className="font-serif text-xl text-eclat-grafite">Hero (primeira dobra)</h2>
+
+        {/* BANNER (imagem) — modo principal */}
+        <div className="rounded-md bg-eclat-areia/30 border border-eclat-pedra/30 p-4 flex flex-col gap-4">
+          <p className="text-xs text-eclat-grafite/70">
+            <strong>Banner (recomendado):</strong> envie a arte pronta. A imagem
+            preenche a primeira dobra (proporção preservada) e é clicável. Havendo
+            banner, os textos abaixo não aparecem.
+          </p>
+          <div>
+            <label className={label}>Banner mobile (vertical · ex. 1080×1350)</label>
+            <UploadImagem url={hero.banner_mobile_url} onChange={(u) => setHero({ ...hero, banner_mobile_url: u })} />
+          </div>
+          <div>
+            <label className={label}>Banner desktop (horizontal · ex. 1920×800)</label>
+            <UploadImagem url={hero.banner_desktop_url} onChange={(u) => setHero({ ...hero, banner_desktop_url: u })} />
+          </div>
+          <div>
+            <label className={label}>Link do banner (ao clicar)</label>
+            <input value={hero.banner_href || ""} onChange={(e) => setHero({ ...hero, banner_href: e.target.value })} placeholder="/store ou /collections/resplendor" className={input} />
+          </div>
+        </div>
+
+        <p className="text-xs uppercase tracking-wider text-eclat-grafite/50 border-t border-eclat-pedra/30 pt-3">
+          Textos (usados só quando NÃO há banner)
+        </p>
+
         <div>
           <span className={label}>Destaque (eyebrow)</span>
           <div className="flex gap-4 text-sm mb-2">
@@ -238,11 +267,6 @@ export default function VitrinePage() {
             <label className={label}>Link do botão</label>
             <input value={hero.cta_href || ""} onChange={(e) => setHero({ ...hero, cta_href: e.target.value })} placeholder="/store" className={input} />
           </div>
-        </div>
-        <div>
-          <label className={label}>Imagem do hero (full-bleed)</label>
-          <UploadImagem url={hero.image_url} onChange={(u) => setHero({ ...hero, image_url: u })} />
-          <p className="text-xs text-eclat-grafite/50 mt-1">Foto editorial vertical funciona melhor no mobile.</p>
         </div>
         <button onClick={() => salvar("hero", hero)} disabled={saving === "hero"} className={btn}>
           {saving === "hero" ? "Salvando…" : "Salvar hero"}
