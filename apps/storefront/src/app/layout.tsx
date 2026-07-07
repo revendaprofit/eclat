@@ -1,6 +1,9 @@
 import { getBaseURL } from "@lib/util/env"
 import { Metadata } from "next"
 import { Playfair_Display, Inter } from "next/font/google"
+import { getSiteContent } from "@lib/data/site-content"
+import { GtmHead, GtmBody } from "@modules/analytics/gtm"
+import { Marketing } from "@modules/analytics/config"
 import "styles/globals.css"
 
 // Texto: sans limpa
@@ -28,14 +31,18 @@ export const metadata: Metadata = {
     "use.ÉCLAT — moda fitness premium e independente. A luz e o resplendor da mulher inteira.",
 }
 
-export default function RootLayout(props: { children: React.ReactNode }) {
+export default async function RootLayout(props: { children: React.ReactNode }) {
+  const marketing = await getSiteContent<Marketing>("marketing")
+
   return (
     <html
       lang="pt-BR"
       data-mode="light"
       className={`${inter.variable} ${playfair.variable}`}
     >
+      <GtmHead gtmId={marketing?.gtm_id} gsc={marketing?.gsc_verification} />
       <body className="bg-eclat-luz text-eclat-grafite antialiased font-sans">
+        <GtmBody gtmId={marketing?.gtm_id} />
         <main className="relative">{props.children}</main>
       </body>
     </html>

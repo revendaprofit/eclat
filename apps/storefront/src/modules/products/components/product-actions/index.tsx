@@ -12,6 +12,7 @@ import { useEffect, useMemo, useRef, useState } from "react"
 import ProductPrice from "../product-price"
 import MobileActions from "./mobile-actions"
 import { useRouter } from "next/navigation"
+import { variantToAddToCart } from "@modules/analytics/items"
 
 type ProductActionsProps = {
   product: HttpTypes.StoreProduct
@@ -131,6 +132,19 @@ export default function ProductActions({
       quantity: 1,
       countryCode,
     })
+
+    // dataLayer: add_to_cart (GTM → GA4/Meta/Ads)
+    try {
+      const w = window as unknown as { dataLayer?: Record<string, unknown>[] }
+      w.dataLayer = w.dataLayer || []
+      w.dataLayer.push({ ecommerce: null })
+      w.dataLayer.push({
+        event: "add_to_cart",
+        ecommerce: variantToAddToCart(product, selectedVariant, 1),
+      })
+    } catch {
+      /* noop */
+    }
 
     setIsAdding(false)
   }

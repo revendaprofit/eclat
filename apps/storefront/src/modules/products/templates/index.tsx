@@ -11,6 +11,8 @@ import { notFound } from "next/navigation"
 import { HttpTypes } from "@medusajs/types"
 
 import ProductActionsWrapper from "./product-actions-wrapper"
+import Track from "@modules/analytics/track"
+import { productToViewItem } from "@modules/analytics/items"
 
 type ProductTemplateProps = {
   product: HttpTypes.StoreProduct
@@ -31,6 +33,7 @@ const ProductTemplate: React.FC<ProductTemplateProps> = ({
 
   return (
     <>
+      <Track event="view_item" ecommerce={productToViewItem(product)} />
       <div
         className="content-container  flex flex-col small:flex-row small:items-start py-6 relative"
         data-testid="product-container"

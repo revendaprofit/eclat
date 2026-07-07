@@ -12,6 +12,7 @@ const ITEMS = [
   { href: "/leads", label: "Leads" },
   { href: "/produtos", label: "Produtos & Estoque" },
   { href: "/vitrine", label: "Vitrine (site)" },
+  { href: "/marketing", label: "Marketing & Rastreamento" },
   { href: "/financeiro", label: "Financeiro" },
   { href: "/configuracoes", label: "Configurações" },
 ]
