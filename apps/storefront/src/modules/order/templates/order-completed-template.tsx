@@ -11,6 +11,7 @@ import PaymentDetails from "@modules/order/components/payment-details"
 import { HttpTypes } from "@medusajs/types"
 import Track from "@modules/analytics/track"
 import { orderToPurchase } from "@modules/analytics/items"
+import { fireCapiPurchase } from "@modules/analytics/capi"
 
 type OrderCompletedTemplateProps = {
   order: HttpTypes.StoreOrder
@@ -22,6 +23,10 @@ export default async function OrderCompletedTemplate({
   const cookies = await nextCookies()
 
   const isOnboarding = cookies.get("_medusa_onboarding")?.value === "true"
+
+  // CAPI Purchase server-side (dedup via event_id purchase_<orderId>).
+  // No-op se META_CAPI_TOKEN / Pixel não estiverem configurados.
+  await fireCapiPurchase(order)
 
   return (
     <div className="py-6 min-h-[calc(100vh-64px)]">
