@@ -3,6 +3,7 @@ import { Metadata } from "next"
 import { Playfair_Display, Inter } from "next/font/google"
 import { getSiteContent } from "@lib/data/site-content"
 import { GtmHead, GtmBody } from "@modules/analytics/gtm"
+import { ConsentDefault, CookieBanner } from "@modules/analytics/consent"
 import { Marketing } from "@modules/analytics/config"
 import "styles/globals.css"
 
@@ -40,10 +41,12 @@ export default async function RootLayout(props: { children: React.ReactNode }) {
       data-mode="light"
       className={`${inter.variable} ${playfair.variable}`}
     >
+      <ConsentDefault />
       <GtmHead gtmId={marketing?.gtm_id} gsc={marketing?.gsc_verification} />
       <body className="bg-eclat-luz text-eclat-grafite antialiased font-sans">
         <GtmBody gtmId={marketing?.gtm_id} />
         <main className="relative">{props.children}</main>
+        <CookieBanner />
       </body>
     </html>
   )

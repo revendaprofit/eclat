@@ -36,6 +36,8 @@ type Banner = {
 type BenefitItem = { title: string; text?: string }
 type Beneficios = { visible?: boolean; heading?: string; items?: BenefitItem[] }
 type News = { visible?: boolean; title?: string; text?: string; button_label?: string }
+type Depoimento = { quote: string; author?: string }
+type Depoimentos = { visible?: boolean; heading?: string; items?: Depoimento[] }
 
 const input =
   "w-full border border-eclat-pedra/50 rounded-md px-3 py-2 text-sm bg-white focus:outline-none focus:border-eclat-dourado"
@@ -105,6 +107,7 @@ export default function VitrinePage() {
   const [banner, setBanner] = useState<Banner>({})
   const [beneficios, setBeneficios] = useState<Beneficios>({})
   const [news, setNews] = useState<News>({})
+  const [depoimentos, setDepoimentos] = useState<Depoimentos>({})
   const [colecoes, setColecoes] = useState<Colecao[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState<string | null>(null)
@@ -120,8 +123,9 @@ export default function VitrinePage() {
       "home.banner",
       "home.benefits",
       "home.newsletter",
+      "home.testimonials",
     ]
-    const [h, s, m, l, f, b, bf, n, c] = await Promise.all([
+    const [h, s, m, l, f, b, bf, n, dep, c] = await Promise.all([
       ...keys.map((k) =>
         fetch(`/api/site-content/${k}`, { cache: "no-store" }).then((r) => r.json())
       ),
@@ -136,6 +140,7 @@ export default function VitrinePage() {
     setBanner(ok(b) as Banner)
     setBeneficios(ok(bf) as Beneficios)
     setNews(ok(n) as News)
+    setDepoimentos(ok(dep) as Depoimentos)
     if (Array.isArray(c)) setColecoes(c)
     setLoading(false)
   }, [])
@@ -177,6 +182,14 @@ export default function VitrinePage() {
           { title: "Caimento que valoriza", text: "Modelagem pensada no corpo real." },
           { title: "Frete para todo o Brasil", text: "Rápido e rastreado." },
           { title: "Troca fácil", text: "30 dias para trocar ou devolver." },
+        ]
+  const depItems: Depoimento[] =
+    depoimentos.items && depoimentos.items.length
+      ? depoimentos.items
+      : [
+          { quote: "O caimento é perfeito, valoriza demais. Não tiro mais.", author: "Marina S." },
+          { quote: "Tecido premium de verdade — sustenta no treino e fica linda na rua.", author: "Camila R." },
+          { quote: "Entrega rápida e a peça é ainda mais bonita pessoalmente.", author: "Juliana P." },
         ]
 
   if (loading) return <p className="text-sm text-eclat-grafite/50">Carregando…</p>
@@ -450,6 +463,37 @@ export default function VitrinePage() {
         </div>
         <button onClick={() => salvar("home.newsletter", news)} disabled={saving === "home.newsletter"} className={btn}>
           {saving === "home.newsletter" ? "Salvando…" : "Salvar newsletter"}
+        </button>
+      </section>
+
+      {/* DEPOIMENTOS (provas sociais) */}
+      <section className={sectionA}>
+        <div className="flex items-center justify-between">
+          <h2 className="font-serif text-xl text-eclat-grafite">Depoimentos (provas sociais)</h2>
+          <Toggle on={depoimentos.visible !== false} onChange={(v) => setDepoimentos({ ...depoimentos, visible: v })} />
+        </div>
+        <div>
+          <label className={label}>Título da seção</label>
+          <input value={depoimentos.heading ?? "Quem veste, ama"} onChange={(e) => setDepoimentos({ ...depoimentos, heading: e.target.value })} className={input} />
+        </div>
+        {depItems.map((it, i) => (
+          <div key={i} className="border border-eclat-pedra/30 rounded p-3 flex flex-col gap-2">
+            <div>
+              <label className={label}>Depoimento {i + 1}</label>
+              <textarea value={it.quote} onChange={(e) => {
+                const items = [...depItems]; items[i] = { ...it, quote: e.target.value }; setDepoimentos({ ...depoimentos, items })
+              }} rows={2} className={input + " resize-y"} />
+            </div>
+            <div>
+              <label className={label}>Autora</label>
+              <input value={it.author || ""} onChange={(e) => {
+                const items = [...depItems]; items[i] = { ...it, author: e.target.value }; setDepoimentos({ ...depoimentos, items })
+              }} className={input} placeholder="Marina S." />
+            </div>
+          </div>
+        ))}
+        <button onClick={() => salvar("home.testimonials", { ...depoimentos, items: depItems })} disabled={saving === "home.testimonials"} className={btn}>
+          {saving === "home.testimonials" ? "Salvando…" : "Salvar depoimentos"}
         </button>
       </section>
 

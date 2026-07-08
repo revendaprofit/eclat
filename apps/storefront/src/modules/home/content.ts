@@ -43,6 +43,13 @@ export type Newsletter = {
   button_label?: string
 }
 
+export type Testimonial = { quote: string; author?: string }
+export type Testimonials = {
+  visible?: boolean
+  heading?: string
+  items?: Testimonial[]
+}
+
 export const HOME_DEFAULTS = {
   manifesto: {
     text:
@@ -89,6 +96,25 @@ export const HOME_DEFAULTS = {
       "Novidades, lançamentos e acesso antecipado — direto no seu e-mail.",
     button_label: "Quero receber",
   } as Newsletter,
+  testimonials: {
+    heading: "Quem veste, ama",
+    items: [
+      {
+        quote:
+          "O caimento é perfeito, valoriza demais. Não tiro mais.",
+        author: "Marina S.",
+      },
+      {
+        quote:
+          "Tecido premium de verdade — sustenta no treino e fica linda na rua.",
+        author: "Camila R.",
+      },
+      {
+        quote: "Entrega rápida e a peça é ainda mais bonita pessoalmente.",
+        author: "Juliana P.",
+      },
+    ],
+  } as Testimonials,
 }
 
 // helper: bloco visível a menos que explicitamente desligado (visible === false)
