@@ -50,6 +50,9 @@ export type Testimonials = {
   items?: Testimonial[]
 }
 
+export type FaqItem = { q: string; a: string }
+export type Faq = { visible?: boolean; heading?: string; items?: FaqItem[] }
+
 export const HOME_DEFAULTS = {
   manifesto: {
     text:
@@ -115,6 +118,31 @@ export const HOME_DEFAULTS = {
       },
     ],
   } as Testimonials,
+  faq: {
+    heading: "Perguntas frequentes",
+    items: [
+      {
+        q: "Como escolho meu tamanho na use.ÉCLAT?",
+        a: "Cada produto tem a tabela de medidas na própria página. Na dúvida entre dois tamanhos, escolha o maior para mais conforto no treino.",
+      },
+      {
+        q: "O tecido é de compressão? Fica transparente no agachamento?",
+        a: "Usamos tecidos premium de alta compressão que sustentam, não marcam e não ficam transparentes no agachamento.",
+      },
+      {
+        q: "Qual o prazo de entrega e o frete?",
+        a: "Enviamos para todo o Brasil com rastreio. O prazo e o valor do frete aparecem no checkout conforme o seu CEP.",
+      },
+      {
+        q: "Posso trocar ou devolver?",
+        a: "Sim. Você tem 30 dias para trocar ou devolver. É só falar com a gente pelo WhatsApp e a gente resolve.",
+      },
+      {
+        q: "As peças servem para treino e para o dia a dia?",
+        a: "Sim. A linha Treino é focada em performance e a linha Casual no lifestyle — muitas peças transitam bem entre os dois mundos.",
+      },
+    ],
+  } as Faq,
 }
 
 // helper: bloco visível a menos que explicitamente desligado (visible === false)

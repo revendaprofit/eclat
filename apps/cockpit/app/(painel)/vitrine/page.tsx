@@ -38,6 +38,8 @@ type Beneficios = { visible?: boolean; heading?: string; items?: BenefitItem[] }
 type News = { visible?: boolean; title?: string; text?: string; button_label?: string }
 type Depoimento = { quote: string; author?: string }
 type Depoimentos = { visible?: boolean; heading?: string; items?: Depoimento[] }
+type FaqItem = { q: string; a: string }
+type Faq = { visible?: boolean; heading?: string; items?: FaqItem[] }
 
 const input =
   "w-full border border-eclat-pedra/50 rounded-md px-3 py-2 text-sm bg-white focus:outline-none focus:border-eclat-dourado"
@@ -108,6 +110,7 @@ export default function VitrinePage() {
   const [beneficios, setBeneficios] = useState<Beneficios>({})
   const [news, setNews] = useState<News>({})
   const [depoimentos, setDepoimentos] = useState<Depoimentos>({})
+  const [faq, setFaq] = useState<Faq>({})
   const [colecoes, setColecoes] = useState<Colecao[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState<string | null>(null)
@@ -124,8 +127,9 @@ export default function VitrinePage() {
       "home.benefits",
       "home.newsletter",
       "home.testimonials",
+      "home.faq",
     ]
-    const [h, s, m, l, f, b, bf, n, dep, c] = await Promise.all([
+    const [h, s, m, l, f, b, bf, n, dep, fq, c] = await Promise.all([
       ...keys.map((k) =>
         fetch(`/api/site-content/${k}`, { cache: "no-store" }).then((r) => r.json())
       ),
@@ -141,6 +145,7 @@ export default function VitrinePage() {
     setBeneficios(ok(bf) as Beneficios)
     setNews(ok(n) as News)
     setDepoimentos(ok(dep) as Depoimentos)
+    setFaq(ok(fq) as Faq)
     if (Array.isArray(c)) setColecoes(c)
     setLoading(false)
   }, [])
@@ -190,6 +195,15 @@ export default function VitrinePage() {
           { quote: "O caimento é perfeito, valoriza demais. Não tiro mais.", author: "Marina S." },
           { quote: "Tecido premium de verdade — sustenta no treino e fica linda na rua.", author: "Camila R." },
           { quote: "Entrega rápida e a peça é ainda mais bonita pessoalmente.", author: "Juliana P." },
+        ]
+  const faqItems: FaqItem[] =
+    faq.items && faq.items.length
+      ? faq.items
+      : [
+          { q: "Como escolho meu tamanho?", a: "Cada produto tem a tabela de medidas na página. Na dúvida entre dois tamanhos, escolha o maior." },
+          { q: "O tecido fica transparente no agachamento?", a: "Não. Usamos tecidos premium de alta compressão que sustentam e não marcam." },
+          { q: "Qual o prazo e o frete?", a: "Enviamos para todo o Brasil com rastreio; prazo e valor aparecem no checkout conforme o CEP." },
+          { q: "Posso trocar ou devolver?", a: "Sim, 30 dias para trocar ou devolver — é só falar no WhatsApp." },
         ]
 
   if (loading) return <p className="text-sm text-eclat-grafite/50">Carregando…</p>
@@ -494,6 +508,38 @@ export default function VitrinePage() {
         ))}
         <button onClick={() => salvar("home.testimonials", { ...depoimentos, items: depItems })} disabled={saving === "home.testimonials"} className={btn}>
           {saving === "home.testimonials" ? "Salvando…" : "Salvar depoimentos"}
+        </button>
+      </section>
+
+      {/* FAQ (perguntas frequentes — GEO) */}
+      <section className={sectionB}>
+        <div className="flex items-center justify-between">
+          <h2 className="font-serif text-xl text-eclat-grafite">FAQ (perguntas frequentes)</h2>
+          <Toggle on={faq.visible !== false} onChange={(v) => setFaq({ ...faq, visible: v })} />
+        </div>
+        <p className="text-xs text-eclat-grafite/55">Respostas diretas ajudam a marca a ser citada por IA (ChatGPT, Perplexity, Google AI). Vira schema FAQPage automaticamente.</p>
+        <div>
+          <label className={label}>Título da seção</label>
+          <input value={faq.heading ?? "Perguntas frequentes"} onChange={(e) => setFaq({ ...faq, heading: e.target.value })} className={input} />
+        </div>
+        {faqItems.map((it, i) => (
+          <div key={i} className="border border-eclat-pedra/30 rounded p-3 flex flex-col gap-2">
+            <div>
+              <label className={label}>Pergunta {i + 1}</label>
+              <input value={it.q} onChange={(e) => {
+                const items = [...faqItems]; items[i] = { ...it, q: e.target.value }; setFaq({ ...faq, items })
+              }} className={input} />
+            </div>
+            <div>
+              <label className={label}>Resposta</label>
+              <textarea value={it.a} onChange={(e) => {
+                const items = [...faqItems]; items[i] = { ...it, a: e.target.value }; setFaq({ ...faq, items })
+              }} rows={2} className={input + " resize-y"} />
+            </div>
+          </div>
+        ))}
+        <button onClick={() => salvar("home.faq", { ...faq, items: faqItems })} disabled={saving === "home.faq"} className={btn}>
+          {saving === "home.faq" ? "Salvando…" : "Salvar FAQ"}
         </button>
       </section>
 

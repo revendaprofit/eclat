@@ -13,6 +13,7 @@ const ITEMS = [
   { href: "/produtos", label: "Produtos & Estoque" },
   { href: "/vitrine", label: "Vitrine (site)" },
   { href: "/marketing", label: "Marketing & Rastreamento" },
+  { href: "/geo", label: "GEO (busca por IA)" },
   { href: "/financeiro", label: "Financeiro" },
   { href: "/configuracoes", label: "Configurações" },
 ]

@@ -7,6 +7,7 @@ import FeaturedLines from "@modules/home/components/featured-lines"
 import EditorialBanner from "@modules/home/components/editorial-banner"
 import Benefits from "@modules/home/components/benefits"
 import Testimonials from "@modules/home/components/testimonials"
+import Faq from "@modules/home/components/faq"
 import Newsletter from "@modules/home/components/newsletter"
 import { listCollections } from "@lib/data/collections"
 import { getRegion } from "@lib/data/regions"
@@ -19,6 +20,7 @@ import {
   EditorialBanner as EditorialBannerType,
   Benefits as BenefitsType,
   Testimonials as TestimonialsType,
+  Faq as FaqType,
   Newsletter as NewsletterType,
   HOME_DEFAULTS,
 } from "@modules/home/content"
@@ -60,6 +62,7 @@ export default async function Home(props: {
     benefits,
     newsletter,
     testimonials,
+    faq,
   ] = await Promise.all([
     getRegion(countryCode),
     listCollections({ fields: "id, handle, title" }),
@@ -71,6 +74,7 @@ export default async function Home(props: {
     getSiteContent<BenefitsType>("home.benefits"),
     getSiteContent<NewsletterType>("home.newsletter"),
     getSiteContent<TestimonialsType>("home.testimonials"),
+    getSiteContent<FaqType>("home.faq"),
   ])
 
   const collections = collectionsRes?.collections
@@ -117,6 +121,8 @@ export default async function Home(props: {
       {isVisible(benefits) && <Benefits content={benefits} />}
 
       {isVisible(testimonials) && <Testimonials content={testimonials} />}
+
+      {isVisible(faq) && <Faq content={faq} />}
 
       {isVisible(newsletter) && <Newsletter content={newsletter} />}
     </>

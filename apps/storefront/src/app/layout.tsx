@@ -6,6 +6,7 @@ import { GtmHead, GtmBody } from "@modules/analytics/gtm"
 import { ConsentDefault, CookieBanner } from "@modules/analytics/consent"
 import { Marketing } from "@modules/analytics/config"
 import PwaRegister from "@modules/common/components/pwa-register"
+import { OrganizationJsonLd, WebSiteJsonLd } from "@modules/seo/jsonld"
 import "styles/globals.css"
 
 // Texto: sans limpa
@@ -55,6 +56,8 @@ export default async function RootLayout(props: { children: React.ReactNode }) {
       <GtmHead gtmId={marketing?.gtm_id} gsc={marketing?.gsc_verification} />
       <body className="bg-eclat-luz text-eclat-grafite antialiased font-sans">
         <GtmBody gtmId={marketing?.gtm_id} />
+        <OrganizationJsonLd />
+        <WebSiteJsonLd />
         <main className="relative">{props.children}</main>
         <CookieBanner />
         <PwaRegister />

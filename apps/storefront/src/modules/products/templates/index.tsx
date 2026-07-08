@@ -13,6 +13,8 @@ import { HttpTypes } from "@medusajs/types"
 import ProductActionsWrapper from "./product-actions-wrapper"
 import Track from "@modules/analytics/track"
 import { productToViewItem } from "@modules/analytics/items"
+import { ProductJsonLd, BreadcrumbJsonLd } from "@modules/seo/jsonld"
+import { getBaseURL } from "@lib/util/env"
 
 type ProductTemplateProps = {
   product: HttpTypes.StoreProduct
@@ -31,9 +33,19 @@ const ProductTemplate: React.FC<ProductTemplateProps> = ({
     return notFound()
   }
 
+  const productUrl = `${getBaseURL()}/${countryCode}/products/${product.handle}`
+
   return (
     <>
       <Track event="view_item" ecommerce={productToViewItem(product)} />
+      <ProductJsonLd product={product} url={productUrl} />
+      <BreadcrumbJsonLd
+        items={[
+          { name: "Início", url: `${getBaseURL()}/${countryCode}` },
+          { name: "Loja", url: `${getBaseURL()}/${countryCode}/store` },
+          { name: product.title ?? "Produto", url: productUrl },
+        ]}
+      />
       <div
         className="content-container  flex flex-col small:flex-row small:items-start py-6 relative"
         data-testid="product-container"
