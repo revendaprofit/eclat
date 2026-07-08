@@ -1,10 +1,11 @@
 import { getBaseURL } from "@lib/util/env"
-import { Metadata } from "next"
+import { Metadata, Viewport } from "next"
 import { Playfair_Display, Inter } from "next/font/google"
 import { getSiteContent } from "@lib/data/site-content"
 import { GtmHead, GtmBody } from "@modules/analytics/gtm"
 import { ConsentDefault, CookieBanner } from "@modules/analytics/consent"
 import { Marketing } from "@modules/analytics/config"
+import PwaRegister from "@modules/common/components/pwa-register"
 import "styles/globals.css"
 
 // Texto: sans limpa
@@ -30,6 +31,15 @@ export const metadata: Metadata = {
   },
   description:
     "use.ÉCLAT — moda fitness premium e independente. A luz e o resplendor da mulher inteira.",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "ÉCLAT",
+  },
+}
+
+export const viewport: Viewport = {
+  themeColor: "#7A3B2C",
 }
 
 export default async function RootLayout(props: { children: React.ReactNode }) {
@@ -47,6 +57,7 @@ export default async function RootLayout(props: { children: React.ReactNode }) {
         <GtmBody gtmId={marketing?.gtm_id} />
         <main className="relative">{props.children}</main>
         <CookieBanner />
+        <PwaRegister />
       </body>
     </html>
   )
