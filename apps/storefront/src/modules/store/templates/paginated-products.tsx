@@ -1,6 +1,8 @@
 import { listProductsWithSort } from "@lib/data/products"
 import { getRegion } from "@lib/data/regions"
+import { getBaseURL } from "@lib/util/env"
 import ProductPreview from "@modules/products/components/product-preview"
+import { ItemListJsonLd } from "@modules/seo/jsonld"
 import { Pagination } from "@modules/store/components/pagination"
 import { SortOptions } from "@modules/store/components/refinement-list/sort-products"
 
@@ -66,8 +68,19 @@ export default async function PaginatedProducts({
 
   const totalPages = Math.ceil(count / PRODUCT_LIMIT)
 
+  const base = getBaseURL()
+
   return (
     <>
+      <ItemListJsonLd
+        name="Produtos use.ÉCLAT"
+        items={products
+          .filter((p) => p.handle)
+          .map((p) => ({
+            name: p.title ?? "",
+            url: `${base}/${countryCode}/products/${p.handle}`,
+          }))}
+      />
       <ul
         className="grid grid-cols-2 w-full small:grid-cols-3 medium:grid-cols-4 gap-x-6 gap-y-8"
         data-testid="products-list"

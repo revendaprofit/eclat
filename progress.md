@@ -566,3 +566,18 @@ PRÓXIMO (usuário, guiado): Railway (Postgres + serviço do repo, root /, vars,
 - Fix do "fetch failed": MEDUSA_ADMIN_URL no Vercel estava localhost; corrigido p/ URL do Railway + REDEPLOY (env só aplica após redeploy).
 - STACK PRODUÇÃO: Loja useeclat.vercel.app | Cockpit eclat-cockpit.vercel.app | Backend+Postgres Railway | Supabase | Evolution.
 - Pendências (não bloqueiam venda): webhook WhatsApp→backend público; foto hero/vitrine via Cockpit; rotacionar chaves; excluir projeto Vercel "eclat-backend".
+
+## 2026-07-24 — SEO/GEO Fase 1 (fundação técnica) ✅
+- Roadmap GEO aprovado (Opção A: manter stack Medusa+Next e evoluir). Fase 1 executada no storefront:
+  1. getBaseURL robusto: NEXT_PUBLIC_BASE_URL > VERCEL_PROJECT_PRODUCTION_URL > localhost (src/lib/util/env.ts). .env.local dev corrigido p/ http://localhost:8000.
+  2. Canonical + og:url em TODAS as páginas públicas (home, produto, categoria [antes quebrado], coleção, store).
+  3. Meta description real do produto (1ª linha da description, ~160c) em vez do título repetido.
+  4. H1 na página de produto (era h2); Store traduzida ("Loja"/"Todos os produtos" — era "Store"/"All products").
+  5. next/image otimização LIGADA (removido unoptimized:true; AVIF/WebP) — LCP.
+  6. Alt texts pt-BR com nome do produto (galeria + Thumbnail c/ prop alt).
+  7. JSON-LD: availability real por estoque das variantes (antes hardcoded InStock) + novo ItemList nas listagens (paginated-products).
+  8. sitemap.ts paginado (catálogo inteiro, sem teto de 100); next-sitemap.js órfão REMOVIDO.
+  9. Redirect / → /br agora 308 permanente (era 307); twitter:card + og:site_name no layout raiz.
+- VALIDADO em dev contra backend Railway de produção: / 308→/br; canonical/og/H1/ItemList/sitemap(19 urls)/availability OK; /_next/image ativo.
+- ⚠️ PENDENTE (ação manual Vercel, projeto eclat-loja): setar NEXT_PUBLIC_BASE_URL=https://www.useeclat.com.br + REDEPLOY (env só aplica após redeploy). Sem isso há fallback p/ VERCEL_PROJECT_PRODUCTION_URL (deve resolver p/ domínio custom, mas a env explícita é o correto).
+- Próximo (Fase 2 GEO): feed Google Merchant Center + GSC; Bing Webmaster + IndexNow + MS Merchant Center; feed formato OpenAI (ACP). Fase 3: páginas institucionais + editorial (CMS Supabase via Cockpit).

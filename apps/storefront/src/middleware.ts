@@ -133,7 +133,9 @@ export async function middleware(request: NextRequest) {
   const queryString = request.nextUrl.search || ""
   const redirectUrl = `${request.nextUrl.origin}/${country}${redirectPath}${queryString}`
 
-  return NextResponse.redirect(redirectUrl, 307)
+  // 308 (permanente): consolida sinal de canonicalização de "/" -> "/br".
+  // Loja de região única (br); rever se um dia houver múltiplas regiões.
+  return NextResponse.redirect(redirectUrl, 308)
 }
 
 export const config = {

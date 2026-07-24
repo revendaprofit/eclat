@@ -32,6 +32,14 @@ export const metadata: Metadata = {
   },
   description:
     "use.ÉCLAT — moda fitness premium e independente. A luz e o resplendor da mulher inteira.",
+  openGraph: {
+    siteName: "use.ÉCLAT",
+    locale: "pt_BR",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",

@@ -21,18 +21,25 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   ]
 
   try {
-    const { response } = await listProducts({
-      countryCode: CC,
-      queryParams: { limit: 100, fields: "handle,updated_at" },
-    })
-    for (const p of response.products) {
-      if (p.handle)
-        urls.push({
-          url: `${base}/${CC}/products/${enc(p.handle)}`,
-          lastModified: p.updated_at ? new Date(p.updated_at) : now,
-          changeFrequency: "weekly",
-          priority: 0.8,
-        })
+    // Pagina o catálogo inteiro (100 por página) — sem teto de produtos.
+    const PAGE = 100
+    let offset = 0
+    for (;;) {
+      const { response } = await listProducts({
+        countryCode: CC,
+        queryParams: { limit: PAGE, offset, fields: "handle,updated_at" },
+      })
+      for (const p of response.products) {
+        if (p.handle)
+          urls.push({
+            url: `${base}/${CC}/products/${enc(p.handle)}`,
+            lastModified: p.updated_at ? new Date(p.updated_at) : now,
+            changeFrequency: "weekly",
+            priority: 0.8,
+          })
+      }
+      offset += PAGE
+      if (response.products.length < PAGE || offset >= response.count) break
     }
   } catch {
     /* ignora se a API falhar */

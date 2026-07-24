@@ -25,7 +25,10 @@ import {
   HOME_DEFAULTS,
 } from "@modules/home/content"
 
-export async function generateMetadata(): Promise<Metadata> {
+export async function generateMetadata(props: {
+  params: Promise<{ countryCode: string }>
+}): Promise<Metadata> {
+  const { countryCode } = await props.params
   const seo = await getSiteContent<{
     title?: string
     description?: string
@@ -35,12 +38,17 @@ export async function generateMetadata(): Promise<Metadata> {
   const description =
     seo?.description ||
     "Moda fitness premium e independente. Leggings, tops e conjuntos que sustentam, valorizam e resplandecem."
+  const path = `/${countryCode}`
   return {
     title,
     description,
+    alternates: {
+      canonical: path,
+    },
     openGraph: {
       title,
       description,
+      url: path,
       images: seo?.og_image_url ? [{ url: seo.og_image_url }] : undefined,
     },
   }

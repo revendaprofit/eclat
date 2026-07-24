@@ -58,9 +58,20 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
     notFound()
   }
 
+  const description = `Coleção ${collection.title} — athleisure premium da use.ÉCLAT.`
+  const path = `/${params.countryCode}/collections/${params.handle}`
+
   const metadata = {
     title: `${collection.title} | use.ÉCLAT`,
-    description: `Coleção ${collection.title} — athleisure premium da use.ÉCLAT.`,
+    description,
+    alternates: {
+      canonical: path,
+    },
+    openGraph: {
+      title: `${collection.title} | use.ÉCLAT`,
+      description,
+      url: path,
+    },
   } as Metadata
 
   return metadata

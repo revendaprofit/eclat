@@ -52,11 +52,18 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
     const description =
       productCategory.description ?? `${title} — athleisure premium da use.ÉCLAT.`
 
+    const path = `/${params.countryCode}/categories/${params.category.join("/")}`
+
     return {
       title: `${title} | use.ÉCLAT`,
       description,
       alternates: {
-        canonical: `${params.category.join("/")}`,
+        canonical: path,
+      },
+      openGraph: {
+        title: `${title} | use.ÉCLAT`,
+        description,
+        url: path,
       },
     }
   } catch {

@@ -25,7 +25,8 @@ const nextConfig = {
     ignoreBuildErrors: true,
   },
   images: {
-    unoptimized: true,
+    // Otimização do Next ATIVA (resize + WebP/AVIF na Vercel) — crítico p/ LCP.
+    formats: ["image/avif", "image/webp"],
     remotePatterns: [
       {
         protocol: "http",

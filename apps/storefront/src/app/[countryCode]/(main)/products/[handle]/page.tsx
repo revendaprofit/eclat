@@ -87,12 +87,26 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
     notFound()
   }
 
+  // description real do produto (1ª linha, ~160 chars); fallback padrão da marca
+  const rawDescription = product.description?.trim().split("\n")[0] || ""
+  const description = rawDescription
+    ? rawDescription.length > 160
+      ? `${rawDescription.slice(0, 157)}…`
+      : rawDescription
+    : `${product.title} — athleisure premium use.ÉCLAT.`
+
+  const path = `/${params.countryCode}/products/${handle}`
+
   return {
     title: `${product.title} | use.ÉCLAT`,
-    description: `${product.title}`,
+    description,
+    alternates: {
+      canonical: path,
+    },
     openGraph: {
       title: `${product.title} | use.ÉCLAT`,
-      description: `${product.title}`,
+      description,
+      url: path,
       images: product.thumbnail ? [product.thumbnail] : [],
     },
   }

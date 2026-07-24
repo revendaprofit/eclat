@@ -56,6 +56,24 @@ export function WebSiteJsonLd() {
   )
 }
 
+// Disponibilidade real: em estoque se alguma variante tem quantidade > 0,
+// não controla estoque ou aceita backorder.
+function getAvailability(product: HttpTypes.StoreProduct) {
+  const variants = (product.variants ?? []) as any[]
+  if (!variants.length) {
+    return "https://schema.org/InStock"
+  }
+  const inStock = variants.some(
+    (v) =>
+      v?.manage_inventory === false ||
+      v?.allow_backorder === true ||
+      (typeof v?.inventory_quantity === "number" && v.inventory_quantity > 0)
+  )
+  return inStock
+    ? "https://schema.org/InStock"
+    : "https://schema.org/OutOfStock"
+}
+
 export function ProductJsonLd({
   product,
   url,
@@ -82,12 +100,39 @@ export function ProductJsonLd({
                 "@type": "Offer",
                 price: Number(price).toFixed(2),
                 priceCurrency: "BRL",
-                availability: "https://schema.org/InStock",
+                availability: getAvailability(product),
                 url,
                 itemCondition: "https://schema.org/NewCondition",
               },
             }
           : {}),
+      }}
+    />
+  )
+}
+
+// Lista de produtos de uma página de listagem (loja/categoria/coleção).
+export function ItemListJsonLd({
+  name,
+  items,
+}: {
+  name: string
+  items: { name: string; url: string }[]
+}) {
+  if (!items?.length) return null
+  return (
+    <JsonLd
+      data={{
+        "@context": "https://schema.org",
+        "@type": "ItemList",
+        name,
+        numberOfItems: items.length,
+        itemListElement: items.map((it, i) => ({
+          "@type": "ListItem",
+          position: i + 1,
+          name: it.name,
+          url: it.url,
+        })),
       }}
     />
   )
