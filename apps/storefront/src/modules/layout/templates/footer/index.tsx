@@ -115,6 +115,31 @@ export default async function Footer() {
                   </LocalizedClientLink>
                 </li>
                 <li>
+                  <LocalizedClientLink href="/sobre" className="hover:text-ui-fg-base">
+                    Sobre a Éclat
+                  </LocalizedClientLink>
+                </li>
+                <li>
+                  <LocalizedClientLink href="/editorial" className="hover:text-ui-fg-base">
+                    Editorial
+                  </LocalizedClientLink>
+                </li>
+                <li>
+                  <LocalizedClientLink href="/guia-de-medidas" className="hover:text-ui-fg-base">
+                    Guia de medidas
+                  </LocalizedClientLink>
+                </li>
+                <li>
+                  <LocalizedClientLink href="/trocas-e-devolucoes" className="hover:text-ui-fg-base">
+                    Trocas e devoluções
+                  </LocalizedClientLink>
+                </li>
+                <li>
+                  <LocalizedClientLink href="/privacidade" className="hover:text-ui-fg-base">
+                    Privacidade
+                  </LocalizedClientLink>
+                </li>
+                <li>
                   <LocalizedClientLink href="/account" className="hover:text-ui-fg-base">
                     Minha conta
                   </LocalizedClientLink>

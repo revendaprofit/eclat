@@ -3,6 +3,8 @@ import { getBaseURL } from "@lib/util/env"
 import { listProducts } from "@lib/data/products"
 import { listCollections } from "@lib/data/collections"
 import { listCategories } from "@lib/data/categories"
+import { listEditorialPosts } from "@lib/data/editorial"
+import { INSTITUTIONAL_PAGES } from "@modules/content/institutional"
 
 // sitemap.xml dinâmico: home, loja, produtos, coleções e categorias (região br).
 const CC = "br"
@@ -18,7 +20,31 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const urls: MetadataRoute.Sitemap = [
     { url: `${base}/${CC}`, lastModified: now, changeFrequency: "daily", priority: 1 },
     { url: `${base}/${CC}/store`, lastModified: now, changeFrequency: "daily", priority: 0.9 },
+    { url: `${base}/${CC}/editorial`, lastModified: now, changeFrequency: "weekly", priority: 0.7 },
   ]
+
+  for (const p of INSTITUTIONAL_PAGES) {
+    urls.push({
+      url: `${base}/${CC}/${p.slug}`,
+      lastModified: now,
+      changeFrequency: "monthly",
+      priority: 0.5,
+    })
+  }
+
+  try {
+    const posts = await listEditorialPosts(500)
+    for (const post of posts) {
+      urls.push({
+        url: `${base}/${CC}/editorial/${enc(post.slug)}`,
+        lastModified: post.updated_at ? new Date(post.updated_at) : now,
+        changeFrequency: "monthly",
+        priority: 0.7,
+      })
+    }
+  } catch {
+    /* ignora */
+  }
 
   try {
     // Pagina o catálogo inteiro (100 por página) — sem teto de produtos.

@@ -159,6 +159,75 @@ export function BreadcrumbJsonLd({
   )
 }
 
+// Artigo editorial (/editorial/<slug>) — sinal forte de citação para IA.
+export function ArticleJsonLd({
+  title,
+  description,
+  url,
+  image,
+  datePublished,
+  dateModified,
+}: {
+  title: string
+  description?: string | null
+  url: string
+  image?: string | null
+  datePublished?: string | null
+  dateModified?: string | null
+}) {
+  const base = getBaseURL()
+  return (
+    <JsonLd
+      data={{
+        "@context": "https://schema.org",
+        "@type": "Article",
+        headline: title,
+        ...(description ? { description } : {}),
+        ...(image ? { image: [image] } : {}),
+        ...(datePublished ? { datePublished } : {}),
+        ...(dateModified ? { dateModified } : {}),
+        inLanguage: "pt-BR",
+        mainEntityOfPage: url,
+        author: { "@type": "Organization", name: "use.ÉCLAT", url: base },
+        publisher: {
+          "@type": "Organization",
+          name: "use.ÉCLAT",
+          logo: {
+            "@type": "ImageObject",
+            url: `${base}/brand/logo-terracota.png`,
+          },
+        },
+      }}
+    />
+  )
+}
+
+// Página institucional (sobre, trocas, medidas, privacidade).
+export function WebPageJsonLd({
+  title,
+  description,
+  url,
+  type = "WebPage",
+}: {
+  title: string
+  description?: string | null
+  url: string
+  type?: "WebPage" | "AboutPage"
+}) {
+  return (
+    <JsonLd
+      data={{
+        "@context": "https://schema.org",
+        "@type": type,
+        name: title,
+        ...(description ? { description } : {}),
+        url,
+        inLanguage: "pt-BR",
+      }}
+    />
+  )
+}
+
 export function FaqJsonLd({
   items,
 }: {

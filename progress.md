@@ -596,3 +596,12 @@ PRÓXIMO (usuário, guiado): Railway (Postgres + serviço do repo, root /, vars,
 - VALIDADO em https://www.useeclat.com.br: / → 308 /br; canonical+og:url com domínio correto (home, produto); título sem duplicação; H1 no produto; JSON-LD availability real; twitter:card; sitemap com domínio de produção; /feed.xml e /openai-feed.json no ar (vazios até produtos terem foto); chave IndexNow servida.
 - 1º ping IndexNow disparado: /api/seo/indexnow → {ok:true, submitted:19, status:202} (Bing/Copilot notificado).
 - Restante do roadmap: Fase 2 cadastros manuais (painel GEO do Cockpit tem o passo-a-passo) + Fase 3 (institucionais/editorial) + fotos reais dos produtos (destravam os feeds).
+
+## 2026-07-24 — SEO/GEO Fase 3 (institucionais + editorial) ✅
+- Migration 0007_editorial.sql APLICADA no Supabase (editorial_post, RLS anon=só published). SOP: architecture/editorial.md.
+- Vitrine: /br/sobre, /br/trocas-e-devolucoes, /br/guia-de-medidas, /br/privacidade (defaults no código, sobrescrevíveis via site_content page.<id>; JSON-LD WebPage/AboutPage + Breadcrumb; rota dinâmica [institutionalSlug]).
+- Vitrine: /br/editorial (lista) + /br/editorial/[slug] (artigo com schema Article, OG type article, capa). Markdown próprio sem dependência (modules/content/markdown.tsx). Footer com links institucionais+editorial. Sitemap inclui tudo.
+- Cockpit: menu "Editorial (artigos)" — CRUD completo (rascunho/publicar, slug automático, tags, capa por URL) via /api/editorial (service_role).
+- 1º artigo PUBLICADO no banco: "Como escolher o tamanho ideal de legging (sem errar)" (slug como-escolher-tamanho-legging). Ajuste: removida promessa de política não aprovada ("primeira troca por nossa conta").
+- VALIDADO em dev (backend produção): 5 páginas com title/canonical/H1; 404 p/ slug desconhecido; artigo com Article JSON-LD + markdown (h2/listas/links internos); listagem e sitemap revalidam em ~60s.
+- Publicação na loja: aparece após o deploy deste commit na Vercel.
