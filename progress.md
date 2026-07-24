@@ -590,3 +590,9 @@ PRÓXIMO (usuário, guiado): Railway (Postgres + serviço do repo, root /, vars,
 - Cockpit → GEO: seção "Cadastros (uma vez)" com passo-a-passo GSC, Google Merchant (listagens gratuitas), Bing Webmaster, MS Merchant Center, OpenAI merchants, Meta Commerce.
 - ⚠️ FEEDS SAEM VAZIOS até os produtos terem IMAGEM (thumbnail null no seed — GMC exige image_link; código pula produto sem foto). Popula sozinho ao cadastrar fotos reais (pendência Parte 1).
 - ⚠️ Deploy Vercel do commit aba30c6 (Fase 1) NÃO apareceu em produção (site ainda 307/sem canonical ~19:10). CLI vercel local logado em conta errada (parisdecor). VERIFICAR painel Vercel do projeto eclat-loja (build falhou? auto-deploy desligado?).
+
+## 2026-07-24 — DEPLOY FASES 1+2 VALIDADO EM PRODUÇÃO ✅
+- Causa do deploy travado: "Redeploy of C3xwtjDSo" preso em Building ~30min bloqueava a fila (1 build por vez); usuário cancelou no painel → fila rodou.
+- VALIDADO em https://www.useeclat.com.br: / → 308 /br; canonical+og:url com domínio correto (home, produto); título sem duplicação; H1 no produto; JSON-LD availability real; twitter:card; sitemap com domínio de produção; /feed.xml e /openai-feed.json no ar (vazios até produtos terem foto); chave IndexNow servida.
+- 1º ping IndexNow disparado: /api/seo/indexnow → {ok:true, submitted:19, status:202} (Bing/Copilot notificado).
+- Restante do roadmap: Fase 2 cadastros manuais (painel GEO do Cockpit tem o passo-a-passo) + Fase 3 (institucionais/editorial) + fotos reais dos produtos (destravam os feeds).
