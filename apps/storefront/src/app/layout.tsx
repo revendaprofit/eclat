@@ -24,27 +24,34 @@ const playfair = Playfair_Display({
   display: "swap",
 })
 
-export const metadata: Metadata = {
-  metadataBase: new URL(getBaseURL()),
-  title: {
-    default: "use.ÉCLAT — athleisure da mulher inteira",
-    template: "%s · use.ÉCLAT",
-  },
-  description:
-    "use.ÉCLAT — moda fitness premium e independente. A luz e o resplendor da mulher inteira.",
-  openGraph: {
-    siteName: "use.ÉCLAT",
-    locale: "pt_BR",
-    type: "website",
-  },
-  twitter: {
-    card: "summary_large_image",
-  },
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: "default",
-    title: "ÉCLAT",
-  },
+export async function generateMetadata(): Promise<Metadata> {
+  // Verificação do Search Console via Metadata API (renderiza no <head>).
+  const marketing = await getSiteContent<Marketing>("marketing")
+  return {
+    metadataBase: new URL(getBaseURL()),
+    title: {
+      default: "use.ÉCLAT — athleisure da mulher inteira",
+      template: "%s · use.ÉCLAT",
+    },
+    description:
+      "use.ÉCLAT — moda fitness premium e independente. A luz e o resplendor da mulher inteira.",
+    openGraph: {
+      siteName: "use.ÉCLAT",
+      locale: "pt_BR",
+      type: "website",
+    },
+    twitter: {
+      card: "summary_large_image",
+    },
+    appleWebApp: {
+      capable: true,
+      statusBarStyle: "default",
+      title: "ÉCLAT",
+    },
+    ...(marketing?.gsc_verification
+      ? { verification: { google: marketing.gsc_verification } }
+      : {}),
+  }
 }
 
 export const viewport: Viewport = {
@@ -60,9 +67,11 @@ export default async function RootLayout(props: { children: React.ReactNode }) {
       data-mode="light"
       className={`${inter.variable} ${playfair.variable}`}
     >
-      <ConsentDefault />
-      <GtmHead gtmId={marketing?.gtm_id} gsc={marketing?.gsc_verification} />
+      {/* Scripts SEMPRE dentro do <body>: filho direto de <html> é HTML
+          inválido e quebra a hidratação (deixava o botão de compra morto). */}
       <body className="bg-eclat-luz text-eclat-grafite antialiased font-sans">
+        <ConsentDefault />
+        <GtmHead gtmId={marketing?.gtm_id} />
         <GtmBody gtmId={marketing?.gtm_id} />
         <OrganizationJsonLd />
         <WebSiteJsonLd />

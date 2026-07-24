@@ -1,5 +1,5 @@
 /* use.ÉCLAT — service worker mínimo (network-first + fallback offline). */
-const CACHE = "eclat-v1"
+const CACHE = "eclat-v2" // v2: purga caches antigos que podiam ter HTML truncado
 
 self.addEventListener("install", () => {
   self.skipWaiting()
@@ -19,6 +19,10 @@ self.addEventListener("activate", (event) => {
 self.addEventListener("fetch", (event) => {
   const req = event.request
   if (req.method !== "GET") return
+  // NUNCA interceptar navegações/documentos: o HTML da loja é streamado
+  // (Suspense) e uma cópia truncada em cache deixa a página sem os scripts
+  // de conclusão — botão de compra morto. SW só cuida de assets estáticos.
+  if (req.mode === "navigate" || req.destination === "document") return
   const url = new URL(req.url)
   if (url.origin !== self.location.origin) return // não interfere em terceiros (tags, imagens externas)
 

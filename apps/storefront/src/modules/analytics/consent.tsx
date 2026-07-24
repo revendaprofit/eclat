@@ -1,6 +1,5 @@
 "use client"
 
-import Script from "next/script"
 import { useEffect, useState } from "react"
 
 // Google Consent Mode v2 + banner de cookies (LGPD).
@@ -36,12 +35,19 @@ function setConsent(granted: boolean) {
   }
 }
 
-// Script default (beforeInteractive): roda ANTES do GTM.
+// Consent default: PRECISA rodar antes do snippet do GTM. Script inline puro
+// no topo do <body> (síncrono no parse) — o GTM carrega afterInteractive, então
+// a ordem é garantida. NÃO usar next/script fora do <body>: <script> como filho
+// direto de <html> é HTML inválido e QUEBRA a hidratação do React (bug que
+// deixava o botão de compra travado em "Out of stock").
 export function ConsentDefault() {
   return (
-    <Script id="consent-default" strategy="beforeInteractive">
-      {`window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('consent','default',{ad_storage:'denied',ad_user_data:'denied',ad_personalization:'denied',analytics_storage:'denied',wait_for_update:500});`}
-    </Script>
+    <script
+      id="consent-default"
+      dangerouslySetInnerHTML={{
+        __html: `window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('consent','default',{ad_storage:'denied',ad_user_data:'denied',ad_personalization:'denied',analytics_storage:'denied',wait_for_update:500});`,
+      }}
+    />
   )
 }
 

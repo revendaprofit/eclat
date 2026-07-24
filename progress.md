@@ -605,3 +605,12 @@ PRÓXIMO (usuário, guiado): Railway (Postgres + serviço do repo, root /, vars,
 - 1º artigo PUBLICADO no banco: "Como escolher o tamanho ideal de legging (sem errar)" (slug como-escolher-tamanho-legging). Ajuste: removida promessa de política não aprovada ("primeira troca por nossa conta").
 - VALIDADO em dev (backend produção): 5 páginas com title/canonical/H1; 404 p/ slug desconhecido; artigo com Article JSON-LD + markdown (h2/listas/links internos); listagem e sitemap revalidam em ~60s.
 - Publicação na loja: aparece após o deploy deste commit na Vercel.
+
+## 2026-07-24 — 🐛 BUG CRÍTICO ACHADO E CORRIGIDO: "esgotado" / botão de compra morto
+- Relatório do gestor de tráfego (Eclat-Relatorio-Implantacao.pdf) apontou prioridade máxima: loja mostra produtos esgotados (venda impossível). Investigação profunda (browser + RSC payload + streaming markers):
+- CAUSA-RAIZ: ConsentDefault e GtmHead renderizados como filhos diretos de <html> no layout raiz (fora de <head>/<body>). <script>/<meta> filho de <html> = HTML inválido → ERRO DE HIDRATAÇÃO do React → a subárvore do ProductActions ficava órfã/desidratada → botão preso no fallback "Out of stock" para TODO cliente, mesmo com estoque 99 na API. (Erros visíveis no console: "In HTML, <script> cannot be a child of <html>. This will cause a hydration error.")
+- FIX: (1) ConsentDefault virou <script> inline puro no TOPO do <body> (ordem garantida antes do GTM afterInteractive); (2) GtmHead (GTM) movido p/ dentro do <body>; (3) verificação GSC movida p/ Metadata API (generateMetadata.verification.google no layout raiz); (4) sw.js NÃO intercepta mais navegações/documentos (HTML streamado + cache = risco de cópia truncada sem scripts de conclusão) e cache renomeado eclat-v2 p/ purgar antigos.
+- Evidências: DOM válido pós-fix (html → só HEAD+BODY); HTML de produção contém os 3 $RC (server streaming OK — o problema era só client-side na hidratação).
+- LIÇÃO (SOP): scripts/metas NUNCA como filhos diretos de <html> em App Router; SW nunca intercepta document/navigate.
+- VALIDAR pós-deploy num navegador real: abrir produto, escolher Tamanho+Cor → botão deve virar "Adicionar à sacola" habilitado.
+- Obs. teste local: o painel de browser do agente não composita frames (rAF não dispara) → reveal/hidratação de Suspense não roda ali; não confundir com o bug.
