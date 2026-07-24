@@ -62,7 +62,8 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
   const path = `/${params.countryCode}/collections/${params.handle}`
 
   const metadata = {
-    title: `${collection.title} | use.ÉCLAT`,
+    // o template do layout raiz acrescenta "· use.ÉCLAT"
+    title: collection.title,
     description,
     alternates: {
       canonical: path,

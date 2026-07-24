@@ -581,3 +581,12 @@ PRÓXIMO (usuário, guiado): Railway (Postgres + serviço do repo, root /, vars,
 - VALIDADO em dev contra backend Railway de produção: / 308→/br; canonical/og/H1/ItemList/sitemap(19 urls)/availability OK; /_next/image ativo.
 - ⚠️ PENDENTE (ação manual Vercel, projeto eclat-loja): setar NEXT_PUBLIC_BASE_URL=https://www.useeclat.com.br + REDEPLOY (env só aplica após redeploy). Sem isso há fallback p/ VERCEL_PROJECT_PRODUCTION_URL (deve resolver p/ domínio custom, mas a env explícita é o correto).
 - Próximo (Fase 2 GEO): feed Google Merchant Center + GSC; Bing Webmaster + IndexNow + MS Merchant Center; feed formato OpenAI (ACP). Fase 3: páginas institucionais + editorial (CMS Supabase via Cockpit).
+
+## 2026-07-24 — SEO/GEO Fase 2 (feeds & registros) ✅ + fix títulos
+- feed.xml REESCRITO nível variante (Google Merchant spec): item_group_id, g:size/g:color (opções Tamanho/Cor), availability real por estoque, additional_image_link, product_type (categorias), catálogo paginado inteiro. Fonte única em lib/util/feed-data.ts (mesma regra de estoque do JSON-LD). Serve Google + Microsoft/Bing + Meta.
+- NOVO /openai-feed.json: feed JSON formato OpenAI Product Feed/ACP (enable_search:true, enable_checkout:false) p/ aplicar em developers.openai.com/commerce.
+- NOVO IndexNow (Bing/Copilot): chave pública em /b513bfa6acd53fb1d42216ee643ff524.txt + ping GET /api/seo/indexnow (submete URLs do sitemap; chamar após publicar produto).
+- FIX: títulos duplicados ("· use.ÉCLAT" 2x) — home usa title absolute; produto/categoria/coleção title puro (template do layout acrescenta a marca).
+- Cockpit → GEO: seção "Cadastros (uma vez)" com passo-a-passo GSC, Google Merchant (listagens gratuitas), Bing Webmaster, MS Merchant Center, OpenAI merchants, Meta Commerce.
+- ⚠️ FEEDS SAEM VAZIOS até os produtos terem IMAGEM (thumbnail null no seed — GMC exige image_link; código pula produto sem foto). Popula sozinho ao cadastrar fotos reais (pendência Parte 1).
+- ⚠️ Deploy Vercel do commit aba30c6 (Fase 1) NÃO apareceu em produção (site ainda 307/sem canonical ~19:10). CLI vercel local logado em conta errada (parisdecor). VERIFICAR painel Vercel do projeto eclat-loja (build falhou? auto-deploy desligado?).

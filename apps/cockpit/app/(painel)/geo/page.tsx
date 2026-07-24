@@ -38,7 +38,22 @@ export default function GeoPage() {
           <Done><strong>FAQ</strong> answer-first + schema FAQPage (edite em <em>Vitrine → FAQ</em>).</Done>
           <Done><strong>llms.txt</strong> em <code className={code}>{STORE}/llms.txt</code> (mapa da marca + feed).</Done>
           <Done><strong>Crawlers de IA liberados</strong> no robots.txt (GPTBot, PerplexityBot, ClaudeBot, Google-Extended…).</Done>
-          <Done><strong>Feed de produtos</strong> em <code className={code}>{STORE}/feed.xml</code> (dados precisos para IA de compras).</Done>
+          <Done><strong>Feed de produtos</strong> em <code className={code}>{STORE}/feed.xml</code> — nível variante (tamanho/cor, estoque real, item_group_id). Serve Google, Microsoft/Bing e Meta.</Done>
+          <Done><strong>Feed OpenAI (ACP)</strong> em <code className={code}>{STORE}/openai-feed.json</code> — pronto p/ o programa de merchants do ChatGPT.</Done>
+          <Done><strong>IndexNow (Bing/Copilot)</strong>: chave publicada + ping em <code className={code}>{STORE}/api/seo/indexnow</code> (abrir essa URL após publicar/alterar produtos → Bing indexa em minutos).</Done>
+        </ul>
+      </section>
+
+      {/* CADASTROS — FASE 2 */}
+      <section className="border border-eclat-dourado/40 rounded-lg bg-white/60 p-5 flex flex-col gap-3">
+        <h2 className="font-serif text-xl text-eclat-grafite">Cadastros (uma vez — você/gestor)</h2>
+        <ul className="flex flex-col gap-1.5">
+          <Step><strong>Google Search Console</strong> (search.google.com/search-console): adicionar {STORE}, verificar (meta tag já suportada em Vitrine → Marketing) e enviar o sitemap <code className={code}>{STORE}/sitemap.xml</code>.</Step>
+          <Step><strong>Google Merchant Center</strong> (merchants.google.com): criar conta BR, ativar <em>listagens gratuitas</em> e cadastrar o feed <code className={code}>{STORE}/feed.xml</code> (atualização diária). Produtos aparecem em Busca, Shopping, Imagens, Lens e Gemini.</Step>
+          <Step><strong>Bing Webmaster Tools</strong> (bing.com/webmasters): adicionar o site (dá p/ importar do Search Console), enviar o sitemap e acompanhar o relatório <em>AI Performance</em> (citações no Copilot).</Step>
+          <Step><strong>Microsoft Merchant Center</strong> (ads.microsoft.com → Tools → Merchant Center): cadastrar o mesmo <code className={code}>{STORE}/feed.xml</code> → produtos no Bing Shopping e Copilot.</Step>
+          <Step><strong>OpenAI / ChatGPT merchants</strong> (chatgpt.com/merchants): aplicar com o feed <code className={code}>{STORE}/openai-feed.json</code>. Hoje o programa é EUA-first; entrar na fila da expansão internacional.</Step>
+          <Step><strong>Meta Commerce</strong> (business.facebook.com/commerce): catálogo com o mesmo <code className={code}>{STORE}/feed.xml</code> (Instagram Shopping).</Step>
         </ul>
       </section>
 

@@ -40,7 +40,8 @@ export async function generateMetadata(props: {
     "Moda fitness premium e independente. Leggings, tops e conjuntos que sustentam, valorizam e resplandecem."
   const path = `/${countryCode}`
   return {
-    title,
+    // absolute: título da home já contém a marca — não passar pelo template "%s · use.ÉCLAT"
+    title: { absolute: title },
     description,
     alternates: {
       canonical: path,

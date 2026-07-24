@@ -55,7 +55,8 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
     const path = `/${params.countryCode}/categories/${params.category.join("/")}`
 
     return {
-      title: `${title} | use.ÉCLAT`,
+      // o template do layout raiz acrescenta "· use.ÉCLAT"
+      title,
       description,
       alternates: {
         canonical: path,
