@@ -15,6 +15,7 @@ const ITEMS = [
   { href: "/editorial", label: "Editorial (artigos)" },
   { href: "/marketing", label: "Marketing & Rastreamento" },
   { href: "/geo", label: "GEO (busca por IA)" },
+  { href: "/custos", label: "Custos de Coleção" },
   { href: "/financeiro", label: "Financeiro" },
   { href: "/configuracoes", label: "Configurações" },
 ]

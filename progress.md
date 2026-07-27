@@ -614,3 +614,8 @@ PRÓXIMO (usuário, guiado): Railway (Postgres + serviço do repo, root /, vars,
 - LIÇÃO (SOP): scripts/metas NUNCA como filhos diretos de <html> em App Router; SW nunca intercepta document/navigate.
 - VALIDAR pós-deploy num navegador real: abrir produto, escolher Tamanho+Cor → botão deve virar "Adicionar à sacola" habilitado.
 - Obs. teste local: o painel de browser do agente não composita frames (rAF não dispara) → reveal/hidratação de Suspense não roda ali; não confundir com o bug.
+
+## 2026-07-27 — Painel "Custos de Coleção" no Cockpit ✅ (+ design da Coleção 01 via IA)
+- DESIGN (Higgsfield/nano-banana, docs/design/): Conjunto 01 APROVADO (blusa off-white costas fechadas + flare com vivos Ramatex Licor 8316 #D5823E amostrado do tecido real) + 4 opções de macacão flare (A quadrado/B half-zip/C halter/D manga longa) com frentes e costas A/C. Logo extraído do PDF em docs/design/brand/.
+- CUSTOS: migration 0008 (costing_piece + costing_item BOM, centavos, RLS anon negado) APLICADA. APIs /api/costing[...]. Tela /custos: lista por coleção, ficha com BOM editável, facção/estampa/modelagem diluída/perda%, custo industrial ao vivo, simulador de preço (imposto/taxa/CAC % + markup, margem com semáforo ≥55% verde) e botão "Aplicar como COGS" → POST /api/costs (produto_custo → DRE). Sidebar: "Custos de Coleção".
+- Seed: 3 fichas da Coleção 01 (blusa, calça, macacão) com BOM placeholder — preencher preços reais (cotação facção + Ramatex).
