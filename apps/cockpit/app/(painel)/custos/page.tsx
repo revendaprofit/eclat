@@ -142,8 +142,52 @@ export default function CustosPage() {
     load()
   }
 
+  async function duplicar() {
+    if (!sel) return
+    const r = await fetch("/api/costing", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: `${sel.name} (nova cor)`,
+        collection: sel.collection,
+        notes: sel.notes,
+      }),
+    })
+    if (!r.ok) {
+      setMsg("Erro ao duplicar.")
+      return
+    }
+    const nova = (await r.json()) as { id: string }
+    // herda BOM e parâmetros; molde reaproveitado => modelagem ZERADA (Opção 1)
+    await fetch(`/api/costing/${nova.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        faccao_centavos: sel.faccao_centavos,
+        estampa_centavos: sel.estampa_centavos,
+        modelagem_total_centavos: 0,
+        modelagem_pecas: sel.modelagem_pecas,
+        perda_pct: sel.perda_pct,
+        imposto_pct: sel.imposto_pct,
+        taxa_pagamento_pct: sel.taxa_pagamento_pct,
+        marketing_pct: sel.marketing_pct,
+        frete_embalagem_centavos: sel.frete_embalagem_centavos,
+        markup: sel.markup,
+        items,
+      }),
+    })
+    setMsg("Ficha duplicada (modelagem zerada — molde reaproveitado) ✓")
+    load()
+  }
+
   async function aplicarCogs() {
     if (!sel) return
+    if (sel.modelagem_total_centavos > 0) {
+      const ok = confirm(
+        "Atenção: esta ficha tem custo de MODELAGEM > 0.\n\nPela convenção ÉCLAT (Opção 1), a modelagem vai em Financeiro → Despesas (Desenvolvimento de coleção) e NÃO no COGS — senão o DRE desconta duas vezes.\n\nAplicar mesmo assim, INCLUINDO a modelagem no custo?"
+      )
+      if (!ok) return
+    }
     const c = calc(sel, items)
     const ids = (sel.medusa_variant_ids || []).filter(Boolean)
     if (!ids.length) {
@@ -180,6 +224,13 @@ export default function CustosPage() {
             Ficha de pré-custo por peça: materiais (BOM) + facção + perdas →
             custo industrial → preço com margem. Ao aprovar, aplique como COGS
             do produto (alimenta o DRE).
+          </p>
+          <p className="text-xs text-eclat-dourado mt-1">
+            Convenção ÉCLAT: modelagem NÃO entra no custo da peça — lance em
+            Financeiro → Despesas (categoria &quot;Desenvolvimento de
+            coleção&quot;). Use o campo de modelagem só para simular viabilidade
+            e zere antes de aplicar o COGS. Molde reaproveitado em nova cor =
+            custo zero (use &quot;Duplicar&quot;).
           </p>
         </div>
         <button
@@ -252,6 +303,13 @@ export default function CustosPage() {
                 <option value="cotacao">cotação</option>
                 <option value="aprovada">aprovada</option>
               </select>
+              <button
+                onClick={duplicar}
+                className="text-sm text-eclat-dourado hover:underline shrink-0"
+                title="Cria variação (nova cor/tecido) herdando o BOM, com modelagem zerada"
+              >
+                duplicar
+              </button>
               <button
                 onClick={() => excluir(sel.id)}
                 className="text-sm text-red-700/70 hover:text-red-700 underline shrink-0"

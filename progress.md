@@ -619,3 +619,7 @@ PRÓXIMO (usuário, guiado): Railway (Postgres + serviço do repo, root /, vars,
 - DESIGN (Higgsfield/nano-banana, docs/design/): Conjunto 01 APROVADO (blusa off-white costas fechadas + flare com vivos Ramatex Licor 8316 #D5823E amostrado do tecido real) + 4 opções de macacão flare (A quadrado/B half-zip/C halter/D manga longa) com frentes e costas A/C. Logo extraído do PDF em docs/design/brand/.
 - CUSTOS: migration 0008 (costing_piece + costing_item BOM, centavos, RLS anon negado) APLICADA. APIs /api/costing[...]. Tela /custos: lista por coleção, ficha com BOM editável, facção/estampa/modelagem diluída/perda%, custo industrial ao vivo, simulador de preço (imposto/taxa/CAC % + markup, margem com semáforo ≥55% verde) e botão "Aplicar como COGS" → POST /api/costs (produto_custo → DRE). Sidebar: "Custos de Coleção".
 - Seed: 3 fichas da Coleção 01 (blusa, calça, macacão) com BOM placeholder — preencher preços reais (cotação facção + Ramatex).
+
+## 2026-07-27 — Custos: convenção de MODELAGEM definida (Opção 1)
+- DECISÃO (usuário): modelagem NÃO entra no COGS da peça — é despesa de desenvolvimento. Lançar em Financeiro → Despesas, categoria "Desenvolvimento de coleção" (criada no Supabase). Campo modelagem na ficha = só simulação de viabilidade; zerar antes de aplicar COGS.
+- Painel /custos: aviso na página com a convenção; confirm() de dupla contagem ao aplicar COGS com modelagem > 0; botão "duplicar" (variação nova cor/tecido herda BOM e parâmetros com modelagem zerada — molde reaproveitado).
