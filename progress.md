@@ -623,3 +623,9 @@ PRÓXIMO (usuário, guiado): Railway (Postgres + serviço do repo, root /, vars,
 ## 2026-07-27 — Custos: convenção de MODELAGEM definida (Opção 1)
 - DECISÃO (usuário): modelagem NÃO entra no COGS da peça — é despesa de desenvolvimento. Lançar em Financeiro → Despesas, categoria "Desenvolvimento de coleção" (criada no Supabase). Campo modelagem na ficha = só simulação de viabilidade; zerar antes de aplicar COGS.
 - Painel /custos: aviso na página com a convenção; confirm() de dupla contagem ao aplicar COGS com modelagem > 0; botão "duplicar" (variação nova cor/tecido herda BOM e parâmetros com modelagem zerada — molde reaproveitado).
+
+## 2026-07-27 — Custos v2: estrutura MODELO × COLEÇÃO (aprovada) + Família Blackout cadastrada
+- Migration 0009 APLICADA: costing_collection (parâmetros padrão por coleção), costing_model (catálogo com FOTO), costing_piece + collection_id/model_id/colorway/foto.
+- Tela /custos reorganizada: seletor de coleção + parâmetros editáveis da coleção; "Nova coleção" (com opção de copiar todas as peças da atual, modelagem zerada); "Adicionar modelo à coleção" (catálogo ou novo; herda BOM da ficha mais recente do modelo); lista de peças com MINIATURA; ficha com foto/modelo/colorway.
+- APIs novas: /api/costing-collections[/id], /api/costing-models; POST /api/costing herda parâmetros da coleção.
+- SEED da prancha real "FAMILIA BLACKOUT VERDE EXERCITO E LICOR.pdf": 8 modelos recortados da prancha com foto no Storage (bucket site/costing/) + 9 fichas (Macaquinho Prisma em 2 colorways) com BOM placeholder. Coleção 01 religada (3 fichas → modelos Blusa ML/Calça Flare/Macacão com fotos dos renders).

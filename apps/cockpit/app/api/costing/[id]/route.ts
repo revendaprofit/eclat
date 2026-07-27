@@ -20,6 +20,9 @@ export async function GET(
 const PIECE_FIELDS = [
   "name",
   "collection",
+  "collection_id",
+  "model_id",
+  "colorway",
   "reference_image_url",
   "status",
   "faccao_centavos",
