@@ -17,6 +17,14 @@ export default function ProductPrice({
 
   const selectedPrice = variant ? variantPrice : cheapestPrice
 
+  // "a partir de" só quando existe faixa real de preço entre as variações
+  const distinctPrices = new Set(
+    (product.variants ?? [])
+      .map((v) => (v as { calculated_price?: { calculated_amount?: number | null } }).calculated_price?.calculated_amount)
+      .filter((p) => p != null)
+  )
+  const hasRange = distinctPrices.size > 1
+
   if (!selectedPrice) {
     return <div className="block w-32 h-9 bg-gray-100 animate-pulse" />
   }
@@ -28,7 +36,7 @@ export default function ProductPrice({
           "text-ui-fg-interactive": selectedPrice.price_type === "sale",
         })}
       >
-        {!variant && "From "}
+        {!variant && hasRange && "a partir de "}
         <span
           data-testid="product-price"
           data-value={selectedPrice.calculated_price_number}

@@ -20,7 +20,7 @@ export async function GET() {
 - [Sitemap](${b}/sitemap.xml): todas as URLs indexáveis.
 
 ## Sobre
-use.ÉCLAT é independente e não vinculada a nenhuma outra marca. Envia para todo o Brasil, com troca/devolução em 30 dias. Moeda: BRL.
+use.ÉCLAT é independente e não vinculada a nenhuma outra marca. Envia para todo o Brasil. Arrependimento em até 7 dias (CDC); defeito de fabricação trocado em até 30 dias; troca de tamanho pelo WhatsApp. Moeda: BRL.
 `
   return new Response(body, {
     headers: {

@@ -207,11 +207,11 @@ export default function ProductActions({
           isLoading={isAdding}
           data-testid="add-product-button"
         >
-          {!selectedVariant && !options
-            ? "Select variant"
-            : !inStock || !isValidVariant
-            ? "Out of stock"
-            : "Add to cart"}
+          {!selectedVariant || !isValidVariant
+            ? "Escolha as opções"
+            : !inStock
+            ? "Esgotado"
+            : "Adicionar à sacola"}
         </Button>
         <MobileActions
           product={product}

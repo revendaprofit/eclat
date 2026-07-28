@@ -50,10 +50,10 @@ export default async function RelatedProducts({
     <div className="product-page-constraint">
       <div className="flex flex-col items-center text-center mb-16">
         <span className="text-base-regular text-gray-600 mb-6">
-          Related products
+          Complete o look
         </span>
         <p className="text-2xl-regular text-ui-fg-base max-w-lg">
-          You might also want to check out these products.
+          Peças da mesma coleção que conversam com esta — e fecham o look ÉCLAT.
         </p>
       </div>
 

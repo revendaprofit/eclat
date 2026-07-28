@@ -12,6 +12,13 @@ import { notFound } from "next/navigation"
 import { HttpTypes } from "@medusajs/types"
 
 import ProductActionsWrapper from "./product-actions-wrapper"
+import DsbHero from "@modules/products/components/dsb-hero"
+import GuaranteeSeals from "@modules/products/components/guarantee-seals"
+import QuemE from "@modules/products/components/quem-e"
+import PdpTestimonials from "@modules/products/components/pdp-testimonials"
+import SizeGuide from "@modules/products/components/size-guide"
+import ProductFaq from "@modules/products/components/product-faq"
+import NotifyMe from "@modules/products/components/notify-me"
 import Track from "@modules/analytics/track"
 import { productToViewItem } from "@modules/analytics/items"
 import { ProductJsonLd, BreadcrumbJsonLd } from "@modules/seo/jsonld"
@@ -38,6 +45,21 @@ const ProductTemplate: React.FC<ProductTemplateProps> = ({
 
   const productUrl = `${getBaseURL()}/${countryCode}/products/${product.handle}`
 
+  // esgotado total: nenhuma variante disponível (mesma regra do JSON-LD/feed)
+  const variants = (product.variants ?? []) as {
+    manage_inventory?: boolean
+    allow_backorder?: boolean
+    inventory_quantity?: number
+  }[]
+  const allOut =
+    variants.length > 0 &&
+    !variants.some(
+      (v) =>
+        v.manage_inventory === false ||
+        v.allow_backorder === true ||
+        (typeof v.inventory_quantity === "number" && v.inventory_quantity > 0)
+    )
+
   return (
     <>
       <Track event="view_item" ecommerce={productToViewItem(product)} />
@@ -55,6 +77,7 @@ const ProductTemplate: React.FC<ProductTemplateProps> = ({
       >
         <div className="flex flex-col small:sticky small:top-48 small:py-0 small:max-w-[300px] w-full py-8 gap-y-6">
           <ProductInfo product={product} />
+          <DsbHero product={product} />
           <ProductTabs product={product} />
         </div>
         <div className="block w-full relative">
@@ -77,7 +100,17 @@ const ProductTemplate: React.FC<ProductTemplateProps> = ({
           >
             <ProductActionsWrapper id={product.id} region={region} />
           </Suspense>
+          <GuaranteeSeals />
+          {allOut && <NotifyMe productId={product.handle ?? product.id} />}
         </div>
+      </div>
+      <div className="content-container max-w-4xl">
+        <QuemE product={product} />
+        <PdpTestimonials />
+        <div className="mt-10">
+          <SizeGuide />
+        </div>
+        <ProductFaq product={product} />
       </div>
       <div
         className="content-container my-16 small:my-32"

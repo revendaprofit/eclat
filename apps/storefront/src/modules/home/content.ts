@@ -90,7 +90,7 @@ export const HOME_DEFAULTS = {
       { title: "Tecido premium", text: "Compressão e toque que duram." },
       { title: "Caimento que valoriza", text: "Modelagem pensada no corpo real." },
       { title: "Frete para todo o Brasil", text: "Rápido e rastreado." },
-      { title: "Troca fácil", text: "30 dias para trocar ou devolver." },
+      { title: "Troca fácil", text: "7 dias para se arrepender (CDC) e troca de tamanho pelo WhatsApp." },
     ],
   } as Benefits,
   newsletter: {
@@ -135,7 +135,7 @@ export const HOME_DEFAULTS = {
       },
       {
         q: "Posso trocar ou devolver?",
-        a: "Sim. Você tem 30 dias para trocar ou devolver. É só falar com a gente pelo WhatsApp e a gente resolve.",
+        a: "Sim. Você tem 7 dias corridos após receber para desistir da compra com reembolso integral (CDC). Troca de tamanho é pelo WhatsApp, conforme o estoque. Defeito de fabricação: troca sem custo em até 30 dias.",
       },
       {
         q: "As peças servem para treino e para o dia a dia?",

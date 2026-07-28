@@ -638,3 +638,13 @@ PRÓXIMO (usuário, guiado): Railway (Postgres + serviço do repo, root /, vars,
 - Seed: personas Aurora (1,75m veste P) e Íris (1,65m veste G) com avatares IA no Supabase Storage (site/personas/).
 - VALIDADO em dev (backend produção): home 200 c/ trigger no nav; PDP 200; tsc limpo nos 2 apps.
 - PENDENTE: gerar fotos por persona dos produtos reais quando entrarem (fluxo no SOP); Fase 2 = reordenação por estilo + selo "tem seu tamanho".
+
+## 2026-07-28 — PDP v2 (spec do wireframe) + correção CDC ✅
+- Decisão do usuário: OPÇÃO A no conflito 7-vs-30 → home/llms.txt alinhados à política real (7 dias arrependimento CDC + 30 defeito + troca de tamanho via WhatsApp). Corrigido em HOME_DEFAULTS (benefit + FAQ, que alimentam o FAQPage JSON-LD) e llms.txt.
+- TRADUÇÃO 100% da PDP: Informações do produto / Envio e trocas / Complete o look (com motivo) / Escolha: {opção} / Esgotado / Adicionar à sacola / "a partir de" só com faixa real de preço (fim do "From" enganoso).
+- Botão corrigido: "Escolha as opções" antes da seleção; "Esgotado" só com variante escolhida sem estoque.
+- NOVOS COMPONENTES (spec): GuaranteeSeals (selos 7/30/WhatsApp junto ao botão) · SizeGuide (tabela de medidas NA PDP + Dica ÉCLAT, id=medidas) · ProductFaq (accordion <details> nativo + schema FAQPage; perguntas por produto via metadata.faq, fallback padrão) · PdpTestimonials (3 depoimentos da home migrados p/ PDP, SEM nota agregada — decisão do spec) · DsbHero (Dor→Solução→Benefício via metadata dsb_*) · QuemE (é/não é pra você via metadata quem_sim/quem_nao) · NotifyMe (avise-me no esgotado → Supabase avise_me, migration 0009 APLICADA, anon INSERT-only).
+- Seed do conteúdo da Legging Resplendor: script pronto em scripts/seed-pdp-legging-resplendor.js — NÃO rodou em produção (senha admin de produção só na Vercel). Alternativa: preencher metadata pela ficha técnica no Cockpit.
+- NÃO implementado por decisão comercial pendente (spec marca como proposta): parcelamento/Pix (aguarda Mercado Pago Parte 4), piso de frete grátis + barra (aguarda financeiro), CEP/ETA com data (aguarda Melhor Envio), composição do tecido (aguarda fornecedor), vídeo 8s na galeria (asset).
+- Plugins do Claude Code data-engineering e semgrep DESABILITADOS no settings.json a pedido (hooks quebrados travando a sessão); backup do settings criado. Válido a partir da próxima sessão.
+- VALIDADO em dev: PDP 200, zero strings em inglês, FAQPage schema presente, selos/medidas/FAQ/depoimentos renderizando, home com texto CDC correto.
