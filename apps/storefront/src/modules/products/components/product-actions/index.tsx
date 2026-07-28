@@ -13,6 +13,7 @@ import ProductPrice from "../product-price"
 import MobileActions from "./mobile-actions"
 import { useRouter } from "next/navigation"
 import { variantToAddToCart } from "@modules/analytics/items"
+import { getPrefs } from "@modules/personalization/prefs"
 
 type ProductActionsProps = {
   product: HttpTypes.StoreProduct
@@ -48,6 +49,22 @@ export default function ProductActions({
       setOptions(variantOptions ?? {})
     }
   }, [product.variants])
+
+  // Minha ÉCLAT: pré-seleciona o tamanho salvo da cliente (se existir na peça)
+  useEffect(() => {
+    const tamanho = getPrefs().tamanho
+    if (!tamanho) return
+    const opt = (product.options || []).find((o) =>
+      /tamanho|size/i.test(o.title ?? "")
+    )
+    if (!opt?.id) return
+    const existe = opt.values?.some((v) => v.value === tamanho)
+    if (existe) {
+      setOptions((prev) =>
+        prev[opt.id!] ? prev : { ...prev, [opt.id!]: tamanho }
+      )
+    }
+  }, [product.options])
 
   const selectedVariant = useMemo(() => {
     if (!product.variants || product.variants.length === 0) {

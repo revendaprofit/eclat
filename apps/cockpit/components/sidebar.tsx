@@ -13,6 +13,7 @@ const ITEMS = [
   { href: "/produtos", label: "Produtos & Estoque" },
   { href: "/vitrine", label: "Vitrine (site)" },
   { href: "/editorial", label: "Editorial (artigos)" },
+  { href: "/personas", label: "Personas (Minha ÉCLAT)" },
   { href: "/marketing", label: "Marketing & Rastreamento" },
   { href: "/geo", label: "GEO (busca por IA)" },
   { href: "/custos", label: "Custos de Coleção" },

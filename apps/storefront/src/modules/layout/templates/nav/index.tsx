@@ -11,6 +11,7 @@ import CartButton from "@modules/layout/components/cart-button"
 import SideMenu from "@modules/layout/components/side-menu"
 import SearchBar from "@modules/layout/components/search-bar"
 import MainMenu from "@modules/layout/components/main-menu"
+import PersonalizeTrigger from "@modules/personalization/trigger"
 
 export default async function Nav() {
   const [regions, locales, currentLocale, categories] = await Promise.all([
@@ -51,6 +52,7 @@ export default async function Nav() {
           <div className="flex items-center gap-x-6 h-full flex-1 basis-0 justify-end">
             <div className="hidden small:flex items-center gap-x-6 h-full">
               <MainMenu />
+              <PersonalizeTrigger />
               <LocalizedClientLink
                 className="hover:text-eclat-terracota transition-colors"
                 href="/account"

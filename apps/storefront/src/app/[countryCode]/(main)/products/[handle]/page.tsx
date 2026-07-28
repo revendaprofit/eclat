@@ -1,6 +1,7 @@
 import { Metadata } from "next"
 import { notFound } from "next/navigation"
 import { listProducts } from "@lib/data/products"
+import { getPersonaMediaForProduct } from "@lib/data/personas"
 import { getRegion, listRegions } from "@lib/data/regions"
 import ProductTemplate from "@modules/products/templates"
 import { HttpTypes } from "@medusajs/types"
@@ -135,12 +136,19 @@ export default async function ProductPage(props: Props) {
     notFound()
   }
 
+  // fotos por persona ("Minha ÉCLAT") — busca por id E handle do produto
+  const personaMedia = await getPersonaMediaForProduct(
+    pricedProduct.id,
+    pricedProduct.handle ?? undefined
+  )
+
   return (
     <ProductTemplate
       product={pricedProduct}
       region={region}
       countryCode={params.countryCode}
       images={images ?? []}
+      personaMedia={personaMedia}
     />
   )
 }

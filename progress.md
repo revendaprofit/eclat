@@ -629,3 +629,12 @@ PRÓXIMO (usuário, guiado): Railway (Postgres + serviço do repo, root /, vars,
 - Tela /custos reorganizada: seletor de coleção + parâmetros editáveis da coleção; "Nova coleção" (com opção de copiar todas as peças da atual, modelagem zerada); "Adicionar modelo à coleção" (catálogo ou novo; herda BOM da ficha mais recente do modelo); lista de peças com MINIATURA; ficha com foto/modelo/colorway.
 - APIs novas: /api/costing-collections[/id], /api/costing-models; POST /api/costing herda parâmetros da coleção.
 - SEED da prancha real "FAMILIA BLACKOUT VERDE EXERCITO E LICOR.pdf": 8 modelos recortados da prancha com foto no Storage (bucket site/costing/) + 9 fichas (Macaquinho Prisma em 2 colorways) com BOM placeholder. Coleção 01 religada (3 fichas → modelos Blusa ML/Calça Flare/Macacão com fotos dos renders).
+
+## 2026-07-27 — ✨ MINHA ÉCLAT (modo wizard) — MVP COMPLETO
+- Feature aprovada pelo usuário (IA personas fixas + modal 1ª visita + MVP completo). SOP: architecture/personalizacao.md.
+- Migration 0008 APLICADA: persona + product_persona_media (RLS anon read; escrita service_role).
+- Vitrine: wizard 3 passos (modelo → tamanho → estilo) montado no layout main, pulável, abre 2,5s pós-hidratação na 1ª visita; botão "Minha ÉCLAT" no nav reabre; prefs em localStorage+cookie (LGPD: nada no servidor); PDP troca galeria p/ fotos da persona client-side (HTML canônico intacto = SEO preservado) com selo "imagens criadas com IA"; tamanho salvo pré-seleciona a variante.
+- Cockpit: menu "Personas (Minha ÉCLAT)" — CRUD personas + fotos por produto×persona (APIs /api/personas*, /api/persona-media).
+- Seed: personas Aurora (1,75m veste P) e Íris (1,65m veste G) com avatares IA no Supabase Storage (site/personas/).
+- VALIDADO em dev (backend produção): home 200 c/ trigger no nav; PDP 200; tsc limpo nos 2 apps.
+- PENDENTE: gerar fotos por persona dos produtos reais quando entrarem (fluxo no SOP); Fase 2 = reordenação por estilo + selo "tem seu tamanho".
