@@ -9,7 +9,7 @@ import Track from "@modules/analytics/track"
 import { cartToBeginCheckout } from "@modules/analytics/items"
 
 export const metadata: Metadata = {
-  title: "Checkout",
+  title: "Finalizar compra",
 }
 
 export default async function Checkout() {
