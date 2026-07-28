@@ -648,3 +648,10 @@ PRÓXIMO (usuário, guiado): Railway (Postgres + serviço do repo, root /, vars,
 - NÃO implementado por decisão comercial pendente (spec marca como proposta): parcelamento/Pix (aguarda Mercado Pago Parte 4), piso de frete grátis + barra (aguarda financeiro), CEP/ETA com data (aguarda Melhor Envio), composição do tecido (aguarda fornecedor), vídeo 8s na galeria (asset).
 - Plugins do Claude Code data-engineering e semgrep DESABILITADOS no settings.json a pedido (hooks quebrados travando a sessão); backup do settings criado. Válido a partir da próxima sessão.
 - VALIDADO em dev: PDP 200, zero strings em inglês, FAQPage schema presente, selos/medidas/FAQ/depoimentos renderizando, home com texto CDC correto.
+
+## 2026-07-28 — 🛍️ CATÁLOGO REAL NO AR — Família Blackout importada
+- Planilha preenchida pelo usuário (8 modelos × 3 cores; tops/shorts R$169, legging R$219, macaquinho R$259; 360 peças).
+- scripts/import-lancamento.py EXECUTADO em produção: coleção familia-blackout, categorias Tops/Macaquinhos criadas (Shorts/Leggings reutilizadas), 8 produtos com 12 variantes cada (Cor×Tamanho), estoque no CD Brasil, renders aprovados como foto inicial; 4 seeds DESPUBLICADOS.
+- scripts/seed-metadata-blackout.py: DSB + quem-é + FAQ (schema FAQPage) nos 8 produtos, copy adaptado do wireframe por categoria.
+- VALIDADO: PDP v2 da legging-vertice no ar com DSB/FAQ/selos; FEED GMC populou pela 1ª vez (96 itens). Store/sitemap aguardando redeploy (cache estático).
+- PENDENTE: fotos por cor + personas Aurora/Íris (Higgsfield desconectado nesta sessão — reconectar o conector); composição do tecido nas fichas.
