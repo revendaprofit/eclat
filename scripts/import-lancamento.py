@@ -129,7 +129,7 @@ def main():
 
         variants = []
         for x in rows:
-            preco = int(round(float(x["PRECO_REAIS"]) * 100))
+            preco = float(x["PRECO_REAIS"])  # Medusa v2: reais decimais, NAO centavos
             for t in TAMANHOS:
                 variants.append({
                     "title": "%s / %s" % (t, x["COR"]),
@@ -185,7 +185,7 @@ def main():
             print("DESPUBLICADO seed:", h)
 
     print()
-    print("IMPORT CONCLUÍDO. Próximos passos automáticos: fotos IA por cor/persona + metadata da PDP.")
+    print("IMPORT CONCLUIDO. Rode scripts/fix-import.py se precisar reprocessar precos/estoque/fotos.")
 
 if __name__ == "__main__":
     main()
