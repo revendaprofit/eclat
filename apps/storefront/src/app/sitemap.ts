@@ -5,6 +5,7 @@ import { listCollections } from "@lib/data/collections"
 import { listCategories } from "@lib/data/categories"
 import { listEditorialPosts } from "@lib/data/editorial"
 import { INSTITUTIONAL_PAGES } from "@modules/content/institutional"
+import { COMING_SOON, COMING_SOON_PATH } from "@lib/coming-soon"
 
 // sitemap.xml dinâmico: home, loja, produtos, coleções e categorias (região br).
 const CC = "br"
@@ -17,6 +18,21 @@ const enc = (handle: string) =>
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const base = getBaseURL()
   const now = new Date()
+
+  // Loja em construção: todas as rotas são reescritas para a lista de
+  // espera (ver middleware) — listar só essa URL evita conteúdo duplicado
+  // no Google enquanto o catálogo não está navegável de verdade.
+  if (COMING_SOON) {
+    return [
+      {
+        url: `${base}${COMING_SOON_PATH}`,
+        lastModified: now,
+        changeFrequency: "weekly",
+        priority: 1,
+      },
+    ]
+  }
+
   const urls: MetadataRoute.Sitemap = [
     { url: `${base}/${CC}`, lastModified: now, changeFrequency: "daily", priority: 1 },
     { url: `${base}/${CC}/store`, lastModified: now, changeFrequency: "daily", priority: 0.9 },

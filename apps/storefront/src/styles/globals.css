@@ -127,3 +127,105 @@
     @apply text-[32px] leading-[44px] font-semibold;
   }
 }
+
+/* === "Em breve" — entrada orquestrada + respiração do elo/foto === */
+@keyframes eclat-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes eclat-rule-grow {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+@keyframes eclat-breathe {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.03);
+  }
+}
+
+@keyframes eclat-kenburns {
+  from {
+    transform: scale(1);
+  }
+  to {
+    transform: scale(1.06);
+  }
+}
+
+.anim-1,
+.anim-3,
+.anim-4,
+.anim-5,
+.anim-6,
+.anim-7,
+.anim-8 {
+  opacity: 0;
+  animation: eclat-fade-up 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+.anim-1 {
+  animation-delay: 0.05s;
+}
+.anim-2 {
+  transform: scaleX(0);
+  animation: eclat-rule-grow 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation-delay: 0.35s;
+}
+.anim-3 {
+  animation-delay: 0.45s;
+}
+.anim-4 {
+  animation-delay: 0.55s;
+}
+.anim-5 {
+  animation-delay: 0.7s;
+}
+.anim-6 {
+  animation-delay: 0.85s;
+}
+.anim-7 {
+  animation-delay: 1s;
+}
+.anim-8 {
+  animation-delay: 1.1s;
+}
+
+.elo-breathe {
+  animation: eclat-breathe 6s ease-in-out infinite;
+}
+
+.kenburns {
+  animation: eclat-kenburns 22s ease-in-out infinite alternate;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .anim-1,
+  .anim-2,
+  .anim-3,
+  .anim-4,
+  .anim-5,
+  .anim-6,
+  .anim-7,
+  .anim-8,
+  .elo-breathe,
+  .kenburns {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}
