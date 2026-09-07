@@ -260,23 +260,34 @@ export async function medusaListCollections(): Promise<CockpitRef[]> {
 export type CockpitCategory = {
   id: string
   name: string
+  handle: string
   parent_id: string | null
   rank: number
+  metadata: Record<string, unknown>
 }
 
 export async function medusaListCategories(): Promise<CockpitCategory[]> {
   const r = await medusaAdmin(
-    `/admin/product-categories?limit=200&fields=id,name,parent_category_id,rank`
+    `/admin/product-categories?limit=200&fields=id,name,handle,parent_category_id,rank,metadata`
   )
   if (!r.ok) throw new Error(`listar categorias falhou (HTTP ${r.status})`)
   const { product_categories } = (await r.json()) as {
-    product_categories: { id: string; name: string; parent_category_id: string | null; rank: number }[]
+    product_categories: {
+      id: string
+      name: string
+      handle: string
+      parent_category_id: string | null
+      rank: number
+      metadata: Record<string, unknown> | null
+    }[]
   }
   return product_categories.map((c) => ({
     id: c.id,
     name: c.name,
+    handle: c.handle,
     parent_id: c.parent_category_id ?? null,
     rank: c.rank ?? 0,
+    metadata: c.metadata ?? {},
   }))
 }
 
@@ -298,11 +309,18 @@ export async function medusaCreateCategory(input: {
 
 export async function medusaUpdateCategory(
   id: string,
-  fields: { name?: string; parent_id?: string | null }
+  fields: {
+    name?: string
+    parent_id?: string | null
+    rank?: number
+    metadata?: Record<string, unknown>
+  }
 ): Promise<void> {
   const body: Record<string, unknown> = {}
   if (fields.name !== undefined) body.name = fields.name
   if (fields.parent_id !== undefined) body.parent_category_id = fields.parent_id || null
+  if (fields.rank !== undefined) body.rank = Math.max(0, Math.round(fields.rank))
+  if (fields.metadata !== undefined) body.metadata = fields.metadata
   const r = await medusaAdmin(`/admin/product-categories/${id}`, {
     method: "POST",
     body: JSON.stringify(body),

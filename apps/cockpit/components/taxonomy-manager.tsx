@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react"
 
-type Cat = { id: string; name: string; parent_id: string | null; rank: number }
+type Cat = { id: string; name: string; handle: string; parent_id: string | null; rank: number; metadata: Record<string, unknown> }
 type Coll = { id: string; title: string; handle: string }
 type Tag = { id: string; name: string }
 
@@ -26,6 +26,7 @@ export default function TaxonomyManager({
   const [tags, setTags] = useState<Tag[]>([])
   const [novaTag, setNovaTag] = useState("")
   const [busy, setBusy] = useState(false)
+  const [editando, setEditando] = useState<Cat | null>(null)
 
   const carregar = useCallback(async () => {
     const [c, co, t] = await Promise.all([
@@ -97,6 +98,17 @@ export default function TaxonomyManager({
     if (confirm(`Excluir a categoria "${c.name}"?`))
       call(`/api/taxonomy/categories/${c.id}`, "DELETE")
   }
+  async function salvarCategoria(cat: Cat, dados: { rank: number; image_url: string; descricao_curta: string }) {
+    await call(`/api/taxonomy/categories/${cat.id}`, "PATCH", {
+      rank: dados.rank,
+      metadata: {
+        ...cat.metadata,
+        image_url: dados.image_url || null,
+        descricao_curta: dados.descricao_curta || null,
+      },
+    })
+    setEditando(null)
+  }
 
   // ---- coleções ----
   function novaColecao() {
@@ -162,6 +174,7 @@ export default function TaxonomyManager({
                   </span>
                   <span className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity text-xs">
                     <button onClick={() => novaCategoria(cat.id)} className="text-eclat-dourado underline" title="Adicionar subcategoria">+ sub</button>
+                    <button onClick={() => setEditando(cat)} className="underline">editar</button>
                     <button onClick={() => renomearCategoria(cat)} className="underline">renomear</button>
                     <button onClick={() => excluirCategoria(cat)} className="text-red-700 underline">excluir</button>
                   </span>
@@ -169,6 +182,7 @@ export default function TaxonomyManager({
               ))}
             </div>
           </section>
+          {editando && <CategoriaEditor cat={editando} onClose={() => setEditando(null)} onSave={salvarCategoria} />}
 
           {/* Coleções */}
           <section>
@@ -217,6 +231,86 @@ export default function TaxonomyManager({
             </div>
           </section>
         </div>
+      </div>
+    </div>
+  )
+}
+
+function CategoriaEditor({
+  cat,
+  onClose,
+  onSave,
+}: {
+  cat: Cat
+  onClose: () => void
+  onSave: (cat: Cat, dados: { rank: number; image_url: string; descricao_curta: string }) => Promise<void>
+}) {
+  const [rank, setRank] = useState(String(cat.rank ?? 0))
+  const [imageUrl, setImageUrl] = useState(String(cat.metadata?.image_url ?? ""))
+  const [descricao, setDescricao] = useState(String(cat.metadata?.descricao_curta ?? ""))
+  const [enviando, setEnviando] = useState(false)
+  const inputCls =
+    "w-full border border-eclat-pedra/50 rounded-md px-3 py-2 text-sm bg-white focus:outline-none focus:border-eclat-dourado"
+  const labelCls = "text-xs uppercase tracking-wider text-eclat-grafite/60 mb-1 block"
+
+  async function upload(file: File) {
+    setEnviando(true)
+    try {
+      const fd = new FormData()
+      fd.append("file", file)
+      const r = await fetch("/api/site-upload", { method: "POST", body: fd })
+      const d = await r.json()
+      if (!r.ok) throw new Error(d.error || "Falha no upload")
+      setImageUrl(d.url)
+    } catch (e) {
+      alert((e as Error).message)
+    } finally {
+      setEnviando(false)
+    }
+  }
+
+  return (
+    <div className="mt-3 border border-eclat-dourado/40 rounded-lg bg-white/70 p-4 flex flex-col gap-3">
+      <div className="flex items-center justify-between">
+        <h4 className="text-sm font-medium text-eclat-grafite">
+          {cat.name} <span className="text-eclat-grafite/40 text-xs">/{cat.handle}</span>
+        </h4>
+        <button onClick={onClose} className="text-eclat-grafite/50 hover:text-eclat-grafite">✕</button>
+      </div>
+      <div className="grid grid-cols-3 gap-3">
+        <div>
+          <label className={labelCls}>Ordem (rank)</label>
+          <input value={rank} onChange={(e) => setRank(e.target.value)} inputMode="numeric" className={inputCls} />
+        </div>
+        <div className="col-span-2">
+          <label className={labelCls}>Descrição curta (1 linha, cabeçalho da listagem)</label>
+          <input value={descricao} onChange={(e) => setDescricao(e.target.value)} maxLength={140} className={inputCls} />
+        </div>
+      </div>
+      <div>
+        <label className={labelCls}>Capa (menu, home e cabeçalho da categoria)</label>
+        <div className="flex items-center gap-3">
+          {imageUrl && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={imageUrl} alt="capa" className="w-16 h-16 rounded object-cover border border-eclat-pedra/40" />
+          )}
+          <input type="file" accept="image/*" onChange={(e) => e.target.files?.[0] && upload(e.target.files[0])} className="text-xs" />
+          {enviando && <span className="text-xs text-eclat-grafite/50">enviando…</span>}
+          {imageUrl && <button onClick={() => setImageUrl("")} className="text-xs text-red-700 underline">remover</button>}
+        </div>
+      </div>
+      <div className="flex gap-3">
+        <button
+          onClick={() => {
+            const n = Number(rank)
+            if (!Number.isFinite(n) || n < 0) return alert("Ordem deve ser um número ≥ 0.")
+            onSave(cat, { rank: n, image_url: imageUrl.trim(), descricao_curta: descricao.trim() })
+          }}
+          className="bg-eclat-grafite text-eclat-luz uppercase tracking-widest text-xs px-5 py-2 rounded-md hover:bg-eclat-dourado hover:text-eclat-grafite transition-colors"
+        >
+          Salvar
+        </button>
+        <button onClick={onClose} className="text-sm text-eclat-grafite/60 underline">cancelar</button>
       </div>
     </div>
   )
