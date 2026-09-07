@@ -182,7 +182,7 @@ export default function TaxonomyManager({
               ))}
             </div>
           </section>
-          {editando && <CategoriaEditor cat={editando} onClose={() => setEditando(null)} onSave={salvarCategoria} />}
+          {editando && <CategoriaEditor key={editando.id} cat={editando} onClose={() => setEditando(null)} onSave={salvarCategoria} />}
 
           {/* Coleções */}
           <section>
