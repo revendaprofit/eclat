@@ -13,7 +13,8 @@ Objetivo desta spec: a cliente encontra a peça certa em três cliques a partir 
 
 | Decisão | Motivo |
 |---|---|
-| **Eixo principal de navegação = tipo de peça** (Leggings, Tops, Shorts, Macaquinhos, Conjuntos). | Catálogo com 8 modelos; é o que o Medusa já tem como categoria; é o que o wizard já pergunta. |
+| **Eixo principal de navegação = tipo de peça**, nesta ordem: Top · Short · Legging · Macaquinho/Macacão · Conjuntos · Acessórios (Óculos, Meias) · Masculino (Bermudas, Camisetas/Regatas). | Catálogo com 8 modelos; é o que o Medusa já tem como categoria; é o que o wizard já pergunta. |
+| **Feminino é o padrão implícito e não ganha rótulo.** Masculino e Acessórios são categorias-mãe com subcategorias, no fim do menu. | Foco da marca é a peça feminina; masculino e acessórios têm venda menor e não podem competir por atenção com o eixo principal. |
 | **Modalidade (treino, casual, pilates…) não existe em lugar nenhum do site.** Nem categoria, nem filtro, nem texto "ideal para". | Peças iguais em páginas diferentes confundem (efeito Alo Yoga); contradiz a promessa "mulher inteira"; duplica conteúdo para SEO. |
 | **Eixo secundário = coleção** (Família Blackout hoje, próximas depois). | Conjuntos de produtos realmente diferentes entre si; é a narrativa da marca ("cada coleção, um capítulo"). |
 | **Conjuntos é categoria, mas conjunto é regra, não SKU.** | Detalhado na spec 2. Esta spec só garante que a categoria exista na navegação. |
@@ -30,14 +31,31 @@ Objetivo desta spec: a cliente encontra a peça certa em três cliques a partir 
 Princípio: **acertar o dado uma vez alimenta quatro telas** (card, filtro, seletor da PDP, galeria).
 
 ### 4.1 Categorias
-- Categorias de nível 1, sem filhas: `leggings`, `tops`, `shorts`, `macaquinhos`, `conjuntos`. Handles fixos, usados em URL e em código.
-- Ordem de exibição pelo campo nativo `rank` (o Cockpit já edita rank em `components/taxonomy-manager.tsx`).
+Árvore final (nome exibido → handle). Handles existentes são mantidos para não quebrar URLs já no feed e no sitemap; só o nome exibido muda.
+
+```
+Top                    → tops
+Short                  → shorts
+Legging                → leggings
+Macaquinho / Macacão   → macaquinhos
+Conjuntos              → conjuntos
+Acessórios             → acessorios
+├── Óculos             → acessorios/oculos
+└── Meias              → acessorios/meias
+Masculino              → masculino
+├── Bermudas           → masculino/bermudas
+└── Camisetas / Regatas → masculino/camisetas-regatas
+```
+
+- As cinco primeiras são o **eixo feminino** e não têm filhas. Acessórios e Masculino são categorias-mãe: a página da mãe lista tudo das filhas, com chips para entrar em cada filha. A rota `categories/[...category]` já suporta o aninhamento.
+- Ordem de exibição pelo campo nativo `rank` (o Cockpit já edita rank em `components/taxonomy-manager.tsx`), respeitando a ordem acima.
 - Por categoria, em `metadata`: `image_url` (capa, usada no menu, na home e no cabeçalho da listagem), `descricao_curta` (1 linha, cabeçalho da listagem), `medidas` (ver 4.4).
 - A vitrine só exibe categoria com pelo menos um produto publicado (regra atual de `category-bar` mantida). **Exceção: `conjuntos`** não terá produtos (conjunto é regra, não SKU) e aparece sempre que houver ao menos uma regra de conjunto ativa; a página em si é definida na spec 2. Até lá, a categoria existe no Medusa mas fica oculta na navegação.
 
 ### 4.2 Opções de variante
-- Todo produto tem exatamente duas opções, com títulos fixos **`Tamanho`** e **`Cor`**. Valores de tamanho: `P`, `M`, `G`, `GG`. Valores de cor: nome canônico idêntico entre produtos (ex.: `Verde Exército`, `Licor`, `Off-white`).
-- O Cockpit valida ao criar/editar produto: título das opções e valores de tamanho fora do padrão bloqueiam o salvamento com mensagem clara. Cor fora do mapa de cores (4.3) gera aviso, não bloqueio.
+- Todo produto de **vestuário** (feminino e masculino) tem exatamente duas opções, com títulos fixos **`Tamanho`** e **`Cor`**. Valores de tamanho: `P`, `M`, `G`, `GG`. Valores de cor: nome canônico idêntico entre produtos (ex.: `Verde Exército`, `Licor`, `Off-white`).
+- **Acessórios** têm sempre `Cor`; `Tamanho` é opcional (meias podem usar `34-38`, `39-43`; óculos não têm tamanho). Os filtros de tamanho na listagem são montados a partir dos valores realmente presentes, nunca de lista fixa.
+- O Cockpit valida ao criar/editar produto: título das opções e, em vestuário, valores de tamanho fora do padrão bloqueiam o salvamento com mensagem clara. Cor fora do mapa de cores (4.3) gera aviso, não bloqueio.
 - Script de verificação `scripts/check-catalog-options.py` lista produtos fora do padrão (rodar antes do D0 sobre a Família Blackout).
 
 ### 4.3 Mapa de cores
@@ -46,7 +64,7 @@ Princípio: **acertar o dado uma vez alimenta quatro telas** (card, filtro, sele
 - A vitrine lê uma vez por request (`getSiteContent("cores")`, revalidate 30s já existente) e cai em cinza neutro com o nome por extenso se a cor não estiver no mapa.
 
 ### 4.4 Guia de medidas por tipo de peça
-- Chave `medidas` em `site_content`, valor por handle de categoria: colunas e linhas. Ex.: `leggings` → colunas Cintura/Quadril; `tops` → Busto/Cintura; `shorts` → Cintura/Quadril; `macaquinhos` → Busto/Cintura/Quadril.
+- Chave `medidas` em `site_content`, valor por handle de categoria: colunas e linhas. Ex.: `leggings` → colunas Cintura/Quadril; `tops` → Busto/Cintura; `shorts` → Cintura/Quadril; `macaquinhos` → Busto/Cintura/Quadril; `masculino/bermudas` → Cintura/Quadril; `masculino/camisetas-regatas` → Tórax/Comprimento. Subcategoria sem tabela própria herda a da mãe; acessórios sem tabela não exibem o bloco.
 - Editado no Cockpit → Vitrine → aba **Medidas** (uma tabela por categoria).
 - `size-guide/index.tsx` passa a receber `categoryHandle` e monta a tabela a partir da chave; fallback = tabela atual.
 
@@ -62,19 +80,20 @@ Princípio: **acertar o dado uma vez alimenta quatro telas** (card, filtro, sele
 ## 5. Navegação
 
 ### 5.1 Header desktop
-- `category-bar` ordena por `rank`, com **Novidades** (→ `/store?ordenar=novidades`) em primeiro, categorias no meio, **Coleções** e **Ver tudo** no fim. "Nova Coleção" some da barra; a coleção em destaque vive dentro de Coleções e na home.
-- Hover em uma categoria abre um painel simples: capa da categoria (`metadata.image_url`) + as cores disponíveis naquela categoria como swatches clicáveis (→ `/categories/<handle>?cor=<nome>`). Implementado em `category-bar` (client island por item); `main-menu/` (código morto) é removido.
+- `category-bar` ordena por `rank`, com **Novidades** (→ `/store?ordenar=novidades`) em primeiro, as sete categorias de nível 1 no meio (Top · Short · Legging · Macaquinho/Macacão · Conjuntos · Acessórios · Masculino), **Coleções** e **Ver tudo** no fim. "Nova Coleção" some da barra; a coleção em destaque vive dentro de Coleções e na home.
+- Hover em uma categoria **feminina** abre um painel simples: capa da categoria (`metadata.image_url`) + as cores disponíveis naquela categoria como swatches clicáveis (→ `/categories/<handle>?cor=<nome>`). Hover em **Acessórios** ou **Masculino** abre a lista das filhas com miniatura, sem swatches. Implementado em `category-bar` (client island por item); `main-menu/` (código morto) é removido.
+- Acessórios e Masculino ficam visualmente mais discretos (peso de fonte normal, cor grafite/60) para não competir com o eixo feminino.
 - Hover em Coleções: lista de coleções com produto publicado, capa de cada uma.
 
 ### 5.2 Menu mobile (`side-menu`)
-- Primeiro nível: as categorias com miniatura quadrada (capa) + "Coleções" (expande) + "Ver tudo". Remover o bloco "Linhas (Treino, Casual…)" e qualquer leitura de `category_children`.
-- Segundo nível não existe (categorias sem filhas).
+- Primeiro nível: as sete categorias com miniatura quadrada (capa) + "Coleções" (expande) + "Ver tudo". Remover o bloco "Linhas (Treino, Casual…)".
+- Segundo nível só em Acessórios e Masculino: tocar expande as filhas inline (acordeão), com a mãe clicável em "Ver tudo de Masculino". As cinco categorias femininas abrem direto.
 
 ### 5.3 Breadcrumb visível
-- Componente `common/components/breadcrumb` renderizado na listagem (Início › Leggings) e na PDP (Início › Leggings › Legging Vértice). Fonte: a primeira categoria do produto. O `BreadcrumbJsonLd` existente passa a receber os mesmos itens (uma fonte só).
+- Componente `common/components/breadcrumb` renderizado na listagem (Início › Legging; Início › Masculino › Bermudas) e na PDP (Início › Legging › Legging Vértice; Início › Masculino › Bermudas › Bermuda X). Fonte: a categoria mais profunda do produto, subindo pelos pais. O `BreadcrumbJsonLd` existente passa a receber os mesmos itens (uma fonte só).
 
 ### 5.4 Home
-- Novo bloco **"Compre por peça"** logo abaixo do hero: grade das categorias com capa e nome, ordem por `rank`. Sem CMS próprio: lê categorias direto. A seção `featured-lines` (CMS) continua disponível para campanhas.
+- Novo bloco **"Compre por peça"** logo abaixo do hero: grade **só das cinco categorias femininas** (Top, Short, Legging, Macaquinho/Macacão, Conjuntos) com capa e nome, ordem por `rank`. Acessórios e Masculino não entram na home; vivem no menu e no footer. Sem CMS próprio: lê categorias direto. A seção `featured-lines` (CMS) continua disponível para campanhas.
 - Ordem das categorias na home respeita a preferência de **estilo** do wizard (ver 10).
 
 ## 6. Listagem (PLP): `/store`, `/categories/[handle]`, `/collections/[handle]`
@@ -176,7 +195,7 @@ Rotas: estender `/api/taxonomy/categories` e `/api/products/[id]`; novas chaves 
 
 ## 14. Critérios de aceite (validação no navegador, backend de produção)
 
-1. Barra desktop mostra as 5 categorias na ordem do rank; hover mostra capa + swatches; clicar num swatch abre a categoria já filtrada por cor.
+1. Barra desktop mostra as 7 categorias na ordem Top · Short · Legging · Macaquinho/Macacão · Conjuntos · Acessórios · Masculino; hover numa feminina mostra capa + swatches e clicar num swatch abre a categoria já filtrada por cor; hover em Acessórios/Masculino lista as filhas; `/br/categories/masculino` lista bermudas e camisetas com chips das filhas.
 2. `/br/categories/leggings?tamanho=G&cor=Verde%20Exército` lista só produtos com variante G Verde disponível; chips ativos; contador correto; canonical sem query; `noindex` presente.
 3. Mesma URL no mobile: gaveta de filtros abre, aplica, fecha e a grade atualiza.
 4. Estado vazio mostra as duas ações e "Ver em outras cores" remove só `cor`.
