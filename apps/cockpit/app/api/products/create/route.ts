@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server"
-import { medusaCreateProduct, type NewProductInput } from "@/lib/medusa"
+import { medusaCreateProduct, medusaListCategories, type NewProductInput } from "@/lib/medusa"
 import { sb } from "@/lib/sb-admin"
+import { categoryPath, isAccessoryHandle, validateProductOptions } from "@/lib/catalog-rules"
 
 // Cria um produto novo (com variantes + estoque inicial) via Medusa Admin API.
+// Valida as opções (spec 4.2) ANTES de chamar o Medusa: erro bloqueia (400), aviso só informa.
 // custo_centavos (opcional) é salvo no Supabase para todas as variações criadas.
 export async function POST(req: Request) {
   const input = (await req.json()) as NewProductInput & { custo_centavos?: number }
@@ -13,6 +15,19 @@ export async function POST(req: Request) {
   if (!input.variants?.length)
     return NextResponse.json({ error: "ao menos uma variação é necessária" }, { status: 400 })
   try {
+    const [cats, coresRes] = await Promise.all([
+      medusaListCategories(),
+      sb("site_content?key=eq.cores&select=value"),
+    ])
+    const selected = cats.filter((c) => (input.category_ids ?? []).includes(c.id))
+    const paths = selected.map((c) => categoryPath(c, cats))
+    const isAccessory = paths.length > 0 && paths.every(isAccessoryHandle)
+    const coresRows = coresRes.ok ? ((await coresRes.json()) as { value: Record<string, unknown> }[]) : []
+    const knownColors = Object.keys(coresRows[0]?.value ?? {})
+    const { errors, warnings } = validateProductOptions(input.options ?? [], { isAccessory, knownColors })
+    if (errors.length)
+      return NextResponse.json({ error: errors.join(" "), errors, warnings }, { status: 400 })
+
     const product = await medusaCreateProduct(input)
 
     const custo = input.custo_centavos
@@ -30,7 +45,7 @@ export async function POST(req: Request) {
           body: JSON.stringify(rows),
         })
     }
-    return NextResponse.json({ id: product.id })
+    return NextResponse.json({ id: product.id, warnings })
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 502 })
   }

@@ -1,9 +1,10 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
+import { categoryPath, isAccessoryHandle, validateProductOptions } from "@/lib/catalog-rules"
 
 type Ref = { id: string; name: string }
-type Cat = { id: string; name: string; parent_id: string | null; rank: number }
+type Cat = { id: string; name: string; handle: string; parent_id: string | null; rank: number }
 
 // slug URL-safe (sem acento, sem traço nas pontas) — lição do Medusa.
 function slugify(s: string) {
@@ -61,6 +62,8 @@ export default function ProductForm({
   const [precoBase, setPrecoBase] = useState("")
   const [custoBase, setCustoBase] = useState("")
   const [estoqueBase, setEstoqueBase] = useState("0")
+  const [novoTamanho, setNovoTamanho] = useState("")
+  const [coresMapa, setCoresMapa] = useState<string[]>([])
 
   // carregar metas + (se edição) o produto
   useEffect(() => {
@@ -71,6 +74,9 @@ export default function ProductForm({
         if (!mr.ok) throw new Error(md.error || "Falha ao carregar coleções/categorias")
         setCollections(md.collections)
         setCategories(md.categories)
+        const cr = await fetch("/api/site-content/cores", { cache: "no-store" })
+        const cd = await cr.json().catch(() => ({}))
+        setCoresMapa(cr.ok && cd && typeof cd === "object" ? Object.keys(cd) : [])
         if (mode === "edit" && productId) {
           const pr = await fetch(`/api/products/${productId}`, { cache: "no-store" })
           const p = await pr.json()
@@ -143,6 +149,22 @@ export default function ProductForm({
     return out
   }, [mode, titulo, tamanhos, cores])
 
+  // Uma categoria conta como acessório se o próprio handle for "acessorios" ou se
+  // for filha (via parent_id) de "acessorios" — daí a resolução via categoryPath.
+  const isAccessory = useMemo(() => {
+    const selecionadas = categories.filter((c) => catIds.includes(c.id))
+    const paths = selecionadas.map((c) => categoryPath(c, categories))
+    return paths.length > 0 && paths.every(isAccessoryHandle)
+  }, [categories, catIds])
+
+  const validacao = useMemo(() => {
+    if (mode !== "create") return { errors: [], warnings: [] }
+    const options: { title: string; values: string[] }[] = []
+    if (tamanhos.length) options.push({ title: "Tamanho", values: tamanhos })
+    if (cores.length) options.push({ title: "Cor", values: cores })
+    return validateProductOptions(options, { isAccessory, knownColors: coresMapa })
+  }, [mode, tamanhos, cores, isAccessory, coresMapa])
+
   function toggleCat(id: string) {
     setCatIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]))
   }
@@ -193,7 +215,7 @@ export default function ProductForm({
         const options: { title: string; values: string[] }[] = []
         if (tamanhos.length) options.push({ title: "Tamanho", values: tamanhos })
         if (cores.length) options.push({ title: "Cor", values: cores })
-        if (!options.length) options.push({ title: "Padrão", values: ["Único"] })
+        if (validacao.errors.length) throw new Error(validacao.errors.join(" "))
         const variants = variantesPreview.map((v) => ({
           ...v,
           price: preco,
@@ -359,7 +381,14 @@ export default function ProductForm({
               <div className="border border-eclat-dourado/40 rounded-lg p-4 bg-white/60 flex flex-col gap-3">
                 <h3 className="text-sm font-medium text-eclat-grafite">Variações</h3>
                 <div>
-                  <label className={labelCls}>Tamanhos</label>
+                  <label className={labelCls}>
+                    Tamanhos
+                    {isAccessory && (
+                      <span className="text-xs text-eclat-grafite/50">
+                        {" "}(opcional para acessórios — deixe vazio se não houver)
+                      </span>
+                    )}
+                  </label>
                   <div className="flex flex-wrap gap-2">
                     {TAMANHOS_PADRAO.map((t) => (
                       <button
@@ -375,6 +404,30 @@ export default function ProductForm({
                       </button>
                     ))}
                   </div>
+                  {isAccessory && (
+                    <div className="flex flex-wrap gap-2 items-center mt-2">
+                      {tamanhos.filter((t) => !TAMANHOS_PADRAO.includes(t)).map((t) => (
+                        <span key={t} className="text-xs bg-eclat-areia/60 rounded-full px-2 py-1 flex items-center gap-1">
+                          {t}
+                          <button onClick={() => setTamanhos(tamanhos.filter((x) => x !== t))} className="text-eclat-grafite/50">✕</button>
+                        </span>
+                      ))}
+                      <input
+                        value={novoTamanho}
+                        onChange={(e) => setNovoTamanho(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault()
+                            const v = novoTamanho.trim()
+                            if (v && !tamanhos.includes(v)) setTamanhos([...tamanhos, v])
+                            setNovoTamanho("")
+                          }
+                        }}
+                        placeholder="+ tamanho livre (Enter)"
+                        className="border border-eclat-pedra/50 rounded-md px-2 py-1 text-xs w-32 bg-white focus:outline-none focus:border-eclat-dourado"
+                      />
+                    </div>
+                  )}
                 </div>
                 <div>
                   <label className={labelCls}>Cores</label>
@@ -385,6 +438,19 @@ export default function ProductForm({
                         <button onClick={() => setCores(cores.filter((x) => x !== c))} className="text-eclat-grafite/50">✕</button>
                       </span>
                     ))}
+                    <select
+                      value=""
+                      onChange={(e) => {
+                        const c = e.target.value
+                        if (c && !cores.includes(c)) setCores([...cores, c])
+                      }}
+                      className="border border-eclat-pedra/50 rounded-md px-2 py-1 text-xs bg-white"
+                    >
+                      <option value="">+ cor do mapa</option>
+                      {coresMapa.filter((c) => !cores.includes(c)).map((c) => (
+                        <option key={c} value={c}>{c}</option>
+                      ))}
+                    </select>
                     <input
                       value={novaCor}
                       onChange={(e) => setNovaCor(e.target.value)}
@@ -394,7 +460,7 @@ export default function ProductForm({
                           addCor()
                         }
                       }}
-                      placeholder="+ cor (Enter)"
+                      placeholder="outra cor (Enter)"
                       className="border border-eclat-pedra/50 rounded-md px-2 py-1 text-xs w-28 bg-white focus:outline-none focus:border-eclat-dourado"
                     />
                   </div>
@@ -416,6 +482,8 @@ export default function ProductForm({
                 <p className="text-xs text-eclat-grafite/60">
                   {variantesPreview.length} variação(ões) serão criadas. Preço e estoque ajustáveis depois na lista.
                 </p>
+                {validacao.errors.map((m) => <p key={m} className="text-xs text-red-700">{m}</p>)}
+                {validacao.warnings.map((m) => <p key={m} className="text-xs text-amber-700">{m}</p>)}
               </div>
             )}
 
@@ -458,7 +526,7 @@ export default function ProductForm({
             <div className="flex gap-3 pt-2 pb-8">
               <button
                 onClick={salvar}
-                disabled={salvando}
+                disabled={salvando || validacao.errors.length > 0}
                 className="bg-eclat-grafite text-eclat-luz uppercase tracking-widest text-xs px-6 py-3 rounded-md hover:bg-eclat-dourado hover:text-eclat-grafite transition-colors disabled:opacity-50"
               >
                 {salvando ? "Salvando…" : mode === "create" ? "Criar produto" : "Salvar alterações"}
