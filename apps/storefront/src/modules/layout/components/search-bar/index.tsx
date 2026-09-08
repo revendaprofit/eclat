@@ -87,7 +87,10 @@ export default function SearchBar({ variant = "inline", nav }: { variant?: "inli
       <form onSubmit={submit} onBlur={onBlur} onKeyDown={onKeyDown} className="relative w-full" role="search">
         <input
           value={q}
-          onChange={(e) => setQ(e.target.value)}
+          onChange={(e) => {
+            setQ(e.target.value)
+            setFocada(true)
+          }}
           onFocus={() => setFocada(true)}
           placeholder="Buscar peças, coleções…"
           aria-label="Buscar produtos"
@@ -96,10 +99,10 @@ export default function SearchBar({ variant = "inline", nav }: { variant?: "inli
           autoComplete="off"
           className="w-full rounded-full border border-eclat-pedra/60 bg-white px-5 py-3 pr-14 text-base text-eclat-grafite placeholder:text-eclat-grafite/40 outline-none focus:border-eclat-terracota transition-colors"
         />
+        {dropdown}
         <button type="submit" aria-label="Buscar" className="absolute right-1.5 top-1/2 -translate-y-1/2 h-9 w-9 rounded-full flex items-center justify-center text-eclat-grafite/70 hover:text-eclat-terracota transition-colors">
           <Lupa size={20} />
         </button>
-        {dropdown}
       </form>
     )
   }
@@ -108,7 +111,10 @@ export default function SearchBar({ variant = "inline", nav }: { variant?: "inli
     <form onSubmit={submit} onBlur={onBlur} onKeyDown={onKeyDown} className="relative flex items-center" role="search">
       <input
         value={q}
-        onChange={(e) => setQ(e.target.value)}
+        onChange={(e) => {
+          setQ(e.target.value)
+          setFocada(true)
+        }}
         placeholder="Buscar peças…"
         aria-label="Buscar produtos"
         aria-expanded={!!mostrar}
@@ -122,10 +128,10 @@ export default function SearchBar({ variant = "inline", nav }: { variant?: "inli
           setFocada(true)
         }}
       />
+      {dropdown}
       <button type="submit" aria-label="Buscar" onClick={() => setAberta(true)} className="hover:text-eclat-terracota transition-colors px-1">
         <Lupa />
       </button>
-      {dropdown}
     </form>
   )
 }
