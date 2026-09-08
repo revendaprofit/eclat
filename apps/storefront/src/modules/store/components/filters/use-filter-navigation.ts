@@ -3,6 +3,7 @@
 import { usePathname, useRouter } from "next/navigation"
 import { useCallback } from "react"
 import { DEFAULT_FILTERS, isSelected, serializeFilters, toggleValue, type FilterState, type PriceRange, type SortKey } from "@lib/util/catalog-filters"
+import { useListingTransition } from "./listing-transition"
 
 type FilterType = "tamanho" | "cor" | "preco" | "disponivel" | "ordenar" | "limpar"
 
@@ -18,14 +19,17 @@ function track(filter_type: FilterType, filter_value: string) {
 export function useFilterNavigation(filters: FilterState) {
   const router = useRouter()
   const pathname = usePathname()
+  const { startTransition } = useListingTransition()
 
   const replace = useCallback(
     (next: FilterState, type: FilterType, value: string) => {
       const q = serializeFilters({ ...next, pagina: 1 })
       track(type, value)
-      router.push(q ? `${pathname}?${q}` : pathname, { scroll: false })
+      startTransition(() => {
+        router.push(q ? `${pathname}?${q}` : pathname, { scroll: false })
+      })
     },
-    [router, pathname]
+    [router, pathname, startTransition]
   )
 
   return {
