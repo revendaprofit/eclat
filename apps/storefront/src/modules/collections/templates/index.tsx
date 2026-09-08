@@ -17,6 +17,10 @@ export default function CollectionTemplate({
       scope={{ collectionId: collection.id }}
       countryCode={countryCode}
       listName={collection.title}
+      breadcrumb={[
+        { name: "Início", href: "" },
+        { name: collection.title, href: `/collections/${collection.handle}` },
+      ]}
       header={<h1 className="font-serif text-3xl text-eclat-grafite mb-6">{collection.title}</h1>}
     />
   )

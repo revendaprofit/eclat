@@ -6,6 +6,7 @@ import { getBaseURL } from "@lib/util/env"
 import { serializeFilters, type FilterState } from "@lib/util/catalog-filters"
 import ProductPreview from "@modules/products/components/product-preview"
 import { ItemListJsonLd } from "@modules/seo/jsonld"
+import Breadcrumb, { type Crumb } from "@modules/common/components/breadcrumb"
 import { Pagination } from "@modules/store/components/pagination"
 import EmptyResults from "@modules/store/components/filters/empty-results"
 import FilterPanel from "@modules/store/components/filters/filter-panel"
@@ -26,12 +27,14 @@ export default async function ProductListing({
   countryCode,
   listName,
   header,
+  breadcrumb,
 }: {
   filters: FilterState
   scope: ListingScope
   countryCode: string
   listName: string
   header?: ReactNode
+  breadcrumb?: Crumb[]
 }) {
   const region = await getRegion(countryCode)
   if (!region) return null
@@ -41,6 +44,7 @@ export default async function ProductListing({
 
   return (
     <div className="content-container py-6" data-testid="category-container">
+      {breadcrumb && <Breadcrumb items={breadcrumb} countryCode={countryCode} />}
       {header}
       <ListingTransitionProvider>
         <ListingToolbar count={result.count} total={result.total} filters={filters} facets={result.facets} colorMap={colorMap} />
