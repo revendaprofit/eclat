@@ -29,6 +29,7 @@ export default async function ProductListing({
   header,
   breadcrumb,
   query,
+  implicitSize,
 }: {
   filters: FilterState
   scope: ListingScope
@@ -37,6 +38,7 @@ export default async function ProductListing({
   header?: ReactNode
   breadcrumb?: Crumb[]
   query?: string
+  implicitSize?: string | null
 }) {
   const region = await getRegion(countryCode)
   if (!region) return null
@@ -48,7 +50,7 @@ export default async function ProductListing({
     <div className="content-container py-6" data-testid="category-container">
       {breadcrumb && <Breadcrumb items={breadcrumb} countryCode={countryCode} />}
       {header}
-      <ListingTransitionProvider>
+      <ListingTransitionProvider implicitSize={implicitSize ?? null}>
         <ListingToolbar count={result.count} total={result.total} filters={filters} facets={result.facets} colorMap={colorMap} />
         <div className="flex flex-col small:flex-row small:items-start gap-8">
           <aside id="filtros" className="hidden small:block small:w-[250px] shrink-0">

@@ -5,6 +5,7 @@ import {
   isIndexable,
   isSelected,
   legacyRedirectQuery,
+  listingHref,
   parseFilters,
   serializeFilters,
   toggleValue,
@@ -94,5 +95,18 @@ describe("legacyRedirectQuery", () => {
   })
   it("sem params antigos devolve null", () => {
     expect(legacyRedirectQuery({ tamanho: "P" })).toBeNull()
+  })
+})
+
+describe("listingHref", () => {
+  it("sem tamanho implícito: URL normal; com q preservado", () => {
+    expect(listingHref("/br/store", { ...DEFAULT_FILTERS, cor: ["Licor"] }, null)).toBe("/br/store?cor=Licor")
+    expect(listingHref("/br/store", DEFAULT_FILTERS, null)).toBe("/br/store")
+    expect(listingHref("/br/busca", { ...DEFAULT_FILTERS, cor: ["Licor"] }, null, "calça preta")).toBe("/br/busca?cor=Licor&q=cal%C3%A7a+preta")
+  })
+  it("com tamanho implícito e resultado sem filtro: grava `tamanho=` vazio (opt-out), mantendo ordenação", () => {
+    expect(listingHref("/br/store", DEFAULT_FILTERS, "M")).toBe("/br/store?tamanho=")
+    expect(listingHref("/br/store", { ...DEFAULT_FILTERS, ordenar: "destaques" }, "M")).toBe("/br/store?tamanho=&ordenar=destaques")
+    expect(listingHref("/br/store", { ...DEFAULT_FILTERS, cor: ["Licor"] }, "M")).toBe("/br/store?cor=Licor")
   })
 })

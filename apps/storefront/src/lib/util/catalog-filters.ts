@@ -120,6 +120,17 @@ export function serializeFilters(f: FilterState): string {
   return p.toString()
 }
 
+// URL de uma mudança de filtro na listagem. Preserva `q` (/busca). Com tamanho implícito do wizard
+// e resultado SEM filtro nenhum, grava `?tamanho=` (param presente, vazio) = opt-out do pré-filtro
+// do servidor (applyPreferredSize); senão a chip "Seu tamanho" voltaria na próxima renderização.
+export function listingHref(pathname: string, next: FilterState, implicitSize: string | null | undefined, keepQ?: string | null): string {
+  const params = new URLSearchParams(serializeFilters({ ...next, pagina: 1 }))
+  if (keepQ) params.set("q", keepQ)
+  let qs = params.toString()
+  if (implicitSize && !hasActiveFilters(next)) qs = `tamanho=${qs ? `&${qs}` : ""}`
+  return qs ? `${pathname}?${qs}` : pathname
+}
+
 // Parâmetros do starter (sortBy/page) → novos. Devolve null quando não há legado.
 const LEGACY_SORT: Record<string, SortKey> = {
   created_at: "novidades",

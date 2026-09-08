@@ -1,7 +1,8 @@
 import { Metadata } from "next"
 import { permanentRedirect, redirect } from "next/navigation"
 
-import { legacyRedirectQuery, parseFilters } from "@lib/util/catalog-filters"
+import { legacyRedirectQuery } from "@lib/util/catalog-filters"
+import { resolveListingFilters } from "@lib/data/prefs"
 import { synonymCategoryHandle } from "@lib/util/search-synonyms"
 import ProductListing from "@modules/store/templates/product-listing"
 
@@ -36,7 +37,7 @@ export default async function BuscaPage(props: Props) {
   }
   const legacy = legacyRedirectQuery(sp)
   if (legacy !== null) permanentRedirect(`${path}?q=${encodeURIComponent(termo)}${legacy ? `&${legacy}` : ""}`)
-  const filters = parseFilters(sp)
+  const { filters, implicitSize } = await resolveListingFilters(sp)
 
   const header = (
     <div className="mb-6">
@@ -61,6 +62,7 @@ export default async function BuscaPage(props: Props) {
       filters={filters}
       scope={{ q: termo }}
       countryCode={countryCode}
+      implicitSize={implicitSize}
       listName={`Busca: ${termo}`}
       query={termo}
       breadcrumb={[

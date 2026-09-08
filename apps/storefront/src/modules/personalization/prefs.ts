@@ -3,13 +3,8 @@
 // Preferências "Minha ÉCLAT" — vivem SÓ no navegador (localStorage + cookie
 // espelho). Sem cadastro, sem dado pessoal no servidor (LGPD-friendly).
 
-export type EclatPrefs = {
-  persona_id?: string
-  persona_slug?: string
-  tamanho?: string // P | M | G | GG
-  estilos?: string[] // ex.: ["legging", "conjunto", "macacao"]
-  wizard_done?: boolean
-}
+import type { EclatPrefs } from "@lib/util/prefs-cookie"
+export type { EclatPrefs }
 
 const KEY = "eclat_prefs"
 

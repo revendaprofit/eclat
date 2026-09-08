@@ -1,12 +1,21 @@
 import type { FilterState } from "@lib/util/catalog-filters"
 import ProductListing from "./product-listing"
 
-export default function StoreTemplate({ filters, countryCode }: { filters: FilterState; countryCode: string }) {
+export default function StoreTemplate({
+  filters,
+  countryCode,
+  implicitSize,
+}: {
+  filters: FilterState
+  countryCode: string
+  implicitSize?: string | null
+}) {
   return (
     <ProductListing
       filters={filters}
       scope={{}}
       countryCode={countryCode}
+      implicitSize={implicitSize}
       listName="Todos os produtos"
       breadcrumb={[
         { name: "Início", href: "" },

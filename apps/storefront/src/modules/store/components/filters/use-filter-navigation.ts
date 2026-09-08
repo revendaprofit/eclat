@@ -2,7 +2,7 @@
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { useCallback } from "react"
-import { DEFAULT_FILTERS, isSelected, serializeFilters, toggleValue, type FilterState, type PriceRange, type SortKey } from "@lib/util/catalog-filters"
+import { DEFAULT_FILTERS, isSelected, listingHref, toggleValue, type FilterState, type PriceRange, type SortKey } from "@lib/util/catalog-filters"
 import { useListingTransition } from "./listing-transition"
 
 type FilterType = "tamanho" | "cor" | "preco" | "disponivel" | "ordenar" | "limpar"
@@ -20,20 +20,15 @@ export function useFilterNavigation(filters: FilterState) {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
-  const { startTransition } = useListingTransition()
+  const { startTransition, implicitSize } = useListingTransition()
 
   const replace = useCallback(
     (next: FilterState, type: FilterType, value: string) => {
-      const params = new URLSearchParams(serializeFilters({ ...next, pagina: 1 }))
-      const q = searchParams.get("q")
-      if (q) params.set("q", q)
-      const qs = params.toString()
       track(type, value)
-      startTransition(() => {
-        router.push(qs ? `${pathname}?${qs}` : pathname, { scroll: false })
-      })
+      const href = listingHref(pathname, next, implicitSize, searchParams.get("q"))
+      startTransition(() => router.push(href, { scroll: false }))
     },
-    [router, pathname, searchParams, startTransition]
+    [router, pathname, searchParams, startTransition, implicitSize]
   )
 
   return {
@@ -47,5 +42,7 @@ export function useFilterNavigation(filters: FilterState) {
     setDisponivel: (on: boolean) => replace({ ...filters, disponivel: on }, "disponivel", on ? "1" : "0"),
     setSort: (ordenar: SortKey) => replace({ ...filters, ordenar }, "ordenar", ordenar),
     clear: () => replace({ ...DEFAULT_FILTERS, ordenar: filters.ordenar }, "limpar", ""),
+    // chip "Seu tamanho: M": some sem virar filtro explícito (opt-out via listingHref)
+    clearImplicitSize: () => replace({ ...filters, tamanho: [] }, "tamanho", "-pref"),
   }
 }

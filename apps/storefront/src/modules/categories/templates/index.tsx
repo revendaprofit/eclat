@@ -10,10 +10,12 @@ export default async function CategoryTemplate({
   category,
   filters,
   countryCode,
+  implicitSize,
 }: {
   category: HttpTypes.StoreProductCategory
   filters: FilterState
   countryCode: string
+  implicitSize?: string | null
 }) {
   if (!category || !countryCode) notFound()
 
@@ -26,6 +28,7 @@ export default async function CategoryTemplate({
         categoryIds: [category.id, ...(category.category_children ?? []).map((c) => c.id)],
       }}
       countryCode={countryCode}
+      implicitSize={implicitSize}
       listName={category.name ?? ""}
       breadcrumb={[
         { name: "Início", href: "" },

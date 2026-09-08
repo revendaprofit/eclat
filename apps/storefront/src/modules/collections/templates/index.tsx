@@ -6,16 +6,19 @@ export default function CollectionTemplate({
   collection,
   filters,
   countryCode,
+  implicitSize,
 }: {
   collection: HttpTypes.StoreCollection
   filters: FilterState
   countryCode: string
+  implicitSize?: string | null
 }) {
   return (
     <ProductListing
       filters={filters}
       scope={{ collectionId: collection.id }}
       countryCode={countryCode}
+      implicitSize={implicitSize}
       listName={collection.title}
       breadcrumb={[
         { name: "Início", href: "" },

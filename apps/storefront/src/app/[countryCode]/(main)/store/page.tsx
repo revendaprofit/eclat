@@ -2,6 +2,7 @@ import { Metadata } from "next"
 import { permanentRedirect } from "next/navigation"
 
 import { isIndexable, legacyRedirectQuery, parseFilters } from "@lib/util/catalog-filters"
+import { resolveListingFilters } from "@lib/data/prefs"
 import StoreTemplate from "@modules/store/templates"
 
 type Params = {
@@ -37,7 +38,7 @@ export default async function StorePage(props: Params) {
   const path = `/${params.countryCode}/store`
   const legacy = legacyRedirectQuery(sp)
   if (legacy !== null) permanentRedirect(legacy ? `${path}?${legacy}` : path)
-  const filters = parseFilters(sp)
+  const { filters, implicitSize } = await resolveListingFilters(sp)
 
-  return <StoreTemplate filters={filters} countryCode={params.countryCode} />
+  return <StoreTemplate filters={filters} countryCode={params.countryCode} implicitSize={implicitSize} />
 }

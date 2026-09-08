@@ -4,6 +4,7 @@ import { notFound, permanentRedirect } from "next/navigation"
 import { getCollectionByHandle, listCollections } from "@lib/data/collections"
 import { listRegions } from "@lib/data/regions"
 import { isIndexable, legacyRedirectQuery, parseFilters } from "@lib/util/catalog-filters"
+import { resolveListingFilters } from "@lib/data/prefs"
 import { StoreCollection, StoreRegion } from "@medusajs/types"
 import CollectionTemplate from "@modules/collections/templates"
 
@@ -82,7 +83,7 @@ export default async function CollectionPage(props: Props) {
   const path = `/${params.countryCode}/collections/${params.handle}`
   const legacy = legacyRedirectQuery(sp)
   if (legacy !== null) permanentRedirect(legacy ? `${path}?${legacy}` : path)
-  const filters = parseFilters(sp)
+  const { filters, implicitSize } = await resolveListingFilters(sp)
 
   const collection = await getCollectionByHandle(params.handle).then(
     (collection) => collection
@@ -97,6 +98,7 @@ export default async function CollectionPage(props: Props) {
       collection={collection}
       filters={filters}
       countryCode={params.countryCode}
+      implicitSize={implicitSize}
     />
   )
 }
