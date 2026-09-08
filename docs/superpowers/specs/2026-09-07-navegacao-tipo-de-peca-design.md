@@ -40,16 +40,17 @@ Legging                → leggings
 Macaquinho / Macacão   → macaquinhos
 Conjuntos              → conjuntos
 Acessórios             → acessorios
-├── Óculos             → acessorios/oculos
-└── Meias              → acessorios/meias
+├── Óculos             → oculos
+└── Meias              → meias
 Masculino              → masculino
-├── Bermudas           → masculino/bermudas
-└── Camisetas / Regatas → masculino/camisetas-regatas
+├── Bermudas           → bermudas
+└── Camisetas / Regatas → camisetas-regatas
 ```
 
+- Os handles das filhas são **FLAT** no Medusa (`oculos`, `meias`, `bermudas`, `camisetas-regatas` — não `acessorios/oculos` etc.). A forma com caminho (`acessorios/oculos`) é derivada em runtime subindo a cadeia de `parent_id` (`categoryPath`, `apps/cockpit/lib/catalog-rules.ts`) e serve só como chave de `site_content.medidas` (4.4) e para a regra de acessório (`isAccessoryHandle`) — **nunca** como segmento de URL. `getCategoryByHandle` (`apps/storefront/src/lib/data/categories.ts`) hoje consulta o Medusa pelo `handle` simples; URLs aninhadas como `/categories/masculino/bermudas` **não são suportadas** por ela. Enquanto isso não muda (fase 4), o breadcrumb (5.3) deve linkar cada nível pelo seu próprio handle flat (`/categories/masculino`, `/categories/bermudas`), não por um caminho composto.
 - As cinco primeiras são o **eixo feminino** e não têm filhas. Acessórios e Masculino são categorias-mãe: a página da mãe lista tudo das filhas, com chips para entrar em cada filha. A rota `categories/[...category]` já suporta o aninhamento.
 - Ordem de exibição pelo campo nativo `rank` (o Cockpit já edita rank em `components/taxonomy-manager.tsx`), respeitando a ordem acima.
-- Por categoria, em `metadata`: `image_url` (capa, usada no menu, na home e no cabeçalho da listagem), `descricao_curta` (1 linha, cabeçalho da listagem), `medidas` (ver 4.4).
+- Por categoria, em `metadata`: `image_url` (capa, usada no menu, na home e no cabeçalho da listagem), `descricao_curta` (1 linha, cabeçalho da listagem).
 - A vitrine só exibe categoria com pelo menos um produto publicado (regra atual de `category-bar` mantida). **Exceção: `conjuntos`** não terá produtos (conjunto é regra, não SKU) e aparece sempre que houver ao menos uma regra de conjunto ativa; a página em si é definida na spec 2. Até lá, a categoria existe no Medusa mas fica oculta na navegação.
 
 ### 4.2 Opções de variante
@@ -70,7 +71,7 @@ Masculino              → masculino
 
 ### 4.5 Fotos por cor
 - Usa o vínculo nativo `variant.images` (a PDP já filtra por `?v_id`). Regra de cadastro: **todas as variantes de uma mesma cor apontam para o mesmo conjunto de fotos**. O Cockpit ganha, no editor de produto, o agrupamento "Fotos por cor" que aplica o vínculo às 4 variantes de tamanho de uma vez.
-- `thumbnail` do produto = primeira foto da primeira cor (ordem das opções).
+- `thumbnail` do produto: **desvio documentado** — em vez de derivada automaticamente (primeira foto da primeira cor), é definida manualmente pelo botão "capa" no bloco Fotos por cor do Cockpit (`components/color-images.tsx`, `medusaSetThumbnail`).
 - Dependência externa: as fotos reais por cor (pendentes desde 2026-07-28). Sem elas, swatches trocam para a mesma foto. O código não depende disso para funcionar.
 
 ### 4.6 Estoque e "novo"
@@ -91,6 +92,7 @@ Masculino              → masculino
 
 ### 5.3 Breadcrumb visível
 - Componente `common/components/breadcrumb` renderizado na listagem (Início › Legging; Início › Masculino › Bermudas) e na PDP (Início › Legging › Legging Vértice; Início › Masculino › Bermudas › Bermuda X). Fonte: a categoria mais profunda do produto, subindo pelos pais. O `BreadcrumbJsonLd` existente passa a receber os mesmos itens (uma fonte só).
+- Cada nível do breadcrumb linka pelo **handle flat** daquela categoria (`/categories/masculino`, depois `/categories/bermudas`) — não por um caminho composto (`/categories/masculino/bermudas`), que `getCategoryByHandle` não resolve hoje (ver 4.1).
 
 ### 5.4 Home
 - Novo bloco **"Compre por peça"** logo abaixo do hero: grade **só das cinco categorias femininas** (Top, Short, Legging, Macaquinho/Macacão, Conjuntos) com capa e nome, ordem por `rank`. Acessórios e Masculino não entram na home; vivem no menu e no footer. Sem CMS próprio: lê categorias direto. A seção `featured-lines` (CMS) continua disponível para campanhas.
