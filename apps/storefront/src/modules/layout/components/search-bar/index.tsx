@@ -5,12 +5,12 @@ import { useParams, useRouter } from "next/navigation"
 import { useEffect, useMemo, useRef, useState } from "react"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import { pushEcommerceEvent } from "@modules/analytics/push"
-import { suggestProducts } from "@lib/data/search"
 import { buildSuggestions, MIN_QUERY, type ProductHit, type Suggestions } from "@lib/util/search-suggest"
 import type { NavData } from "@lib/util/navigation"
 
 // Busca da vitrine (spec §9): sugestões ao digitar (categorias + cores vêm da NavData já em
-// memória; produtos via server action com debounce de 200 ms). Enter continua indo para /busca.
+// memória; produtos via GET /api/busca/sugestoes — Route Handler, I1 — com debounce de 200 ms
+// e AbortController por digitação). Enter continua indo para /busca.
 // variant "inline" = lupa que expande (desktop nav); "full" = barra arredondada (mobile).
 
 const DEBOUNCE_MS = 200
@@ -25,8 +25,10 @@ export default function SearchBar({ variant = "inline", nav }: { variant?: "inli
   const [focada, setFocada] = useState(false) // dropdown visível
   const [hits, setHits] = useState<ProductHit[]>([])
   const ultimoTermo = useRef("")
+  const id = `busca-sugestoes-${variant}`
 
-  // produtos: debounce; resposta de um termo antigo é descartada (ultimoTermo)
+  // produtos: debounce + AbortController (cancela a requisição anterior); resposta de um termo
+  // antigo é descartada (ultimoTermo). I2: qualquer rejeição que não seja abort limpa os hits.
   useEffect(() => {
     const termo = q.trim()
     ultimoTermo.current = termo
@@ -34,12 +36,22 @@ export default function SearchBar({ variant = "inline", nav }: { variant?: "inli
       setHits([])
       return
     }
+    const controller = new AbortController()
     const t = setTimeout(() => {
-      suggestProducts(termo, cc).then((res) => {
-        if (ultimoTermo.current === termo) setHits(res)
-      })
+      fetch(`/api/busca/sugestoes?q=${encodeURIComponent(termo)}&cc=${cc}`, { signal: controller.signal })
+        .then((r) => r.json())
+        .then((data: { products?: ProductHit[] }) => {
+          if (ultimoTermo.current === termo) setHits(data.products ?? [])
+        })
+        .catch((e) => {
+          if (e?.name === "AbortError") return
+          if (ultimoTermo.current === termo) setHits([])
+        })
     }, DEBOUNCE_MS)
-    return () => clearTimeout(t)
+    return () => {
+      clearTimeout(t)
+      controller.abort()
+    }
   }, [q, cc])
 
   const sugestoes = useMemo(() => buildSuggestions(q, nav, hits), [q, nav, hits])
@@ -79,7 +91,7 @@ export default function SearchBar({ variant = "inline", nav }: { variant?: "inli
   )
 
   const dropdown = mostrar && (
-    <Dropdown sugestoes={sugestoes} termo={q.trim()} cc={cc} onPick={escolher} className={variant === "full" ? "left-0 right-0" : "right-0 w-80"} />
+    <Dropdown id={id} sugestoes={sugestoes} termo={q.trim()} cc={cc} onPick={escolher} className={variant === "full" ? "left-0 right-0" : "right-0 w-80"} />
   )
 
   if (variant === "full") {
@@ -94,8 +106,10 @@ export default function SearchBar({ variant = "inline", nav }: { variant?: "inli
           onFocus={() => setFocada(true)}
           placeholder="Buscar peças, coleções…"
           aria-label="Buscar produtos"
-          aria-expanded={!!mostrar}
-          aria-controls="busca-sugestoes"
+          role="combobox"
+          aria-autocomplete="list"
+          aria-expanded={mostrar}
+          aria-controls={mostrar ? id : undefined}
           autoComplete="off"
           className="w-full rounded-full border border-eclat-pedra/60 bg-white px-5 py-3 pr-14 text-base text-eclat-grafite placeholder:text-eclat-grafite/40 outline-none focus:border-eclat-terracota transition-colors"
         />
@@ -117,8 +131,10 @@ export default function SearchBar({ variant = "inline", nav }: { variant?: "inli
         }}
         placeholder="Buscar peças…"
         aria-label="Buscar produtos"
-        aria-expanded={!!mostrar}
-        aria-controls="busca-sugestoes"
+        role="combobox"
+        aria-autocomplete="list"
+        aria-expanded={mostrar}
+        aria-controls={mostrar ? id : undefined}
         autoComplete="off"
         className={`bg-transparent border-b border-ui-border-base focus:border-eclat-terracota outline-none text-small-regular transition-all duration-200 ${
           aberta ? "w-40 small:w-48 px-1" : "w-0 px-0"
@@ -136,12 +152,18 @@ export default function SearchBar({ variant = "inline", nav }: { variant?: "inli
   )
 }
 
-function Dropdown({ sugestoes, termo, cc, onPick, className }: { sugestoes: Suggestions; termo: string; cc: string; onPick: (t: SuggestionType, v: string) => void; className: string }) {
+function Dropdown({ id, sugestoes, termo, cc, onPick, className }: { id: string; sugestoes: Suggestions; termo: string; cc: string; onPick: (t: SuggestionType, v: string) => void; className: string }) {
   const vazio = sugestoes.categories.length + sugestoes.colors.length + sugestoes.products.length === 0
   const titulo = "px-4 pt-3 pb-1 text-[10px] uppercase tracking-[0.2em] text-eclat-grafite/50"
   const item = "block px-4 py-2 text-sm text-eclat-grafite hover:bg-eclat-areia/40 focus:bg-eclat-areia/40 outline-none"
   return (
-    <div id="busca-sugestoes" className={`absolute top-full mt-2 z-50 bg-white border border-ui-border-base rounded-xl shadow-lg overflow-hidden ${className}`} data-testid="search-suggestions">
+    <div
+      id={id}
+      role="region"
+      aria-label="Sugestões de busca"
+      className={`absolute top-full mt-2 z-50 bg-white border border-ui-border-base rounded-xl shadow-lg overflow-hidden ${className}`}
+      data-testid="search-suggestions"
+    >
       {vazio ? (
         <p className="px-4 py-3 text-sm text-eclat-grafite/60">Nenhuma sugestão — pressione Enter para buscar “{termo}”.</p>
       ) : (
