@@ -14,26 +14,30 @@ export default function ColorSelect({ colorMap, disabled }: { colorMap: ColorMap
   return (
     <div className="flex flex-col gap-y-2" data-testid="color-select">
       <span className="text-sm">Cor{atual ? <>: <strong>{atual}</strong></> : null}</span>
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap items-start gap-2">
         {cores.map((c) => {
           const r = resolveColor(colorMap, c)
           const on = color !== null && normalizeColorName(color) === normalizeColorName(c)
           const disponivel = firstAvailableVariantId(product, c) !== null
           return (
-            <button
-              key={c}
-              type="button"
-              disabled={disabled}
-              onClick={() => setValue(opt.id, c)}
-              aria-pressed={on}
-              aria-label={`Cor ${r.name}${disponivel ? "" : " (esgotada)"}`}
-              title={r.name}
-              className={clx("relative w-8 h-8 rounded-full border border-black/10", on && "ring-2 ring-eclat-terracota ring-offset-2", !disponivel && "opacity-60")}
-              style={r.swatch_url ? { backgroundImage: `url(${r.swatch_url})`, backgroundSize: "cover" } : { backgroundColor: r.hex }}
-              data-testid={`color-${c}`}
-            >
-              {!disponivel && <span aria-hidden className="absolute inset-0 rounded-full bg-[linear-gradient(135deg,transparent_46%,rgba(0,0,0,.55)_48%,rgba(0,0,0,.55)_52%,transparent_54%)]" />}
-            </button>
+            <div key={c} className="flex flex-col items-center gap-1">
+              <button
+                type="button"
+                disabled={disabled}
+                onClick={() => setValue(opt.id, c)}
+                aria-pressed={on}
+                aria-label={`Cor ${r.name}${disponivel ? "" : " (esgotada)"}`}
+                title={r.name}
+                className={clx("relative w-8 h-8 rounded-full border border-black/10", on && "ring-2 ring-eclat-terracota ring-offset-2", !disponivel && "opacity-60")}
+                style={r.swatch_url ? { backgroundImage: `url(${r.swatch_url})`, backgroundSize: "cover" } : { backgroundColor: r.hex }}
+                data-testid={`color-${c}`}
+              >
+                {!disponivel && <span aria-hidden className="absolute inset-0 rounded-full bg-[linear-gradient(135deg,transparent_46%,rgba(0,0,0,.55)_48%,rgba(0,0,0,.55)_52%,transparent_54%)]" />}
+              </button>
+              {/* Sem hex/swatch cadastrado no mapa de cores: o círculo fica neutro, então o nome
+                  vira texto visível para não confundir com outra cor igualmente neutra. */}
+              {!r.known && <span className="text-[10px] text-eclat-grafite/70 max-w-[56px] text-center leading-tight">{r.name}</span>}
+            </div>
           )
         })}
       </div>

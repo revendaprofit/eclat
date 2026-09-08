@@ -1,8 +1,10 @@
 import { listProducts } from "@lib/data/products"
+import { listCategories } from "@lib/data/categories"
 import { getRegion } from "@lib/data/regions"
 import { HttpTypes } from "@medusajs/types"
 import { colorValues } from "@lib/util/pdp-variants"
 import { normalizeColorName } from "@lib/util/colors"
+import { deepestCategoryId } from "@lib/util/category-chain"
 import { sortByKey } from "@lib/util/catalog-facets"
 import ProductPreview from "../product-preview"
 
@@ -10,7 +12,11 @@ import ProductPreview from "../product-preview"
 export default async function RelatedProducts({ product, countryCode }: { product: HttpTypes.StoreProduct; countryCode: string }) {
   const region = await getRegion(countryCode)
   if (!region) return null
-  const cat = product.categories?.[0]
+  // Categoria mais profunda entre as do produto (spec §5.3) — não `categories[0]` (ver templates/index.tsx).
+  const catIds = (product.categories ?? []).map((c) => c.id)
+  const allCats = catIds.length ? await listCategories().catch(() => []) : []
+  const deepId = catIds.length ? deepestCategoryId(allCats, catIds) : null
+  const cat = deepId ? allCats.find((c) => c.id === deepId) : undefined
   const queryParams: HttpTypes.StoreProductListParams = cat ? { category_id: [cat.id], limit: 24 } : product.collection_id ? { collection_id: [product.collection_id], limit: 24 } : { limit: 24 }
   const { response } = await listProducts({ queryParams, countryCode })
   const outros = response.products.filter((p) => p.id !== product.id)

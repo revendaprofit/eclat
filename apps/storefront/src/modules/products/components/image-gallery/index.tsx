@@ -44,7 +44,7 @@ const ImageGallery = ({ images, productTitle }: ImageGalleryProps) => {
     <div className="flex flex-col items-start relative">
       <div
         ref={trackRef}
-        className="flex w-full gap-x-2 overflow-x-auto snap-x snap-mandatory scrollbar-hide small:flex-col small:overflow-visible small:gap-y-4 small:mx-16 small:w-auto small:flex-1"
+        className="flex w-full gap-x-2 overflow-x-auto snap-x snap-mandatory no-scrollbar small:flex-col small:overflow-visible small:gap-y-4 small:mx-16 small:w-auto small:flex-1"
         data-testid="image-gallery"
       >
         {images.map((image, index) => (

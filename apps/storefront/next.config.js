@@ -27,6 +27,9 @@ const nextConfig = {
   images: {
     // Otimização do Next ATIVA (resize + WebP/AVIF na Vercel) — crítico p/ LCP.
     formats: ["image/avif", "image/webp"],
+    // 80 = quality dos cards/PDP (product-card, image-gallery); 50/75 = defaults do Next mantidos
+    // como fallback para outros usos de <Image>. Sem isso o Next avisa em build/dev.
+    qualities: [50, 75, 80],
     remotePatterns: [
       {
         protocol: "http",

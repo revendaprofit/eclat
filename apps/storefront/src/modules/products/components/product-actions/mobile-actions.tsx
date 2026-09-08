@@ -26,6 +26,7 @@ type MobileActionsProps = {
   show: boolean
   optionsDisabled: boolean
   colorMap: ColorMap
+  onNotify?: (variantId: string, label: string) => void
 }
 
 const MobileActions: React.FC<MobileActionsProps> = ({
@@ -39,6 +40,7 @@ const MobileActions: React.FC<MobileActionsProps> = ({
   show,
   optionsDisabled,
   colorMap,
+  onNotify,
 }) => {
   const { state, open, close } = useToggleState()
 
@@ -179,7 +181,7 @@ const MobileActions: React.FC<MobileActionsProps> = ({
                     {(product.variants?.length ?? 0) > 1 && (
                       <div className="flex flex-col gap-y-6">
                         <ColorSelect colorMap={colorMap} disabled={optionsDisabled} />
-                        <SizeSelect disabled={optionsDisabled} />
+                        <SizeSelect disabled={optionsDisabled} onNotify={onNotify} />
                         {(product.options ?? [])
                           .filter((o) => !/^(tamanho|cor)$/i.test(o.title ?? ""))
                           .map((option) => (

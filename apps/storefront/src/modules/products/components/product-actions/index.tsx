@@ -88,6 +88,7 @@ export default function ProductActions({ product, colorMap, disabled }: ProductA
         show={!inView}
         optionsDisabled={!!disabled || isAdding}
         colorMap={colorMap}
+        onNotify={(variantId, label) => setNotifyFor({ variantId, label })}
       />
     </div>
   )
