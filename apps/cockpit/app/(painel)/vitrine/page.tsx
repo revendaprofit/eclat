@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react"
 import CoresEditor from "@/components/cores-editor"
+import MedidasEditor from "@/components/medidas-editor"
 
 type Hero = {
   banner_mobile_url?: string
@@ -225,6 +226,12 @@ export default function VitrinePage() {
       <section className={sectionA}>
         <h2 className="font-serif text-xl text-eclat-grafite">Cores (catálogo)</h2>
         <CoresEditor />
+      </section>
+
+      {/* MEDIDAS (guia por categoria) */}
+      <section className={sectionA}>
+        <h2 className="font-serif text-xl text-eclat-grafite">Guia de medidas por categoria</h2>
+        <MedidasEditor />
       </section>
 
       {/* HERO */}
