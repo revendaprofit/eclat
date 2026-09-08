@@ -94,7 +94,7 @@ export const listProducts = async ({
     })
 }
 
-export type ListingScope = { categoryIds?: string[]; collectionId?: string; productIds?: string[] }
+export type ListingScope = { categoryIds?: string[]; collectionId?: string; productIds?: string[]; q?: string }
 export type ListingResult = {
   products: HttpTypes.StoreProduct[]
   count: number
@@ -119,6 +119,7 @@ export const listProductsFiltered = async ({
   if (scope.categoryIds?.length) queryParams.category_id = scope.categoryIds
   if (scope.collectionId) queryParams.collection_id = [scope.collectionId]
   if (scope.productIds?.length) queryParams.id = scope.productIds
+  if (scope.q) queryParams.q = scope.q // busca textual da Store API (título/descrição), spec §9
 
   const {
     response: { products: all },

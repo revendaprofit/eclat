@@ -28,6 +28,7 @@ export default async function ProductListing({
   listName,
   header,
   breadcrumb,
+  query,
 }: {
   filters: FilterState
   scope: ListingScope
@@ -35,6 +36,7 @@ export default async function ProductListing({
   listName: string
   header?: ReactNode
   breadcrumb?: Crumb[]
+  query?: string
 }) {
   const region = await getRegion(countryCode)
   if (!region) return null
@@ -54,7 +56,7 @@ export default async function ProductListing({
           </aside>
           <PendingGrid className="w-full">
             {result.count === 0 ? (
-              <EmptyResults filters={filters} />
+              <EmptyResults filters={filters} query={query} />
             ) : (
               <>
                 <ItemListJsonLd

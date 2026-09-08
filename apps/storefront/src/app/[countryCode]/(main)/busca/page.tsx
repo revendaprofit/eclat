@@ -1,77 +1,73 @@
 import { Metadata } from "next"
+import { permanentRedirect, redirect } from "next/navigation"
 
-import { listProducts } from "@lib/data/products"
-import { getRegion } from "@lib/data/regions"
-import ProductPreview from "@modules/products/components/product-preview"
-import LocalizedClientLink from "@modules/common/components/localized-client-link"
+import { legacyRedirectQuery, parseFilters } from "@lib/util/catalog-filters"
+import { synonymCategoryHandle } from "@lib/util/search-synonyms"
+import ProductListing from "@modules/store/templates/product-listing"
 
 type Props = {
-  searchParams: Promise<{ q?: string }>
+  searchParams: Promise<Record<string, string | string[] | undefined>>
   params: Promise<{ countryCode: string }>
 }
 
+const termoDe = (sp: Record<string, string | string[] | undefined>) => (Array.isArray(sp.q) ? sp.q[0] : sp.q ?? "").trim()
+
 export async function generateMetadata(props: Props): Promise<Metadata> {
-  const { q } = await props.searchParams
-  const termo = (q || "").trim()
+  const { countryCode } = await props.params
+  const termo = termoDe(await props.searchParams)
   return {
-    title: termo ? `Busca: ${termo} | use.ÉCLAT` : "Busca | use.ÉCLAT",
+    title: termo ? `Busca: ${termo}` : "Busca",
     description: termo ? `Resultados da busca por "${termo}" na use.ÉCLAT.` : "Busque peças da use.ÉCLAT.",
-    robots: { index: false }, // páginas de resultado não são indexadas
+    alternates: { canonical: `/${countryCode}/busca` },
+    robots: { index: false, follow: true }, // resultados de busca nunca indexam (spec §6.4/§9)
   }
 }
 
 export default async function BuscaPage(props: Props) {
   const { countryCode } = await props.params
-  const { q } = await props.searchParams
-  const termo = (q || "").trim()
+  const sp = await props.searchParams
+  const termo = termoDe(sp)
+  const path = `/${countryCode}/busca`
 
-  const region = await getRegion(countryCode)
+  // "calça" → /categories/leggings (ruling 2: só quando a busca inteira é sinônimo; 307, sinônimos mudam)
+  if (termo) {
+    const handle = synonymCategoryHandle(termo)
+    if (handle) redirect(`/${countryCode}/categories/${handle}`)
+  }
+  const legacy = legacyRedirectQuery(sp)
+  if (legacy !== null) permanentRedirect(`${path}?q=${encodeURIComponent(termo)}${legacy ? `&${legacy}` : ""}`)
+  const filters = parseFilters(sp)
 
-  let produtos: Awaited<ReturnType<typeof listProducts>>["response"]["products"] = []
-  if (termo && region) {
-    const { response } = await listProducts({
-      countryCode,
-      queryParams: { q: termo, limit: 24 },
-    })
-    produtos = response.products
+  const header = (
+    <div className="mb-6">
+      <p className="uppercase tracking-[0.25em] text-[11px] text-eclat-terracota">Busca</p>
+      <h1 className="font-serif text-3xl text-eclat-grafite mt-1">
+        {termo ? <>Resultados para “{termo}”</> : "O que você procura?"}
+      </h1>
+    </div>
+  )
+
+  if (!termo) {
+    return (
+      <div className="content-container py-10">
+        {header}
+        <p className="text-sm text-eclat-grafite/60">Digite um termo na busca acima — por nome, cor ou tipo de peça.</p>
+      </div>
+    )
   }
 
   return (
-    <div className="content-container py-10">
-      <div className="mb-8">
-        <p className="uppercase tracking-[0.25em] text-[11px] text-eclat-terracota">Busca</p>
-        <h1 className="font-serif text-3xl text-eclat-grafite mt-1">
-          {termo ? <>Resultados para “{termo}”</> : "O que você procura?"}
-        </h1>
-        {termo && (
-          <p className="text-sm text-eclat-grafite/60 mt-1">
-            {produtos.length === 0 ? "Nenhuma peça encontrada." : `${produtos.length} peça(s) encontrada(s).`}
-          </p>
-        )}
-      </div>
-
-      {!termo ? (
-        <p className="text-sm text-eclat-grafite/60">
-          Digite um termo na busca acima — por nome, coleção ou estilo.
-        </p>
-      ) : produtos.length === 0 ? (
-        <div className="text-sm text-eclat-grafite/70">
-          <p>Não encontramos peças para “{termo}”.</p>
-          <LocalizedClientLink href="/store" className="text-eclat-terracota underline mt-2 inline-block">
-            Ver toda a loja
-          </LocalizedClientLink>
-        </div>
-      ) : (
-        region && (
-          <ul className="grid grid-cols-2 small:grid-cols-3 medium:grid-cols-4 gap-x-6 gap-y-8">
-            {produtos.map((p) => (
-              <li key={p.id}>
-                <ProductPreview product={p} region={region} />
-              </li>
-            ))}
-          </ul>
-        )
-      )}
-    </div>
+    <ProductListing
+      filters={filters}
+      scope={{ q: termo }}
+      countryCode={countryCode}
+      listName={`Busca: ${termo}`}
+      query={termo}
+      breadcrumb={[
+        { name: "Início", href: "" },
+        { name: "Busca", href: "/busca" },
+      ]}
+      header={header}
+    />
   )
 }

@@ -1,6 +1,6 @@
 "use client"
 
-import { usePathname, useRouter } from "next/navigation"
+import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { useCallback } from "react"
 import { DEFAULT_FILTERS, isSelected, serializeFilters, toggleValue, type FilterState, type PriceRange, type SortKey } from "@lib/util/catalog-filters"
 import { useListingTransition } from "./listing-transition"
@@ -19,17 +19,21 @@ function track(filter_type: FilterType, filter_value: string) {
 export function useFilterNavigation(filters: FilterState) {
   const router = useRouter()
   const pathname = usePathname()
+  const searchParams = useSearchParams()
   const { startTransition } = useListingTransition()
 
   const replace = useCallback(
     (next: FilterState, type: FilterType, value: string) => {
-      const q = serializeFilters({ ...next, pagina: 1 })
+      const params = new URLSearchParams(serializeFilters({ ...next, pagina: 1 }))
+      const q = searchParams.get("q")
+      if (q) params.set("q", q)
+      const qs = params.toString()
       track(type, value)
       startTransition(() => {
-        router.push(q ? `${pathname}?${q}` : pathname, { scroll: false })
+        router.push(qs ? `${pathname}?${qs}` : pathname, { scroll: false })
       })
     },
-    [router, pathname, startTransition]
+    [router, pathname, searchParams, startTransition]
   )
 
   return {
