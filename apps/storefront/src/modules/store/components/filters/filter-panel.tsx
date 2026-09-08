@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { clx } from "@modules/common/components/ui"
 import { hasActiveFilters, type FilterState } from "@lib/util/catalog-filters"
 import type { Facets } from "@lib/util/catalog-facets"
@@ -15,6 +15,12 @@ export default function FilterPanel({ facets, filters, colorMap, onApplied }: { 
   const [min, setMin] = useState(filters.preco?.min?.toString() ?? "")
   const [max, setMax] = useState(filters.preco?.max?.toString() ?? "")
   const apply = (fn: () => void) => { fn(); onApplied?.() }
+
+  // Ressincroniza os inputs de/até com o filtro ativo quando alterado externamente (atalho, chip, limpar, voltar)
+  useEffect(() => {
+    setMin(filters.preco?.min?.toString() ?? "")
+    setMax(filters.preco?.max?.toString() ?? "")
+  }, [filters.preco?.min, filters.preco?.max])
 
   const faixas = facets.preco
     ? (() => {
