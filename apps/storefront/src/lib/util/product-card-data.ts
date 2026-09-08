@@ -48,12 +48,14 @@ export function buildProductCardData(product: HttpTypes.StoreProduct, colorMap: 
     const vs = name === "" ? variants : variants.filter((v) => optionValue(product.options, v as StockVariant, "Cor") === name)
     const r = name === "" ? { name: "", hex: "", swatch_url: null, known: false } : resolveColor(colorMap, name)
     const withImages = vs.find((v) => urls(v.images).length > 0)
-    const sizes = sortSizes(vs.map((v) => optionValue(product.options, v as StockVariant, "Tamanho") ?? "").filter(Boolean))
+    const sizeOf = (v: V) => optionValue(product.options, v as StockVariant, "Tamanho")
+    const distinctSizes = Array.from(new Set(vs.map((v) => sizeOf(v)).filter((s): s is string => !!s)))
+    const orderedSizes = sortSizes(distinctSizes)
     const ordered = [
-      ...sizes.map((s) => vs.find((v) => optionValue(product.options, v as StockVariant, "Tamanho") === s)!),
-      ...vs.filter((v) => !optionValue(product.options, v as StockVariant, "Tamanho")),
+      ...orderedSizes.flatMap((s) => vs.filter((v) => sizeOf(v) === s)),
+      ...vs.filter((v) => !sizeOf(v)),
     ]
-    const cardVariants = ordered.map((v) => ({ id: v.id, size: optionValue(product.options, v as StockVariant, "Tamanho"), available: isVariantAvailable(v as StockVariant) }))
+    const cardVariants = ordered.map((v) => ({ id: v.id, size: sizeOf(v), available: isVariantAvailable(v as StockVariant) }))
     return {
       name: r.name,
       hex: r.hex,
@@ -62,7 +64,7 @@ export function buildProductCardData(product: HttpTypes.StoreProduct, colorMap: 
       images: withImages ? urls(withImages.images) : productImages,
       variants: cardVariants,
       available: cardVariants.some((v) => v.available),
-      lowStock: name === "" ? false : isLowStock(product, name),
+      lowStock: isLowStock(product, name),
       firstAvailableVariantId: cardVariants.find((v) => v.available)?.id ?? null,
     }
   }

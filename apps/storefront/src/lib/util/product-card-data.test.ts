@@ -51,6 +51,37 @@ describe("buildProductCardData", () => {
     expect(s.colors.length).toBe(1)
     expect(s.colors[0].name).toBe("")
     expect(s.colors[0].variants.length).toBe(4)
+    // v1=M, v2=P, v3=P, v4=M (ordem original) -> tamanhos distintos ordenados [P, M]; dentro de cada
+    // tamanho mantém a ordem original das variantes: P -> v2,v3; M -> v1,v4.
+    expect(s.colors[0].variants.map((v) => v.id)).toEqual(["v2", "v3", "v1", "v4"])
+  })
+  it("duas variantes do mesmo tamanho numa cor: nenhuma some, disponibilidade correta", () => {
+    const dup = {
+      ...P,
+      variants: [
+        v("va", "M", "Verde Exercito", 0),
+        v("vb", "M", "Verde Exercito", 5),
+      ],
+    } as unknown as HttpTypes.StoreProduct
+    const s = buildProductCardData(dup, MAP, NOW)
+    const cor = s.colors.find((c) => c.name === "Verde Exército")!
+    expect(cor.variants.map((x) => x.id)).toEqual(["va", "vb"])
+    expect(cor.variants.map((x) => x.available)).toEqual([false, true])
+    expect(cor.available).toBe(true)
+    expect(cor.firstAvailableVariantId).toBe("vb")
+  })
+  it("lowStock do bucket sem cor segue isLowStock (estoque total <= 3)", () => {
+    const semCorBaixo = {
+      ...P,
+      options: [OPTS[0]],
+      variants: [v("v1", "M", "Verde Exercito", 2, []), v("v2", "P", "Licor", 1, [])].map((x) => ({
+        ...x,
+        options: [x.options![0]],
+      })),
+    } as unknown as HttpTypes.StoreProduct
+    const s = buildProductCardData(semCorBaixo, MAP, NOW)
+    expect(s.colors[0].name).toBe("")
+    expect(s.colors[0].lowStock).toBe(true)
   })
 })
 
