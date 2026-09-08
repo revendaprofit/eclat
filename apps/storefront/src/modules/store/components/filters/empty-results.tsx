@@ -2,15 +2,17 @@
 
 import { usePathname, useSearchParams } from "next/navigation"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
-import { DEFAULT_FILTERS, listingHref, type FilterState } from "@lib/util/catalog-filters"
+import { DEFAULT_FILTERS, listingHref, shouldOptOut, type FilterState } from "@lib/util/catalog-filters"
 import { useListingTransition } from "./listing-transition"
 
-// Estado vazio útil (spec §6.3): sempre oferece um caminho de volta.
+// Estado vazio útil (spec §6.3): sempre oferece um caminho de volta. Todo link daqui que termina
+// sem tamanho é uma remoção deliberada do tamanho (ação "tamanho" — ruling 7), não uma ação "outro".
 export default function EmptyResults({ filters, query }: { filters: FilterState; query?: string }) {
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const { implicitSize } = useListingTransition()
-  const link = (f: FilterState) => listingHref(pathname, f, implicitSize, searchParams.get("q"))
+  const optedOut = searchParams.get("tamanho") === ""
+  const link = (f: FilterState) => listingHref(pathname, f, shouldOptOut(f, "tamanho", implicitSize, optedOut), searchParams.get("q"))
   const partes: string[] = []
   if (filters.tamanho.length) partes.push(`tamanho ${filters.tamanho.join("/")}`)
   if (filters.cor.length) partes.push(`cor ${filters.cor.join("/")}`)

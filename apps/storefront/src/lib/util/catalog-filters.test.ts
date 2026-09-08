@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 import {
   DEFAULT_FILTERS,
+  explicitFilters,
   hasActiveFilters,
   isIndexable,
   isSelected,
@@ -8,6 +9,7 @@ import {
   listingHref,
   parseFilters,
   serializeFilters,
+  shouldOptOut,
   toggleValue,
 } from "./catalog-filters"
 
@@ -99,14 +101,50 @@ describe("legacyRedirectQuery", () => {
 })
 
 describe("listingHref", () => {
-  it("sem tamanho implícito: URL normal; com q preservado", () => {
-    expect(listingHref("/br/store", { ...DEFAULT_FILTERS, cor: ["Licor"] }, null)).toBe("/br/store?cor=Licor")
-    expect(listingHref("/br/store", DEFAULT_FILTERS, null)).toBe("/br/store")
-    expect(listingHref("/br/busca", { ...DEFAULT_FILTERS, cor: ["Licor"] }, null, "calça preta")).toBe("/br/busca?cor=Licor&q=cal%C3%A7a+preta")
+  it("sem opt-out: URL normal; com q preservado", () => {
+    expect(listingHref("/br/store", { ...DEFAULT_FILTERS, cor: ["Licor"] }, false)).toBe("/br/store?cor=Licor")
+    expect(listingHref("/br/store", DEFAULT_FILTERS, false)).toBe("/br/store")
+    expect(listingHref("/br/busca", { ...DEFAULT_FILTERS, cor: ["Licor"] }, false, "calça preta")).toBe("/br/busca?cor=Licor&q=cal%C3%A7a+preta")
   })
-  it("com tamanho implícito e resultado sem filtro: grava `tamanho=` vazio (opt-out), mantendo ordenação", () => {
-    expect(listingHref("/br/store", DEFAULT_FILTERS, "M")).toBe("/br/store?tamanho=")
-    expect(listingHref("/br/store", { ...DEFAULT_FILTERS, ordenar: "destaques" }, "M")).toBe("/br/store?tamanho=&ordenar=destaques")
-    expect(listingHref("/br/store", { ...DEFAULT_FILTERS, cor: ["Licor"] }, "M")).toBe("/br/store?cor=Licor")
+  it("com opt-out: grava `tamanho=` vazio, mantendo os demais params — exceto quando o resultado já tem tamanho", () => {
+    expect(listingHref("/br/store", DEFAULT_FILTERS, true)).toBe("/br/store?tamanho=")
+    expect(listingHref("/br/store", { ...DEFAULT_FILTERS, ordenar: "destaques" }, true)).toBe("/br/store?tamanho=&ordenar=destaques")
+    expect(listingHref("/br/store", { ...DEFAULT_FILTERS, cor: ["Licor"] }, true)).toBe("/br/store?tamanho=&cor=Licor")
+    expect(listingHref("/br/store", { ...DEFAULT_FILTERS, tamanho: ["G"] }, true)).toBe("/br/store?tamanho=G")
+  })
+})
+
+describe("explicitFilters", () => {
+  it("remove só o tamanho implícito, ignorando caixa", () => {
+    expect(explicitFilters({ ...DEFAULT_FILTERS, tamanho: ["M", "G"] }, "m")).toEqual({ ...DEFAULT_FILTERS, tamanho: ["G"] })
+  })
+  it("sem tamanho implícito: devolve a mesma referência", () => {
+    const f = { ...DEFAULT_FILTERS, tamanho: ["M"] }
+    expect(explicitFilters(f, null)).toBe(f)
+    expect(explicitFilters(f, undefined)).toBe(f)
+  })
+})
+
+describe("shouldOptOut", () => {
+  const semTamanho = DEFAULT_FILTERS
+  const comTamanho = { ...DEFAULT_FILTERS, tamanho: ["M"] }
+  it("ação em outro filtro com implícito ativo: não opta por sair (o implícito não vira explícito)", () => {
+    expect(shouldOptOut(semTamanho, "outro", "M", false)).toBe(false)
+  })
+  it("ação em tamanho, zerando a lista, com implícito ativo: opt-out", () => {
+    expect(shouldOptOut(semTamanho, "tamanho", "M", false)).toBe(true)
+  })
+  it("limpar tudo com implícito ativo: opt-out", () => {
+    expect(shouldOptOut(semTamanho, "limpar", "M", false)).toBe(true)
+  })
+  it("já em opt-out: preserva ao mexer em outro filtro", () => {
+    expect(shouldOptOut(semTamanho, "outro", "M", true)).toBe(true)
+  })
+  it("sem implícito e sem opt-out prévio: nunca grava o opt-out", () => {
+    expect(shouldOptOut(semTamanho, "outro", null, false)).toBe(false)
+  })
+  it("resultado com tamanho presente: nunca é opt-out, em nenhuma ação", () => {
+    expect(shouldOptOut(comTamanho, "tamanho", "M", false)).toBe(false)
+    expect(shouldOptOut(comTamanho, "outro", "M", true)).toBe(false)
   })
 })

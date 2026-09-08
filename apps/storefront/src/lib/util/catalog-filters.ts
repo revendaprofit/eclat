@@ -120,14 +120,28 @@ export function serializeFilters(f: FilterState): string {
   return p.toString()
 }
 
-// URL de uma mudança de filtro na listagem. Preserva `q` (/busca). Com tamanho implícito do wizard
-// e resultado SEM filtro nenhum, grava `?tamanho=` (param presente, vazio) = opt-out do pré-filtro
-// do servidor (applyPreferredSize); senão a chip "Seu tamanho" voltaria na próxima renderização.
-export function listingHref(pathname: string, next: FilterState, implicitSize: string | null | undefined, keepQ?: string | null): string {
+// Visão do estado SEM o tamanho implícito do wizard — ponto de partida de toda ação que não
+// mexe em tamanho (ruling 7: o implícito nunca vira explícito por tabela).
+export function explicitFilters(filters: FilterState, implicitSize: string | null | undefined): FilterState {
+  if (!implicitSize) return filters
+  return { ...filters, tamanho: filters.tamanho.filter((t) => t.toLowerCase() !== implicitSize.toLowerCase()) }
+}
+
+// Opt-out `?tamanho=` entra quando a cliente REMOVE o tamanho (ação em tamanho/limpar que zera a lista
+// com implícito ativo) ou quando a URL atual já está em opt-out (preserva ao mexer em outros filtros).
+export function shouldOptOut(next: FilterState, action: "tamanho" | "limpar" | "outro", implicitSize: string | null | undefined, optedOut: boolean): boolean {
+  if (next.tamanho.length > 0) return false
+  if (optedOut) return true
+  return !!implicitSize && action !== "outro"
+}
+
+// URL de uma mudança de filtro na listagem. Preserva `q` (/busca). Com optOut, grava `?tamanho=`
+// (param presente, vazio) — o servidor (applyPreferredSize) não reaplica o tamanho preferido.
+export function listingHref(pathname: string, next: FilterState, optOut: boolean, keepQ?: string | null): string {
   const params = new URLSearchParams(serializeFilters({ ...next, pagina: 1 }))
   if (keepQ) params.set("q", keepQ)
   let qs = params.toString()
-  if (implicitSize && !hasActiveFilters(next)) qs = `tamanho=${qs ? `&${qs}` : ""}`
+  if (optOut && next.tamanho.length === 0) qs = `tamanho=${qs ? `&${qs}` : ""}`
   return qs ? `${pathname}?${qs}` : pathname
 }
 
