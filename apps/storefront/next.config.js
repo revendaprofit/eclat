@@ -22,7 +22,7 @@ const nextConfig = {
     ignoreDuringBuilds: true,
   },
   typescript: {
-    ignoreBuildErrors: true,
+    ignoreBuildErrors: false,
   },
   images: {
     // Otimização do Next ATIVA (resize + WebP/AVIF na Vercel) — crítico p/ LCP.

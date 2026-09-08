@@ -53,6 +53,13 @@ export const listProducts = async ({
     ...(await getCacheOptions("products")),
   }
 
+  // Campos padrão que todo chamador precisa (card, disponibilidade, badges).
+  // Se o chamador pedir `fields` próprio, ANEXA em vez de substituir — um
+  // `queryParams.fields` não pode fazer o produto perder inventory/images/tags.
+  const defaultFields = "*variants.calculated_price,+variants.inventory_quantity,*variants.images,+metadata,+tags"
+  const { fields: extraFields, ...restQueryParams } = queryParams ?? {}
+  const fields = extraFields ? `${defaultFields},${extraFields}` : defaultFields
+
   return sdk.client
     .fetch<{ products: HttpTypes.StoreProduct[]; count: number }>(
       `/store/products`,
@@ -62,9 +69,8 @@ export const listProducts = async ({
           limit,
           offset,
           region_id: region?.id,
-          fields:
-            "*variants.calculated_price,+variants.inventory_quantity,*variants.images,+metadata,+tags,",
-          ...queryParams,
+          fields,
+          ...restQueryParams,
         },
         headers,
         next,
