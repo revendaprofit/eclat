@@ -24,4 +24,8 @@ describe("synonymCategoryHandle", () => {
   it("'bermuda' NÃO é sinônimo (Bermudas é categoria real em Masculino — ruling 1)", () => {
     expect(synonymCategoryHandle("bermuda")).toBeNull()
   })
+  it("chave herdada do protótipo não é sinônimo (I3)", () => {
+    expect(synonymCategoryHandle("constructor")).toBeNull()
+    expect(synonymCategoryHandle("__proto__")).toBeNull()
+  })
 })

@@ -26,8 +26,10 @@ export function normalizeTerm(s: string): string {
 }
 
 // Devolve o handle só quando a busca INTEIRA é um sinônimo ("calça", "Calças"); "calça preta" → null.
+// hasOwnProperty explícito (I3): SEARCH_SYNONYMS[t] sozinho responderia a chaves herdadas do
+// protótipo ("constructor", "__proto__", "toString"…) como se fossem sinônimo válido.
 export function synonymCategoryHandle(q: string): string | null {
   const t = normalizeTerm(q)
   if (!t) return null
-  return SEARCH_SYNONYMS[t] ?? null
+  return Object.prototype.hasOwnProperty.call(SEARCH_SYNONYMS, t) ? SEARCH_SYNONYMS[t] : null
 }

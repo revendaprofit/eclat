@@ -15,4 +15,7 @@ describe("orderByStyles", () => {
   it("mapa cobre os 5 estilos do wizard", () => {
     expect(Object.keys(STYLE_HANDLES).sort()).toEqual(["conjunto", "legging", "macacao", "short", "top"])
   })
+  it("chave herdada do protótipo não é estilo válido (I3)", () => {
+    expect(orderByStyles(ITEMS, ["constructor"])).toBe(ITEMS)
+  })
 })
