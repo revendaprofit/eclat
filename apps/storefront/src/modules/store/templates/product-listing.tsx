@@ -1,12 +1,15 @@
 import type { ReactNode } from "react"
 import { listProductsFiltered, type ListingScope } from "@lib/data/products"
 import { getRegion } from "@lib/data/regions"
+import { getColorMap } from "@lib/data/colors"
 import { getBaseURL } from "@lib/util/env"
 import type { FilterState } from "@lib/util/catalog-filters"
 import ProductPreview from "@modules/products/components/product-preview"
 import { ItemListJsonLd } from "@modules/seo/jsonld"
 import { Pagination } from "@modules/store/components/pagination"
 import EmptyResults from "@modules/store/components/filters/empty-results"
+import FilterPanel from "@modules/store/components/filters/filter-panel"
+import ListingToolbar from "@modules/store/components/filters/listing-toolbar"
 import Track from "@modules/analytics/track"
 import { productsToItemList } from "@modules/analytics/items"
 
@@ -26,21 +29,16 @@ export default async function ProductListing({
 }) {
   const region = await getRegion(countryCode)
   if (!region) return null
-  const result = await listProductsFiltered({ filters, scope, countryCode })
+  const [result, colorMap] = await Promise.all([listProductsFiltered({ filters, scope, countryCode }), getColorMap()])
   const base = getBaseURL()
 
   return (
     <div className="content-container py-6" data-testid="category-container">
       {header}
-      <div className="flex items-center justify-between mb-6 text-sm text-eclat-grafite/70" data-testid="listing-toolbar">
-        <span data-testid="result-count">
-          {result.count === result.total ? `${result.total} peças` : `${result.count} de ${result.total} peças`}
-        </span>
-        {/* Task 5: ordenação + botão de filtros (mobile) entram aqui */}
-      </div>
+      <ListingToolbar count={result.count} total={result.total} filters={filters} facets={result.facets} colorMap={colorMap} />
       <div className="flex flex-col small:flex-row small:items-start gap-8">
         <aside id="filtros" className="hidden small:block small:w-[250px] shrink-0">
-          {/* Task 5: <FilterPanel facets={result.facets} filters={filters} /> */}
+          <FilterPanel facets={result.facets} filters={filters} colorMap={colorMap} />
         </aside>
         <div className="w-full">
           {result.count === 0 ? (
