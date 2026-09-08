@@ -10,12 +10,14 @@ export type GA4Item = {
   price?: number
   quantity?: number
   item_category?: string
+  index?: number
 }
 
 export type EcommercePayload = {
   currency?: string
   value?: number
   transaction_id?: string
+  item_list_name?: string
   items?: GA4Item[]
 }
 

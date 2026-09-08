@@ -27,6 +27,25 @@ export function productToViewItem(
   }
 }
 
+export function productsToItemList(
+  products: HttpTypes.StoreProduct[],
+  listName: string
+): EcommercePayload {
+  return {
+    item_list_name: listName,
+    items: products.map((p, i): GA4Item => {
+      const v: any = p.variants?.[0]
+      return {
+        item_id: v?.sku || p.id,
+        item_name: p.title || undefined,
+        price: n(v?.calculated_price?.calculated_amount),
+        index: i,
+        item_category: (p.categories?.[0] as any)?.name,
+      }
+    }),
+  }
+}
+
 export function variantToAddToCart(
   product: HttpTypes.StoreProduct,
   variant: any,

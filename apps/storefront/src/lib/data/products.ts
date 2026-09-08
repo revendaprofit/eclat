@@ -1,7 +1,6 @@
 "use server"
 
 import { sdk } from "@lib/config"
-import { sortProducts, SortOptions } from "@lib/util/sort-products"
 import { applyFilters, computeFacets, paginate, sortByKey, type Facets } from "@lib/util/catalog-facets"
 import type { FilterState } from "@lib/util/catalog-filters"
 import { HttpTypes } from "@medusajs/types"
@@ -84,56 +83,6 @@ export const listProducts = async ({
         queryParams,
       }
     })
-}
-
-/**
- * This will fetch 100 products to the Next.js cache and sort them based on the sortBy parameter.
- * It will then return the paginated products based on the page and limit parameters.
- */
-export const listProductsWithSort = async ({
-  page = 0,
-  queryParams,
-  sortBy = "created_at",
-  countryCode,
-}: {
-  page?: number
-  queryParams?: HttpTypes.FindParams & HttpTypes.StoreProductParams
-  sortBy?: SortOptions
-  countryCode: string
-}): Promise<{
-  response: { products: HttpTypes.StoreProduct[]; count: number }
-  nextPage: number | null
-  queryParams?: HttpTypes.FindParams & HttpTypes.StoreProductParams
-}> => {
-  const limit = queryParams?.limit || 12
-
-  const {
-    response: { products, count },
-  } = await listProducts({
-    pageParam: 0,
-    queryParams: {
-      ...queryParams,
-      limit: 100,
-    },
-    countryCode,
-  })
-
-  const sortedProducts = sortProducts(products, sortBy)
-
-  const pageParam = (page - 1) * limit
-
-  const nextPage = count > pageParam + limit ? pageParam + limit : null
-
-  const paginatedProducts = sortedProducts.slice(pageParam, pageParam + limit)
-
-  return {
-    response: {
-      products: paginatedProducts,
-      count,
-    },
-    nextPage,
-    queryParams,
-  }
 }
 
 export type ListingScope = { categoryIds?: string[]; collectionId?: string; productIds?: string[] }

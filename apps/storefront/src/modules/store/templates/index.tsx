@@ -1,43 +1,14 @@
-import { Suspense } from "react"
+import type { FilterState } from "@lib/util/catalog-filters"
+import ProductListing from "./product-listing"
 
-import SkeletonProductGrid from "@modules/skeletons/templates/skeleton-product-grid"
-import RefinementList from "@modules/store/components/refinement-list"
-import { SortOptions } from "@modules/store/components/refinement-list/sort-products"
-
-import PaginatedProducts from "./paginated-products"
-
-const StoreTemplate = ({
-  sortBy,
-  page,
-  countryCode,
-}: {
-  sortBy?: SortOptions
-  page?: string
-  countryCode: string
-}) => {
-  const pageNumber = page ? parseInt(page) : 1
-  const sort = sortBy || "created_at"
-
+export default function StoreTemplate({ filters, countryCode }: { filters: FilterState; countryCode: string }) {
   return (
-    <div
-      className="flex flex-col small:flex-row small:items-start py-6 content-container"
-      data-testid="category-container"
-    >
-      <RefinementList sortBy={sort} />
-      <div className="w-full">
-        <div className="mb-8 text-2xl-semi">
-          <h1 data-testid="store-page-title">Todos os produtos</h1>
-        </div>
-        <Suspense fallback={<SkeletonProductGrid />}>
-          <PaginatedProducts
-            sortBy={sort}
-            page={pageNumber}
-            countryCode={countryCode}
-          />
-        </Suspense>
-      </div>
-    </div>
+    <ProductListing
+      filters={filters}
+      scope={{}}
+      countryCode={countryCode}
+      listName="Todos os produtos"
+      header={<h1 className="font-serif text-3xl text-eclat-grafite mb-6" data-testid="store-page-title">Todos os produtos</h1>}
+    />
   )
 }
-
-export default StoreTemplate

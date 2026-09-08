@@ -1,13 +1,11 @@
 import { Metadata } from "next"
+import { permanentRedirect } from "next/navigation"
 
-import { SortOptions } from "@modules/store/components/refinement-list/sort-products"
+import { isIndexable, legacyRedirectQuery, parseFilters } from "@lib/util/catalog-filters"
 import StoreTemplate from "@modules/store/templates"
 
 type Params = {
-  searchParams: Promise<{
-    sortBy?: SortOptions
-    page?: string
-  }>
+  searchParams: Promise<Record<string, string | string[] | undefined>>
   params: Promise<{
     countryCode: string
   }>
@@ -24,6 +22,7 @@ export async function generateMetadata(props: Params): Promise<Metadata> {
     alternates: {
       canonical: path,
     },
+    robots: isIndexable(parseFilters(await props.searchParams)) ? undefined : { index: false, follow: true },
     openGraph: {
       title: "Loja | use.ÉCLAT",
       description,
@@ -33,15 +32,12 @@ export async function generateMetadata(props: Params): Promise<Metadata> {
 }
 
 export default async function StorePage(props: Params) {
-  const params = await props.params;
-  const searchParams = await props.searchParams;
-  const { sortBy, page } = searchParams
+  const params = await props.params
+  const sp = await props.searchParams
+  const path = `/${params.countryCode}/store`
+  const legacy = legacyRedirectQuery(sp)
+  if (legacy !== null) permanentRedirect(legacy ? `${path}?${legacy}` : path)
+  const filters = parseFilters(sp)
 
-  return (
-    <StoreTemplate
-      sortBy={sortBy}
-      page={page}
-      countryCode={params.countryCode}
-    />
-  )
+  return <StoreTemplate filters={filters} countryCode={params.countryCode} />
 }
