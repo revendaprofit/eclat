@@ -1,0 +1,89 @@
+import { medusaIntegrationTestRunner } from "@medusajs/test-utils"
+import { criarAdmin } from "../helpers/admin"
+import { criarCatalogoBase, type CatalogoBase } from "../helpers/catalogo"
+
+jest.setTimeout(180 * 1000)
+
+const ajustes = (item: any) => (item.adjustments ?? []) as { code: string; amount: number }[]
+const somaPorCodigo = (cart: any, code: string) =>
+  cart.items.flatMap(ajustes).filter((a: any) => a.code === code).reduce((s: number, a: any) => s + Number(a.amount), 0)
+
+medusaIntegrationTestRunner({
+  inApp: true,
+  env: { CONJUNTO_POC: "1" },
+  // Ajuste de harness (2.15.5): o afterEach padrão do medusaIntegrationTestRunner faz TRUNCATE
+  // em todas as tabelas depois de CADA it() (ver @medusajs/test-utils/dist/database.js `teardown`).
+  // Os casos A e B reaproveitam o catálogo/admin/promoção criados uma única vez no beforeAll —
+  // sem desligar o teardown automático, o caso B rodaria contra um banco vazio (região, canal de
+  // vendas e chave publicável já apagados pelo truncate após o caso A) e falharia por 400
+  // ("A valid publishable key is required"), não pela lógica do gancho/promoção.
+  disableAutoTeardown: true,
+  testSuite: ({ api, getContainer }) => {
+    let admin: Record<string, string>
+    let cat: CatalogoBase
+
+    beforeAll(async () => {
+      admin = (await criarAdmin(api, getContainer())).headers
+      cat = await criarCatalogoBase(api, admin)
+      // Promoção automática do "conjunto": 10% em cada unidade marcada com conjunto_desconto = poc
+      await api.post(
+        "/admin/promotions",
+        {
+          code: "CONJUNTO-POC",
+          type: "standard",
+          is_automatic: true,
+          status: "active",
+          application_method: {
+            type: "percentage",
+            target_type: "items",
+            allocation: "each",
+            // Ajuste de payload (2.15.5): allocation "each"/"once" exige max_quantity —
+            // não documentado no brief. 1 = no máximo 1 unidade por linha recebe o desconto,
+            // consistente com o gancho, que já isola a unidade marcada como entrada própria de quantity=1.
+            max_quantity: 1,
+            value: 10,
+            currency_code: "brl",
+            // Ajuste de payload (2.15.5): o atributo de target_rules em escopo "items" precisa do
+            // prefixo "items." — é o que o pré-filtro de promoções automáticas (build-promotion-
+            // rule-query-filter-from-context) usa para casar com o contexto achatado (flattenObjectToKeyValuePairs
+            // prefixa cada chave de items com "items."); sem o prefixo a promoção é descartada ANTES da
+            // avaliação da regra em si (que aí sim aceita os dois formatos, pois remove o prefixo "items."
+            // antes de ler a propriedade do item — ver areRulesValidForContext em
+            // @medusajs/promotion/dist/utils/validations/promotion-rule.js). O gancho continua marcando o
+            // item com a propriedade "conjunto_desconto" (sem prefixo) — é o `attribute` da regra que muda.
+            target_rules: [{ attribute: "items.conjunto_desconto", operator: "eq", values: ["poc"] }],
+          },
+        },
+        { headers: admin }
+      )
+    })
+
+    async function novoCarrinho(linhas: { variantId: string; quantity: number }[]) {
+      const cart = (await api.post("/store/carts", { region_id: cat.regionId, sales_channel_id: cat.salesChannelId }, { headers: cat.storeHeaders })).data.cart
+      for (const l of linhas) {
+        await api.post(`/store/carts/${cart.id}/line-items`, { variant_id: l.variantId, quantity: l.quantity }, { headers: cat.storeHeaders })
+      }
+      return (await api.get(`/store/carts/${cart.id}?fields=*items,*items.adjustments`, { headers: cat.storeHeaders })).data.cart
+    }
+
+    describe("A — top + legging, 1 unidade cada", () => {
+      it("desconta só a unidade marcada (a mais barata: Top R$ 189 → R$ 18,90)", async () => {
+        const cart = await novoCarrinho([{ variantId: cat.top.variantId, quantity: 1 }, { variantId: cat.legging.variantId, quantity: 1 }])
+        const top = cart.items.find((i: any) => i.variant_id === cat.top.variantId)
+        const legging = cart.items.find((i: any) => i.variant_id === cat.legging.variantId)
+        expect(somaPorCodigo({ items: [top] }, "CONJUNTO-POC")).toBeCloseTo(18.9, 2)
+        expect(ajustes(legging)).toHaveLength(0)
+        expect(Number(cart.discount_total)).toBeCloseTo(18.9, 2)
+      })
+    })
+
+    describe("B — linha com 2 unidades, só 1 em conjunto (§6.3)", () => {
+      it("desconta uma unidade só (Top ×2 = R$ 378 → desconto R$ 18,90, não R$ 37,80)", async () => {
+        const cart = await novoCarrinho([{ variantId: cat.top.variantId, quantity: 2 }, { variantId: cat.legging.variantId, quantity: 1 }])
+        const top = cart.items.find((i: any) => i.variant_id === cat.top.variantId)
+        expect(Number(top.quantity)).toBe(2)
+        expect(Number(cart.discount_total)).toBeCloseTo(18.9, 2)
+      })
+    })
+  },
+})
