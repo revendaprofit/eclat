@@ -655,3 +655,13 @@ PRÓXIMO (usuário, guiado): Railway (Postgres + serviço do repo, root /, vars,
 - scripts/seed-metadata-blackout.py: DSB + quem-é + FAQ (schema FAQPage) nos 8 produtos, copy adaptado do wireframe por categoria.
 - VALIDADO: PDP v2 da legging-vertice no ar com DSB/FAQ/selos; FEED GMC populou pela 1ª vez (96 itens). Store/sitemap aguardando redeploy (cache estático).
 - PENDENTE: fotos por cor + personas Aurora/Íris (Higgsfield desconectado nesta sessão — reconectar o conector); composição do tecido nas fichas.
+
+## 2026-09-07 — Fase 1 (navegação por tipo de peça): dados + Cockpit ✅
+- Spec: docs/superpowers/specs/2026-09-07-navegacao-tipo-de-peca-design.md · Plano: docs/superpowers/plans/2026-09-07-fase1-dados-catalogo-cockpit.md
+- Árvore final de categorias aplicada em produção (setup-categorias.py). Nomes: Top/Short/Legging/Macaquinho / Macacão/Conjuntos/Acessórios/Masculino (7 raízes ativas + 4 filhas). Raízes legadas `treino`/`casual` e as 4 filhas de `casual` foram DESATIVADAS (não deletadas).
+- Cockpit: categorias com ordem+capa+descrição; validação Tamanho/Cor na criação; Vitrine → Cores e → Medidas; Fotos por cor no editor; campo Ordem em Destaques.
+- Vitrine: utilitários availability/colors/measurements (Vitest) + leitura de site_content.cores/medidas + metadata/rank nas categorias. Nada visível ainda (F2–F4).
+- Seed de cores/medidas aplicado (site_content.cores = Blackout/Licor/Verde Exercito, hex a preencher; site_content.medidas = 4 tabelas feminino). check-catalog-options.py: 0 produto(s) com pendências.
+- PENDENTE (fora do código): hex das cores (Vitrine → Cores) e fotos reais por cor (os 8 produtos da Família Blackout hoje só têm o render inicial vinculado às variantes, não fotos distintas por cor — a auditoria não aponta erro porque cada variante já tem ≥1 imagem, mas o conteúdo ainda precisa ser substituído pelo dono).
+- PENDENTE (validação de tela) — telas do Cockpit não puderam ser validadas em navegador nesta sessão (login Supabase exige o dono): Produtos → Categorias → editar (capa/descrição/ordem); Produtos → Novo produto (validação Tamanho/Cor); Produtos → editar → Fotos por cor; Vitrine → Cores; Vitrine → Medidas; Produtos → editar → Ordem em Destaques.
+- Conhecido: `npm run lint` no Cockpit está quebrado por conflito de dependência `ajv`/`eslintrc` pré-existente (não introduzido por esta fase).

@@ -82,4 +82,14 @@ Exemplos iniciais: **"Resplendor"** (carro-chefe), **"Luz Primeira"** (lançamen
 - [ ] Criar região Brasil/BRL e remover Europe/EUR (ajustar default region da vitrine).
 - [ ] Garantir opções Tamanho (P/M/G/GG) e Cor na criação de produtos.
 - [ ] Criar as 8 categorias e as coleções iniciais.
+
+## Navegação por tipo de peça — dados (Fase 1, 2026-09)
+- Árvore de categorias (handles fixos): tops · shorts · leggings · macaquinhos · conjuntos · acessorios{oculos,meias} · masculino{bermudas,camisetas-regatas}. Nome exibido é livre; handle NÃO muda (URL/feed/sitemap). Ordem = `rank`. Capa/descrição em `metadata.image_url` / `metadata.descricao_curta` (Cockpit → Categorias → editar). Script idempotente: `scripts/setup-categorias.py --apply`. Aplicado em produção: 7 raízes ativas (Top, Short, Legging, Macaquinho / Macacão, Conjuntos, Acessórios, Masculino) + 4 filhas; as raízes legadas `treino`/`casual` e as 4 filhas de `casual` foram DESATIVADAS (status inativo, não deletadas).
+- Opções de variante: vestuário = `Tamanho` (P/M/G/GG) + `Cor`; acessórios = `Cor` (+ `Tamanho` livre, opcional). Regra em `apps/cockpit/lib/catalog-rules.ts`; a rota `/api/products/create` bloqueia erro (400) e devolve `warnings`. Handles de categoria-filha no Medusa são planos (ex.: `oculos`); o caminho completo (`acessorios/oculos`) é derivado via `parent_id` — `categoryPath(cat, all)` em `apps/cockpit/lib/catalog-rules.ts`. Auditoria: `scripts/check-catalog-options.py`.
+- Mapa de cores: `site_content.cores` = `{ "<nome canônico>": { hex, swatch_url } }` (Cockpit → Vitrine → Cores). Vitrine: `lib/util/colors.ts` (`resolveColor`, fallback #C9C4BC) + `lib/data/colors.ts`.
+- Guia de medidas: `site_content.medidas` = `{ "<handle ou mae/filha>": { columns, rows } }` (Cockpit → Vitrine → Medidas). Vitrine: `lib/util/measurements.ts` (`pickMeasurements` herda da mãe) + `lib/data/measurements.ts`. Seed: `scripts/seed-site-content-catalogo.py --apply` (não sobrescreve).
+- Fotos por cor: vínculo nativo imagem↔variante (`POST /admin/products/{id}/images/{image_id}/variants/batch`, Medusa ≥ 2.11.2). Regra: uma foto pertence à cor quando está em TODAS as variantes da cor (`apps/cockpit/lib/color-images.ts`). Na PDP, variante com imagens mostra só as suas; sem imagens, cai nas fotos do produto ("Sem cor").
+- Disponibilidade/novidade (fonte única p/ card, filtros e PDP): `apps/storefront/src/lib/util/availability.ts` — disponível = não gerencia estoque ∨ backorder ∨ qty>0; "últimas peças" = soma da cor ≤ 3; "novo" = created_at < 30 dias ∨ tag `novo`.
+- Destaques: `product.metadata.destaque_rank` (string numérica; ausente = fora). Cockpit → editar produto.
+- Testes de funções puras: `npm test --workspace=apps/storefront` e `--workspace=apps/cockpit` (Vitest).
 - [ ] Definir dados reais dos produtos (nomes, cores, preços, imagens) — ou seed de exemplos on-brand.
