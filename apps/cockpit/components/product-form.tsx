@@ -132,7 +132,7 @@ export default function ProductForm({
     }
     walk(null, 0)
     return out
-  }, [categories])
+  }, [categories, catIds])
 
   const variantesPreview = useMemo(() => {
     if (mode !== "create") return []
