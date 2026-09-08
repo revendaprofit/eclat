@@ -12,6 +12,16 @@ type ImageGalleryProps = { images: HttpTypes.StoreProductImage[]; productTitle?:
 const ImageGallery = ({ images, productTitle }: ImageGalleryProps) => {
   const trackRef = useRef<HTMLDivElement>(null)
   const [active, setActive] = useState(0)
+  // Chave estável da lista de fotos (não a referência do array, que muda a cada
+  // render): troca de cor real -> listKey muda -> carrossel volta pro início.
+  // Re-render sem troca de fotos (ex.: outro estado do pai) -> listKey igual -> não mexe.
+  const listKey = images.map((i) => i.id).join("|")
+
+  useEffect(() => {
+    setActive(0)
+    trackRef.current?.scrollTo({ left: 0 })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [listKey])
 
   useEffect(() => {
     const track = trackRef.current
@@ -25,7 +35,8 @@ const ImageGallery = ({ images, productTitle }: ImageGalleryProps) => {
     )
     items.forEach((el) => io.observe(el))
     return () => io.disconnect()
-  }, [images])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [listKey])
 
   const alt = (i: number) => (productTitle ? `${productTitle} — use.ÉCLAT — foto ${i + 1}` : `Foto ${i + 1} do produto`)
 

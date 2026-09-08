@@ -4,7 +4,8 @@ import { listProducts } from "@lib/data/products"
 import { getPersonaMediaForProduct } from "@lib/data/personas"
 import { getRegion, listRegions } from "@lib/data/regions"
 import ProductTemplate from "@modules/products/templates"
-import { HttpTypes } from "@medusajs/types"
+import { imagesForColor } from "@lib/util/pdp-variants"
+import { optionValue, type StockVariant } from "@lib/util/availability"
 
 type Props = {
   params: Promise<{ countryCode: string; handle: string }>
@@ -51,23 +52,6 @@ export async function generateStaticParams() {
     )
     return []
   }
-}
-
-function getImagesForVariant(
-  product: HttpTypes.StoreProduct,
-  selectedVariantId?: string
-) {
-  if (!selectedVariantId || !product.variants) {
-    return product.images
-  }
-
-  const variant = product.variants!.find((v) => v.id === selectedVariantId)
-  if (!variant || !variant.images?.length) {
-    return product.images
-  }
-
-  const imageIdsMap = new Map(variant.images!.map((i) => [i.id, true]))
-  return product.images?.filter((i) => imageIdsMap.has(i.id)) ?? null
 }
 
 export async function generateMetadata(props: Props): Promise<Metadata> {
@@ -130,7 +114,18 @@ export default async function ProductPage(props: Props) {
     queryParams: { handle: params.handle },
   }).then(({ response }) => response.products[0])
 
-  const images = getImagesForVariant(pricedProduct, selectedVariantId)
+  // Mesma regra de "fotos por cor" usada no client (VariantGallery, spec §4.5):
+  // v_id → variante → cor da variante → imagesForColor. Sem variante/sem cor → fotos do produto.
+  const selectedVariant = selectedVariantId
+    ? pricedProduct.variants?.find((v) => v.id === selectedVariantId)
+    : undefined
+  const selectedColor = selectedVariant
+    ? optionValue(pricedProduct.options, selectedVariant as StockVariant, "Cor")
+    : null
+  const images =
+    selectedVariant && selectedColor
+      ? imagesForColor(pricedProduct, selectedColor)
+      : pricedProduct.images ?? []
 
   if (!pricedProduct) {
     notFound()
