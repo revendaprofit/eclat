@@ -56,7 +56,7 @@ export const listProducts = async ({
   // Campos padrão que todo chamador precisa (card, disponibilidade, badges).
   // Se o chamador pedir `fields` próprio, ANEXA em vez de substituir — um
   // `queryParams.fields` não pode fazer o produto perder inventory/images/tags.
-  const defaultFields = "*variants.calculated_price,+variants.inventory_quantity,*variants.images,+metadata,+tags"
+  const defaultFields = "*variants.calculated_price,+variants.inventory_quantity,*variants.images,+metadata,+tags,*categories"
   const { fields: extraFields, ...restQueryParams } = queryParams ?? {}
   const fields = extraFields ? `${defaultFields},${extraFields}` : defaultFields
 

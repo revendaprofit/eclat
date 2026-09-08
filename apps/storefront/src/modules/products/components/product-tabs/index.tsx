@@ -42,6 +42,8 @@ const ProductTabs = ({ product }: ProductTabsProps) => {
 }
 
 const ProductInfoTab = ({ product }: ProductTabsProps) => {
+  const composicao =
+    typeof product.metadata?.composicao === "string" ? product.metadata.composicao : null
   return (
     <div className="text-small-regular py-8">
       <div className="grid grid-cols-2 gap-x-8">
@@ -50,25 +52,27 @@ const ProductInfoTab = ({ product }: ProductTabsProps) => {
             <span className="font-semibold">Material</span>
             <p>{product.material ? product.material : "-"}</p>
           </div>
+          {composicao && (
+            <div>
+              <span className="font-semibold">Composição</span>
+              <p>{composicao}</p>
+            </div>
+          )}
           <div>
-            <span className="font-semibold">País de origem</span>
-            <p>{product.origin_country ? product.origin_country : "-"}</p>
-          </div>
-          <div>
-            <span className="font-semibold">Type</span>
+            <span className="font-semibold">Tipo</span>
             <p>{product.type ? product.type.value : "-"}</p>
           </div>
         </div>
         <div className="flex flex-col gap-y-4">
           <div>
-            <span className="font-semibold">Weight</span>
+            <span className="font-semibold">Peso</span>
             <p>{product.weight ? `${product.weight} g` : "-"}</p>
           </div>
           <div>
-            <span className="font-semibold">Dimensions</span>
+            <span className="font-semibold">Dimensões</span>
             <p>
               {product.length && product.width && product.height
-                ? `${product.length}L x ${product.width}W x ${product.height}H`
+                ? `${product.length}C x ${product.width}L x ${product.height}A`
                 : "-"}
             </p>
           </div>
@@ -85,31 +89,30 @@ const ShippingInfoTab = () => {
         <div className="flex items-start gap-x-2">
           <FastDelivery />
           <div>
-            <span className="font-semibold">Fast delivery</span>
+            <span className="font-semibold">Entrega rastreada</span>
             <p className="max-w-sm">
-              Your package will arrive in 3-5 business days at your pick up
-              location or in the comfort of your home.
+              Enviamos para todo o Brasil com rastreio. O prazo e o valor do
+              frete aparecem no checkout conforme o seu CEP.
             </p>
           </div>
         </div>
         <div className="flex items-start gap-x-2">
           <Refresh />
           <div>
-            <span className="font-semibold">Simple exchanges</span>
+            <span className="font-semibold">7 dias para se arrepender</span>
             <p className="max-w-sm">
-              Is the fit not quite right? No worries - we&apos;ll exchange your
-              product for a new one.
+              Você tem 7 dias corridos após receber para desistir da compra
+              com reembolso integral (CDC).
             </p>
           </div>
         </div>
         <div className="flex items-start gap-x-2">
           <Back />
           <div>
-            <span className="font-semibold">Easy returns</span>
+            <span className="font-semibold">Troca de tamanho e defeito</span>
             <p className="max-w-sm">
-              Just return your product and we&apos;ll refund your money. No
-              questions asked – we&apos;ll do our best to make sure your return
-              is hassle-free.
+              Troca de tamanho é pelo WhatsApp, conforme o estoque. Defeito de
+              fabricação: troca sem custo em até 30 dias.
             </p>
           </div>
         </div>

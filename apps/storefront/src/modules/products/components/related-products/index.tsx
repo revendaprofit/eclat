@@ -10,15 +10,7 @@ import ProductPreview from "../product-preview"
 export default async function RelatedProducts({ product, countryCode }: { product: HttpTypes.StoreProduct; countryCode: string }) {
   const region = await getRegion(countryCode)
   if (!region) return null
-  // `product` (fetch padrão da página de PDP) não inclui `categories` nos campos
-  // default de listProducts — busca só esse campo aqui para não depender de mudar
-  // o fetch upstream (fora do escopo desta task).
-  const cat =
-    product.categories?.[0] ??
-    (await listProducts({
-      queryParams: { id: [product.id], fields: "categories.id,categories.name", limit: 1 },
-      countryCode,
-    }).then(({ response }) => response.products[0]?.categories?.[0]))
+  const cat = product.categories?.[0]
   const queryParams: HttpTypes.StoreProductListParams = cat ? { category_id: [cat.id], limit: 24 } : product.collection_id ? { collection_id: [product.collection_id], limit: 24 } : { limit: 24 }
   const { response } = await listProducts({ queryParams, countryCode })
   const outros = response.products.filter((p) => p.id !== product.id)
