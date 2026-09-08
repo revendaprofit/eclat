@@ -390,6 +390,21 @@ export async function medusaCreateTag(value: string): Promise<{ id: string }> {
   return (await r.json()).product_tag
 }
 
+// Valores distintos da opção "Cor" em todos os produtos (para semear o mapa de cores).
+export async function medusaListColorValues(): Promise<string[]> {
+  const r = await medusaAdmin(`/admin/products?limit=200&fields=options.title,options.values.value`)
+  if (!r.ok) throw new Error(`listar cores falhou (HTTP ${r.status})`)
+  const { products } = (await r.json()) as {
+    products: { options?: { title: string; values?: { value: string }[] }[] }[]
+  }
+  const set = new Set<string>()
+  for (const p of products)
+    for (const o of p.options ?? [])
+      if (o.title.trim().toLowerCase() === "cor")
+        for (const v of o.values ?? []) if (v.value?.trim()) set.add(v.value.trim())
+  return [...set].sort((a, b) => a.localeCompare(b, "pt-BR"))
+}
+
 export async function medusaUpdateTag(id: string, value: string): Promise<void> {
   const r = await medusaAdmin(`/admin/product-tags/${id}`, {
     method: "POST",

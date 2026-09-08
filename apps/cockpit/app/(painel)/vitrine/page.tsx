@@ -1,6 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useState } from "react"
+import CoresEditor from "@/components/cores-editor"
 
 type Hero = {
   banner_mobile_url?: string
@@ -219,6 +220,12 @@ export default function VitrinePage() {
           Textos, imagens e SEO da loja — editáveis aqui. Cada bloco tem liga/desliga.
         </p>
       </div>
+
+      {/* CORES (mapa de cores do catálogo) */}
+      <section className={sectionA}>
+        <h2 className="font-serif text-xl text-eclat-grafite">Cores (catálogo)</h2>
+        <CoresEditor />
+      </section>
 
       {/* HERO */}
       <section className={sectionA}>
