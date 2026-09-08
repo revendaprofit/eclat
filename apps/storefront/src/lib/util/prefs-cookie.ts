@@ -7,7 +7,7 @@ import { hasActiveFilters, type FilterState, type SearchParamsLike } from "./cat
 export type EclatPrefs = {
   persona_id?: string
   persona_slug?: string
-  tamanho?: string // P | M | G | GG
+  tamanho?: string // um dos valores de SIZE_ORDER (PP…XG); o wizard oferece P/M/G/GG
   estilos?: string[] // ex.: ["legging", "top"] — chaves de STYLE_HANDLES (style-order.ts)
   wizard_done?: boolean
 }
