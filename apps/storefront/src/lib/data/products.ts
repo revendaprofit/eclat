@@ -2,6 +2,8 @@
 
 import { sdk } from "@lib/config"
 import { sortProducts, SortOptions } from "@lib/util/sort-products"
+import { applyFilters, computeFacets, paginate, sortByKey, type Facets } from "@lib/util/catalog-facets"
+import type { FilterState } from "@lib/util/catalog-filters"
 import { HttpTypes } from "@medusajs/types"
 import { getAuthHeaders, getCacheOptions } from "./cookies"
 import { getRegion, retrieveRegion } from "./regions"
@@ -131,5 +133,47 @@ export const listProductsWithSort = async ({
     },
     nextPage,
     queryParams,
+  }
+}
+
+export type ListingScope = { categoryIds?: string[]; collectionId?: string; productIds?: string[] }
+export type ListingResult = {
+  products: HttpTypes.StoreProduct[]
+  count: number
+  total: number
+  totalPages: number
+  pagina: number
+  facets: Facets
+}
+
+// Listagem com filtros (spec §6.1): busca até 100 produtos do escopo, filtra,
+// ordena e pagina em memória; facetas calculadas sobre o conjunto do escopo.
+export const listProductsFiltered = async ({
+  filters,
+  scope,
+  countryCode,
+}: {
+  filters: FilterState
+  scope: ListingScope
+  countryCode: string
+}): Promise<ListingResult> => {
+  const queryParams: HttpTypes.FindParams & HttpTypes.StoreProductListParams = { limit: 100 }
+  if (scope.categoryIds?.length) queryParams.category_id = scope.categoryIds
+  if (scope.collectionId) queryParams.collection_id = [scope.collectionId]
+  if (scope.productIds?.length) queryParams.id = scope.productIds
+
+  const {
+    response: { products: all },
+  } = await listProducts({ pageParam: 1, queryParams, countryCode })
+
+  const filtered = sortByKey(applyFilters(all, filters), filters.ordenar)
+  const page = paginate(filtered, filters.pagina)
+  return {
+    products: page.items,
+    count: filtered.length,
+    total: all.length,
+    totalPages: page.totalPages,
+    pagina: page.pagina,
+    facets: computeFacets(all, filters),
   }
 }
