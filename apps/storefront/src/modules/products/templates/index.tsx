@@ -26,7 +26,7 @@ import { getBaseURL } from "@lib/util/env"
 import { getColorMap } from "@lib/data/colors"
 import { ProductSelectionProvider } from "@modules/products/components/product-selection"
 import Breadcrumb from "@modules/common/components/breadcrumb"
-import { getCategoryChain, getCategoryPath } from "@lib/data/category-path"
+import { getDeepestCategoryChain } from "@lib/data/category-path"
 import { getMeasureMap } from "@lib/data/measurements"
 import { pickMeasurements } from "@lib/util/measurements"
 
@@ -37,6 +37,7 @@ type ProductTemplateProps = {
   images: HttpTypes.StoreProductImage[]
   personaMedia?: PersonaMedia[]
   selectedVariantId?: string | null
+  initialColor?: string | null
 }
 
 const ProductTemplate = async ({
@@ -46,6 +47,7 @@ const ProductTemplate = async ({
   images,
   personaMedia = [],
   selectedVariantId,
+  initialColor,
 }: ProductTemplateProps) => {
   if (!product || !product.id) {
     return notFound()
@@ -53,16 +55,18 @@ const ProductTemplate = async ({
 
   const colorMap = await getColorMap()
 
-  const catId = product.categories?.[0]?.id
-  const chain = catId ? await getCategoryChain(catId) : []
+  // Categoria mais profunda entre as do produto (spec §5.3) — não `categories[0]`: um produto
+  // que está na raiz E numa subcategoria não deve prender breadcrumb/medidas na raiz.
+  const catIds = (product.categories ?? []).map((c) => c.id)
+  const chain = catIds.length ? await getDeepestCategoryChain(catIds) : []
   const breadcrumbItems = [
-    { name: "Início", href: "/" },
+    { name: "Início", href: "" },
     ...chain.map((c) => ({ name: c.name, href: `/categories/${c.handle}` })),
     { name: product.title ?? "Produto", href: `/products/${product.handle}` },
   ]
 
   const measureMap = await getMeasureMap()
-  const categoryPath = catId ? await getCategoryPath(catId) : null
+  const categoryPath = chain.length ? chain.map((c) => c.handle).join("/") : null
   const measureTable = categoryPath ? pickMeasurements(measureMap, categoryPath) : null
 
   const productUrl = `${getBaseURL()}/${countryCode}/products/${product.handle}`
@@ -86,7 +90,7 @@ const ProductTemplate = async ({
     <>
       <Track event="view_item" ecommerce={productToViewItem(product)} />
       <ProductJsonLd product={product} url={productUrl} />
-      <ProductSelectionProvider key={product.id} product={product} initialVariantId={selectedVariantId}>
+      <ProductSelectionProvider key={product.id} product={product} initialVariantId={selectedVariantId} initialColor={initialColor}>
         <div className="content-container relative">
           <Breadcrumb items={breadcrumbItems} countryCode={countryCode} />
           <div

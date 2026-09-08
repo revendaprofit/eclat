@@ -17,17 +17,18 @@ type Ctx = {
 }
 const SelectionContext = createContext<Ctx | null>(null)
 
-export function ProductSelectionProvider({ product, initialVariantId, children }: { product: HttpTypes.StoreProduct; initialVariantId?: string | null; children: ReactNode }) {
-  // SSR e 1º render do client usam só o v_id (determinístico); a preferência do wizard entra depois de hidratar.
-  // O template monta este provider com `key={product.id}`, então ele é recriado do zero a cada troca de
-  // produto — este efeito de montagem ([] deps) roda uma vez por produto, sem precisar recalcular deps.
-  const [selection, setSelection] = useState<Selection>(() => initialSelection(product, { variantId: initialVariantId ?? null }))
+export function ProductSelectionProvider({ product, initialVariantId, initialColor, children }: { product: HttpTypes.StoreProduct; initialVariantId?: string | null; initialColor?: string | null; children: ReactNode }) {
+  // SSR e 1º render do client usam só v_id/cor da URL (determinístico); a preferência do wizard
+  // entra depois de hidratar. O template monta este provider com `key={product.id}`, então ele é
+  // recriado do zero a cada troca de produto — este efeito de montagem ([] deps) roda uma vez por
+  // produto, sem precisar recalcular deps.
+  const [selection, setSelection] = useState<Selection>(() => initialSelection(product, { variantId: initialVariantId ?? null, color: initialColor ?? null }))
   useEffect(() => {
     const pref = getPrefs().tamanho
     if (!pref) return
     const tamOpt = findOption(product, "Tamanho")
     if (tamOpt && selection[tamOpt.id] !== undefined) return
-    const next = initialSelection(product, { variantId: initialVariantId ?? null, prefSize: pref })
+    const next = initialSelection(product, { variantId: initialVariantId ?? null, color: initialColor ?? null, prefSize: pref })
     setSelection((prev) => ({ ...next, ...prev }))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -37,9 +38,12 @@ export function ProductSelectionProvider({ product, initialVariantId, children }
   const color = useMemo(() => selectedColor(product, selection), [product, selection])
   const sizeAvail = useMemo(() => sizeAvailability(product, color), [product, color])
 
-  // ?v_id acompanha a variante sem recarregar (history API). `useSearchParams` NÃO é atualizado por
-  // `replaceState` (o App Router não re-sincroniza fora de navegação própria) — mas nada na página lê
-  // `v_id` no client, então isso é inofensivo aqui.
+  // ?v_id acompanha a variante sem recarregar (history API). Passamos `null` como 1º argumento
+  // (não `window.history.state`): o Next 15.5 detecta o estado atual (`__NA`) e, ao ver o MESMO
+  // objeto de volta, curto-circuita sem atualizar sua URL canônica interna — daí o próximo refresh
+  // do router (ex.: `addToCart` → `revalidateTag`) sobrescreve a barra de endereço e perde o `?v_id`.
+  // Com `null`, o Next copia seu próprio estado interno e dispara uma restauração que também
+  // ressincroniza `useSearchParams`.
   useEffect(() => {
     if (typeof window === "undefined") return
     const url = new URL(window.location.href)
@@ -48,7 +52,7 @@ export function ProductSelectionProvider({ product, initialVariantId, children }
     if (current === next) return
     if (next) url.searchParams.set("v_id", next)
     else url.searchParams.delete("v_id")
-    window.history.replaceState(window.history.state, "", url.toString())
+    window.history.replaceState(null, "", url.toString())
   }, [selectedVariant?.id])
 
   const value = useMemo<Ctx>(

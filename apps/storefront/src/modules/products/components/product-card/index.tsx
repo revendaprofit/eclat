@@ -20,7 +20,9 @@ export default function ProductCard({ data, countryCode, listName, aspect = "por
   const color = data.colors[active] ?? data.colors[0]
   const [img1, img2] = color?.images.length ? color.images : data.images
   const badge = badgeFor(data, active)
-  const href = `/products/${data.handle}${color?.firstAvailableVariantId ? `?v_id=${color.firstAvailableVariantId}` : ""}`
+  // Leva a cor escolhida na vitrine (nunca o tamanho — controller: tamanho só quando a cliente
+  // escolher na PDP). Produto sem opção Cor tem `color.name === ""` -> sem query.
+  const href = `/products/${data.handle}${color?.name ? `?cor=${encodeURIComponent(color.name)}` : ""}`
   // Proporção do card: portrait (9/16) no grid, featured (11/14) no destaque da home
   const aspectClass = aspect === "featured" ? "aspect-[11/14]" : "aspect-[9/16]"
 

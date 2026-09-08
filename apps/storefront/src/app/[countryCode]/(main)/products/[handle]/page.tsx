@@ -4,12 +4,11 @@ import { listProducts } from "@lib/data/products"
 import { getPersonaMediaForProduct } from "@lib/data/personas"
 import { getRegion, listRegions } from "@lib/data/regions"
 import ProductTemplate from "@modules/products/templates"
-import { imagesForColor } from "@lib/util/pdp-variants"
-import { optionValue, type StockVariant } from "@lib/util/availability"
+import { imagesForColor, initialSelection, selectedColor } from "@lib/util/pdp-variants"
 
 type Props = {
   params: Promise<{ countryCode: string; handle: string }>
-  searchParams: Promise<{ v_id?: string }>
+  searchParams: Promise<{ v_id?: string; cor?: string }>
 }
 
 export async function generateStaticParams() {
@@ -104,6 +103,7 @@ export default async function ProductPage(props: Props) {
   const searchParams = await props.searchParams
 
   const selectedVariantId = searchParams.v_id
+  const initialColor = searchParams.cor ?? null
 
   if (!region) {
     notFound()
@@ -114,22 +114,16 @@ export default async function ProductPage(props: Props) {
     queryParams: { handle: params.handle },
   }).then(({ response }) => response.products[0])
 
-  // Mesma regra de "fotos por cor" usada no client (VariantGallery, spec §4.5):
-  // v_id → variante → cor da variante → imagesForColor. Sem variante/sem cor → fotos do produto.
-  const selectedVariant = selectedVariantId
-    ? pricedProduct.variants?.find((v) => v.id === selectedVariantId)
-    : undefined
-  const selectedColor = selectedVariant
-    ? optionValue(pricedProduct.options, selectedVariant as StockVariant, "Cor")
-    : null
-  const images =
-    selectedVariant && selectedColor
-      ? imagesForColor(pricedProduct, selectedColor)
-      : pricedProduct.images ?? []
-
   if (!pricedProduct) {
     notFound()
   }
+
+  // Mesma regra usada no client (ProductSelectionProvider + VariantGallery, spec §4.5): a seleção
+  // inicial (v_id da URL > cor única do produto > ?cor= do card) decide a cor, e a cor decide as
+  // fotos — v_id sozinho não basta (produto de cor única/variante única também pré-seleciona sem v_id).
+  const sel = initialSelection(pricedProduct, { variantId: selectedVariantId ?? null, color: initialColor })
+  const cor = selectedColor(pricedProduct, sel)
+  const images = cor ? imagesForColor(pricedProduct, cor) : pricedProduct.images ?? []
 
   // fotos por persona ("Minha ÉCLAT") — busca por id E handle do produto
   const personaMedia = await getPersonaMediaForProduct(
@@ -145,6 +139,7 @@ export default async function ProductPage(props: Props) {
       images={images ?? []}
       personaMedia={personaMedia}
       selectedVariantId={selectedVariantId ?? null}
+      initialColor={initialColor}
     />
   )
 }

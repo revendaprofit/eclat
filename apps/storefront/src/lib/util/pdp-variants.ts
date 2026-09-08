@@ -82,7 +82,7 @@ export function firstAvailableVariantId(product: Product, color: string): string
   return ordered.find((v) => isVariantAvailable(v as StockVariant))?.id ?? null
 }
 
-export function initialSelection(product: Product, opts: { variantId?: string | null; prefSize?: string | null }): Selection {
+export function initialSelection(product: Product, opts: { variantId?: string | null; prefSize?: string | null; color?: string | null }): Selection {
   const sel: Selection = {}
   const variant = opts.variantId ? (product.variants ?? []).find((v) => v.id === opts.variantId) : undefined
   if (variant) {
@@ -98,7 +98,14 @@ export function initialSelection(product: Product, opts: { variantId?: string | 
   }
   const corOpt = findOption(product, "Cor")
   const cores = colorValues(product)
-  if (corOpt && cores.length === 1) sel[corOpt.id] = cores[0]
+  if (corOpt && cores.length === 1) {
+    sel[corOpt.id] = cores[0]
+  } else if (corOpt && opts.color) {
+    // Cor vinda do link do card (`?cor=`, ver product-card): pré-seleciona SÓ a cor, com a grafia do
+    // catálogo — nunca o tamanho, que a cliente ainda não escolheu (decisão do controller, ver spec §8).
+    const hit = cores.find((c) => norm(c) === norm(opts.color!))
+    if (hit) sel[corOpt.id] = hit
+  }
   const tamOpt = findOption(product, "Tamanho")
   if (tamOpt && opts.prefSize) {
     const cor = corOpt ? sel[corOpt.id] ?? null : null

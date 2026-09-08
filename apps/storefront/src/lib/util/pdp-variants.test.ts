@@ -108,6 +108,18 @@ describe("initialSelection", () => {
   })
 })
 
+describe("initialSelection com cor da URL do card", () => {
+  it("cor reconhecida pré-seleciona com a grafia do catálogo; nunca o tamanho", () => {
+    expect(initialSelection(P, { color: "verde exército" })).toEqual({ o_c: "Verde Exercito" })
+  })
+  it("cor não reconhecida não pré-seleciona nada", () => {
+    expect(initialSelection(P, { color: "Azul" })).toEqual({})
+  })
+  it("variantId vence sobre color", () => {
+    expect(initialSelection(P, { variantId: "v4", color: "Verde Exercito" })).toEqual({ o_t: "P", o_c: "Licor" })
+  })
+})
+
 describe("variantLabel / selectedColor", () => {
   it("rótulo cor / tamanho e cor selecionada", () => {
     expect(variantLabel(P, P.variants![1] as any)).toBe("Verde Exercito / M")
