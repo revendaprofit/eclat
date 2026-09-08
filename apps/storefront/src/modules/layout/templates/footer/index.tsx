@@ -1,7 +1,8 @@
-import { listCategories } from "@lib/data/categories";
 import { listCollections } from "@lib/data/collections";
+import { listRegions } from "@lib/data/regions";
+import { getNavigation } from "@lib/data/navigation";
 import { Text, clx } from "@modules/common/components/ui";
-import { HttpTypes } from "@medusajs/types";
+import { StoreRegion } from "@medusajs/types";
 
 import LocalizedClientLink from "@modules/common/components/localized-client-link";
 
@@ -9,9 +10,13 @@ export default async function Footer() {
   const { collections } = await listCollections({
     fields: "*products",
   });
-  const productCategories = await listCategories().catch(
-    () => [] as HttpTypes.StoreProductCategory[]
-  );
+  // I8: mesma árvore de navegação da barra/menu (getNavigation) — só raízes visíveis
+  // (≥1 produto publicado), na ordem de rank, com as filhas de cada uma.
+  const regions = await listRegions()
+    .then((r: StoreRegion[]) => r)
+    .catch(() => [] as StoreRegion[]);
+  const countryCode = regions?.[0]?.countries?.[0]?.iso_2 ?? "br";
+  const { roots } = await getNavigation(countryCode);
 
   return (
     <footer className="border-t border-ui-border-base w-full">
@@ -26,7 +31,7 @@ export default async function Footer() {
             </LocalizedClientLink>
           </div>
           <div className="text-small-regular gap-10 md:gap-x-16 grid grid-cols-2 sm:grid-cols-3">
-            {productCategories && productCategories?.length > 0 && (
+            {roots.length > 0 && (
               <div className="flex flex-col gap-y-2">
                 <span className="txt-small-plus txt-ui-fg-base">
                   Categorias
@@ -35,51 +40,38 @@ export default async function Footer() {
                   className="grid grid-cols-1 gap-2"
                   data-testid="footer-categories"
                 >
-                  {productCategories
-                    ?.filter((c) => !c.parent_category)
-                    .slice(0, 6)
-                    .map((c) => {
-                    const children =
-                      c.category_children?.map((child) => ({
-                        name: child.name,
-                        handle: child.handle,
-                        id: child.id,
-                      })) || null;
-
-                    return (
-                      <li
-                        className="flex flex-col gap-2 text-ui-fg-subtle txt-small"
-                        key={c.id}
-                      >
-                        <LocalizedClientLink
-                          className={clx(
-                            "hover:text-ui-fg-base",
-                            children && "txt-small-plus"
-                          )}
-                          href={`/categories/${c.handle}`}
-                          data-testid="category-link"
-                        >
-                          {c.name}
-                        </LocalizedClientLink>
-                        {children && (
-                          <ul className="grid grid-cols-1 ml-3 gap-2">
-                            {children &&
-                              children.map((child) => (
-                                <li key={child.id}>
-                                  <LocalizedClientLink
-                                    className="hover:text-ui-fg-base"
-                                    href={`/categories/${child.handle}`}
-                                    data-testid="category-link"
-                                  >
-                                    {child.name}
-                                  </LocalizedClientLink>
-                                </li>
-                              ))}
-                          </ul>
+                  {roots.map((r) => (
+                    <li
+                      className="flex flex-col gap-2 text-ui-fg-subtle txt-small"
+                      key={r.id}
+                    >
+                      <LocalizedClientLink
+                        className={clx(
+                          "hover:text-ui-fg-base",
+                          r.children.length > 0 && "txt-small-plus"
                         )}
-                      </li>
-                    );
-                  })}
+                        href={`/categories/${r.handle}`}
+                        data-testid="category-link"
+                      >
+                        {r.name}
+                      </LocalizedClientLink>
+                      {r.children.length > 0 && (
+                        <ul className="grid grid-cols-1 ml-3 gap-2">
+                          {r.children.map((child) => (
+                            <li key={child.id}>
+                              <LocalizedClientLink
+                                className="hover:text-ui-fg-base"
+                                href={`/categories/${child.handle}`}
+                                data-testid="category-link"
+                              >
+                                {child.name}
+                              </LocalizedClientLink>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </li>
+                  ))}
                 </ul>
               </div>
             )}

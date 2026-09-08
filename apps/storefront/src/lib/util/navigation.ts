@@ -91,12 +91,17 @@ export function buildNavData(input: { categories: CategoryInput[]; products: Pro
 
   const firstThumb = (collectionId: string): string | null =>
     products.find((p) => p.collection_id === collectionId && str(p.thumbnail))?.thumbnail ?? null
-  const navCollections: NavCollection[] = collections.map((c) => ({
-    id: c.id,
-    title: c.title,
-    handle: c.handle,
-    image_url: str(c.metadata?.image_url) ?? firstThumb(c.id),
-  }))
+  // spec §5.1: coleção só entra na navegação se tiver ao menos 1 produto publicado nela (I2) —
+  // capa (metadata ou 1º produto) não basta para listar uma coleção vazia.
+  const collectionsWithProduct = new Set(products.map((p) => p.collection_id).filter((id): id is string => !!id))
+  const navCollections: NavCollection[] = collections
+    .filter((c) => collectionsWithProduct.has(c.id))
+    .map((c) => ({
+      id: c.id,
+      title: c.title,
+      handle: c.handle,
+      image_url: str(c.metadata?.image_url) ?? firstThumb(c.id),
+    }))
 
   return { roots, feminine, collections: navCollections }
 }

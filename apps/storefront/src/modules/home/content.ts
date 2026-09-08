@@ -59,6 +59,9 @@ export const HOME_DEFAULTS = {
       "A Éclat veste a mulher inteira — corpo, força e delicadeza — com peças pensadas para durar e brilhar em cada movimento.",
   } as Manifesto,
   lines: {
+    // Oculta por padrão (achado I7): "Compre por peça" já cobre a navegação por categoria;
+    // "Nossas linhas" só aparece se o dono ligar explicitamente no Cockpit (site_content.home.lines.visible=true).
+    visible: false,
     heading: "Nossas peças",
     items: [
       {
@@ -139,7 +142,7 @@ export const HOME_DEFAULTS = {
       },
       {
         q: "As peças servem para treino e para o dia a dia?",
-        a: "Sim. A linha Treino é focada em performance e a linha Casual no lifestyle — muitas peças transitam bem entre os dois mundos.",
+        a: "Sim. As peças são pensadas para sustentar no treino e acompanhar o dia todo — compressão que segura, tecido que respira, caimento que valoriza.",
       },
     ],
   } as Faq,

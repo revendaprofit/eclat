@@ -53,10 +53,9 @@ describe("buildNavData", () => {
   it("femininas = só as visíveis entre as cinco, na ordem", () => {
     expect(nav.feminine.map((c) => c.handle)).toEqual(["tops", "leggings"])
   })
-  it("coleções com capa do metadata ou thumbnail do 1º produto; sem produto e sem capa continua listada", () => {
+  it("coleção só aparece se algum produto pertence a ela (capa não basta); capa vem do metadata ou do 1º produto", () => {
     expect(nav.collections).toEqual([
       { id: "col_black", title: "Família Blackout", handle: "familia-blackout", image_url: "p1.jpg" },
-      { id: "col_lum", title: "Lumière", handle: "lumiere", image_url: "lum.jpg" },
     ])
   })
   it("entrada vazia devolve vazio", () => {

@@ -6,13 +6,20 @@ import type { NavCategory, NavCollection } from "@lib/util/navigation"
 
 const MAX_COLORS = 6
 
+// Capa com fallback pela inicial do nome quando não há imagem (minor 9) — mesmo padrão do
+// menu mobile e do "Compre por peça" na home. Módulo (minor 10): não recriar a cada render.
+const Capa = ({ src, alt }: { src: string | null; alt: string }) => (
+  <div className="relative w-40 aspect-[3/4] rounded-md overflow-hidden bg-eclat-areia/40 shrink-0">
+    {src ? (
+      <Image src={src} alt={alt} fill sizes="160px" quality={80} className="object-cover" />
+    ) : (
+      <div className="absolute inset-0 flex items-center justify-center font-serif text-3xl text-eclat-grafite/30">{alt.charAt(0)}</div>
+    )}
+  </div>
+)
+
 // Painel do hover da barra (spec §5.1): feminina = capa + cores; mãe = filhas; coleções = capas.
 export default function NavPanel({ kind, category, collections = [], onNavigate }: { kind: "feminine" | "parent" | "collections"; category?: NavCategory; collections?: NavCollection[]; onNavigate: () => void }) {
-  const Capa = ({ src, alt }: { src: string | null; alt: string }) => (
-    <div className="relative w-40 aspect-[3/4] rounded-md overflow-hidden bg-eclat-areia/40 shrink-0">
-      {src && <Image src={src} alt={alt} fill sizes="160px" quality={80} className="object-cover" />}
-    </div>
-  )
   if (kind === "feminine" && category) {
     const cores = category.colors.slice(0, MAX_COLORS)
     return (

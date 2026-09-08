@@ -75,7 +75,9 @@ const CartDropdown = ({
 
   return (
     <div
-      className="h-full z-50"
+      // minor 11: `relative` explícito garante o próprio contexto de empilhamento — o
+      // dropdown da sacola (z-50) fica sempre acima do painel de hover da barra (z-40).
+      className="h-full z-50 relative"
       onMouseEnter={openAndCancel}
       onMouseLeave={close}
     >

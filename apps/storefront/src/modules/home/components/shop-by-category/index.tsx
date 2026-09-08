@@ -1,15 +1,27 @@
 import Image from "next/image"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
+import { clx } from "@modules/common/components/ui"
 import { getNavigation } from "@lib/data/navigation"
+
+// I6: classes completas (não interpoladas) para o Tailwind não descartar no build — o número
+// de colunas do desktop acompanha a quantidade de femininas visíveis (nunca mais colunas que itens).
+const SMALL_COLS: Record<number, string> = {
+  1: "small:grid-cols-1",
+  2: "small:grid-cols-2",
+  3: "small:grid-cols-3",
+  4: "small:grid-cols-4",
+  5: "small:grid-cols-5",
+}
 
 // "Compre por peça" (spec §5.4): as categorias femininas visíveis, por rank, com capa.
 export default async function ShopByCategory({ countryCode }: { countryCode: string }) {
   const { feminine } = await getNavigation(countryCode)
   if (!feminine.length) return null
+  const columns = Math.min(feminine.length, 5)
   return (
     <section className="content-container py-12 small:py-16" data-testid="shop-by-category">
       <h2 className="font-serif text-3xl small:text-4xl text-eclat-grafite mb-8 text-center">Compre por peça</h2>
-      <ul className="grid grid-cols-2 small:grid-cols-5 gap-3 small:gap-5">
+      <ul className={clx("grid grid-cols-2 gap-3 small:gap-5", SMALL_COLS[columns])}>
         {feminine.map((c) => (
           <li key={c.id}>
             <LocalizedClientLink href={`/categories/${c.handle}`} className="group block">

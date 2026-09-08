@@ -22,7 +22,8 @@ export async function getNavigation(countryCode: string): Promise<NavData> {
       collections: collectionsRes.collections as any,
       colorMap,
     })
-  } catch {
+  } catch (e) {
+    console.error("[navigation]", e)
     return { roots: [], feminine: [], collections: [] }
   }
 }
