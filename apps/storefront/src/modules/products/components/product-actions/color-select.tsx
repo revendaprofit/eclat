@@ -1,7 +1,7 @@
 "use client"
 
 import { clx } from "@modules/common/components/ui"
-import { normalizeColorName, resolveColor, type ColorMap } from "@lib/util/colors"
+import { normalizeColorName, resolveColor, type ColorMap, FALLBACK_HEX } from "@lib/util/colors"
 import { colorValues, findOption, firstAvailableVariantId } from "@lib/util/pdp-variants"
 import { useProductSelection } from "../product-selection"
 
@@ -34,9 +34,8 @@ export default function ColorSelect({ colorMap, disabled }: { colorMap: ColorMap
               >
                 {!disponivel && <span aria-hidden className="absolute inset-0 rounded-full bg-[linear-gradient(135deg,transparent_46%,rgba(0,0,0,.55)_48%,rgba(0,0,0,.55)_52%,transparent_54%)]" />}
               </button>
-              {/* Sem hex/swatch cadastrado no mapa de cores: o círculo fica neutro, então o nome
-                  vira texto visível para não confundir com outra cor igualmente neutra. */}
-              {!r.known && <span className="text-[10px] text-eclat-grafite/70 max-w-[56px] text-center leading-tight">{r.name}</span>}
+              {/* Sem hex/swatch: mostra nome (mapa sem hex ou desconhecida) */}
+              {!r.swatch_url && (!r.known || r.hex === FALLBACK_HEX) && <span className="text-[10px] text-eclat-grafite/70 max-w-[56px] text-center leading-tight">{r.name}</span>}
             </div>
           )
         })}
