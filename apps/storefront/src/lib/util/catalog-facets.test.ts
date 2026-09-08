@@ -20,6 +20,9 @@ const prod = (id: string, created: string, variants: HttpTypes.StoreProductVaria
 const LEG = prod("legging", "2026-09-01", [v("l1", "P", "Verde Exercito", 2, 219), v("l2", "G", "Verde Exercito", 0, 219), v("l3", "G", "Licor", 4, 219)])
 const TOP = prod("top", "2026-08-01", [v("t1", "P", "Licor", 1, 169), v("t2", "M", "Licor", 3, 169)], { destaque_rank: "1" })
 const SHORT = prod("short", "2026-07-01", [v("s1", "M", "Blackout", 0, 149)], { destaque_rank: "0" })
+const SEMPRECO = prod("sempreco", "2026-09-05", [
+  { id: "sp1", manage_inventory: true, allow_backorder: false, inventory_quantity: 2, options: [{ option_id: "o_t", value: "M" }, { option_id: "o_c", value: "Neutro" }] } as unknown as HttpTypes.StoreProductVariant,
+])
 const ALL = [LEG, TOP, SHORT]
 
 describe("productMinPrice / sortSizes", () => {
@@ -72,6 +75,11 @@ describe("sortByKey", () => {
     expect(sortByKey(ALL, "menor-preco").map((p) => p.id)).toEqual(["short", "top", "legging"])
     expect(sortByKey(ALL, "maior-preco").map((p) => p.id)).toEqual(["legging", "top", "short"])
     expect(sortByKey(ALL, "destaques").map((p) => p.id)).toEqual(["short", "top", "legging"])
+  })
+  it("produto sem preço fica por último em qualquer ordenação por preço", () => {
+    const withSempreco = [LEG, TOP, SHORT, SEMPRECO]
+    expect(sortByKey(withSempreco, "menor-preco").map((p) => p.id)).toEqual(["short", "top", "legging", "sempreco"])
+    expect(sortByKey(withSempreco, "maior-preco").map((p) => p.id)).toEqual(["legging", "top", "short", "sempreco"])
   })
   it("não muta a entrada", () => {
     const copy = [...ALL]

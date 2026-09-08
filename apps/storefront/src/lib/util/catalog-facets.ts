@@ -133,8 +133,12 @@ export function sortByKey(products: Product[], key: SortKey): Product[] {
   if (key === "menor-preco" || key === "maior-preco") {
     const sign = key === "menor-preco" ? 1 : -1
     return out.sort((a, b) => {
-      const pa = productMinPrice(a) ?? Infinity
-      const pb = productMinPrice(b) ?? Infinity
+      const pa = productMinPrice(a)
+      const pb = productMinPrice(b)
+      // Produto sem preço vai por último em qualquer direção
+      if (pa === null && pb === null) return byNew(a, b)
+      if (pa === null) return 1
+      if (pb === null) return -1
       return pa === pb ? byNew(a, b) : sign * (pa - pb)
     })
   }
