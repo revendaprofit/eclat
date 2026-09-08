@@ -13,6 +13,7 @@ import ProductPrice from "../product-price"
 import MobileActions from "./mobile-actions"
 import { useRouter } from "next/navigation"
 import { variantToAddToCart } from "@modules/analytics/items"
+import { pushEcommerceEvent } from "@modules/analytics/push"
 import { getPrefs } from "@modules/personalization/prefs"
 
 type ProductActionsProps = {
@@ -151,17 +152,7 @@ export default function ProductActions({
     })
 
     // dataLayer: add_to_cart (GTM → GA4/Meta/Ads)
-    try {
-      const w = window as unknown as { dataLayer?: Record<string, unknown>[] }
-      w.dataLayer = w.dataLayer || []
-      w.dataLayer.push({ ecommerce: null })
-      w.dataLayer.push({
-        event: "add_to_cart",
-        ecommerce: variantToAddToCart(product, selectedVariant, 1),
-      })
-    } catch {
-      /* noop */
-    }
+    pushEcommerceEvent("add_to_cart", variantToAddToCart(product, selectedVariant, 1))
 
     setIsAdding(false)
   }

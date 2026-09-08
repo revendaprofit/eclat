@@ -5,21 +5,15 @@ import { addToCart } from "@lib/data/cart"
 import type { CardColor, ProductCardData } from "@lib/util/product-card-data"
 import { clx } from "@modules/common/components/ui"
 import { showToast } from "@modules/common/components/toast"
+import { pushEcommerceEvent } from "@modules/analytics/push"
 
 function pushAddToCart(data: ProductCardData, v: { id: string; size: string | null }, color: string) {
-  try {
-    const w = window as unknown as { dataLayer?: Record<string, unknown>[] }
-    w.dataLayer = w.dataLayer || []
-    w.dataLayer.push({ ecommerce: null })
-    w.dataLayer.push({
-      event: "add_to_cart",
-      ecommerce: {
-        currency: (data.price?.currency_code || "brl").toUpperCase(),
-        value: data.price?.calculated_price_number,
-        items: [{ item_id: v.id, item_name: data.title, price: data.price?.calculated_price_number, quantity: 1, item_variant: [color, v.size].filter(Boolean).join(" / ") }],
-      },
-    })
-  } catch {}
+  const payload = {
+    currency: (data.price?.currency_code || "brl").toUpperCase(),
+    value: data.price?.calculated_price_number,
+    items: [{ item_id: v.id, item_name: data.title, price: data.price?.calculated_price_number, quantity: 1, item_variant: [color, v.size].filter(Boolean).join(" / ") }],
+  }
+  pushEcommerceEvent("add_to_cart", payload)
 }
 
 // Faixa de tamanhos com adição rápida (spec §7): desktop no hover, mobile via "+".

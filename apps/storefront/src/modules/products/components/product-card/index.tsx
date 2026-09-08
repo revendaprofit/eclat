@@ -8,14 +8,10 @@ import { badgeFor, type ProductCardData } from "@lib/util/product-card-data"
 import Badge from "./badge"
 import QuickAdd from "./quick-add"
 import Swatches from "./swatches"
+import { pushEcommerceEvent } from "@modules/analytics/push"
 
 function pushSelectItem(data: ProductCardData, listName?: string) {
-  try {
-    const w = window as unknown as { dataLayer?: Record<string, unknown>[] }
-    w.dataLayer = w.dataLayer || []
-    w.dataLayer.push({ ecommerce: null })
-    w.dataLayer.push({ event: "select_item", ecommerce: { item_list_name: listName, items: [{ item_id: data.id, item_name: data.title, price: data.price?.calculated_price_number }] } })
-  } catch {}
+  pushEcommerceEvent("select_item", { item_list_name: listName, items: [{ item_id: data.id, item_name: data.title, price: data.price?.calculated_price_number }] })
 }
 
 export default function ProductCard({ data, countryCode, listName, aspect = "portrait" }: { data: ProductCardData; countryCode: string; listName?: string; aspect?: "portrait" | "featured" }) {
