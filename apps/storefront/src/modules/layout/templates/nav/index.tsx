@@ -30,7 +30,7 @@ export default async function Nav() {
           <div className="flex-1 basis-0 h-full flex items-center">
             {/* sanduíche apenas no mobile — no desktop as categorias ficam na barra abaixo */}
             <div className="h-full small:hidden">
-              <SideMenu regions={regions} locales={locales} currentLocale={currentLocale} />
+              <SideMenu regions={regions} locales={locales} currentLocale={currentLocale} nav={nav} />
             </div>
           </div>
 

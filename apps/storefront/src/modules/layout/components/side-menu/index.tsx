@@ -1,6 +1,7 @@
 "use client"
 
 import { Popover, PopoverPanel, Transition } from "@headlessui/react"
+import Image from "next/image"
 import useToggleState from "@lib/hooks/use-toggle-state"
 import { ArrowRightMini, XMark } from "@medusajs/icons"
 import { HttpTypes } from "@medusajs/types"
@@ -10,16 +11,17 @@ import { Fragment } from "react"
 import CountrySelect from "../country-select"
 import LanguageSelect from "../language-select"
 import { Locale } from "@lib/data/locales"
+import type { NavData } from "@lib/util/navigation"
 
 
 type SideMenuProps = {
   regions: HttpTypes.StoreRegion[] | null
   locales: Locale[] | null
   currentLocale: string | null
-  lines?: HttpTypes.StoreProductCategory[]
+  nav: NavData
 }
 
-const SideMenu = ({ regions, locales, currentLocale, lines }: SideMenuProps) => {
+const SideMenu = ({ regions, locales, currentLocale, nav }: SideMenuProps) => {
   const countryToggleState = useToggleState()
   const languageToggleState = useToggleState()
 
@@ -71,64 +73,57 @@ const SideMenu = ({ regions, locales, currentLocale, lines }: SideMenuProps) => 
                         <XMark />
                       </button>
                     </div>
-                    <ul className="flex flex-col gap-6 items-start justify-start overflow-y-auto">
+                    <ul className="flex flex-col gap-3 items-stretch justify-start overflow-y-auto" data-testid="mobile-nav">
                       <li>
-                        <LocalizedClientLink
-                          href="/"
-                          className="text-3xl leading-10 hover:text-ui-fg-disabled"
-                          onClick={close}
-                          data-testid="início-link"
-                        >
-                          Início
-                        </LocalizedClientLink>
+                        <LocalizedClientLink href="/" className="text-2xl leading-10 hover:text-ui-fg-disabled" onClick={close} data-testid="início-link">Início</LocalizedClientLink>
                       </li>
-
-                      {/* Linhas (Treino, Casual…) com subcategorias */}
-                      {lines?.map((line) => (
-                        <li key={line.id} className="w-full">
-                          <LocalizedClientLink
-                            href={`/categories/${line.handle}`}
-                            className="text-3xl leading-10 hover:text-ui-fg-disabled uppercase tracking-wide"
-                            onClick={close}
-                          >
-                            {line.name}
-                          </LocalizedClientLink>
-                          <ul className="flex flex-col gap-1 mt-2 ml-1">
-                            {line.category_children?.map((child) => (
-                              <li key={child.id}>
-                                <LocalizedClientLink
-                                  href={`/categories/${child.handle}`}
-                                  className="text-base leading-7 text-ui-fg-on-color/80 hover:text-ui-fg-on-color"
-                                  onClick={close}
-                                >
-                                  {child.name}
-                                </LocalizedClientLink>
-                              </li>
-                            ))}
-                          </ul>
+                      {nav.roots.map((r) => {
+                        const Thumb = (
+                          <span className="w-12 h-12 rounded-md overflow-hidden bg-white/10 shrink-0 flex items-center justify-center font-serif text-lg">
+                            {r.image_url ? <Image src={r.image_url} alt="" width={48} height={48} className="w-12 h-12 object-cover" /> : r.name.charAt(0)}
+                          </span>
+                        )
+                        if (r.children.length === 0) {
+                          return (
+                            <li key={r.id}>
+                              <LocalizedClientLink href={`/categories/${r.handle}`} onClick={close} className="flex items-center gap-3 text-xl leading-tight hover:text-ui-fg-disabled" data-testid={`mobile-cat-${r.handle}`}>
+                                {Thumb}<span>{r.name}</span>
+                              </LocalizedClientLink>
+                            </li>
+                          )
+                        }
+                        return (
+                          <li key={r.id}>
+                            <details className="group/acc">
+                              <summary className="flex items-center gap-3 text-xl leading-tight cursor-pointer list-none [&::-webkit-details-marker]:hidden hover:text-ui-fg-disabled" data-testid={`mobile-cat-${r.handle}`}>
+                                {Thumb}<span className="flex-1">{r.name}</span><ArrowRightMini className="transition-transform group-open/acc:rotate-90" />
+                              </summary>
+                              <ul className="flex flex-col gap-1 mt-2 ml-[60px]">
+                                {r.children.map((ch) => (
+                                  <li key={ch.id}><LocalizedClientLink href={`/categories/${ch.handle}`} onClick={close} className="text-base leading-7 text-ui-fg-on-color/80 hover:text-ui-fg-on-color">{ch.name}</LocalizedClientLink></li>
+                                ))}
+                                <li><LocalizedClientLink href={`/categories/${r.handle}`} onClick={close} className="text-sm underline underline-offset-4">Ver tudo de {r.name}</LocalizedClientLink></li>
+                              </ul>
+                            </details>
+                          </li>
+                        )
+                      })}
+                      {nav.collections.length > 0 && (
+                        <li>
+                          <details className="group/acc">
+                            <summary className="flex items-center gap-3 text-xl leading-tight cursor-pointer list-none [&::-webkit-details-marker]:hidden hover:text-ui-fg-disabled" data-testid="mobile-colecoes">
+                              <span className="w-12 h-12 rounded-md bg-white/10 flex items-center justify-center font-serif text-lg">C</span><span className="flex-1">Coleções</span><ArrowRightMini className="transition-transform group-open/acc:rotate-90" />
+                            </summary>
+                            <ul className="flex flex-col gap-1 mt-2 ml-[60px]">
+                              {nav.collections.map((c) => (
+                                <li key={c.id}><LocalizedClientLink href={`/collections/${c.handle}`} onClick={close} className="text-base leading-7 text-ui-fg-on-color/80 hover:text-ui-fg-on-color">{c.title}</LocalizedClientLink></li>
+                              ))}
+                            </ul>
+                          </details>
                         </li>
-                      ))}
-
-                      <li>
-                        <LocalizedClientLink
-                          href="/store"
-                          className="text-3xl leading-10 hover:text-ui-fg-disabled"
-                          onClick={close}
-                          data-testid="loja-link"
-                        >
-                          Toda a loja
-                        </LocalizedClientLink>
-                      </li>
-                      <li>
-                        <LocalizedClientLink
-                          href="/account"
-                          className="text-3xl leading-10 hover:text-ui-fg-disabled"
-                          onClick={close}
-                          data-testid="conta-link"
-                        >
-                          Conta
-                        </LocalizedClientLink>
-                      </li>
+                      )}
+                      <li><LocalizedClientLink href="/store" className="text-2xl leading-10 hover:text-ui-fg-disabled" onClick={close} data-testid="loja-link">Toda a loja</LocalizedClientLink></li>
+                      <li><LocalizedClientLink href="/account" className="text-2xl leading-10 hover:text-ui-fg-disabled" onClick={close} data-testid="conta-link">Conta</LocalizedClientLink></li>
                     </ul>
                     <div className="flex flex-col gap-y-6">
                       {!!locales?.length && (
