@@ -34,12 +34,16 @@ export async function POST(req: Request, { params }: Params) {
     }
     const urls = (body.urls ?? []).filter((u) => typeof u === "string" && u.trim())
     if (!urls.length) return NextResponse.json({ error: "urls obrigatório" }, { status: 400 })
-    const novas = await medusaAddProductImages(id, urls)
+    let variant_ids: string[] | undefined
     if (body.color) {
       const g = await grouped(id)
       const grupo = g.groups.find((x) => x.color === body.color)
       if (!grupo) return NextResponse.json({ error: `cor "${body.color}" não existe neste produto` }, { status: 400 })
-      for (const img of novas) await medusaSetImageVariants(id, img.id, grupo.variant_ids, [])
+      variant_ids = grupo.variant_ids
+    }
+    const novas = await medusaAddProductImages(id, urls)
+    if (variant_ids) {
+      for (const img of novas) await medusaSetImageVariants(id, img.id, variant_ids, [])
     }
     return NextResponse.json(await grouped(id))
   } catch (e) {
