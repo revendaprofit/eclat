@@ -1,4 +1,5 @@
 // Estado dos filtros da listagem ↔ query string (spec §6.2). Puro, sem I/O.
+import { normalizeColorName } from "./colors"
 
 export const PRODUCT_LIMIT = 24
 export const SORT_KEYS = ["novidades", "menor-preco", "maior-preco", "destaques"] as const
@@ -71,6 +72,32 @@ export function parseFilters(sp: SearchParamsLike): FilterState {
     ordenar,
     pagina,
   }
+}
+
+// Comparação de um valor de tamanho/cor contra uma lista de filtro ativa.
+// Cor sempre via normalizeColorName (acento/caixa-insensível — o mapa de cores do
+// site pode grafar diferente do catálogo, ex. "Verde Exército" × "Verde Exercito");
+// tamanho é caixa-insensível.
+export function isSelected(list: string[], value: string, field: "tamanho" | "cor"): boolean {
+  if (field === "cor") {
+    const wanted = normalizeColorName(value)
+    return list.some((x) => normalizeColorName(x) === wanted)
+  }
+  return list.some((x) => x.toLowerCase() === value.toLowerCase())
+}
+
+// Alterna um valor na lista (adiciona se ausente, remove se presente) usando a
+// mesma comparação normalizada de isSelected — evita duplicata ao clicar de novo
+// numa cor com grafia diferente da já selecionada.
+export function toggleValue(list: string[], value: string, field: "tamanho" | "cor"): string[] {
+  if (isSelected(list, value, field)) {
+    if (field === "cor") {
+      const wanted = normalizeColorName(value)
+      return list.filter((x) => normalizeColorName(x) !== wanted)
+    }
+    return list.filter((x) => x.toLowerCase() !== value.toLowerCase())
+  }
+  return [...list, value]
 }
 
 export function hasActiveFilters(f: FilterState): boolean {

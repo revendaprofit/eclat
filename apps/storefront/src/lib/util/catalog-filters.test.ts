@@ -3,9 +3,11 @@ import {
   DEFAULT_FILTERS,
   hasActiveFilters,
   isIndexable,
+  isSelected,
   legacyRedirectQuery,
   parseFilters,
   serializeFilters,
+  toggleValue,
 } from "./catalog-filters"
 
 describe("parseFilters", () => {
@@ -63,6 +65,24 @@ describe("hasActiveFilters / isIndexable", () => {
     expect(isIndexable({ ...DEFAULT_FILTERS, ordenar: "destaques" })).toBe(true)
     expect(isIndexable({ ...DEFAULT_FILTERS, pagina: 2 })).toBe(false)
     expect(isIndexable({ ...DEFAULT_FILTERS, cor: ["Licor"] })).toBe(false)
+  })
+})
+
+describe("isSelected / toggleValue", () => {
+  it("tamanho: adiciona quando ausente", () => {
+    expect(toggleValue(["P"], "M", "tamanho")).toEqual(["P", "M"])
+  })
+  it("tamanho: remove ignorando caixa", () => {
+    expect(isSelected(["p", "M"], "P", "tamanho")).toBe(true)
+    expect(toggleValue(["p", "M"], "P", "tamanho")).toEqual(["M"])
+  })
+  it("cor: adiciona quando ausente", () => {
+    expect(toggleValue(["Licor"], "Verde Exército", "cor")).toEqual(["Licor", "Verde Exército"])
+  })
+  it("cor: remove ignorando acento/caixa mesmo com grafia diferente (facetas × site_content.cores)", () => {
+    expect(isSelected(["Verde Exército"], "verde exercito", "cor")).toBe(true)
+    expect(toggleValue(["Verde Exército"], "Verde Exercito", "cor")).toEqual([])
+    expect(toggleValue(["Licor", "Verde Exército"], "verde   exército", "cor")).toEqual(["Licor"])
   })
 })
 

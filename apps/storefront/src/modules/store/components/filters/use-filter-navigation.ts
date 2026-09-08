@@ -2,7 +2,7 @@
 
 import { usePathname, useRouter } from "next/navigation"
 import { useCallback } from "react"
-import { DEFAULT_FILTERS, serializeFilters, type FilterState, type PriceRange, type SortKey } from "@lib/util/catalog-filters"
+import { DEFAULT_FILTERS, isSelected, serializeFilters, toggleValue, type FilterState, type PriceRange, type SortKey } from "@lib/util/catalog-filters"
 
 type FilterType = "tamanho" | "cor" | "preco" | "disponivel" | "ordenar" | "limpar"
 
@@ -31,8 +31,8 @@ export function useFilterNavigation(filters: FilterState) {
   return {
     filters,
     toggleList: (field: "tamanho" | "cor", value: string) => {
-      const has = filters[field].some((x) => x.toLowerCase() === value.toLowerCase())
-      const list = has ? filters[field].filter((x) => x.toLowerCase() !== value.toLowerCase()) : [...filters[field], value]
+      const has = isSelected(filters[field], value, field)
+      const list = toggleValue(filters[field], value, field)
       replace({ ...filters, [field]: list }, field, `${has ? "-" : "+"}${value}`)
     },
     setPrice: (preco: PriceRange | null) => replace({ ...filters, preco }, "preco", preco ? `${preco.min ?? ""}-${preco.max ?? ""}` : ""),

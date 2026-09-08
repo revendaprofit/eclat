@@ -46,7 +46,11 @@ export default function QuickAdd({ data, color, countryCode, open, onClose }: { 
     <div
       className={clx(
         "absolute inset-x-0 bottom-0 z-10 bg-eclat-luz/95 backdrop-blur px-2 py-2 transition-opacity",
-        open ? "opacity-100" : "opacity-0 pointer-events-none small:group-hover:opacity-100 small:group-hover:pointer-events-auto"
+        // Fechado: invisible (não só opacity-0) tira os botões da ordem de tab;
+        // reaparece no hover E no foco de teclado (group-focus-within) do card.
+        open
+          ? "visible opacity-100"
+          : "invisible opacity-0 pointer-events-none small:group-hover:visible small:group-hover:opacity-100 small:group-hover:pointer-events-auto small:group-focus-within:visible small:group-focus-within:opacity-100"
       )}
       data-testid="quick-add"
     >

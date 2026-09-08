@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 
 type ToastMsg = { message: string; action?: { label: string; href: string } }
@@ -10,13 +10,19 @@ export function showToast(t: ToastMsg) {
 
 export default function ToastHost() {
   const [toast, setToast] = useState<ToastMsg | null>(null)
+  const timeoutRef = useRef<number | null>(null)
   useEffect(() => {
     const on = (e: Event) => {
       setToast((e as CustomEvent<ToastMsg>).detail)
-      window.setTimeout(() => setToast(null), 3500)
+      // Um toast rápido em seguida do outro não deve deixar o antigo fechar o novo cedo.
+      if (timeoutRef.current !== null) window.clearTimeout(timeoutRef.current)
+      timeoutRef.current = window.setTimeout(() => setToast(null), 3500)
     }
     window.addEventListener("eclat:toast", on)
-    return () => window.removeEventListener("eclat:toast", on)
+    return () => {
+      window.removeEventListener("eclat:toast", on)
+      if (timeoutRef.current !== null) window.clearTimeout(timeoutRef.current)
+    }
   }, [])
   if (!toast) return null
   return (

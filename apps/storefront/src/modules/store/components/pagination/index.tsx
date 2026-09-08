@@ -28,7 +28,8 @@ export function Pagination({
     } else {
       params.set("pagina", newPage.toString())
     }
-    router.push(`${pathname}?${params.toString()}`)
+    const q = params.toString()
+    router.push(q ? `${pathname}?${q}` : pathname)
   }
 
   // Function to render a page button

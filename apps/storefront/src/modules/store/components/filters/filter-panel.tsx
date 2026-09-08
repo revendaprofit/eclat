@@ -2,12 +2,11 @@
 
 import { useState, useEffect } from "react"
 import { clx } from "@modules/common/components/ui"
-import { hasActiveFilters, type FilterState } from "@lib/util/catalog-filters"
+import { hasActiveFilters, isSelected, type FilterState } from "@lib/util/catalog-filters"
 import type { Facets } from "@lib/util/catalog-facets"
 import { resolveColor, type ColorMap } from "@lib/util/colors"
 import { useFilterNavigation } from "./use-filter-navigation"
 
-const selected = (list: string[], v: string) => list.some((x) => x.toLowerCase() === v.toLowerCase())
 const grupo = "text-[11px] uppercase tracking-[0.2em] text-eclat-grafite/60 mb-3"
 
 export default function FilterPanel({ facets, filters, colorMap, onApplied }: { facets: Facets; filters: FilterState; colorMap: ColorMap; onApplied?: () => void }) {
@@ -41,16 +40,20 @@ export default function FilterPanel({ facets, filters, colorMap, onApplied }: { 
         <section>
           <p className={grupo}>Tamanho</p>
           <div className="flex flex-wrap gap-2">
-            {facets.tamanhos.map((t) => (
-              <button
-                key={t.value}
-                onClick={() => apply(() => nav.toggleList("tamanho", t.value))}
-                className={clx("h-9 min-w-[44px] px-3 rounded-full border text-xs", selected(filters.tamanho, t.value) ? "bg-eclat-grafite text-eclat-luz border-eclat-grafite" : "border-eclat-pedra/60 hover:border-eclat-grafite")}
-                data-testid={`filter-tamanho-${t.value}`}
-              >
-                {t.value} <span className="opacity-60">({t.count})</span>
-              </button>
-            ))}
+            {facets.tamanhos.map((t) => {
+              const on = isSelected(filters.tamanho, t.value, "tamanho")
+              return (
+                <button
+                  key={t.value}
+                  onClick={() => apply(() => nav.toggleList("tamanho", t.value))}
+                  aria-pressed={on}
+                  className={clx("h-9 min-w-[44px] px-3 rounded-full border text-xs", on ? "bg-eclat-grafite text-eclat-luz border-eclat-grafite" : "border-eclat-pedra/60 hover:border-eclat-grafite")}
+                  data-testid={`filter-tamanho-${t.value}`}
+                >
+                  {t.value} <span className="opacity-60">({t.count})</span>
+                </button>
+              )
+            })}
           </div>
         </section>
       )}
@@ -60,10 +63,10 @@ export default function FilterPanel({ facets, filters, colorMap, onApplied }: { 
           <ul className="flex flex-col gap-2">
             {facets.cores.map((c) => {
               const r = resolveColor(colorMap, c.name)
-              const on = selected(filters.cor, c.name)
+              const on = isSelected(filters.cor, c.name, "cor")
               return (
                 <li key={c.name}>
-                  <button onClick={() => apply(() => nav.toggleList("cor", r.name))} className={clx("flex items-center gap-3 w-full text-left", on && "font-semibold")} data-testid={`filter-cor-${c.name}`}>
+                  <button onClick={() => apply(() => nav.toggleList("cor", r.name))} aria-pressed={on} className={clx("flex items-center gap-3 w-full text-left", on && "font-semibold")} data-testid={`filter-cor-${c.name}`}>
                     <span
                       className={clx("w-5 h-5 rounded-full border border-black/10 shrink-0", on && "ring-2 ring-eclat-terracota ring-offset-1")}
                       style={r.swatch_url ? { backgroundImage: `url(${r.swatch_url})`, backgroundSize: "cover" } : { backgroundColor: r.hex }}

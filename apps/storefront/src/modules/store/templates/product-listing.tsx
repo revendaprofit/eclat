@@ -1,15 +1,19 @@
 import type { ReactNode } from "react"
+import { Suspense } from "react"
+import { HttpTypes } from "@medusajs/types"
 import { listProductsFiltered, type ListingScope } from "@lib/data/products"
 import { getRegion } from "@lib/data/regions"
 import { getColorMap } from "@lib/data/colors"
 import { getBaseURL } from "@lib/util/env"
-import type { FilterState } from "@lib/util/catalog-filters"
+import { serializeFilters, type FilterState } from "@lib/util/catalog-filters"
+import type { ColorMap } from "@lib/util/colors"
 import ProductPreview from "@modules/products/components/product-preview"
 import { ItemListJsonLd } from "@modules/seo/jsonld"
 import { Pagination } from "@modules/store/components/pagination"
 import EmptyResults from "@modules/store/components/filters/empty-results"
 import FilterPanel from "@modules/store/components/filters/filter-panel"
 import ListingToolbar from "@modules/store/components/filters/listing-toolbar"
+import SkeletonProductGrid from "@modules/skeletons/templates/skeleton-product-grid"
 import Track from "@modules/analytics/track"
 import { productsToItemList } from "@modules/analytics/items"
 
@@ -29,12 +33,41 @@ export default async function ProductListing({
 }) {
   const region = await getRegion(countryCode)
   if (!region) return null
-  const [result, colorMap] = await Promise.all([listProductsFiltered({ filters, scope, countryCode }), getColorMap()])
-  const base = getBaseURL()
+  // colorMap não depende do filtro — busca fora do Suspense, junto com a região.
+  const colorMap = await getColorMap()
 
   return (
     <div className="content-container py-6" data-testid="category-container">
       {header}
+      {/* key por estado de filtro: remonta (e reexibe o skeleton) a cada mudança de
+          filtro/ordenação/página, e é o que faz o Track de view_item_list re-disparar. */}
+      <Suspense key={serializeFilters(filters)} fallback={<SkeletonProductGrid />}>
+        <ListingResults filters={filters} scope={scope} countryCode={countryCode} listName={listName} colorMap={colorMap} region={region} />
+      </Suspense>
+    </div>
+  )
+}
+
+async function ListingResults({
+  filters,
+  scope,
+  countryCode,
+  listName,
+  colorMap,
+  region,
+}: {
+  filters: FilterState
+  scope: ListingScope
+  countryCode: string
+  listName: string
+  colorMap: ColorMap
+  region: HttpTypes.StoreRegion
+}) {
+  const result = await listProductsFiltered({ filters, scope, countryCode })
+  const base = getBaseURL()
+
+  return (
+    <>
       <ListingToolbar count={result.count} total={result.total} filters={filters} facets={result.facets} colorMap={colorMap} />
       <div className="flex flex-col small:flex-row small:items-start gap-8">
         <aside id="filtros" className="hidden small:block small:w-[250px] shrink-0">
@@ -62,6 +95,6 @@ export default async function ProductListing({
           )}
         </div>
       </div>
-    </div>
+    </>
   )
 }

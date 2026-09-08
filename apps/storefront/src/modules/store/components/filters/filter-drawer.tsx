@@ -1,6 +1,6 @@
 "use client"
 
-import { Dialog, DialogPanel, Transition, TransitionChild } from "@headlessui/react"
+import { Dialog, DialogPanel, DialogTitle, Transition, TransitionChild } from "@headlessui/react"
 import { Fragment, useState } from "react"
 import type { FilterState } from "@lib/util/catalog-filters"
 import { hasActiveFilters } from "@lib/util/catalog-filters"
@@ -24,7 +24,7 @@ export default function FilterDrawer({ facets, filters, colorMap, count }: { fac
           <TransitionChild as={Fragment} enter="ease-out duration-200" enterFrom="translate-y-full" enterTo="translate-y-0" leave="ease-in duration-150" leaveFrom="translate-y-0" leaveTo="translate-y-full">
             <DialogPanel className="fixed inset-x-0 bottom-0 max-h-[85vh] overflow-y-auto bg-eclat-luz rounded-t-2xl p-6 flex flex-col gap-6">
               <div className="flex items-center justify-between">
-                <p className="font-serif text-xl text-eclat-grafite">Filtrar</p>
+                <DialogTitle as="p" className="font-serif text-xl text-eclat-grafite">Filtrar</DialogTitle>
                 <button onClick={() => setOpen(false)} aria-label="Fechar" className="text-2xl leading-none">×</button>
               </div>
               <FilterPanel facets={facets} filters={filters} colorMap={colorMap} />
