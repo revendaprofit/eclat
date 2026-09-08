@@ -61,6 +61,41 @@ medusaIntegrationTestRunner({
         },
         { headers: admin }
       )
+      // Cupom de ITENS com a regra de exclusão do §6.4: só alcança unidades marcadas "nenhum"
+      // (fora do conjunto). Mesmos ajustes de payload do Task 2: max_quantity obrigatório para
+      // allocation "each" (usamos 1000 pelo mesmo motivo documentado acima) e o atributo de
+      // target_rules em escopo "items" precisa do prefixo "items.".
+      await api.post(
+        "/admin/promotions",
+        {
+          code: "CUPOM10",
+          type: "standard",
+          is_automatic: false,
+          status: "active",
+          application_method: {
+            type: "percentage",
+            target_type: "items",
+            allocation: "each",
+            max_quantity: 1000,
+            value: 10,
+            currency_code: "brl",
+            target_rules: [{ attribute: "items.conjunto_desconto", operator: "eq", values: ["nenhum"] }],
+          },
+        },
+        { headers: admin }
+      )
+      // Cupom de PEDIDO inteiro (não aceita target_rules por item): observar o que acontece
+      await api.post(
+        "/admin/promotions",
+        {
+          code: "PEDIDO10",
+          type: "standard",
+          is_automatic: false,
+          status: "active",
+          application_method: { type: "percentage", target_type: "order", value: 10, currency_code: "brl" },
+        },
+        { headers: admin }
+      )
     })
 
     async function novoCarrinho(linhas: { variantId: string; quantity: number }[], metadata?: Record<string, unknown>) {
@@ -107,6 +142,43 @@ medusaIntegrationTestRunner({
         expect(Number(top.quantity)).toBe(3)
         expect(somaPorCodigo({ items: [top] }, "CONJUNTO-POC")).toBeCloseTo(37.8, 2)
         expect(Number(cart.discount_total)).toBeCloseTo(37.8, 2)
+      })
+    })
+
+    describe("C — cupom de itens com exclusão (§6.4)", () => {
+      it("cupom desconta só a legging (fora do conjunto); o conjunto continua no top", async () => {
+        const cart0 = await novoCarrinho([{ variantId: cat.top.variantId, quantity: 1 }, { variantId: cat.legging.variantId, quantity: 1 }])
+        await api.post(`/store/carts/${cart0.id}/promotions`, { promo_codes: ["CUPOM10"] }, { headers: cat.storeHeaders })
+        const cart = (await api.get(`/store/carts/${cart0.id}?fields=*items,*items.adjustments`, { headers: cat.storeHeaders })).data.cart
+        expect(somaPorCodigo(cart, "CONJUNTO-POC")).toBeCloseTo(18.9, 2) // 10% do top
+        expect(somaPorCodigo(cart, "CUPOM10")).toBeCloseTo(25.9, 2) // 10% da legging, nada no top
+        expect(Number(cart.discount_total)).toBeCloseTo(44.8, 2)
+      })
+    })
+
+    describe("D — cupom de pedido inteiro (sem regra por item)", () => {
+      it("registra o comportamento: desconto do pedido alcança ou não a unidade em conjunto?", async () => {
+        const cart0 = await novoCarrinho([{ variantId: cat.top.variantId, quantity: 1 }, { variantId: cat.legging.variantId, quantity: 1 }])
+        await api.post(`/store/carts/${cart0.id}/promotions`, { promo_codes: ["PEDIDO10"] }, { headers: cat.storeHeaders })
+        const cart = (await api.get(`/store/carts/${cart0.id}?fields=*items,*items.adjustments`, { headers: cat.storeHeaders })).data.cart
+        const pedido = somaPorCodigo(cart, "PEDIDO10")
+        // eslint-disable-next-line no-console
+        console.log("[F0-D] PEDIDO10 total =", pedido, "ajustes:", JSON.stringify(cart.items.map((i: any) => ({ v: i.variant_id, adj: i.adjustments }))))
+        expect(pedido).toBeGreaterThan(0) // só garante que o cupom foi aplicado; o VALOR vai para o relatório
+
+        // Observação extra (sem asserção): empilhando CUPOM10 (itens) em cima de PEDIDO10 (pedido)
+        // no mesmo carrinho — /store/carts/{id}/promotions é aditivo (PromotionActions.ADD quando
+        // promo_codes não é vazio), então isso NÃO substitui o PEDIDO10 já aplicado. Serve só para
+        // o relatório da F0 (empilhamento de cupons de pedido + itens).
+        await api.post(`/store/carts/${cart0.id}/promotions`, { promo_codes: ["CUPOM10"] }, { headers: cat.storeHeaders })
+        const cartAmbos = (await api.get(`/store/carts/${cart0.id}?fields=*items,*items.adjustments`, { headers: cat.storeHeaders })).data.cart
+        // eslint-disable-next-line no-console
+        console.log(
+          "[F0-bonus] PEDIDO10 + CUPOM10 discount_total =",
+          cartAmbos.discount_total,
+          "ajustes:",
+          JSON.stringify(cartAmbos.items.map((i: any) => ({ v: i.variant_id, adj: i.adjustments })))
+        )
       })
     })
   },
