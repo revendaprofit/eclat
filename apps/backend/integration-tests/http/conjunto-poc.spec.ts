@@ -38,9 +38,14 @@ medusaIntegrationTestRunner({
             target_type: "items",
             allocation: "each",
             // Ajuste de payload (2.15.5): allocation "each"/"once" exige max_quantity —
-            // não documentado no brief. 1 = no máximo 1 unidade por linha recebe o desconto,
-            // consistente com o gancho, que já isola a unidade marcada como entrada própria de quantity=1.
-            max_quantity: 1,
+            // não documentado no brief. IMPORTANTE (achado da revisão): max_quantity: 1 faria o
+            // motor CAPAR o desconto em 1 unidade sozinho (ver @medusajs/utils/dist/totals/promotion/
+            // index.js: maximumPromotionAmount = unitPrice * (max_quantity ?? 1)), então o caso B
+            // passaria com 18,90 mesmo se o hook NÃO dividisse o contexto — não provaria o §6.3.
+            // Usamos um valor alto (bem acima de qualquer quantidade testada) para que o teto do
+            // motor nunca entre em jogo: o valor observado passa a depender só da divisão de
+            // contexto feita pelo gancho, que é o que este teste precisa provar.
+            max_quantity: 1000,
             value: 10,
             currency_code: "brl",
             // Ajuste de payload (2.15.5): o atributo de target_rules em escopo "items" precisa do
@@ -58,8 +63,14 @@ medusaIntegrationTestRunner({
       )
     })
 
-    async function novoCarrinho(linhas: { variantId: string; quantity: number }[]) {
-      const cart = (await api.post("/store/carts", { region_id: cat.regionId, sales_channel_id: cat.salesChannelId }, { headers: cat.storeHeaders })).data.cart
+    async function novoCarrinho(linhas: { variantId: string; quantity: number }[], metadata?: Record<string, unknown>) {
+      const cart = (
+        await api.post(
+          "/store/carts",
+          { region_id: cat.regionId, sales_channel_id: cat.salesChannelId, ...(metadata ? { metadata } : {}) },
+          { headers: cat.storeHeaders }
+        )
+      ).data.cart
       for (const l of linhas) {
         await api.post(`/store/carts/${cart.id}/line-items`, { variant_id: l.variantId, quantity: l.quantity }, { headers: cat.storeHeaders })
       }
@@ -83,6 +94,19 @@ medusaIntegrationTestRunner({
         const top = cart.items.find((i: any) => i.variant_id === cat.top.variantId)
         expect(Number(top.quantity)).toBe(2)
         expect(Number(cart.discount_total)).toBeCloseTo(18.9, 2)
+      })
+    })
+
+    describe("B2 — linha com 3 unidades, 2 em conjunto (K=2 de N=3)", () => {
+      it("desconta duas unidades (Top ×3 = R$ 567 → R$ 37,80, não R$ 56,70 nem R$ 18,90)", async () => {
+        const cart = await novoCarrinho(
+          [{ variantId: cat.top.variantId, quantity: 3 }, { variantId: cat.legging.variantId, quantity: 1 }],
+          { conjunto_poc_k: 2 }
+        )
+        const top = cart.items.find((i: any) => i.variant_id === cat.top.variantId)
+        expect(Number(top.quantity)).toBe(3)
+        expect(somaPorCodigo({ items: [top] }, "CONJUNTO-POC")).toBeCloseTo(37.8, 2)
+        expect(Number(cart.discount_total)).toBeCloseTo(37.8, 2)
       })
     })
   },
