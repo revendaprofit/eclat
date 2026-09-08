@@ -17,12 +17,13 @@ export async function POST(req: Request) {
   try {
     const [cats, coresRes] = await Promise.all([
       medusaListCategories(),
-      sb("site_content?key=eq.cores&select=value"),
+      sb("site_content?key=eq.cores&select=value").catch(() => null),
     ])
     const selected = cats.filter((c) => (input.category_ids ?? []).includes(c.id))
     const paths = selected.map((c) => categoryPath(c, cats))
     const isAccessory = paths.length > 0 && paths.every(isAccessoryHandle)
-    const coresRows = coresRes.ok ? ((await coresRes.json()) as { value: Record<string, unknown> }[]) : []
+    // Mapa de cores é opcional para criação do produto
+    const coresRows = coresRes?.ok ? ((await coresRes.json()) as { value: Record<string, unknown> }[]) : []
     const knownColors = Object.keys(coresRows[0]?.value ?? {})
     const { errors, warnings } = validateProductOptions(input.options ?? [], { isAccessory, knownColors })
     if (errors.length)
