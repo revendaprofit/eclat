@@ -20,6 +20,14 @@
 }
 
 @layer utilities {
+  /* Galeria da PDP (carrossel mobile): esconder a barra de rolagem do track com snap */
+  .scrollbar-hide {
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
   /* Chrome, Safari and Opera */
   .no-scrollbar::-webkit-scrollbar {
     display: none;
