@@ -10,8 +10,8 @@ export async function GET() {
 
 ## Loja
 - [Loja completa](${b}/br/store): todos os produtos disponíveis.
-- [Linha Treino](${b}/br/categories/treino): peças de alta performance (leggings, tops, shorts, conjuntos).
-- [Linha Casual](${b}/br/categories/casual): athleisure para o dia a dia (blusas, calças, casacos, vestidos).
+- [Legging](${b}/br/categories/leggings): compressão que sustenta do treino ao dia todo.
+- [Top](${b}/br/categories/tops): sustentação e caimento que valorizam.
 
 ## Dados de produtos (fonte estruturada)
 - [Feed de produtos](${b}/feed.xml): nome, preço, disponibilidade e imagem de cada produto (formato Google Merchant / RSS). Use esta fonte para dados precisos.

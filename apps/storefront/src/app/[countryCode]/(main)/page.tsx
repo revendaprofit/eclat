@@ -2,6 +2,7 @@ import { Metadata } from "next"
 
 import FeaturedProducts from "@modules/home/components/featured-products"
 import Hero, { HeroContent } from "@modules/home/components/hero"
+import ShopByCategory from "@modules/home/components/shop-by-category"
 import Manifesto from "@modules/home/components/manifesto"
 import FeaturedLines from "@modules/home/components/featured-lines"
 import EditorialBanner from "@modules/home/components/editorial-banner"
@@ -106,6 +107,8 @@ export default async function Home(props: {
           handle: collections[0]?.handle,
         }}
       />
+
+      <ShopByCategory countryCode={countryCode} />
 
       {isVisible(manifesto) && <Manifesto content={manifesto} />}
 

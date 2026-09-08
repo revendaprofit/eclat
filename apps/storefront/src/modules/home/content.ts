@@ -59,17 +59,17 @@ export const HOME_DEFAULTS = {
       "A Éclat veste a mulher inteira — corpo, força e delicadeza — com peças pensadas para durar e brilhar em cada movimento.",
   } as Manifesto,
   lines: {
-    heading: "Nossas linhas",
+    heading: "Nossas peças",
     items: [
       {
-        label: "Treino",
-        caption: "Alta performance e caimento que valoriza",
-        href: "/categories/treino",
+        label: "Legging",
+        caption: "Compressão que sustenta do treino ao dia todo",
+        href: "/categories/leggings",
       },
       {
-        label: "Casual",
-        caption: "Do estúdio à rua, sem perder a elegância",
-        href: "/categories/casual",
+        label: "Top",
+        caption: "Sustentação e caimento que valorizam",
+        href: "/categories/tops",
       },
     ],
   } as FeaturedLines,

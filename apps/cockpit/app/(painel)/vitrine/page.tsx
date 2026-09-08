@@ -178,8 +178,8 @@ export default function VitrinePage() {
     linhas.items && linhas.items.length
       ? linhas.items
       : [
-          { label: "Treino", caption: "Alta performance e caimento que valoriza", href: "/categories/treino" },
-          { label: "Casual", caption: "Do estúdio à rua, sem perder a elegância", href: "/categories/casual" },
+          { label: "Legging", caption: "Compressão que sustenta do treino ao dia todo", href: "/categories/leggings" },
+          { label: "Top", caption: "Sustentação e caimento que valorizam", href: "/categories/tops" },
         ]
   const benItems: BenefitItem[] =
     beneficios.items && beneficios.items.length
@@ -352,7 +352,7 @@ export default function VitrinePage() {
                 <label className={label}>Link</label>
                 <input value={it.href} onChange={(e) => {
                   const items = [...lineItems]; items[i] = { ...it, href: e.target.value }; setLinhas({ ...linhas, items })
-                }} className={input} placeholder="/categories/treino" />
+                }} className={input} placeholder="/categories/leggings" />
               </div>
             </div>
             <div>
