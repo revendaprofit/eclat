@@ -1,13 +1,12 @@
 "use client"
 
 import { clx } from "@modules/common/components/ui"
-import { resolveColor, type ColorMap } from "@lib/util/colors"
+import { normalizeColorName, resolveColor, type ColorMap } from "@lib/util/colors"
 import { colorValues, findOption, firstAvailableVariantId } from "@lib/util/pdp-variants"
-import { normalizeColorName } from "@lib/util/colors"
 import { useProductSelection } from "../product-selection"
 
 export default function ColorSelect({ colorMap, disabled }: { colorMap: ColorMap; disabled?: boolean }) {
-  const { product, selection, setValue, color } = useProductSelection()
+  const { product, setValue, color } = useProductSelection()
   const opt = findOption(product, "Cor")
   if (!opt) return null
   const cores = colorValues(product)

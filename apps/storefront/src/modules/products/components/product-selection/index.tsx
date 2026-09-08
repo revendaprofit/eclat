@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react"
 import type { HttpTypes } from "@medusajs/types"
-import { initialSelection, isCompleteSelection, selectedColor, sizeAvailability, variantFor, type Selection } from "@lib/util/pdp-variants"
+import { findOption, initialSelection, isCompleteSelection, selectedColor, sizeAvailability, variantFor, type Selection } from "@lib/util/pdp-variants"
 import { getPrefs } from "@modules/personalization/prefs"
 
 // Seleção de variante da PDP compartilhada por seletores, botão, galeria e "Avise-me".
@@ -19,22 +19,27 @@ const SelectionContext = createContext<Ctx | null>(null)
 
 export function ProductSelectionProvider({ product, initialVariantId, children }: { product: HttpTypes.StoreProduct; initialVariantId?: string | null; children: ReactNode }) {
   // SSR e 1º render do client usam só o v_id (determinístico); a preferência do wizard entra depois de hidratar.
+  // O template monta este provider com `key={product.id}`, então ele é recriado do zero a cada troca de
+  // produto — este efeito de montagem ([] deps) roda uma vez por produto, sem precisar recalcular deps.
   const [selection, setSelection] = useState<Selection>(() => initialSelection(product, { variantId: initialVariantId ?? null }))
   useEffect(() => {
     const pref = getPrefs().tamanho
     if (!pref) return
-    setSelection((prev) => {
-      const next = initialSelection(product, { variantId: initialVariantId ?? null, prefSize: pref })
-      return Object.keys(next).length > Object.keys(prev).length ? { ...next, ...prev } : prev
-    })
-  }, [product, initialVariantId])
+    const tamOpt = findOption(product, "Tamanho")
+    if (tamOpt && selection[tamOpt.id] !== undefined) return
+    const next = initialSelection(product, { variantId: initialVariantId ?? null, prefSize: pref })
+    setSelection((prev) => ({ ...next, ...prev }))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const selectedVariant = useMemo(() => variantFor(product, selection), [product, selection])
   const isComplete = useMemo(() => isCompleteSelection(product, selection), [product, selection])
   const color = useMemo(() => selectedColor(product, selection), [product, selection])
   const sizeAvail = useMemo(() => sizeAvailability(product, color), [product, color])
 
-  // ?v_id acompanha a variante sem recarregar (history API; o App Router sincroniza useSearchParams).
+  // ?v_id acompanha a variante sem recarregar (history API). `useSearchParams` NÃO é atualizado por
+  // `replaceState` (o App Router não re-sincroniza fora de navegação própria) — mas nada na página lê
+  // `v_id` no client, então isso é inofensivo aqui.
   useEffect(() => {
     if (typeof window === "undefined") return
     const url = new URL(window.location.href)

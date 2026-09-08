@@ -7,7 +7,7 @@ import { Button } from "@modules/common/components/ui"
 import Divider from "@modules/common/components/divider"
 import OptionSelect from "@modules/products/components/product-actions/option-select"
 import { useParams } from "next/navigation"
-import { useRef, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import ProductPrice from "../product-price"
 import MobileActions from "./mobile-actions"
 import { variantToAddToCart } from "@modules/analytics/items"
@@ -27,6 +27,12 @@ export default function ProductActions({ product, colorMap, disabled }: ProductA
   const [isAdding, setIsAdding] = useState(false)
   const [notifyFor, setNotifyFor] = useState<{ variantId: string; label: string } | null>(null)
   const countryCode = useParams().countryCode as string
+
+  // Qualquer troca de opção limpa o pedido manual de "Avise-me": ele não deve sobreviver a uma nova
+  // seleção (ex.: usuária pede aviso num tamanho esgotado e depois escolhe um tamanho disponível).
+  useEffect(() => {
+    setNotifyFor(null)
+  }, [selection])
 
   const inStock = !!selectedVariant && isVariantAvailable(selectedVariant as StockVariant)
   const actionsRef = useRef<HTMLDivElement>(null)

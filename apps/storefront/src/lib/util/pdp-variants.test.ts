@@ -84,6 +84,28 @@ describe("initialSelection", () => {
     expect(initialSelection({ ...P, variants: P.variants } as any, { prefSize: "M" })).toEqual({ o_t: "M" })   // sem cor: M existe em alguma cor
     expect(initialSelection(P, { prefSize: "G" })).toEqual({})                                                 // G esgotado em todas
   })
+  it("produto de variante única: pré-seleciona os valores da variante mesmo sem opção Cor", () => {
+    const opts = [{ id: "o_x", title: "Tamanho", values: [{ value: "Único" }] }]
+    const unica = {
+      id: "p2",
+      options: opts,
+      variants: [
+        { id: "v_only", manage_inventory: true, allow_backorder: false, inventory_quantity: 1, options: [{ option_id: "o_x", value: "Único" }] },
+      ],
+    } as unknown as HttpTypes.StoreProduct
+    expect(initialSelection(unica, {})).toEqual({ o_x: "Único" })
+  })
+  it("produto de variante única COM v_id: usa o ramo do v_id (mesmo resultado)", () => {
+    const opts = [{ id: "o_x", title: "Tamanho", values: [{ value: "Único" }] }]
+    const unica = {
+      id: "p2",
+      options: opts,
+      variants: [
+        { id: "v_only", manage_inventory: true, allow_backorder: false, inventory_quantity: 1, options: [{ option_id: "o_x", value: "Único" }] },
+      ],
+    } as unknown as HttpTypes.StoreProduct
+    expect(initialSelection(unica, { variantId: "v_only" })).toEqual({ o_x: "Único" })
+  })
 })
 
 describe("variantLabel / selectedColor", () => {

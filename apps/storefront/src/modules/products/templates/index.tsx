@@ -77,7 +77,7 @@ const ProductTemplate = async ({
           { name: product.title ?? "Produto", url: productUrl },
         ]}
       />
-      <ProductSelectionProvider product={product} initialVariantId={selectedVariantId}>
+      <ProductSelectionProvider key={product.id} product={product} initialVariantId={selectedVariantId}>
         <div
           className="content-container  flex flex-col small:flex-row small:items-start py-6 relative"
           data-testid="product-container"

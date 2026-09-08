@@ -89,6 +89,13 @@ export function initialSelection(product: Product, opts: { variantId?: string | 
     for (const vo of variant.options ?? []) if (vo.option_id && vo.value) sel[vo.option_id] = vo.value
     return sel
   }
+  // Produto com uma única variante: pré-seleciona todos os valores dela (mesmo quando a única opção não
+  // é Cor, ex.: "Tamanho: Único") — sem isso o botão fica preso em "Escolha as opções" sem nada pra escolher.
+  const variants = product.variants ?? []
+  if (variants.length === 1) {
+    for (const vo of variants[0].options ?? []) if (vo.option_id && vo.value) sel[vo.option_id] = vo.value
+    return sel
+  }
   const corOpt = findOption(product, "Cor")
   const cores = colorValues(product)
   if (corOpt && cores.length === 1) sel[corOpt.id] = cores[0]
