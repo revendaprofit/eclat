@@ -59,7 +59,7 @@ export default async function Nav() {
               </LocalizedClientLink>
             </div>
             <div className="hidden small:block">
-              <SearchBar />
+              <SearchBar nav={nav} />
             </div>
             <Suspense
               fallback={
@@ -92,7 +92,7 @@ export default async function Nav() {
 
       {/* busca em destaque (mobile) */}
       <div className="small:hidden bg-eclat-luz border-b border-ui-border-base px-4 py-3">
-        <SearchBar variant="full" />
+        <SearchBar variant="full" nav={nav} />
       </div>
     </div>
   )
