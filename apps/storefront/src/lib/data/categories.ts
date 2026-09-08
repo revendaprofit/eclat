@@ -3,8 +3,11 @@ import { HttpTypes } from "@medusajs/types"
 import { getCacheOptions } from "./cookies"
 
 export const listCategories = async (query?: Record<string, unknown>) => {
+  // revalida a cada 5 min — a invalidação por tag usa um cacheId por visitante e não cobre
+  // publicações no Cockpit (I3)
   const next = {
     ...(await getCacheOptions("categories")),
+    revalidate: 300,
   }
 
   const limit = query?.limit || 100
@@ -29,8 +32,11 @@ export const listCategories = async (query?: Record<string, unknown>) => {
 export const getCategoryByHandle = async (categoryHandle: string[]) => {
   const handle = `${categoryHandle.join("/")}`
 
+  // revalida a cada 5 min — a invalidação por tag usa um cacheId por visitante e não cobre
+  // publicações no Cockpit (I3)
   const next = {
     ...(await getCacheOptions("categories")),
+    revalidate: 300,
   }
 
   return sdk.client

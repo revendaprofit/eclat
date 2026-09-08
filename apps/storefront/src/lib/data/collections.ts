@@ -23,8 +23,11 @@ export const retrieveCollection = async (id: string) => {
 export const listCollections = async (
   queryParams: Record<string, string> = {}
 ): Promise<{ collections: HttpTypes.StoreCollection[]; count: number }> => {
+  // revalida a cada 5 min — a invalidação por tag usa um cacheId por visitante e não cobre
+  // publicações no Cockpit (I3)
   const next = {
     ...(await getCacheOptions("collections")),
+    revalidate: 300,
   }
 
   queryParams.limit = queryParams.limit || "100"
@@ -45,8 +48,11 @@ export const listCollections = async (
 export const getCollectionByHandle = async (
   handle: string
 ): Promise<HttpTypes.StoreCollection | null> => {
+  // revalida a cada 5 min — a invalidação por tag usa um cacheId por visitante e não cobre
+  // publicações no Cockpit (I3)
   const next = {
     ...(await getCacheOptions("collections")),
+    revalidate: 300,
   }
 
   return await sdk.client

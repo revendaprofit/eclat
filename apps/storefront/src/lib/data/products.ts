@@ -49,8 +49,11 @@ export const listProducts = async ({
     ...(await getAuthHeaders()),
   }
 
+  // revalida a cada 5 min — a invalidação por tag usa um cacheId por visitante e não cobre
+  // publicações no Cockpit (I3)
   const next = {
     ...(await getCacheOptions("products")),
+    revalidate: 300,
   }
 
   // Campos padrão que todo chamador precisa (card, disponibilidade, badges).
