@@ -193,6 +193,7 @@ medusaIntegrationTestRunner({
       })
     })
 
+    // Resultado F0: PASSOU como escrito — decisão §6.3 adotada (divisão de contexto, sem fallback).
     describe("B — linha com 2 unidades, só 1 em conjunto (§6.3)", () => {
       it("desconta uma unidade só (Top ×2 = R$ 378 → desconto R$ 18,90, não R$ 37,80)", async () => {
         const cart = await novoCarrinho([{ variantId: cat.top.variantId, quantity: 2 }, { variantId: cat.legging.variantId, quantity: 1 }])
@@ -202,6 +203,7 @@ medusaIntegrationTestRunner({
       })
     })
 
+    // Resultado F0: PASSOU (37,80) — confirma que a divisão de contexto generaliza para K intermediário.
     describe("B2 — linha com 3 unidades, 2 em conjunto (K=2 de N=3)", () => {
       it("desconta duas unidades (Top ×3 = R$ 567 → R$ 37,80, não R$ 56,70 nem R$ 18,90)", async () => {
         const cart = await novoCarrinho(
@@ -215,6 +217,7 @@ medusaIntegrationTestRunner({
       })
     })
 
+    // Resultado F0: PASSOU (44,80 = 18,90 + 25,90) — decisão §6.4 adotada para cupons de itens.
     describe("C — cupom de itens com exclusão (§6.4)", () => {
       it("cupom desconta só a legging (fora do conjunto); o conjunto continua no top", async () => {
         const cart0 = await novoCarrinho([{ variantId: cat.top.variantId, quantity: 1 }, { variantId: cat.legging.variantId, quantity: 1 }])
@@ -226,6 +229,8 @@ medusaIntegrationTestRunner({
       })
     })
 
+    // Resultado F0: 42,91 — cupom de pedido alcança a unidade em conjunto, mas incide sobre o
+    // subtotal já líquido do CONJUNTO-POC (compounding), não sobre o preço cheio. Ver §6.4.
     describe("D — cupom de pedido inteiro (sem regra por item)", () => {
       it("registra o comportamento: desconto do pedido alcança ou não a unidade em conjunto?", async () => {
         const cart0 = await novoCarrinho([{ variantId: cat.top.variantId, quantity: 1 }, { variantId: cat.legging.variantId, quantity: 1 }])
@@ -252,6 +257,9 @@ medusaIntegrationTestRunner({
       })
     })
 
+    // Resultado F0: REJEITADO pela Admin API (400 invalid_data, promotion-module.js:570-574) —
+    // target_rules não é permitido em target_type: order. Decisão §6.4: F1 converte cupons de
+    // pedido em cupons de itens (allocation: across) para poder excluir a unidade em conjunto.
     describe("D2 — cupom de pedido inteiro COM regra de exclusão por item", () => {
       it("registra se o desconto de pedido respeita a marcação (esperado se respeitar: 25,90 = 10% só da legging; se ignorar: 44,80/42,91-like)", async () => {
         if (!d2Aceito) {
