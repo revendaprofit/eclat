@@ -266,11 +266,12 @@ export type CockpitCategory = {
   parent_id: string | null
   rank: number
   metadata: Record<string, unknown>
+  is_active: boolean
 }
 
 export async function medusaListCategories(): Promise<CockpitCategory[]> {
   const r = await medusaAdmin(
-    `/admin/product-categories?limit=200&fields=id,name,handle,parent_category_id,rank,metadata`
+    `/admin/product-categories?limit=200&fields=id,name,handle,parent_category_id,rank,metadata,is_active`
   )
   if (!r.ok) throw new Error(`listar categorias falhou (HTTP ${r.status})`)
   const { product_categories } = (await r.json()) as {
@@ -281,6 +282,7 @@ export async function medusaListCategories(): Promise<CockpitCategory[]> {
       parent_category_id: string | null
       rank: number
       metadata: Record<string, unknown> | null
+      is_active: boolean | null
     }[]
   }
   return product_categories.map((c) => ({
@@ -290,6 +292,7 @@ export async function medusaListCategories(): Promise<CockpitCategory[]> {
     parent_id: c.parent_category_id ?? null,
     rank: c.rank ?? 0,
     metadata: c.metadata ?? {},
+    is_active: c.is_active ?? true,
   }))
 }
 

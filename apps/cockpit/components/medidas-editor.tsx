@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react"
 
 // Vitrine → Medidas. Uma tabela por categoria (chave = caminho de handle). Subcategoria
 // sem tabela herda a da mãe na vitrine; acessórios podem ficar sem tabela.
-type Cat = { id: string; name: string; handle: string; parent_id: string | null; rank: number }
+type Cat = { id: string; name: string; handle: string; parent_id: string | null; rank: number; is_active: boolean }
 // Formato salvo em site_content.medidas (task 3): linhas como string[], rows[i][0] = tamanho.
 type WireTable = { columns: string[]; rows: string[][] }
 // Formato interno: cada linha ganha um id estável, para não perder o foco/digitação
@@ -75,11 +75,13 @@ export default function MedidasEditor() {
     carregar()
   }, [carregar])
 
-  // caminhos "mae/filha" na ordem da árvore
+  // caminhos "mae/filha" na ordem da árvore — categorias desativadas (legado) somem do
+  // seletor: não faz sentido editar a tabela de medidas de uma categoria que ninguém vê.
   const caminhos = useMemo(() => {
     const byId = new Map(cats.map((c) => [c.id, c]))
     const path = (c: Cat): string => (c.parent_id && byId.get(c.parent_id) ? `${path(byId.get(c.parent_id)!)}/${c.handle}` : c.handle)
     return [...cats]
+      .filter((c) => c.is_active)
       .sort((a, b) => a.rank - b.rank || a.name.localeCompare(b.name))
       .map((c) => ({ key: path(c), label: c.parent_id ? `↳ ${c.name}` : c.name, depth: c.parent_id ? 1 : 0 }))
       .sort((a, b) => a.key.localeCompare(b.key))

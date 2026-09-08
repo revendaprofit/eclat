@@ -5,7 +5,7 @@ import { categoryPath, isAccessoryHandle, validateProductOptions } from "@/lib/c
 import ColorImages from "@/components/color-images"
 
 type Ref = { id: string; name: string }
-type Cat = { id: string; name: string; handle: string; parent_id: string | null; rank: number }
+type Cat = { id: string; name: string; handle: string; parent_id: string | null; rank: number; is_active: boolean }
 
 // slug URL-safe (sem acento, sem traço nas pontas) — lição do Medusa.
 function slugify(s: string) {
@@ -76,9 +76,9 @@ export default function ProductForm({
         if (!mr.ok) throw new Error(md.error || "Falha ao carregar coleções/categorias")
         setCollections(md.collections)
         setCategories(md.categories)
-        const cr = await fetch("/api/site-content/cores", { cache: "no-store" })
-        const cd = await cr.json().catch(() => ({}))
-        setCoresMapa(cr.ok && cd && typeof cd === "object" ? Object.keys(cd) : [])
+        const cr = await fetch("/api/site-content/cores", { cache: "no-store" }).catch(() => null)
+        const cd = cr && cr.ok ? await cr.json().catch(() => ({})) : {}
+        setCoresMapa(cr && cr.ok && cd && typeof cd === "object" ? Object.keys(cd) : [])
         if (mode === "edit" && productId) {
           const pr = await fetch(`/api/products/${productId}`, { cache: "no-store" })
           const p = await pr.json()
@@ -111,10 +111,13 @@ export default function ProductForm({
     if (!handleTocado) setHandle(slugify(titulo))
   }, [titulo, handleTocado])
 
-  // categorias ordenadas em árvore (pai → filhos) com profundidade
+  // categorias ordenadas em árvore (pai → filhos) com profundidade — exclui categorias
+  // desativadas (legado), exceto se o produto já estiver nela (mantém visível, com aviso,
+  // para não sumir a atribuição silenciosamente).
   const catsArvore = useMemo(() => {
+    const visiveis = categories.filter((c) => c.is_active || catIds.includes(c.id))
     const byParent = new Map<string | null, Cat[]>()
-    categories.forEach((c) => {
+    visiveis.forEach((c) => {
       const k = c.parent_id
       if (!byParent.has(k)) byParent.set(k, [])
       byParent.get(k)!.push(c)
@@ -360,6 +363,7 @@ export default function ProductForm({
                     {depth > 0 && <span className="text-eclat-grafite/30">└</span>}
                     <input type="checkbox" checked={catIds.includes(cat.id)} onChange={() => toggleCat(cat.id)} className="accent-eclat-dourado" />
                     {cat.name}
+                    {!cat.is_active && <span className="text-red-700 text-xs">(inativa)</span>}
                   </label>
                 ))}
               </div>

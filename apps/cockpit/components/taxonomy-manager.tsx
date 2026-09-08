@@ -2,7 +2,15 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react"
 
-type Cat = { id: string; name: string; handle: string; parent_id: string | null; rank: number; metadata: Record<string, unknown> }
+type Cat = {
+  id: string
+  name: string
+  handle: string
+  parent_id: string | null
+  rank: number
+  metadata: Record<string, unknown>
+  is_active: boolean
+}
 type Coll = { id: string; title: string; handle: string }
 type Tag = { id: string; name: string }
 
@@ -165,12 +173,15 @@ export default function TaxonomyManager({
               {arvore.map(({ cat, depth }) => (
                 <div
                   key={cat.id}
-                  className="flex items-center justify-between px-3 py-2 text-sm group"
+                  className={`flex items-center justify-between px-3 py-2 text-sm group ${
+                    cat.is_active ? "" : "opacity-50"
+                  }`}
                   style={{ paddingLeft: 12 + depth * 20 }}
                 >
                   <span className="flex items-center gap-1">
                     {depth > 0 && <span className="text-eclat-grafite/30">└</span>}
                     {cat.name}
+                    {!cat.is_active && <span className="text-eclat-grafite/50 text-xs">(inativa)</span>}
                   </span>
                   <span className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity text-xs">
                     <button onClick={() => novaCategoria(cat.id)} className="text-eclat-dourado underline" title="Adicionar subcategoria">+ sub</button>

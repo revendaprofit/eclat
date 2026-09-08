@@ -79,4 +79,17 @@ describe("categoryPath", () => {
     expect(isAccessoryHandle(categoryPath(oculos, all))).toBe(true)
     expect(isAccessoryHandle(categoryPath(tops, all))).toBe(false)
   })
+  it("parent_id órfão (mãe não está na lista) retorna só o próprio handle, sem travar", () => {
+    const orfa = { id: "cat_orfa", handle: "orfa", parent_id: "cat_inexistente" }
+    expect(categoryPath(orfa, all)).toBe("orfa")
+  })
+  it("cadeia com mais de um nível sobe até a raiz", () => {
+    const neta = { id: "cat_neta", handle: "neta", parent_id: "cat_oculos" }
+    expect(categoryPath(neta, [...all, neta])).toBe("acessorios/oculos/neta")
+  })
+  it("parent_id em ciclo não trava (proteção via 'seen')", () => {
+    const a = { id: "cat_a", handle: "a", parent_id: "cat_b" }
+    const b = { id: "cat_b", handle: "b", parent_id: "cat_a" }
+    expect(categoryPath(a, [a, b])).toBe("b/a")
+  })
 })

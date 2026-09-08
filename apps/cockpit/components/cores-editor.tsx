@@ -8,6 +8,18 @@ type Row = { id: string; name: string; hex: string; swatch_url: string }
 
 const HEX_RE = /^#[0-9a-f]{6}$/i
 
+// Normaliza nome de cor para comparação: sem acento, minúsculo, espaços colapsados
+// (mesma semântica de normalizeColorName da vitrine) — evita duplicata tipo
+// "Verde Exército" vs "verde  exercito".
+function normName(s: string): string {
+  return s
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, " ")
+}
+
 let idSeq = 0
 function newId() {
   if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") return crypto.randomUUID()
@@ -54,14 +66,14 @@ export default function CoresEditor() {
   }
   function add(name: string) {
     const n = name.trim()
-    if (!n || rows.some((r) => r.name.toLowerCase() === n.toLowerCase())) return
+    if (!n || rows.some((r) => normName(r.name) === normName(n))) return
     setRows([...rows, { id: newId(), name: n, hex: "", swatch_url: "" }])
   }
   async function importarDoCatalogo() {
     const r = await fetch("/api/catalog-colors", { cache: "no-store" })
     const d = await r.json()
     if (!r.ok) return alert(d.error || "Falha ao ler cores do catálogo")
-    const faltantes = (d.colors as string[]).filter((c) => !rows.some((x) => x.name.toLowerCase() === c.toLowerCase()))
+    const faltantes = (d.colors as string[]).filter((c) => !rows.some((x) => normName(x.name) === normName(c)))
     if (!faltantes.length) return alert("Todas as cores do catálogo já estão no mapa.")
     setRows([...rows, ...faltantes.map((name) => ({ id: newId(), name, hex: "", swatch_url: "" }))])
   }
@@ -80,7 +92,7 @@ export default function CoresEditor() {
     }
     const vistos = new Map<string, string>()
     for (const r of rows) {
-      const chave = r.name.trim().toLowerCase()
+      const chave = normName(r.name)
       const original = vistos.get(chave)
       if (original) return alert(`Nome duplicado: "${original}" e "${r.name.trim()}" seriam salvos como a mesma cor.`)
       vistos.set(chave, r.name.trim())
