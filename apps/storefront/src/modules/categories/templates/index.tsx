@@ -2,6 +2,7 @@ import { notFound } from "next/navigation"
 
 import type { FilterState } from "@lib/util/catalog-filters"
 import ProductListing from "@modules/store/templates/product-listing"
+import CategoryHeader from "@modules/categories/components/category-header"
 import { HttpTypes } from "@medusajs/types"
 
 export default function CategoryTemplate({
@@ -23,11 +24,7 @@ export default function CategoryTemplate({
       }}
       countryCode={countryCode}
       listName={category.name ?? ""}
-      header={
-        <h1 className="font-serif text-3xl text-eclat-grafite mb-6" data-testid="category-page-title">
-          {category.name}
-        </h1>
-      }
+      header={<CategoryHeader category={category} />}
     />
   )
 }
