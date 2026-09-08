@@ -21,6 +21,15 @@ medusaIntegrationTestRunner({
   testSuite: ({ api, getContainer }) => {
     let admin: Record<string, string>
     let cat: CatalogoBase
+    // D2 (findings do Task 3): payload de PEDIDO10X (cupom de pedido COM target_rules) é decidido
+    // em runtime dentro do beforeAll (chamada HTTP real), mas o Jest resolve describe/it de forma
+    // síncrona na fase de coleta, ANTES do beforeAll rodar — não dá pra usar it.skip condicionado a
+    // este resultado (ele sempre "veria" o valor inicial). Por isso o it() de D2 abaixo é único e se
+    // adapta ao resultado real (aceito ou rejeitado), sempre passando — o achado vai pro console.log
+    // e para o relatório, não para o status do teste.
+    let d2Aceito = false
+    let d2ErroTentativa1: unknown
+    let d2ErroTentativa2: unknown
 
     beforeAll(async () => {
       admin = (await criarAdmin(api, getContainer())).headers
@@ -95,6 +104,67 @@ medusaIntegrationTestRunner({
           application_method: { type: "percentage", target_type: "order", value: 10, currency_code: "brl" },
         },
         { headers: admin }
+      )
+      // D2 (achado #1 da revisão do Task 3): a leitura de que "cupom de PEDIDO não tem como respeitar
+      // target_rules" era uma suposição não testada, contradita pela leitura do motor (getValidItemsForPromotion
+      // em @medusajs/promotion/dist/utils/compute-actions/line-items.js:97-125 aplica target_rules igual para
+      // isTargetOrder e isTargetItems). Testamos empiricamente: tenta criar PEDIDO10X (pedido + target_rules).
+      try {
+        await api.post(
+          "/admin/promotions",
+          {
+            code: "PEDIDO10X",
+            type: "standard",
+            is_automatic: false,
+            status: "active",
+            application_method: {
+              type: "percentage",
+              target_type: "order",
+              value: 10,
+              currency_code: "brl",
+              target_rules: [{ attribute: "items.conjunto_desconto", operator: "eq", values: ["nenhum"] }],
+            },
+          },
+          { headers: admin }
+        )
+        d2Aceito = true
+      } catch (e: any) {
+        d2ErroTentativa1 = e.response?.data ?? { message: e.message }
+        // Fallback do brief: allocation "across" + max_quantity (caso a rejeição seja sobre allocation, não sobre target_rules)
+        try {
+          await api.post(
+            "/admin/promotions",
+            {
+              code: "PEDIDO10X",
+              type: "standard",
+              is_automatic: false,
+              status: "active",
+              application_method: {
+                type: "percentage",
+                target_type: "order",
+                value: 10,
+                currency_code: "brl",
+                allocation: "across",
+                max_quantity: 1000,
+                target_rules: [{ attribute: "items.conjunto_desconto", operator: "eq", values: ["nenhum"] }],
+              },
+            },
+            { headers: admin }
+          )
+          d2Aceito = true
+        } catch (e2: any) {
+          d2Aceito = false
+          d2ErroTentativa2 = e2.response?.data ?? { message: e2.message }
+        }
+      }
+      // eslint-disable-next-line no-console
+      console.log(
+        "[F0-D2] PEDIDO10X aceito?",
+        d2Aceito,
+        "erro (1a tentativa, sem allocation):",
+        JSON.stringify(d2ErroTentativa1),
+        "erro (2a tentativa, allocation across):",
+        JSON.stringify(d2ErroTentativa2)
       )
     })
 
@@ -179,6 +249,24 @@ medusaIntegrationTestRunner({
           "ajustes:",
           JSON.stringify(cartAmbos.items.map((i: any) => ({ v: i.variant_id, adj: i.adjustments })))
         )
+      })
+    })
+
+    describe("D2 — cupom de pedido inteiro COM regra de exclusão por item", () => {
+      it("registra se o desconto de pedido respeita a marcação (esperado se respeitar: 25,90 = 10% só da legging; se ignorar: 44,80/42,91-like)", async () => {
+        if (!d2Aceito) {
+          // eslint-disable-next-line no-console
+          console.log("[F0-D2] SKIP (payload rejeitado pela Admin API nas duas tentativas) — ver [F0-D2] acima para o erro exato")
+          expect(d2Aceito).toBe(false) // documenta a rejeição; o valor vai para o relatório, não há carrinho a testar
+          return
+        }
+        const cart0 = await novoCarrinho([{ variantId: cat.top.variantId, quantity: 1 }, { variantId: cat.legging.variantId, quantity: 1 }])
+        await api.post(`/store/carts/${cart0.id}/promotions`, { promo_codes: ["PEDIDO10X"] }, { headers: cat.storeHeaders })
+        const cart = (await api.get(`/store/carts/${cart0.id}?fields=*items,*items.adjustments`, { headers: cat.storeHeaders })).data.cart
+        const pedido = somaPorCodigo(cart, "PEDIDO10X")
+        // eslint-disable-next-line no-console
+        console.log("[F0-D2] PEDIDO10X total =", pedido, "ajustes:", JSON.stringify(cart.items.map((i: any) => ({ v: i.variant_id, adj: i.adjustments }))))
+        expect(pedido).toBeGreaterThan(0)
       })
     })
   },
