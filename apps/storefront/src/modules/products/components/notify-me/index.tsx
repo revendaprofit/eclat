@@ -57,7 +57,9 @@ export default function NotifyMe({
   return (
     <div className="mt-4 rounded-xl border border-eclat-terracota/40 bg-eclat-areia/20 p-4">
       <p className="text-sm font-semibold text-eclat-grafite">
-        Esgotou — mas volta. Quer ser avisada primeiro?
+        {variantLabel
+          ? `Esgotou em ${variantLabel} — mas volta. Quer ser avisada primeiro?`
+          : "Esgotou — mas volta. Quer ser avisada primeiro?"}
       </p>
       <div className="flex flex-col gap-2 mt-3">
         <input

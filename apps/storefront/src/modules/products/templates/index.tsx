@@ -1,4 +1,4 @@
-import React, { Suspense } from "react"
+import { Suspense } from "react"
 
 import PersonaGallery from "@modules/personalization/persona-gallery"
 import type { PersonaMedia } from "@lib/data/personas"
@@ -23,6 +23,8 @@ import Track from "@modules/analytics/track"
 import { productToViewItem } from "@modules/analytics/items"
 import { ProductJsonLd, BreadcrumbJsonLd } from "@modules/seo/jsonld"
 import { getBaseURL } from "@lib/util/env"
+import { getColorMap } from "@lib/data/colors"
+import { ProductSelectionProvider } from "@modules/products/components/product-selection"
 
 type ProductTemplateProps = {
   product: HttpTypes.StoreProduct
@@ -30,18 +32,22 @@ type ProductTemplateProps = {
   countryCode: string
   images: HttpTypes.StoreProductImage[]
   personaMedia?: PersonaMedia[]
+  selectedVariantId?: string | null
 }
 
-const ProductTemplate: React.FC<ProductTemplateProps> = ({
+const ProductTemplate = async ({
   product,
   region,
   countryCode,
   images,
   personaMedia = [],
-}) => {
+  selectedVariantId,
+}: ProductTemplateProps) => {
   if (!product || !product.id) {
     return notFound()
   }
+
+  const colorMap = await getColorMap()
 
   const productUrl = `${getBaseURL()}/${countryCode}/products/${product.handle}`
 
@@ -71,39 +77,42 @@ const ProductTemplate: React.FC<ProductTemplateProps> = ({
           { name: product.title ?? "Produto", url: productUrl },
         ]}
       />
-      <div
-        className="content-container  flex flex-col small:flex-row small:items-start py-6 relative"
-        data-testid="product-container"
-      >
-        <div className="flex flex-col small:sticky small:top-48 small:py-0 small:max-w-[300px] w-full py-8 gap-y-6">
-          <ProductInfo product={product} />
-          <DsbHero product={product} />
-          <ProductTabs product={product} />
+      <ProductSelectionProvider product={product} initialVariantId={selectedVariantId}>
+        <div
+          className="content-container  flex flex-col small:flex-row small:items-start py-6 relative"
+          data-testid="product-container"
+        >
+          <div className="flex flex-col small:sticky small:top-48 small:py-0 small:max-w-[300px] w-full py-8 gap-y-6">
+            <ProductInfo product={product} />
+            <DsbHero product={product} />
+            <ProductTabs product={product} />
+          </div>
+          <div className="block w-full relative">
+            <PersonaGallery
+              images={images}
+              personaMedia={personaMedia}
+              productTitle={product.title}
+            />
+          </div>
+          <div className="flex flex-col small:sticky small:top-48 small:py-0 small:max-w-[300px] w-full py-8 gap-y-12">
+            <ProductOnboardingCta />
+            <Suspense
+              fallback={
+                <ProductActions
+                  disabled={true}
+                  product={product}
+                  region={region}
+                  colorMap={colorMap}
+                />
+              }
+            >
+              <ProductActionsWrapper id={product.id} region={region} colorMap={colorMap} />
+            </Suspense>
+            <GuaranteeSeals />
+            {allOut && <NotifyMe productId={product.handle ?? product.id} />}
+          </div>
         </div>
-        <div className="block w-full relative">
-          <PersonaGallery
-            images={images}
-            personaMedia={personaMedia}
-            productTitle={product.title}
-          />
-        </div>
-        <div className="flex flex-col small:sticky small:top-48 small:py-0 small:max-w-[300px] w-full py-8 gap-y-12">
-          <ProductOnboardingCta />
-          <Suspense
-            fallback={
-              <ProductActions
-                disabled={true}
-                product={product}
-                region={region}
-              />
-            }
-          >
-            <ProductActionsWrapper id={product.id} region={region} />
-          </Suspense>
-          <GuaranteeSeals />
-          {allOut && <NotifyMe productId={product.handle ?? product.id} />}
-        </div>
-      </div>
+      </ProductSelectionProvider>
       <div className="content-container max-w-4xl">
         <QuemE product={product} />
         <PdpTestimonials />

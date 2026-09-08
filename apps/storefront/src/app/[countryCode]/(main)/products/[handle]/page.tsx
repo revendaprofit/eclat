@@ -149,6 +149,7 @@ export default async function ProductPage(props: Props) {
       countryCode={params.countryCode}
       images={images ?? []}
       personaMedia={personaMedia}
+      selectedVariantId={selectedVariantId ?? null}
     />
   )
 }

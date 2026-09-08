@@ -8,8 +8,12 @@ import X from "@modules/common/icons/x"
 
 import { getProductPrice } from "@lib/util/get-product-price"
 import OptionSelect from "./option-select"
+import ColorSelect from "./color-select"
+import SizeSelect from "./size-select"
 import { HttpTypes } from "@medusajs/types"
 import { isSimpleProduct } from "@lib/util/product"
+import { variantLabel } from "@lib/util/pdp-variants"
+import type { ColorMap } from "@lib/util/colors"
 
 type MobileActionsProps = {
   product: HttpTypes.StoreProduct
@@ -21,6 +25,7 @@ type MobileActionsProps = {
   isAdding?: boolean
   show: boolean
   optionsDisabled: boolean
+  colorMap: ColorMap
 }
 
 const MobileActions: React.FC<MobileActionsProps> = ({
@@ -33,6 +38,7 @@ const MobileActions: React.FC<MobileActionsProps> = ({
   isAdding,
   show,
   optionsDisabled,
+  colorMap,
 }) => {
   const { state, open, close } = useToggleState()
 
@@ -109,9 +115,7 @@ const MobileActions: React.FC<MobileActionsProps> = ({
               >
                 <div className="flex items-center justify-between w-full">
                   <span>
-                    {variant
-                      ? Object.values(options).join(" / ")
-                      : "Escolher opções"}
+                    {variant ? variantLabel(product, variant) : "Escolher opções"}
                   </span>
                   <ChevronDown />
                 </div>
@@ -174,8 +178,11 @@ const MobileActions: React.FC<MobileActionsProps> = ({
                   <div className="bg-white px-6 py-12">
                     {(product.variants?.length ?? 0) > 1 && (
                       <div className="flex flex-col gap-y-6">
-                        {(product.options || []).map((option) => {
-                          return (
+                        <ColorSelect colorMap={colorMap} disabled={optionsDisabled} />
+                        <SizeSelect disabled={optionsDisabled} />
+                        {(product.options ?? [])
+                          .filter((o) => !/^(tamanho|cor)$/i.test(o.title ?? ""))
+                          .map((option) => (
                             <div key={option.id}>
                               <OptionSelect
                                 option={option}
@@ -185,8 +192,7 @@ const MobileActions: React.FC<MobileActionsProps> = ({
                                 disabled={optionsDisabled}
                               />
                             </div>
-                          )
-                        })}
+                          ))}
                       </div>
                     )}
                   </div>
