@@ -18,19 +18,21 @@ function pushSelectItem(data: ProductCardData, listName?: string) {
   } catch {}
 }
 
-export default function ProductCard({ data, countryCode, listName }: { data: ProductCardData; countryCode: string; listName?: string }) {
+export default function ProductCard({ data, countryCode, listName, aspect = "portrait" }: { data: ProductCardData; countryCode: string; listName?: string; aspect?: "portrait" | "featured" }) {
   const [active, setActive] = useState(() => Math.max(0, data.colors.findIndex((c) => c.available)))
   const [sheet, setSheet] = useState(false)
   const color = data.colors[active] ?? data.colors[0]
   const [img1, img2] = color?.images.length ? color.images : data.images
   const badge = badgeFor(data, active)
   const href = `/products/${data.handle}${color?.firstAvailableVariantId ? `?v_id=${color.firstAvailableVariantId}` : ""}`
+  // Proporção do card: portrait (9/16) no grid, featured (11/14) no destaque da home
+  const aspectClass = aspect === "featured" ? "aspect-[11/14]" : "aspect-[9/16]"
 
   // A faixa de adição rápida fica FORA do link (botão dentro de <a> é HTML inválido):
   // o link cobre a imagem por baixo, a faixa fica por cima como irmã posicionada.
   return (
     <div className="group relative" data-testid="product-wrapper">
-      <div className="relative aspect-[9/16] w-full overflow-hidden rounded-large bg-ui-bg-subtle">
+      <div className={clx("relative w-full overflow-hidden rounded-large bg-ui-bg-subtle", aspectClass)}>
         <LocalizedClientLink href={href} onClick={() => pushSelectItem(data, listName)} className="absolute inset-0 block" aria-label={data.title}>
           <Badge badge={badge} percent={data.price?.percentage_diff} />
           {img1 ? (
