@@ -2,6 +2,8 @@ import Image from "next/image"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import { clx } from "@modules/common/components/ui"
 import { getNavigation } from "@lib/data/navigation"
+import { getServerPrefs } from "@lib/data/prefs"
+import { orderByStyles } from "@lib/util/style-order"
 
 // I6: classes completas (não interpoladas) para o Tailwind não descartar no build — o número
 // de colunas do desktop acompanha a quantidade de femininas visíveis (nunca mais colunas que itens).
@@ -15,14 +17,16 @@ const SMALL_COLS: Record<number, string> = {
 
 // "Compre por peça" (spec §5.4): as categorias femininas visíveis, por rank, com capa.
 export default async function ShopByCategory({ countryCode }: { countryCode: string }) {
-  const { feminine } = await getNavigation(countryCode)
+  const [{ feminine }, prefs] = await Promise.all([getNavigation(countryCode), getServerPrefs()])
   if (!feminine.length) return null
-  const columns = Math.min(feminine.length, 5)
+  // spec §10: estilos do wizard primeiro (nunca esconde nada); sem cookie, ordem = rank
+  const ordered = orderByStyles(feminine, prefs.estilos)
+  const columns = Math.min(ordered.length, 5)
   return (
     <section className="content-container py-12 small:py-16" data-testid="shop-by-category">
       <h2 className="font-serif text-3xl small:text-4xl text-eclat-grafite mb-8 text-center">Compre por peça</h2>
       <ul className={clx("grid grid-cols-2 gap-3 small:gap-5", SMALL_COLS[columns])}>
-        {feminine.map((c) => (
+        {ordered.map((c) => (
           <li key={c.id}>
             <LocalizedClientLink href={`/categories/${c.handle}`} className="group block">
               <div className="relative aspect-[3/4] rounded-md overflow-hidden bg-eclat-areia/40">

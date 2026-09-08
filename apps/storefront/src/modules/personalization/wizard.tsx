@@ -1,6 +1,7 @@
 "use client"
 
 import Image from "next/image"
+import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 import { getPrefs, setPrefs, type EclatPrefs } from "./prefs"
 import type { Persona } from "@lib/data/personas"
@@ -9,14 +10,17 @@ import type { Persona } from "@lib/data/personas"
 // Renderiza nada no SSR (não afeta SEO/CWV); abre após hidratar, com atraso.
 
 const TAMANHOS = ["P", "M", "G", "GG"]
+// ids = chaves de STYLE_HANDLES (lib/util/style-order.ts) — a home reordena "Compre por peça" por eles
 const ESTILOS = [
-  { id: "legging", label: "Leggings & Flare" },
-  { id: "top", label: "Tops & Blusas" },
+  { id: "legging", label: "Leggings" },
+  { id: "top", label: "Tops" },
+  { id: "short", label: "Shorts" },
   { id: "conjunto", label: "Conjuntos" },
-  { id: "macacao", label: "Macacões" },
+  { id: "macacao", label: "Macaquinhos & Macacões" },
 ]
 
 export default function Wizard({ personas }: { personas: Persona[] }) {
+  const router = useRouter()
   const [open, setOpen] = useState(false)
   const [step, setStep] = useState(0)
   const [draft, setDraft] = useState<EclatPrefs>({})
@@ -45,10 +49,12 @@ export default function Wizard({ personas }: { personas: Persona[] }) {
   const close = (done: boolean) => {
     setPrefs({ ...draft, wizard_done: done || getPrefs().wizard_done || false })
     setOpen(false)
+    router.refresh()
   }
   const finish = () => {
     setPrefs({ ...draft, wizard_done: true })
     setOpen(false)
+    router.refresh()
   }
 
   return (
@@ -110,7 +116,7 @@ export default function Wizard({ personas }: { personas: Persona[] }) {
           <>
             <h2 className="font-serif text-2xl text-eclat-grafite mb-1">Seu tamanho</h2>
             <p className="text-sm text-eclat-grafite/60 mb-5">
-              Todo produto já abre no seu tamanho.
+              Todo produto e toda listagem já abrem no seu tamanho.
             </p>
             <div className="flex gap-3">
               {TAMANHOS.map((t) => (
