@@ -53,7 +53,7 @@ export default async function ProductListing({
               <ul className="grid grid-cols-2 w-full small:grid-cols-3 medium:grid-cols-4 gap-x-6 gap-y-8" data-testid="products-list">
                 {result.products.map((p) => (
                   <li key={p.id}>
-                    <ProductPreview product={p} region={region} />
+                    <ProductPreview product={p} region={region} listName={listName} />
                   </li>
                 ))}
               </ul>
