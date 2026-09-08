@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react"
 import { categoryPath, isAccessoryHandle, validateProductOptions } from "@/lib/catalog-rules"
+import ColorImages from "@/components/color-images"
 
 type Ref = { id: string; name: string }
 type Cat = { id: string; name: string; handle: string; parent_id: string | null; rank: number }
@@ -376,6 +377,13 @@ export default function ProductForm({
                 )}
               </div>
             </div>
+
+            {mode === "edit" && productId && (
+              <div>
+                <label className={labelCls}>Fotos por cor</label>
+                <ColorImages productId={productId} />
+              </div>
+            )}
 
             {mode === "create" && (
               <div className="border border-eclat-dourado/40 rounded-lg p-4 bg-white/60 flex flex-col gap-3">

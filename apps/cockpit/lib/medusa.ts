@@ -1,6 +1,8 @@
 // Acesso à Medusa Admin API a partir do cockpit (server-side).
 // Login programático (jeito mais simples) com token em cache curto.
 
+import type { RawImage, RawProductImages } from "./color-images"
+
 const URL = process.env.MEDUSA_ADMIN_URL
 const EMAIL = process.env.MEDUSA_ADMIN_EMAIL
 const PASSWORD = process.env.MEDUSA_ADMIN_PASSWORD
@@ -773,4 +775,69 @@ export async function medusaUpdateProduct(
 export async function medusaDeleteProduct(id: string): Promise<void> {
   const r = await medusaAdmin(`/admin/products/${id}`, { method: "DELETE" })
   if (!r.ok) throw new Error(`excluir produto falhou (HTTP ${r.status}): ${await r.text()}`)
+}
+
+// ---- Fotos por cor (spec 4.5) ----
+
+export async function medusaGetProductImages(productId: string): Promise<RawProductImages> {
+  const r = await medusaAdmin(
+    `/admin/products/${productId}?fields=thumbnail,images.id,images.url,options.id,options.title,variants.id,variants.options.option_id,variants.options.value,variants.images.id`
+  )
+  if (!r.ok) throw new Error(`buscar imagens falhou (HTTP ${r.status})`)
+  const { product } = (await r.json()) as { product: RawProductImages }
+  return {
+    thumbnail: product.thumbnail ?? null,
+    images: product.images ?? [],
+    options: product.options ?? [],
+    variants: product.variants ?? [],
+  }
+}
+
+// O Medusa substitui a lista inteira: reenviar as existentes (por id) + as novas (por url).
+export async function medusaAddProductImages(productId: string, urls: string[]): Promise<RawImage[]> {
+  const antes = await medusaGetProductImages(productId)
+  const r = await medusaAdmin(`/admin/products/${productId}`, {
+    method: "POST",
+    body: JSON.stringify({
+      images: [...antes.images.map((i) => ({ id: i.id, url: i.url })), ...urls.map((url) => ({ url }))],
+    }),
+  })
+  if (!r.ok) throw new Error(`adicionar imagens falhou (HTTP ${r.status}): ${await r.text()}`)
+  const depois = await medusaGetProductImages(productId)
+  const ids = new Set(antes.images.map((i) => i.id))
+  return depois.images.filter((i) => !ids.has(i.id))
+}
+
+export async function medusaRemoveProductImage(productId: string, imageId: string): Promise<void> {
+  const antes = await medusaGetProductImages(productId)
+  const r = await medusaAdmin(`/admin/products/${productId}`, {
+    method: "POST",
+    body: JSON.stringify({
+      images: antes.images.filter((i) => i.id !== imageId).map((i) => ({ id: i.id, url: i.url })),
+    }),
+  })
+  if (!r.ok) throw new Error(`remover imagem falhou (HTTP ${r.status}): ${await r.text()}`)
+}
+
+// Vincula/desvincula UMA imagem a variantes (endpoint nativo desde Medusa 2.11.2).
+export async function medusaSetImageVariants(
+  productId: string,
+  imageId: string,
+  add: string[],
+  remove: string[]
+): Promise<void> {
+  if (!add.length && !remove.length) return
+  const r = await medusaAdmin(`/admin/products/${productId}/images/${imageId}/variants/batch`, {
+    method: "POST",
+    body: JSON.stringify({ add, remove }),
+  })
+  if (!r.ok) throw new Error(`vincular imagem falhou (HTTP ${r.status}): ${await r.text()}`)
+}
+
+export async function medusaSetThumbnail(productId: string, url: string | null): Promise<void> {
+  const r = await medusaAdmin(`/admin/products/${productId}`, {
+    method: "POST",
+    body: JSON.stringify({ thumbnail: url }),
+  })
+  if (!r.ok) throw new Error(`definir capa falhou (HTTP ${r.status}): ${await r.text()}`)
 }
