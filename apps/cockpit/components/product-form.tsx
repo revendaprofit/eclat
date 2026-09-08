@@ -55,6 +55,7 @@ export default function ProductForm({
   const [thumbnail, setThumbnail] = useState<string | null>(null)
   const [enviandoImg, setEnviandoImg] = useState(false)
   const [meta, setMeta] = useState<{ k: string; v: string }[]>([{ k: "", v: "" }])
+  const [destaqueRank, setDestaqueRank] = useState("")
 
   // variantes (apenas no modo criar)
   const [tamanhos, setTamanhos] = useState<string[]>(["P", "M", "G", "GG"])
@@ -92,7 +93,10 @@ export default function ProductForm({
           setPeso(p.weight != null ? String(p.weight) : "")
           setThumbnail(p.thumbnail ?? null)
           const entries = Object.entries(p.metadata ?? {})
-          setMeta(entries.length ? entries.map(([k, v]) => ({ k, v: String(v) })) : [{ k: "", v: "" }])
+          const dr = entries.find(([k]) => k === "destaque_rank")
+          setDestaqueRank(dr ? String(dr[1]) : "")
+          const semDestaque = entries.filter(([k]) => k !== "destaque_rank")
+          setMeta(semDestaque.length ? semDestaque.map(([k, v]) => ({ k, v: String(v) })) : [{ k: "", v: "" }])
         }
       } catch (e) {
         setErro((e as Error).message)
@@ -199,11 +203,14 @@ export default function ProductForm({
     meta.forEach(({ k, v }) => {
       if (k.trim()) o[k.trim()] = v
     })
+    if (destaqueRank.trim() !== "") o.destaque_rank = String(Math.round(Number(destaqueRank)))
+    else delete o.destaque_rank
     return o
   }
 
   async function salvar() {
     setErro(null)
+    if (destaqueRank.trim() !== "" && !(Number(destaqueRank) >= 0)) return setErro("Ordem em Destaques deve ser um número ≥ 0.")
     if (!titulo.trim()) return setErro("Informe o título.")
     if (!handle.trim()) return setErro("Informe o handle (URL).")
     const pesoNum = peso.trim() === "" ? null : Number(peso)
@@ -494,6 +501,11 @@ export default function ProductForm({
                 {validacao.warnings.map((m) => <p key={m} className="text-xs text-amber-700">{m}</p>)}
               </div>
             )}
+
+            <div>
+              <label className={labelCls}>Ordem em &quot;Destaques&quot; (menor aparece primeiro; vazio = fora dos destaques)</label>
+              <input value={destaqueRank} onChange={(e) => setDestaqueRank(e.target.value)} inputMode="numeric" className={inputCls + " max-w-[160px]"} />
+            </div>
 
             <div>
               <label className={labelCls}>Ficha técnica (metadata)</label>
