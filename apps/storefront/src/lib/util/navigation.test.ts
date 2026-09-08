@@ -24,6 +24,7 @@ const PRODUCTS = [
   prod("p2", ["c_top"], [v("v3", "verde exército", 1)], "col_black"),
   prod("p3", ["c_leg"], [v("v4", "Blackout", 5)], "col_black"),
   prod("p4", ["c_meia"], [v("v5", "Preto", 1)], null),
+  prod("p5", ["c_leg"], [v("v6", "Blackout", 2)], "col_lum"),
 ]
 const COLLECTIONS = [{ id: "col_black", title: "Família Blackout", handle: "familia-blackout", metadata: {} }, { id: "col_lum", title: "Lumière", handle: "lumiere", metadata: { image_url: "lum.jpg" } }]
 const MAP = { "Verde Exército": { hex: "#3B4A2F", swatch_url: null }, Licor: { hex: "#D5823E", swatch_url: null } }
@@ -55,7 +56,8 @@ describe("buildNavData", () => {
   })
   it("coleção só aparece se algum produto pertence a ela (capa não basta); capa vem do metadata ou do 1º produto", () => {
     expect(nav.collections).toEqual([
-      { id: "col_black", title: "Família Blackout", handle: "familia-blackout", image_url: "p1.jpg" },
+      { id: "col_black", title: "Família Blackout", handle: "familia-blackout", image_url: "p1.jpg" }, // sem metadata → thumb do 1º produto
+      { id: "col_lum", title: "Lumière", handle: "lumiere", image_url: "lum.jpg" }, // metadata.image_url vence a thumb do p5
     ])
   })
   it("entrada vazia devolve vazio", () => {
