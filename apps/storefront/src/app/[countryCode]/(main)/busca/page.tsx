@@ -36,7 +36,10 @@ export default async function BuscaPage(props: Props) {
     if (handle) redirect(`/${countryCode}/categories/${handle}`)
   }
   const legacy = legacyRedirectQuery(sp)
-  if (legacy !== null) permanentRedirect(`${path}?q=${encodeURIComponent(termo)}${legacy ? `&${legacy}` : ""}`)
+  if (legacy !== null) {
+    const query = [termo ? `q=${encodeURIComponent(termo)}` : "", legacy].filter(Boolean).join("&")
+    permanentRedirect(query ? `${path}?${query}` : path)
+  }
   const { filters, implicitSize } = await resolveListingFilters(sp)
 
   const header = (
