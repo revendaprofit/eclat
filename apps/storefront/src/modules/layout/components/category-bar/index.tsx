@@ -16,32 +16,43 @@ export default function CategoryBar({ nav }: { nav: NavData }) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(null) }
     window.addEventListener("keydown", onKey)
-    return () => window.removeEventListener("keydown", onKey)
+    return () => {
+      window.removeEventListener("keydown", onKey)
+      if (timer.current) window.clearTimeout(timer.current)
+    }
   }, [])
 
   const item = "h-11 flex items-center transition-colors hover:text-eclat-terracota focus:outline-none focus-visible:text-eclat-terracota"
   const current = open ? nav.roots.find((r) => r.handle === open) : undefined
   const panelKind = open === "colecoes" ? "collections" : current?.children.length ? "parent" : "feminine"
   const hasPanel = open === "colecoes" ? nav.collections.length > 0 : !!current && (current.children.length > 0 || current.colors.length > 0 || !!current.image_url)
+  const rootHasPanel = (r: NavData["roots"][number]) => r.children.length > 0 || r.colors.length > 0 || !!r.image_url
 
   return (
-    <div className="hidden small:block bg-white border-b border-ui-border-base relative" onMouseLeave={hide}>
+    <div
+      className="hidden small:block bg-white border-b border-ui-border-base relative"
+      onMouseLeave={hide}
+      onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node | null)) hide() }}
+    >
       <nav className="content-container flex items-center justify-center gap-x-10 h-11 text-xsmall-regular uppercase tracking-[0.18em]" aria-label="Categorias">
         <LocalizedClientLink href="/store?ordenar=novidades" className={clx(item, "text-eclat-terracota font-semibold")} onMouseEnter={hide} data-testid="nav-novidades">Novidades</LocalizedClientLink>
-        {nav.roots.map((r) => (
-          <LocalizedClientLink
-            key={r.id}
-            href={`/categories/${r.handle}`}
-            className={clx(item, r.feminine ? "text-eclat-grafite/80" : "text-eclat-grafite/60", open === r.handle && "text-eclat-terracota")}
-            onMouseEnter={() => show(r.handle)}
-            onFocus={() => show(r.handle)}
-            aria-expanded={open === r.handle}
-            aria-controls="nav-panel"
-            data-testid={`nav-cat-${r.handle}`}
-          >
-            {r.name}
-          </LocalizedClientLink>
-        ))}
+        {nav.roots.map((r) => {
+          const withPanel = rootHasPanel(r)
+          return (
+            <LocalizedClientLink
+              key={r.id}
+              href={`/categories/${r.handle}`}
+              className={clx(item, r.feminine ? "text-eclat-grafite/80" : "text-eclat-grafite/60", open === r.handle && "text-eclat-terracota")}
+              onMouseEnter={withPanel ? () => show(r.handle) : undefined}
+              onFocus={withPanel ? () => show(r.handle) : undefined}
+              onClick={() => setOpen(null)}
+              {...(withPanel ? { "aria-expanded": open === r.handle, "aria-controls": "nav-panel" } : {})}
+              data-testid={`nav-cat-${r.handle}`}
+            >
+              {r.name}
+            </LocalizedClientLink>
+          )
+        })}
         {nav.collections.length > 0 && (
           <button type="button" className={clx(item, "uppercase tracking-[0.18em] text-eclat-grafite/80", open === "colecoes" && "text-eclat-terracota")} onMouseEnter={() => show("colecoes")} onFocus={() => show("colecoes")} onClick={() => setOpen(open === "colecoes" ? null : "colecoes")} aria-expanded={open === "colecoes"} aria-controls="nav-panel" data-testid="nav-colecoes">Coleções</button>
         )}
