@@ -1,6 +1,7 @@
 import { listCategories } from "@lib/data/categories";
 import { listCollections } from "@lib/data/collections";
 import { Text, clx } from "@modules/common/components/ui";
+import { HttpTypes } from "@medusajs/types";
 
 import LocalizedClientLink from "@modules/common/components/localized-client-link";
 
@@ -8,7 +9,9 @@ export default async function Footer() {
   const { collections } = await listCollections({
     fields: "*products",
   });
-  const productCategories = await listCategories();
+  const productCategories = await listCategories().catch(
+    () => [] as HttpTypes.StoreProductCategory[]
+  );
 
   return (
     <footer className="border-t border-ui-border-base w-full">

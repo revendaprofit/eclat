@@ -69,6 +69,13 @@ describe("optionValue / variantsOfColor", () => {
   it("filtra variantes de uma cor", () => {
     expect(variantsOfColor(PRODUCT, "Licor").map((x) => x.id)).toEqual(["v3", "v4"])
   })
+  it("filtra variantes de uma cor ignorando acento/caixa (normalizeColorName)", () => {
+    const PRODUTO_SEM_ACENTO = {
+      options: OPTS,
+      variants: [v("w1", "P", "Verde Exercito", 4)],
+    }
+    expect(variantsOfColor(PRODUTO_SEM_ACENTO, "Verde Exército").map((x) => x.id)).toEqual(["w1"])
+  })
 })
 
 describe("colorStock / isLowStock", () => {

@@ -1,6 +1,8 @@
 // Regras de disponibilidade e "novidade" — uma fonte só para card, filtros e PDP.
 // Sem I/O, sem React: testável e usável em server e client components.
 
+import { normalizeColorName } from "./colors"
+
 export type StockVariant = {
   id?: string
   manage_inventory?: boolean | null
@@ -43,7 +45,10 @@ export function optionValue(
 }
 
 export function variantsOfColor(product: ProductLike, color: string): StockVariant[] {
-  return (product.variants ?? []).filter((v) => optionValue(product.options, v, "Cor") === color)
+  const wanted = normalizeColorName(color)
+  return (product.variants ?? []).filter(
+    (v) => normalizeColorName(optionValue(product.options, v, "Cor") ?? "") === wanted
+  )
 }
 
 // Soma só quantidade numérica das variantes disponíveis (backorder sem estoque conta 0).
