@@ -43,7 +43,7 @@ Nunca vincular a Éclat a nenhuma outra marca.
 - Fundação (Parte 0): CONCLUÍDA. Repo: github.com/revendaprofit/eclat (conta revendaprofit fixada p/ push).
 - Parte 1 — Catálogo: architecture/catalog.md. Região Brasil/BRL, vitrine pt-BR. 4 produtos-exemplo
   (seed: apps/backend/src/scripts/seed-eclat.ts). PENDENTE: produtos REAIS + imagens.
-- Parte 2 — Vitrine: shell de marca pt-BR (nav, hero, home, footer). PENDENTE: busca, SEO por página, telas de conta.
+- Parte 2 — Vitrine: shell de marca pt-BR (nav, hero, home, footer). PENDENTE: telas de conta. (Busca com sugestões e SEO por listagem: entregues nas Fases 2–5 da spec de navegação por tipo de peça.)
 - Parte 3 — Carrinho & Checkout: fluxo validado (pedido criado) + pt-BR. Pagamento = provider manual.
 - Parte 4 — Pagamento (Mercado Pago): ADIADA (retomar com Access Token do MP).
 - Parte 5 — CRM/Supabase: architecture/crm.md + supabase/migrations/0001_crm_init.sql aplicados.

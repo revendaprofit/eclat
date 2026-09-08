@@ -166,11 +166,11 @@ Query params em português, estáveis e compartilháveis:
 ## 9. Busca
 
 - A barra ganha **sugestões ao digitar** (client, debounce 200ms): categorias cujo nome bate, cores do mapa que batem ("verde" → "Ver Verde Exército em Leggings/Tops…") e até 5 produtos via `/store/products?q=`. Enter continua indo para `/busca`.
-- `/busca` passa a usar o mesmo pipeline de listagem (filtros, ordenação, paginação) com `q` como filtro extra. Sinônimos simples num mapa local (`lib/util/search-synonyms.ts`: "calça" → leggings, "blusa"/"cropped" → tops, "bermuda" → shorts, "macacão" → macaquinhos).
+- `/busca` passa a usar o mesmo pipeline de listagem (filtros, ordenação, paginação) com `q` como filtro extra. Sinônimos simples num mapa local (`lib/util/search-synonyms.ts`: "calça" → leggings, "blusa"/"cropped" → tops, "shortinho" → shorts ("bermuda" não: Bermudas é categoria real em Masculino — ruling F5), "macacão" → macaquinhos).
 
 ## 10. Wizard "Minha ÉCLAT" ligado à navegação
 
-- **Tamanho salvo** pré-aplica `tamanho=<X>` ao abrir qualquer listagem sem filtro explícito, com chip removível "Seu tamanho: M". A URL só recebe o param quando a cliente mexe (evita URLs personalizadas em compartilhamento).
+- **Tamanho salvo** pré-aplica `tamanho=<X>` ao abrir qualquer listagem sem filtro explícito, com chip removível "Seu tamanho: M". A URL só recebe o param quando a cliente mexe (evita URLs personalizadas em compartilhamento). Opt-out da chip = `?tamanho=` (param presente e vazio).
 - **Estilos escolhidos** reordenam o bloco "Compre por peça" da home (escolhidos primeiro). Nada é escondido.
 - Ambos lidos do cookie espelho já existente (`prefs.ts`), no servidor.
 
