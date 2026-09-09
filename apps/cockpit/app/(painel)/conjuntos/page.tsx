@@ -3,6 +3,7 @@
 import { Suspense, useCallback } from "react"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import ConjuntoRegras from "@/components/conjunto-regras"
+import ConjuntoCurados from "@/components/conjunto-curados"
 
 const ABAS = [
   { value: "regras", label: "Regras" },
@@ -51,11 +52,7 @@ function ConjuntosPageInner() {
         ))}
       </div>
 
-      {aba === "regras" ? (
-        <ConjuntoRegras />
-      ) : (
-        <p className="text-sm text-eclat-grafite/50">Em construção.</p>
-      )}
+      {aba === "regras" ? <ConjuntoRegras /> : <ConjuntoCurados />}
     </div>
   )
 }
