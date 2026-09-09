@@ -758,3 +758,7 @@ PRÓXIMO (usuário, guiado): Railway (Postgres + serviço do repo, root /, vars,
   6. Só então, se quiser: ativar a regra padrão (liga o benefício de fato na vitrine/carrinho quando F3/F4 estiverem no ar).
   - Resultados a registrar aqui (nesta entrada, ao final de cada passo do dono): pendente — nenhum passo executado ainda.
 - PENDÊNCIAS: (1) redeploy do backend (`railway up`) antes do roteiro, ver acima; (2) roteiro de validação do dono (6 passos acima), nenhum executado nesta task; (3) `DELETE /admin/conjuntos/regras/:id` para exceções (hoje só desativa) — pendência de backend para reintroduzir "Usar padrão"; (4) `capa` nas coleções para o card de par de coleção (F3). Próxima ação: dono roda o roteiro (após o redeploy) e decide se ativa a regra padrão; F3 (vitrine)/F4 (carrinho) podem seguir em paralelo.
+
+## 2026-09-09 — Benefício Conjunto F2: deploy (backend + Cockpit) ✅
+- Backend: `railway up` (deployment `4dddf4e6`, SUCCESS 10:55) com `capa_url` `.nullable()`; sonda em produção (POST curado com `capa_url: null` e produtos inexistentes → 400 "Um ou mais produtos não existem", i.e. o schema aceitou null; nada gravado, 0 curados). Cockpit publicado pelo Vercel com o push de `main` (`8d32436`).
+- Próximo: roteiro de validação do dono (entrada da F2 acima). Regra padrão continua inativa.
