@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react"
 import { categoryPath, isAccessoryHandle, validateProductOptions } from "@/lib/catalog-rules"
 import ColorImages from "@/components/color-images"
+import ConjuntoProdutoPanel from "@/components/conjunto-produto-panel"
 
 type Ref = { id: string; name: string }
 type Cat = { id: string; name: string; handle: string; parent_id: string | null; rank: number; is_active: boolean }
@@ -395,6 +396,8 @@ export default function ProductForm({
                 <ColorImages productId={productId} />
               </div>
             )}
+
+            {mode === "edit" && productId && <ConjuntoProdutoPanel productId={productId} />}
 
             {mode === "create" && (
               <div className="border border-eclat-dourado/40 rounded-lg p-4 bg-white/60 flex flex-col gap-3">
