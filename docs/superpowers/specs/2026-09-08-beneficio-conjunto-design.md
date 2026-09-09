@@ -154,9 +154,11 @@ cards inicialmente visíveis; fallback de thumbnail do produto quando não há f
 §7.1/§7.4), **V2** (um par gerado por coleção some da vitrine quando um curado ativo cobre exatamente
 o mesmo conjunto de produtos — o carrinho aplicaria a regra do curado, não a da coleção; mudança no
 backend, `apps/backend/src/modules/beneficio-conjunto/catalogo-conjuntos.ts`, precisa de redeploy antes
-do deploy da vitrine — ver §12), **V3/V5** (§7.2 — "Adicionar o conjunto" é resumível após falha
-parcial: o progresso de quais peças já entraram no carrinho fica atrelado à seleção corrente, sem
-`useEffect` de reset separado; os seletores de cada peça ficam travados durante a adição), **V4**
+do deploy da vitrine — ver §12), **V3/V5** (§7.2/§7.3 — os dois fluxos de adição ("Adicionar o
+conjunto" na página do conjunto, "Adicionar as duas" na PDP) são resumíveis após falha parcial, por
+mecanismos diferentes: V5 é a PDP — progresso atrelado à seleção corrente, sem `useEffect` de reset;
+V3 é a página do conjunto, que mantém um `useEffect` de reset guardado por `adicionandoRef` durante a
+adição; em ambos os fluxos os seletores de cada peça ficam travados durante a adição), **V4**
 (§7.4 — o selo "Forma conjunto" também aparece numa peça que só forma conjunto através de um curado
 ativo, não só via par de coleção listado — sem isso a Legging do curado Look Blackout, ofuscada pelo
 V2, nunca ganharia o selo apesar de aparecer em "Complete o conjunto" na própria PDP).
