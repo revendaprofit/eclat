@@ -90,7 +90,9 @@ updateCartPromotionsWorkflow
 
 **Marcação (ruling 4 do controller — ver §6.1 amendado na spec):** cada entrada de contexto ganha `conjunto_desconto` com um de três valores — `regra_id` (unidade que recebe desconto), `"conjunto"` (está num conjunto mas não é a unidade descontada, ex. a peça mais cara em "menor peça" — o cupom também não a alcança), `"nenhum"` (livre). **O contexto não carrega `conjunto_id`**: uma mesma linha (`item_id`) pode ter unidades em conjuntos diferentes ao mesmo tempo (ex. top ×2 pareado com legging num conjunto e com short em outro), então um `conjunto_id` único por entrada mentiria. Quem precisa saber qual conjunto formou cada unidade usa `GET /store/conjuntos/oportunidades?cart_id=`, que devolve `conjuntos: ConjuntoFormado[]` com os `item_id`s corretos.
 
-Uma linha com quantidade N, das quais K estão marcadas, vira até 3 entradas de contexto com o **mesmo `id`** (decisão provada na F0): `regra_id` (K1 unidades), `"conjunto"` (K2), `"nenhum"` (N−K1−K2). Todo campo monetário da entrada (`subtotal`, `total`, `discount_total`, `tax_total` etc., e o respectivo `raw_<campo>.value`) é reescalado por `n/q` (função `escalar` em `avaliar-carrinho.ts`) — não só `subtotal`.
+Uma linha com quantidade N, das quais K estão marcadas, vira **uma entrada de contexto por marca presente** com o **mesmo `id`** (decisão provada na F0; texto corrigido — M4): não é um teto fixo de 3. Uma linha pode ter unidades em conjuntos de **regras diferentes** ao mesmo tempo (ex.: top ×2 pareado com uma legging num conjunto e com um short em outro — cada `regra_id` é uma marca própria), então o número de entradas é o número de marcas distintas que tocaram a linha (`regra_id` de cada conjunto, `"conjunto"`, `"nenhum"`), não um valor fixo. Todo campo monetário da entrada (`subtotal`, `total`, `discount_total`, `tax_total` etc., e o respectivo `raw_<campo>.value`) é reescalado por `n/q` (função `escalar` em `avaliar-carrinho.ts`) — não só `subtotal`.
+
+**Risco documentado (I2):** quando uma linha é dividida em mais de uma entrada de contexto, todas continuam com o **mesmo `item.id`** — e o motor de promoções do Medusa calcula o desconto de uma promoção sobre o subtotal do item já **líquido** do desconto que outra promoção aplicou ao mesmo `item.id`, mesmo em entradas de contexto diferentes. Ou seja, a base de desconto é compartilhada entre o conjunto e um cupom que alcança o resto livre da mesma linha — o valor do cupom não é o "ingênuo" (percentual sobre o subtotal cheio da fração livre), e sim sobre esse subtotal menos o que o conjunto já descontou do mesmo item. Ver regressão observada em `apps/backend/integration-tests/http/conjunto-carrinho.spec.ts` ("caso 10"): top ×3 (R$ 189) + legging ×1 (R$ 259), regra padrão `total_percentual` 20% + `CUPOM10` (itens, 10%, regra de exclusão) → conjunto R$ 89,60 (20% de 189+259), cupom R$ 34,02 (não os R$ 37,80 ingênuos — 10% de 340,20, que é 378,00 menos os R$ 37,80 já descontados do mesmo item pelo conjunto). F3/F4 evitam o problema adicionando peças elegíveis sempre em **linhas separadas** (`metadata.conjunto_slot` distinto, spec §6.3), para que toda linha tenha no máximo uma marca.
 
 **O gancho nunca lança** (`conjunto-marcar.ts`): qualquer erro cai em `console.error("[conjunto] gancho", e)` e devolve `new StepResponse({})` — o carrinho segue sem o benefício em vez de quebrar.
 
@@ -182,7 +184,7 @@ Em `oportunidades`, os candidatos **não excluem** produtos já no carrinho — 
 
 ## 9. Como rodar os testes (Windows + Docker)
 
-Suítes: `apps/backend/src/modules/beneficio-conjunto/__tests__/*.unit.spec.ts` (30 testes puros) e `apps/backend/integration-tests/http/conjunto-{modulo,promocao,carrinho,cupom,admin,catalogo,store}.spec.ts` (64 testes de integração HTTP, mais `saude.spec.ts` do harness). **Nunca aponta para produção nem para o Postgres nativo de desenvolvimento** — sempre o contêiner Docker `eclat-pg-test`.
+Suítes: `apps/backend/src/modules/beneficio-conjunto/__tests__/*.unit.spec.ts` (30 testes puros) e `apps/backend/integration-tests/http/conjunto-{modulo,promocao,carrinho,cupom,admin,catalogo,store}.spec.ts` (68 testes de integração HTTP, mais `saude.spec.ts` do harness). **Nunca aponta para produção nem para o Postgres nativo de desenvolvimento** — sempre o contêiner Docker `eclat-pg-test`.
 
 ```bash
 # 1) subir o Postgres de teste (uma vez por sessão de trabalho)
@@ -228,10 +230,19 @@ Mesmo padrão de `scripts/setup-categorias.py` (credenciais de `apps/cockpit/.en
 Ações idempotentes, nesta ordem:
 1. `GET /admin/conjuntos/regras` — cria a regra `padrao` (10% sobre o total, **inativa**) só se ainda não existir.
 2. `GET`/`PUT /admin/conjuntos/pares` — garante `(leggings, tops)` e `(shorts, tops)` ativos, preservando qualquer outro par já cadastrado (o `PUT` sempre envia a lista completa, existentes + novos).
-3. `POST /admin/conjuntos/reconciliar` — imprime `{ regras, cupons }`.
+3. `POST /admin/conjuntos/reconciliar` — **I3:** antes de chamar (em simulação, ou logo antes do `POST` com `--apply`), lista via `GET /admin/promotions` cada promoção não-`CONJUNTO-*` com `code`, `target_type`, `allocation`, se já tem a regra de exclusão, e o que mudaria (`order → items`; `+ regra de exclusão`; `shipping → ignorada`) — visibilidade do que a reconciliação vai tocar antes de gravar. Com `--apply`, chama o `POST` e imprime `{ regras, cupons }`.
 4. `GET /admin/promotions?limit=100` — lista (melhor esforço) os cupons não-`CONJUNTO-*` já convertidos (`target_type: items` + regra de exclusão).
 
 Validado com `python -m py_compile scripts/setup-conjunto.py` (sem erro). **Não executado contra produção nesta task** — a Task 8 só documenta e prepara o script; a execução com `--apply` é o passo 3 do checklist de deploy (§13), que depende do "pode aplicar" do dono.
+
+### Desfazer a conversão de um cupom (I3)
+
+Não existe rota de "reverter" — a conversão (§6) é deliberadamente de mão única (a rota `POST /admin/conjuntos/reconciliar` só converte para a frente). Para desfazer manualmente uma promoção que a conversão alterou:
+1. Achar a promoção (`GET /admin/promotions/:id` com `fields=application_method.target_rules.*`).
+2. Apagar a `target_rule` `{ attribute: "items.conjunto_desconto", operator: "eq", values: ["nenhum"] }` (via `DELETE /admin/promotions/:id/target-rules/batch` ou equivalente da versão do Medusa em uso — checar a doc da Admin API da versão).
+3. Se a promoção tinha virado `items`/`across` (era `order` antes), devolver com `POST /admin/promotions/:id { "application_method": { "target_type": "order", "allocation": null, "max_quantity": null } }` (voltar `allocation`/`max_quantity` para o que a promoção de pedido inteiro aceita).
+
+**Recomendação:** antes do primeiro `--apply` em produção, tirar um dump das três tabelas do módulo Promotion que a conversão toca — `promotion`, `promotion_application_method`, `promotion_rule` (e `promotion_rule_value`) — para ter um "antes" restaurável sem depender de reconstruir o estado manualmente promoção por promoção.
 
 ## 12. Riscos e limites conhecidos
 
@@ -242,6 +253,8 @@ Herdados da spec (§12):
 - **Volume de gerados** cresce com o catálogo — a vitrine (F3) precisa limitar/paginar.
 - **Cupons criados antes do deploy** precisam do script/rota de reconciliação para ganhar a exclusão.
 - O gancho roda a cada mudança de carrinho; custo em memória sobre poucas linhas, desprezível.
+- **I2 — linha dividida compartilha a base de desconto entre conjunto e cupom** (mesmo `item.id`, ver §4 acima): quando o gancho divide uma linha em mais de uma entrada de contexto (parte em conjunto, parte livre), o cupom que alcança a parte livre é calculado sobre o subtotal já líquido do desconto que o conjunto aplicou à mesma linha — não sobre o valor "ingênuo" da fração livre isolada. Regressão pinada em `conjunto-carrinho.spec.ts` ("caso 10"). F3/F4 adicionam peças elegíveis em linhas separadas (`metadata.conjunto_slot`) para que toda linha tenha no máximo uma marca e o problema não apareça na prática — spec §6.3 "Decisão F1".
+- **Pareamento guloso com permutações é máximo só para grafos de pares em formato de estrela** (o cadastro de hoje: `leggings—tops` e `shorts—tops`, ambos com `tops` como nó comum). Testar todas as ordens de processamento (`MAX_PARES_PERMUTAVEIS`, §4 acima) garante o máximo de conjuntos quando os pares ativos formam uma estrela, mas **não há essa garantia se os pares formarem um ciclo** — ex.: cadastrar também `leggings+shorts` fecha um triângulo `tops—leggings—shorts—tops`, e o pareamento guloso por ordem pode ficar aquém do máximo teórico (problema clássico de emparelhamento máximo em grafo geral, que greedy-por-permutação não resolve com garantia — precisaria de um algoritmo tipo Blossom). Limite documentado, não corrigido nesta fase; `PUT /admin/conjuntos/pares` pode ganhar um aviso quando os pares ativos deixarem de formar uma estrela.
 
 Achados da execução F1 (Task 8, registrados aqui por não terem virado risco real):
 - `model.array()` do DML gerou `text[]` nativo sem precisar do fallback `json` cogitado no plano.
@@ -249,7 +262,7 @@ Achados da execução F1 (Task 8, registrados aqui por não terem virado risco r
 - Atualizar `target_type` de um cupom existente (`order` → `items`) funcionou via `promo.updatePromotions` direto no serviço do módulo Promotion, sem passar pelo workflow (evita reentrância no próprio gancho).
 - **Mapeamento 409→422:** o brief pedia `409 Conflict` para duplicidade; o framework do Medusa só mapeia `409` para `MedusaError.Types.CONFLICT` (que sobrescreve a mensagem por um texto genérico de retry). As rotas usam `DUPLICATE_ERROR` (`422`) para manter a mensagem em pt-BR — documentado nas rotas e aqui.
 - **`conjuntoPorHandle` só aceita a ordem canônica** do handle (`handleA--handleB` com A = `categoria_a`) — decisão deliberada para não ter duas URLs válidas para o mesmo conjunto; a vitrine (F3) precisa sempre montar o link a partir de `listarConjuntos`, nunca invertendo os handles à mão.
-- **Testes:** 30 unitários (`__tests__/*.unit.spec.ts`) + 64 de integração HTTP (`integration-tests/http/conjunto-*.spec.ts`) + `saude.spec.ts` do harness, todos verdes contra o Postgres de teste em Docker.
+- **Testes:** 30 unitários (`__tests__/*.unit.spec.ts`) + 68 de integração HTTP (`integration-tests/http/conjunto-*.spec.ts`, após a onda final de revisão — C1/I1/I2/buyget) + `saude.spec.ts` do harness, todos verdes contra o Postgres de teste em Docker.
 
 ## 13. O que F2/F3/F4 consomem
 
@@ -259,7 +272,7 @@ Achados da execução F1 (Task 8, registrados aqui por não terem virado risco r
 
 ## 14. Checklist de deploy (dono/controller — não executar nesta task)
 
-1. O **dono** faz `git push` de `main` (política do projeto: agente entrega os comandos, não faz push — ver memória `eclat-git-push.md`).
+1. Após o **merge** desta branch em `main` (feito localmente), o **dono** faz `git push` de `main` (política do projeto: agente entrega os comandos, não faz push — ver memória `eclat-git-push.md`).
 2. Railway builda e roda `medusa db:migrate` no `predeploy` — cria as 3 tabelas (`conjunto_regra`, `conjunto_par`, `conjunto_curado`).
 3. Com o **"pode aplicar"** do dono: `python scripts/setup-conjunto.py --apply` — cria a regra padrão **inativa**, os 2 pares, reconcilia promoções/cupons existentes.
 4. Validar `GET /store/conjuntos` em produção (deve vir `{ curados: [], colecoes: [] }` — vazio até existir regra **ativa**) e testar um carrinho em dev apontando para o backend de produção (`MEDUSA_BACKEND_URL`/`--base` conforme `architecture/cockpit.md`/`architecture/deploy.md`).
