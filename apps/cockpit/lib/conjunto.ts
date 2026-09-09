@@ -1,0 +1,66 @@
+// Benefício Conjunto no Cockpit — regras de formulário, dinheiro e prévia. Puro (sem fetch, sem React).
+// Espelha a matemática do backend (apps/backend/src/modules/beneficio-conjunto/utils/montar-conjuntos.ts).
+export type TipoDesconto = "menor_peca_percentual" | "menor_peca_valor" | "total_percentual" | "total_valor"
+export const TIPOS_DESCONTO: { value: TipoDesconto; label: string; unidade: "%" | "R$" }[] = [
+  { value: "menor_peca_percentual", label: "% na peça de menor valor", unidade: "%" },
+  { value: "menor_peca_valor", label: "R$ na peça de menor valor", unidade: "R$" },
+  { value: "total_percentual", label: "% sobre o total do conjunto", unidade: "%" },
+  { value: "total_valor", label: "R$ sobre o total do conjunto", unidade: "R$" },
+]
+export type Regra = { id: string; nome: string; escopo: "padrao" | "colecao" | "curado"; collection_id: string | null; tipo_desconto: TipoDesconto; valor: number; ativa: boolean; promotion_id: string | null }
+export type Par = { id: string; categoria_a: string; categoria_b: string; ativo: boolean }
+export type Curado = { id: string; nome: string; handle: string; capa_url: string | null; product_ids: string[]; ativo: boolean; ordem: number; regra: Regra }
+
+export const unidadeDoTipo = (t: TipoDesconto): "%" | "R$" => (t.endsWith("percentual") ? "%" : "R$")
+
+export function entradaParaValor(t: TipoDesconto, texto: string): number | null {
+  const s = texto.replace(/R\$|\s|%/g, "")
+  if (!s) return null
+  if (unidadeDoTipo(t) === "%") {
+    if (!/^\d+$/.test(s)) return null
+    const n = Number(s)
+    return n >= 1 && n <= 100 ? n : null
+  }
+  const norm = s.replace(/\.(?=\d{3}(\D|$))/g, "").replace(",", ".")
+  if (!/^\d+(\.\d{1,2})?$/.test(norm)) return null
+  const centavos = Math.round(Number(norm) * 100)
+  return centavos >= 1 ? centavos : null
+}
+export function valorParaEntrada(t: TipoDesconto, valor: number): string {
+  return unidadeDoTipo(t) === "%" ? String(valor) : (valor / 100).toFixed(2).replace(".", ",")
+}
+export function formatarReais(centavos: number): string {
+  const [int, dec] = (centavos / 100).toFixed(2).split(".")
+  return `R$ ${int.replace(/\B(?=(\d{3})+(?!\d))/g, ".")},${dec}`
+}
+export function validarRegra(d: { nome: string; tipo_desconto: TipoDesconto; valorTexto: string }): string | null {
+  if (!d.nome.trim()) return "Informe o nome da regra."
+  if (entradaParaValor(d.tipo_desconto, d.valorTexto) === null) return unidadeDoTipo(d.tipo_desconto) === "%" ? "Valor inválido: use um percentual inteiro de 1 a 100." : "Valor inválido: use reais, ex.: 45,90."
+  return null
+}
+export function validarCurado(d: { nome: string; product_ids: string[]; tipo_desconto: TipoDesconto; valorTexto: string }): string | null {
+  if (!d.nome.trim()) return "Informe o nome do conjunto."
+  if (new Set(d.product_ids).size < 2) return "Escolha pelo menos 2 produtos diferentes."
+  return validarRegra({ nome: d.nome, tipo_desconto: d.tipo_desconto, valorTexto: d.valorTexto })
+}
+export function previaBeneficio(t: TipoDesconto, valor: number, precos: number[]) {
+  const n = precos.length
+  const idxMin = precos.reduce((m, p, i) => (p < precos[m] ? i : m), 0)
+  let descontos = precos.map(() => 0)
+  if (t === "menor_peca_percentual") descontos[idxMin] = Math.min(precos[idxMin], Math.round((precos[idxMin] * valor) / 100))
+  else if (t === "menor_peca_valor") descontos[idxMin] = Math.min(precos[idxMin], valor)
+  else if (t === "total_percentual") descontos = precos.map((p) => Math.min(p, Math.round((p * valor) / 100)))
+  else descontos = precos.map((p) => Math.min(p, Math.round(valor / n)))
+  const total = precos.reduce((s, p) => s + p, 0)
+  const economia = descontos.reduce((s, d) => s + d, 0)
+  return { descontos, total, economia, final: total - economia }
+}
+export function alertaEstoque(p: { status: string; variants: { stock: number | null }[] }): "rascunho" | "sem_estoque" | "estoque_baixo" | null {
+  if (p.status !== "published") return "rascunho"
+  const soma = p.variants.reduce((s, v) => s + Math.max(0, v.stock ?? 0), 0)
+  if (soma <= 0) return "sem_estoque"
+  if (soma <= 3) return "estoque_baixo"
+  return null
+}
+export const slugConjunto = (s: string) =>
+  s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "")
