@@ -232,10 +232,11 @@ export async function getConjuntosDoProduto(
   return { parceiras, regra, curados }
 }
 
-// Predicado de elegibilidade para o selo "Forma conjunto" (spec §7.3): fecha sobre a vitrine crua
-// + o mapa de raízes de categoria, uma vez por listagem (o chamador reusa o predicado por card).
+// Predicado de elegibilidade para o selo "Forma conjunto" (spec §7.3, ruling V4): fecha sobre a
+// vitrine crua + o mapa de raízes de categoria, uma vez por listagem (o chamador reusa o
+// predicado por card, passando o id do produto primeiro).
 export async function getElegibilidade(): Promise<
-  (collection_id: string | null, categoryIds: string[]) => boolean
+  (productId: string, collection_id: string | null, categoryIds: string[]) => boolean
 > {
   const [vitrine, raizes] = await Promise.all([fetchVitrineRaw(), buildRaizesMap()])
   return elegibilidade(vitrine, raizes)

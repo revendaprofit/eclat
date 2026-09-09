@@ -79,7 +79,7 @@ export default async function ProductListing({
                         product={p}
                         region={region}
                         listName={listName}
-                        formaConjunto={elegivel(p.collection_id ?? null, (p.categories ?? []).map((c) => c.id))}
+                        formaConjunto={elegivel(p.id, p.collection_id ?? null, (p.categories ?? []).map((c) => c.id))}
                       />
                     </li>
                   ))}

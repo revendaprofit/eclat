@@ -229,7 +229,16 @@ describe("corParceira", () => {
 
 describe("elegibilidade", () => {
   const vitrine: VitrineStore = {
-    curados: [],
+    curados: [
+      {
+        id: "ccur_1",
+        nome: "Look Blackout",
+        handle: "look-blackout",
+        capa_url: null,
+        product_ids: ["prod_top", "prod_leg"],
+        regra: { tipo_desconto: "total_valor", valor: 4500 },
+      },
+    ],
     colecoes: [
       {
         collection_id: "col_1",
@@ -245,19 +254,28 @@ describe("elegibilidade", () => {
   ])
 
   it("coleção com regra + categoria cuja raiz está num par → true", () => {
-    expect(elegibilidade(vitrine, raizes)("col_1", ["cat_top"])).toBe(true)
+    expect(elegibilidade(vitrine, raizes)("a", "col_1", ["cat_top"])).toBe(true)
   })
 
   it("raiz fora dos pares da coleção → false", () => {
-    expect(elegibilidade(vitrine, raizes)("col_1", ["cat_short"])).toBe(false)
+    expect(elegibilidade(vitrine, raizes)("a", "col_1", ["cat_short"])).toBe(false)
   })
 
   it("sem coleção (null) → false", () => {
-    expect(elegibilidade(vitrine, raizes)(null, ["cat_top"])).toBe(false)
+    expect(elegibilidade(vitrine, raizes)("a", null, ["cat_top"])).toBe(false)
   })
 
   it("coleção sem entrada na vitrine → false", () => {
-    expect(elegibilidade(vitrine, raizes)("col_desconhecida", ["cat_top"])).toBe(false)
+    expect(elegibilidade(vitrine, raizes)("a", "col_desconhecida", ["cat_top"])).toBe(false)
+  })
+
+  it("produto em curado ativo, sem par listado da coleção → true (ruling V4)", () => {
+    expect(elegibilidade(vitrine, raizes)("prod_leg", null, ["cat_leg"])).toBe(true)
+    expect(elegibilidade(vitrine, raizes)("prod_leg", "col_desconhecida", ["cat_short"])).toBe(true)
+  })
+
+  it("produto sem par listado e sem curado → false", () => {
+    expect(elegibilidade(vitrine, raizes)("prod_inexistente", "col_1", ["cat_short"])).toBe(false)
   })
 })
 

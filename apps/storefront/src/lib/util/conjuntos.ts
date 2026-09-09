@@ -204,12 +204,19 @@ export function corParceira(parceira: HttpTypes.StoreProduct, corAtual: string |
   return cores.find((c) => corComVarianteDisponivel(parceira, c)) ?? null
 }
 
-// Fecha sobre a vitrine (F1) para responder, por coleção + categorias do produto, se ele
-// participa de algum conjunto vendável agora — usado pelo painel/CTA da PDP.
+// Fecha sobre a vitrine (F1) para responder, por produto, se ele participa de algum conjunto
+// vendável agora — usado pelo selo "Forma conjunto" da vitrine (ruling V4). Elegível quando: (a)
+// a coleção do produto tem regra ativa E a raiz de alguma categoria do produto aparece numa das
+// pares LISTADOS dessa coleção — mesmo critério de antes; OU (b) o id do produto está no
+// `product_ids` de algum CURADO ativo. O (b) cobre o caso em que um par de coleção some da
+// vitrine por coincidir 1:1 com um curado ativo (Ruling V2, `catalogo-conjuntos.ts`
+// `listarConjuntos`) — sem o OR, a peça obscurecida (ex.: a Legging do curado "Look Blackout")
+// nunca ganharia o selo, mesmo aparecendo como parceira na PDP via `parceirasDoProduto` (achado
+// registrado no report da Task 5, "Preocupação 1").
 export function elegibilidade(
   vitrine: VitrineStore,
   raizes: Map<string, string>
-): (collection_id: string | null, categoryIds: string[]) => boolean {
+): (productId: string, collection_id: string | null, categoryIds: string[]) => boolean {
   const raizesPorColecao = new Map<string, Set<string>>()
   for (const col of vitrine.colecoes) {
     const raizesColecao = new Set<string>()
@@ -219,7 +226,14 @@ export function elegibilidade(
     }
     raizesPorColecao.set(col.collection_id, raizesColecao)
   }
-  return (collection_id: string | null, categoryIds: string[]) => {
+  // Sem Set spread (build target não garante downlevelIteration) — concat/loop.
+  let idsEmCuradosArr: string[] = []
+  for (const curado of vitrine.curados) {
+    idsEmCuradosArr = idsEmCuradosArr.concat(curado.product_ids)
+  }
+  const idsEmCurados = new Set(idsEmCuradosArr)
+  return (productId: string, collection_id: string | null, categoryIds: string[]) => {
+    if (idsEmCurados.has(productId)) return true
     if (!collection_id) return false
     const raizesColecao = raizesPorColecao.get(collection_id)
     if (!raizesColecao) return false
