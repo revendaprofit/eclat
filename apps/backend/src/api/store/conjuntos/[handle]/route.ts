@@ -15,6 +15,7 @@ export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
     conjunto: {
       tipo: conjunto.tipo,
       nome: conjunto.nome,
+      capa_url: conjunto.capa_url,
       handle,
       product_ids: conjunto.product_ids,
       regra: { tipo_desconto: conjunto.regra.tipo_desconto, valor: conjunto.regra.valor },

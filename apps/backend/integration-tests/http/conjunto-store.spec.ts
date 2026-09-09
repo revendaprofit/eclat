@@ -71,13 +71,14 @@ medusaIntegrationTestRunner({
     })
 
     describe("GET /store/conjuntos/:handle", () => {
-      it("handle canônico → 200 com os 2 ids e a regra; cache 300s", async () => {
+      it("handle canônico → 200 com os 2 ids e a regra; capa_url null (par de coleção não tem capa); cache 300s", async () => {
         const res = await api.get("/store/conjuntos/legging-vertice--top-aura", { headers: cat.storeHeaders })
         expect(res.status).toBe(200)
         expect(res.headers["cache-control"]).toBe("public, s-maxage=300, stale-while-revalidate=600")
         expect(res.data.conjunto).toMatchObject({
           tipo: "colecao",
           handle: "legging-vertice--top-aura",
+          capa_url: null,
           regra: { tipo_desconto: "menor_peca_percentual", valor: 20 },
         })
         expect(res.data.conjunto.product_ids.sort()).toEqual([cat.legging.productId, cat.top.productId].sort())
@@ -92,6 +93,29 @@ medusaIntegrationTestRunner({
       it("handle inexistente → 404", async () => {
         await expect(api.get("/store/conjuntos/nada-aqui", { headers: cat.storeHeaders })).rejects.toMatchObject({
           response: { status: 404 },
+        })
+      })
+
+      it("curado com capa_url → 200 devolve a mesma capa_url gravada na criação", async () => {
+        const criado = await api.post(
+          "/admin/conjuntos/curados",
+          {
+            nome: "Trio Vero Store",
+            capa_url: "https://exemplo.test/capa.jpg",
+            product_ids: [cat.macaquinho.productId, cat.topLum.productId],
+            tipo_desconto: "total_valor",
+            valor: 3000,
+          },
+          { headers: admin }
+        )
+        const handle = criado.data.curado.handle
+
+        const res = await api.get(`/store/conjuntos/${handle}`, { headers: cat.storeHeaders })
+        expect(res.status).toBe(200)
+        expect(res.data.conjunto).toMatchObject({
+          tipo: "curado",
+          handle,
+          capa_url: "https://exemplo.test/capa.jpg",
         })
       })
     })

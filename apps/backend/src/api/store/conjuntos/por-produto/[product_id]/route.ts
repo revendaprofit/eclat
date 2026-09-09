@@ -2,19 +2,15 @@
 // os curados "crus" (sem `regra` anexada, só `regra_id`) porque é usado também pela rota admin;
 // aqui resolvemos a regra de cada curado e só listamos os com regra efetivamente ativa — mesma
 // política de "vendável agora" que `listarConjuntos` aplica aos curados da vitrine principal.
+// `regras` já vem no retorno de `parceirasDoProduto` (que internamente já chama `svc.carregarAtivos()`)
+// — não chamamos `svc.carregarAtivos()` de novo aqui (fix round 1, achado "carga redundante em por-produto").
 import type { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
-import { BENEFICIO_CONJUNTO_MODULE } from "../../../../../modules/beneficio-conjunto"
 import { parceirasDoProduto } from "../../../../../modules/beneficio-conjunto/catalogo-conjuntos"
 import type { Regra } from "../../../../../modules/beneficio-conjunto/utils/tipos"
 
 export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
   const { product_id } = req.params
-  const svc: any = req.scope.resolve(BENEFICIO_CONJUNTO_MODULE)
-
-  const [{ parceiras, curados }, { regras }] = await Promise.all([
-    parceirasDoProduto(req.scope, product_id),
-    svc.carregarAtivos() as Promise<{ regras: Regra[] }>,
-  ])
+  const { parceiras, curados, regras } = await parceirasDoProduto(req.scope, product_id)
 
   const curadosVendaveis = curados
     .map((c) => ({ ...c, regra: regras.find((r) => r.id === c.regra_id) }))

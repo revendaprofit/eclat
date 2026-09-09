@@ -89,7 +89,7 @@ export async function listarConjuntos(container: MedusaContainer): Promise<{
 export async function parceirasDoProduto(
   container: MedusaContainer,
   productId: string
-): Promise<{ parceiras: { product_id: string; categoria_raiz: string; collection_id: string }[]; curados: Curado[] }> {
+): Promise<{ parceiras: { product_id: string; categoria_raiz: string; collection_id: string }[]; curados: Curado[]; regras: Regra[] }> {
   const svc: any = container.resolve(BENEFICIO_CONJUNTO_MODULE)
   const [{ regras, pares, curados }, raizes, [ancoraBruta], produtosPublicadosBrutos] = await Promise.all([
     svc.carregarAtivos() as Promise<{ regras: Regra[]; pares: Par[]; curados: Curado[] }>,
@@ -99,23 +99,23 @@ export async function parceirasDoProduto(
   ])
   const curadosDoProduto = curados.filter((c) => c.ativo && c.product_ids.includes(productId))
   const ancora = ancoraBruta ? comRaiz([ancoraBruta], raizes)[0] : null
-  if (!ancora || !ancora.collection_id || !ancora.categoria_raiz) return { parceiras: [], curados: curadosDoProduto }
+  if (!ancora || !ancora.collection_id || !ancora.categoria_raiz) return { parceiras: [], curados: curadosDoProduto, regras }
 
   const regra = regraEfetiva(regras, ancora.collection_id)
-  if (!regra) return { parceiras: [], curados: curadosDoProduto }
+  if (!regra) return { parceiras: [], curados: curadosDoProduto, regras }
 
   const raizesParceiras = new Set<string>()
   for (const par of pares) {
     if (par.categoria_a === ancora.categoria_raiz) raizesParceiras.add(par.categoria_b)
     if (par.categoria_b === ancora.categoria_raiz) raizesParceiras.add(par.categoria_a)
   }
-  if (!raizesParceiras.size) return { parceiras: [], curados: curadosDoProduto }
+  if (!raizesParceiras.size) return { parceiras: [], curados: curadosDoProduto, regras }
 
   const parceiras = comRaiz(produtosPublicadosBrutos, raizes)
     .filter((p) => p.id !== productId && p.collection_id === ancora.collection_id && p.categoria_raiz && raizesParceiras.has(p.categoria_raiz))
     .map((p) => ({ product_id: p.id, categoria_raiz: p.categoria_raiz as string, collection_id: p.collection_id as string }))
 
-  return { parceiras, curados: curadosDoProduto }
+  return { parceiras, curados: curadosDoProduto, regras }
 }
 
 // Resolve um handle de vitrine para um conjunto vendável (curado, ou par `handleA--handleB`
@@ -133,7 +133,7 @@ export async function parceirasDoProduto(
 export async function conjuntoPorHandle(
   container: MedusaContainer,
   handle: string
-): Promise<{ tipo: "curado" | "colecao"; nome: string; product_ids: string[]; regra: Regra } | null> {
+): Promise<{ tipo: "curado" | "colecao"; nome: string; capa_url: string | null; product_ids: string[]; regra: Regra } | null> {
   const svc: any = container.resolve(BENEFICIO_CONJUNTO_MODULE)
   const { regras, pares, curados } = (await svc.carregarAtivos()) as { regras: Regra[]; pares: Par[]; curados: Curado[] }
 
@@ -143,7 +143,7 @@ export async function conjuntoPorHandle(
     if (!regra?.ativa) return null
     const produtos = await buscarProdutos(container, { id: curado.product_ids, status: "published" })
     if (produtos.length !== curado.product_ids.length) return null
-    return { tipo: "curado", nome: curado.nome, product_ids: curado.product_ids, regra }
+    return { tipo: "curado", nome: curado.nome, capa_url: curado.capa_url, product_ids: curado.product_ids, regra }
   }
 
   const partes = handle.split("--")
@@ -161,5 +161,5 @@ export async function conjuntoPorHandle(
   if (!par) return null
   const regra = regraEfetiva(regras, a.collection_id)
   if (!regra) return null
-  return { tipo: "colecao", nome: `${a.title} + ${b.title}`, product_ids: [a.id, b.id], regra }
+  return { tipo: "colecao", nome: `${a.title} + ${b.title}`, capa_url: null, product_ids: [a.id, b.id], regra }
 }

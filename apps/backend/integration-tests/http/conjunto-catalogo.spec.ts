@@ -105,7 +105,13 @@ medusaIntegrationTestRunner({
       it("curado criado pela rota admin aparece em listarConjuntos().curados e resolve por handle", async () => {
         const res = await api.post(
           "/admin/conjuntos/curados",
-          { nome: "Trio Vero", product_ids: [cat.macaquinho.productId, cat.topLum.productId], tipo_desconto: "total_valor", valor: 3000 },
+          {
+            nome: "Trio Vero",
+            capa_url: "https://exemplo.test/capa.jpg",
+            product_ids: [cat.macaquinho.productId, cat.topLum.productId],
+            tipo_desconto: "total_valor",
+            valor: 3000,
+          },
           { headers: admin }
         )
         curadoHandle = res.data.curado.handle
@@ -114,7 +120,7 @@ medusaIntegrationTestRunner({
         expect(curados.some((c) => c.handle === curadoHandle)).toBe(true)
 
         const resolvido = await conjuntoPorHandle(getContainer(), curadoHandle)
-        expect(resolvido).toMatchObject({ tipo: "curado" })
+        expect(resolvido).toMatchObject({ tipo: "curado", capa_url: "https://exemplo.test/capa.jpg" })
         expect(resolvido!.product_ids.sort()).toEqual([cat.macaquinho.productId, cat.topLum.productId].sort())
       })
 
