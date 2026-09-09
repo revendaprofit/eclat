@@ -29,11 +29,17 @@ export default function PecaDoConjunto({
   index,
   colorMap,
   onChange,
+  disabled,
 }: {
   peca: PecaCard
   index: number
   colorMap: ColorMap
   onChange: (index: number, info: SelecaoPeca) => void
+  // Trava os seletores enquanto o loop de `handleAdicionar` está em voo (fix round 2, achado
+  // "seleção durante o loop derruba `adicionados`") — impede o usuário de trocar cor/tamanho de
+  // uma peça no meio de uma tentativa de adicionar, que dispararia o efeito de reset em
+  // `ConjuntoBuilder` e apagaria o progresso já registrado.
+  disabled?: boolean
 }) {
   const { product, color, selectedVariant, isComplete } = useProductSelection()
   const ssrImages = useMemo(() => imagesForColor(product, color), [product, color])
@@ -49,8 +55,8 @@ export default function PecaDoConjunto({
       <h3 className="font-serif text-xl text-eclat-grafite">{peca.title}</h3>
       <VariantGallery ssrImages={ssrImages} productTitle={peca.title} />
       <div className="flex flex-col gap-y-4">
-        <ColorSelect colorMap={colorMap} />
-        <SizeSelect showGuide={false} />
+        <ColorSelect colorMap={colorMap} disabled={disabled} />
+        <SizeSelect showGuide={false} disabled={disabled} />
       </div>
       <LocalizedClientLink
         href={`/products/${peca.handle}#medidas`}

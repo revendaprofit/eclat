@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import type { HttpTypes } from "@medusajs/types"
 import type { ColorMap } from "@lib/util/colors"
 import { addToCart } from "@lib/data/cart"
@@ -46,9 +46,21 @@ export default function ConjuntoBuilder({
   // Índices (posição em `produtos`/`card.pecas`) já adicionados ao carrinho na tentativa em
   // curso — retry resumível (fix round 1, achado "retry duplica linhas já adicionadas"): o loop
   // de `handleAdicionar` pula quem já está aqui, então uma falha na peça 2 não re-adiciona a peça
-  // 1 na tentativa seguinte. Zerado ao concluir com sucesso e sempre que `selecoes` muda — trocar a
-  // variante de uma peça já adicionada é um "adicionar de novo" deliberado, não um retry.
+  // 1 na tentativa seguinte. Zerado ao concluir com sucesso e sempre que `selecoes` muda fora de
+  // uma tentativa em curso — trocar a variante de uma peça já adicionada é um "adicionar de novo"
+  // deliberado, não um retry.
   const [adicionados, setAdicionados] = useState<Set<number>>(new Set())
+  // Espelha `adicionando` em ref (fix round 2, achado "seleção durante o loop derruba
+  // `adicionados`"): o loop de `handleAdicionar` grava a variante escolhida em `selecoes` via
+  // `onChange`/`handleChange` mesmo quando o usuário não mexeu em nada (primeira leitura de cada
+  // peça), o que dispararia o efeito de reset abaixo NO MEIO da própria tentativa. Com os
+  // seletores desabilitados durante o loop (ver `disabled={adicionando}` no JSX) o usuário não
+  // consegue mais gerar esse changes, mas o ref é a garantia definitiva: o efeito só zera
+  // `adicionados` quando não há uma adição em voo.
+  const adicionandoRef = useRef(false)
+  useEffect(() => {
+    adicionandoRef.current = adicionando
+  }, [adicionando])
 
   const handleChange = useCallback(
     (index: number, info: SelecaoPeca) => {
@@ -63,9 +75,13 @@ export default function ConjuntoBuilder({
     [produtos]
   )
 
-  // Ver comentário de `adicionados` acima — só dispara quando `selecoes` de fato muda (o bailout
-  // dentro do `setSelecoes` acima evita updates redundantes que disparariam isto à toa).
+  // Ver comentário de `adicionados`/`adicionandoRef` acima — só dispara quando `selecoes` de fato
+  // muda (o bailout dentro do `setSelecoes` acima evita updates redundantes que disparariam isto
+  // à toa) E não há uma tentativa de `handleAdicionar` em voo. Sem essa guarda, trocar a seleção
+  // da peça 1 enquanto a peça 0 já foi adicionada e a peça 1 está em `addToCart` apagaria
+  // `adicionados={0}`; se a peça 1 então falhasse, o retry re-adicionaria a peça 0 (duplicata).
   useEffect(() => {
+    if (adicionandoRef.current) return
     setAdicionados(new Set())
   }, [selecoes])
 
@@ -141,7 +157,13 @@ export default function ConjuntoBuilder({
       <div className="grid grid-cols-1 small:grid-cols-2 gap-10 flex-1">
         {produtos.map((produto, i) => (
           <ProductSelectionProvider key={produto.id} product={produto} initialColor={primeiraCorDisponivel(produto)}>
-            <PecaDoConjunto peca={card.pecas[i]} index={i} colorMap={colorMap} onChange={handleChange} />
+            <PecaDoConjunto
+              peca={card.pecas[i]}
+              index={i}
+              colorMap={colorMap}
+              onChange={handleChange}
+              disabled={adicionando}
+            />
           </ProductSelectionProvider>
         ))}
       </div>
