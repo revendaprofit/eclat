@@ -169,5 +169,79 @@ medusaIntegrationTestRunner({
       const aindaManual = await retrievePromo(manual.id)
       expect(regrasExclusao(aindaManual.application_method.target_rules)).toHaveLength(1)
     })
+
+    // f — C1: promoção de FRETE (target_type "shipping_methods") nunca alcança unidade de item —
+    // a regra de exclusão `items.conjunto_desconto eq nenhum` seria avaliada no escopo de shipping
+    // method (que não tem esse atributo) e falharia sempre, desativando o cupom em silêncio. O
+    // gancho de conversão (e `reconciliar`) devem ignorar a promoção por completo: target_type
+    // intocado, sem regra-alvo de itens acrescentada. Não exercitamos a aplicação num carrinho
+    // real (exigiria stock location + shipping profile + fulfillment provider + shipping option
+    // só para este caso) — só as checagens estruturais, como autorizado no plano.
+    it("caso f: FRETE10 (cupom de frete) é ignorado pela conversão — target_type intocado, sem regra de itens", async () => {
+      const res = await api.post(
+        "/admin/promotions",
+        {
+          code: "FRETE10",
+          type: "standard",
+          is_automatic: false,
+          status: "active",
+          application_method: { type: "percentage", target_type: "shipping_methods", allocation: "each", value: 10, currency_code: "brl", max_quantity: 1000 },
+        },
+        { headers: admin }
+      )
+      const frete10Id = res.data.promotion.id
+
+      const antes = await retrievePromo(frete10Id)
+      expect(antes.application_method.target_type).toBe("shipping_methods")
+      expect(regrasExclusao(antes.application_method.target_rules)).toHaveLength(0)
+
+      const resultado = await reconciliar(getContainer())
+      expect(resultado.cupons).toBe(0)
+
+      const depois = await retrievePromo(frete10Id)
+      expect(depois.application_method.target_type).toBe("shipping_methods")
+      expect(regrasExclusao(depois.application_method.target_rules)).toHaveLength(0)
+    })
+
+    // g — `buyget` (compre X, ganhe Y) não tem o conceito de cupom "de pedido" — a conversão
+    // order→items não se aplica a ele (checado em `converterCupom`: `p.type !== "buyget"`), mas a
+    // regra de exclusão é acrescentada do mesmo jeito, e `target_type` continua "items" (o único
+    // valor que a Admin API aceita para `buyget`).
+    it("caso g: BUYGET1 (compre legging, ganhe top) ganha a regra de exclusão; target_type continua items; reconciliar idempotente", async () => {
+      const res = await api.post(
+        "/admin/promotions",
+        {
+          code: "BUYGET1",
+          type: "buyget",
+          is_automatic: false,
+          status: "active",
+          application_method: {
+            type: "percentage",
+            target_type: "items",
+            allocation: "each",
+            value: 100,
+            max_quantity: 1000,
+            currency_code: "brl",
+            buy_rules_min_quantity: 2,
+            apply_to_quantity: 1,
+            buy_rules: [{ attribute: "items.product.id", operator: "in", values: [cat.legging.productId, cat.top.productId] }],
+            target_rules: [{ attribute: "items.product.id", operator: "in", values: [cat.legging.productId, cat.top.productId] }],
+          },
+        },
+        { headers: admin }
+      )
+      const buyget1Id = res.data.promotion.id
+
+      const antes = await retrievePromo(buyget1Id)
+      expect(antes.application_method.target_type).toBe("items")
+      expect(regrasExclusao(antes.application_method.target_rules)).toHaveLength(1)
+
+      const resultado = await reconciliar(getContainer())
+      expect(resultado.cupons).toBe(0)
+
+      const depois = await retrievePromo(buyget1Id)
+      expect(depois.application_method.target_type).toBe("items")
+      expect(regrasExclusao(depois.application_method.target_rules)).toHaveLength(1)
+    })
   },
 })

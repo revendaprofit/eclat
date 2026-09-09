@@ -308,5 +308,53 @@ medusaIntegrationTestRunner({
         expect(Number(cart.discount_total)).toBeCloseTo(37.8, 2)
       })
     })
+
+    // 10 — I2: linha dividida compartilha a base de desconto entre conjunto e cupom (mesmo
+    // `item.id`, ver architecture/conjunto.md §12 e spec §6.3 "Decisão F1"). top×3 (189 cada) +
+    // legging×1 (259): só 1 par se forma (falta legging para os outros 2 tops), então o gancho
+    // divide a linha do top em DUAS entradas de contexto com o mesmo item_id — 1 unidade marcada
+    // com a regra padrão (entra no par) e 2 unidades marcadas "nenhum" (livres, alcançadas por
+    // CUPOM10). O valor "ingênuo" do cupom seria 10% de 2×189 = 37,80 tratando as duas entradas
+    // como independentes. NÃO é isso que acontece: o motor de promoções calcula o cupom sobre o
+    // subtotal do item já líquido do desconto que a promoção do conjunto aplicou ao MESMO
+    // `item.id` (mesmo estando em entradas de contexto diferentes) — 378,00 (2 unidades livres) −
+    // 37,80 (desconto do conjunto já debitado desse item) = 340,20; 10% disso = 34,02. Valor
+    // OBSERVADO rodando este teste contra o Medusa 2.15.5 real (não o ingênuo 37,80) — registrado
+    // também no report da task.
+    it("caso 10: top×3 (189) + legging×1 (259), padrão total_percentual 20 + CUPOM10 → conjunto 89,60, cupom 34,02 (observado; ingênuo seria 37,80)", async () => {
+      await removerColecaoBlack()
+      await setPadrao("total_percentual", 20)
+
+      const cart0 = await novoCarrinho([{ variantId: cat.top.variantId, quantity: 3 }, { variantId: cat.legging.variantId, quantity: 1 }])
+      await api.post(`/store/carts/${cart0.id}/promotions`, { promo_codes: ["CUPOM10"] }, { headers: cat.storeHeaders })
+      const cart = (await api.get(`/store/carts/${cart0.id}?fields=*items,*items.adjustments`, { headers: cat.storeHeaders })).data.cart
+
+      const conjunto = somaPorCodigo(cart, codigoDaRegra(regraPadraoId))
+      const cupom = somaPorCodigo(cart, "CUPOM10")
+      // conjunto: 20% de (189 + 259) = 89,60 (a promoção do conjunto aplica só sobre a entrada de
+      // contexto marcada, sem interação com o cupom). cupom: valor observado, ver comentário acima.
+      expect(conjunto).toBeCloseTo(89.6, 2)
+      expect(cupom).toBeCloseTo(34.02, 2)
+      expect(Number(cart.discount_total)).toBeCloseTo(conjunto + cupom, 2)
+    })
+
+    // 11 — I1: zero regra ativa (padrão desativada, sem exceção de coleção) — cobre tanto "erro no
+    // gancho" (I1: catch devolve tudo marcado MARCA_LIVRE) quanto "primeiro boot" (regra padrão
+    // ainda inativa, como o seed de produção cria — architecture/conjunto.md §14). Sem conjunto
+    // algum formado, todo item cai em "nenhum" e um cupom de itens (com a regra de exclusão) o
+    // alcança normalmente — cupom nunca fica "preso" por causa do Benefício Conjunto. Último caso
+    // do arquivo: desativa a regra padrão de propósito, sem restaurar depois.
+    it("caso 11: sem regra ativa nenhuma → sem ajuste CONJUNTO; CUPOM10 aplica nos dois itens = 44,80", async () => {
+      await removerColecaoBlack()
+      await setPadrao("menor_peca_percentual", 20, false)
+
+      const cart0 = await novoCarrinho([{ variantId: cat.top.variantId, quantity: 1 }, { variantId: cat.legging.variantId, quantity: 1 }])
+      await api.post(`/store/carts/${cart0.id}/promotions`, { promo_codes: ["CUPOM10"] }, { headers: cat.storeHeaders })
+      const cart = (await api.get(`/store/carts/${cart0.id}?fields=*items,*items.adjustments`, { headers: cat.storeHeaders })).data.cart
+
+      expect(somaPorCodigo(cart, codigoDaRegra(regraPadraoId))).toBe(0)
+      expect(somaPorCodigo(cart, "CUPOM10")).toBeCloseTo(44.8, 2)
+      expect(Number(cart.discount_total)).toBeCloseTo(44.8, 2)
+    })
   },
 })
