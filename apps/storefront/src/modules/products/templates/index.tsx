@@ -25,6 +25,7 @@ import { ProductJsonLd } from "@modules/seo/jsonld"
 import { getBaseURL } from "@lib/util/env"
 import { getColorMap } from "@lib/data/colors"
 import { ProductSelectionProvider } from "@modules/products/components/product-selection"
+import CompleteSet from "@modules/products/components/complete-set"
 import Breadcrumb from "@modules/common/components/breadcrumb"
 import { getDeepestCategoryChain } from "@lib/data/category-path"
 import { getMeasureMap } from "@lib/data/measurements"
@@ -127,6 +128,7 @@ const ProductTemplate = async ({
               {allOut && <NotifyMe productId={product.handle ?? product.id} />}
             </div>
           </div>
+          <CompleteSet product={product} countryCode={countryCode} colorMap={colorMap} />
         </div>
       </ProductSelectionProvider>
       <div className="content-container max-w-4xl">

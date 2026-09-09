@@ -70,6 +70,11 @@ describe("buildProductCardData", () => {
     expect(cor.available).toBe(true)
     expect(cor.firstAvailableVariantId).toBe("vb")
   })
+  it("formaConjunto: false por padrão, true quando o chamador passa (selo do card)", () => {
+    expect(d.formaConjunto).toBe(false)
+    const comSelo = buildProductCardData(P, MAP, NOW, true)
+    expect(comSelo.formaConjunto).toBe(true)
+  })
   it("lowStock do bucket sem cor segue isLowStock (estoque total <= 3)", () => {
     const semCorBaixo = {
       ...P,

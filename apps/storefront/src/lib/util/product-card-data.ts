@@ -30,13 +30,19 @@ export type ProductCardData = {
   isNew: boolean
   onSale: boolean
   available: boolean
+  formaConjunto?: boolean
 }
 
 type V = HttpTypes.StoreProductVariant & { images?: { url?: string | null }[] | null }
 
 const urls = (imgs: { url?: string | null }[] | null | undefined) => (imgs ?? []).map((i) => i.url).filter((u): u is string => !!u)
 
-export function buildProductCardData(product: HttpTypes.StoreProduct, colorMap: ColorMap, now = Date.now()): ProductCardData {
+export function buildProductCardData(
+  product: HttpTypes.StoreProduct,
+  colorMap: ColorMap,
+  now = Date.now(),
+  formaConjunto = false
+): ProductCardData {
   const variants = (product.variants ?? []) as V[]
   const productImages = [product.thumbnail, ...urls(product.images)].filter((u, i, a): u is string => !!u && a.indexOf(u) === i)
   const corOpt = (product.options ?? []).find((o) => (o.title ?? "").toLowerCase() === "cor")
@@ -80,6 +86,7 @@ export function buildProductCardData(product: HttpTypes.StoreProduct, colorMap: 
     isNew: isNew(product, now),
     onSale: price?.price_type === "sale",
     available: isProductAvailable(variants as StockVariant[]),
+    formaConjunto,
   }
 }
 

@@ -2,6 +2,7 @@ import type { ReactNode } from "react"
 import { listProductsFiltered, type ListingScope } from "@lib/data/products"
 import { getRegion } from "@lib/data/regions"
 import { getColorMap } from "@lib/data/colors"
+import { getElegibilidade } from "@lib/data/conjuntos"
 import { getBaseURL } from "@lib/util/env"
 import { serializeFilters, type FilterState } from "@lib/util/catalog-filters"
 import ProductPreview from "@modules/products/components/product-preview"
@@ -45,6 +46,9 @@ export default async function ProductListing({
   const colorMap = await getColorMap()
   const result = await listProductsFiltered({ filters, scope, countryCode })
   const base = getBaseURL()
+  // Selo "Forma conjunto" (spec §7.3): predicado calculado UMA vez por listagem, aplicado por
+  // card — nunca uma chamada por produto (ver `getElegibilidade`).
+  const elegivel = await getElegibilidade()
 
   return (
     <div className="content-container py-6" data-testid="category-container">
@@ -71,7 +75,12 @@ export default async function ProductListing({
                 <ul className="grid grid-cols-2 w-full small:grid-cols-3 medium:grid-cols-4 gap-x-6 gap-y-8" data-testid="products-list">
                   {result.products.map((p) => (
                     <li key={p.id}>
-                      <ProductPreview product={p} region={region} listName={listName} />
+                      <ProductPreview
+                        product={p}
+                        region={region}
+                        listName={listName}
+                        formaConjunto={elegivel(p.collection_id ?? null, (p.categories ?? []).map((c) => c.id))}
+                      />
                     </li>
                   ))}
                 </ul>

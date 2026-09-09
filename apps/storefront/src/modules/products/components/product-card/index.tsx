@@ -48,6 +48,11 @@ export default function ProductCard({ data, countryCode, listName, aspect = "por
             {data.price && <Text className={clx("text-ui-fg-muted", data.price.price_type === "sale" && "text-ui-fg-interactive")} data-testid="price">{data.price.calculated_price}</Text>}
           </div>
         </div>
+        {data.formaConjunto && (
+          <p className="mt-1 text-[10px] uppercase tracking-[0.15em] text-eclat-dourado" data-testid="forma-conjunto-badge">
+            Forma conjunto
+          </p>
+        )}
       </LocalizedClientLink>
       <div className="flex items-center justify-between">
         <Swatches colors={data.colors} active={active} onSelect={(i) => { setActive(i); setSheet(false) }} />
