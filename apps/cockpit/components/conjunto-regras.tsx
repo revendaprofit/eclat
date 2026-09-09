@@ -166,7 +166,15 @@ function BlocoPadrao({
       <div className="grid grid-cols-2 gap-3">
         <div>
           <label className={label}>Tipo de desconto</label>
-          <select value={tipo} onChange={(e) => setTipo(e.target.value as TipoDesconto)} className={input}>
+          <select
+            value={tipo}
+            onChange={(e) => {
+              // trocar o tipo limpa o valor: 20 (%) não pode virar R$ 20,00 por acidente
+              setTipo(e.target.value as TipoDesconto)
+              setValorTexto("")
+            }}
+            className={input}
+          >
             {TIPOS_DESCONTO.map((t) => (
               <option key={t.value} value={t.value}>
                 {t.label}
@@ -326,7 +334,10 @@ function BlocoExcecoes({
                       <label className={label}>Tipo</label>
                       <select
                         value={form.tipo}
-                        onChange={(e) => setForm(c.id, form, { tipo: e.target.value as TipoDesconto })}
+                        onChange={(e) => {
+                          // trocar o tipo limpa o valor: 20 (%) não pode virar R$ 20,00 por acidente
+                          setForm(c.id, form, { tipo: e.target.value as TipoDesconto, valorTexto: "" })
+                        }}
                         className={input}
                       >
                         {TIPOS_DESCONTO.map((t) => (
