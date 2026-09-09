@@ -2,6 +2,7 @@
 // Login programático (jeito mais simples) com token em cache curto.
 
 import type { RawImage, RawProductImages } from "./color-images"
+import type { Regra, Par, Curado, TipoDesconto } from "./conjunto"
 
 const URL = process.env.MEDUSA_ADMIN_URL
 const EMAIL = process.env.MEDUSA_ADMIN_EMAIL
@@ -56,6 +57,136 @@ export async function medusaAdmin(
     },
     cache: "no-store",
   })
+}
+
+// ---- Erro genérico da Admin API (Benefício Conjunto e futuros helpers) ----
+export class MedusaHttpError extends Error {
+  constructor(public status: number, message: string) {
+    super(message)
+  }
+}
+
+// Chama a Admin API e devolve o JSON; erro do Medusa vira MedusaHttpError com a mensagem do
+// backend (pt-BR nas rotas de conjunto).
+async function medusaJson<T>(path: string, init: RequestInit = {}): Promise<T> {
+  const r = await medusaAdmin(path, init)
+  if (!r.ok) {
+    let msg = `HTTP ${r.status}`
+    try {
+      const j = await r.json()
+      msg = j.message || j.error || msg
+    } catch {}
+    throw new MedusaHttpError(r.status, msg)
+  }
+  return (await r.json()) as T
+}
+
+// ---- Benefício Conjunto (F2 Cockpit) ----
+// Proxies finos para a Admin API do módulo (F1, apps/backend/src/api/admin/conjuntos/*):
+// nenhuma regra de negócio aqui, só forma do body/resposta.
+
+export async function conjuntoListRegras(): Promise<Regra[]> {
+  const { regras } = await medusaJson<{ regras: Regra[] }>(`/admin/conjuntos/regras`)
+  return regras
+}
+
+export async function conjuntoCreateRegra(input: {
+  nome: string
+  escopo: "padrao" | "colecao"
+  collection_id?: string
+  tipo_desconto: TipoDesconto
+  valor: number
+  ativa?: boolean
+}): Promise<Regra> {
+  const { regra } = await medusaJson<{ regra: Regra }>(`/admin/conjuntos/regras`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  })
+  return regra
+}
+
+export async function conjuntoUpdateRegra(
+  id: string,
+  input: Partial<{ nome: string; tipo_desconto: TipoDesconto; valor: number; ativa: boolean }>
+): Promise<Regra> {
+  const { regra } = await medusaJson<{ regra: Regra }>(`/admin/conjuntos/regras/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(input),
+  })
+  return regra
+}
+
+export async function conjuntoGetPares(): Promise<Par[]> {
+  const { pares } = await medusaJson<{ pares: Par[] }>(`/admin/conjuntos/pares`)
+  return pares
+}
+
+export async function conjuntoSetPares(
+  pares: { categoria_a: string; categoria_b: string; ativo?: boolean }[]
+): Promise<Par[]> {
+  const { pares: atualizados } = await medusaJson<{ pares: Par[] }>(`/admin/conjuntos/pares`, {
+    method: "PUT",
+    body: JSON.stringify({ pares }),
+  })
+  return atualizados
+}
+
+export async function conjuntoListCurados(): Promise<Curado[]> {
+  const { curados } = await medusaJson<{ curados: Curado[] }>(`/admin/conjuntos/curados`)
+  return curados
+}
+
+export async function conjuntoCreateCurado(input: {
+  nome: string
+  handle?: string
+  capa_url?: string | null
+  product_ids: string[]
+  tipo_desconto: TipoDesconto
+  valor: number
+  ativo?: boolean
+  ordem?: number
+}): Promise<Curado> {
+  const { curado } = await medusaJson<{ curado: Curado }>(`/admin/conjuntos/curados`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  })
+  return curado
+}
+
+export async function conjuntoUpdateCurado(
+  id: string,
+  input: Partial<{
+    nome: string
+    capa_url: string | null
+    product_ids: string[]
+    tipo_desconto: TipoDesconto
+    valor: number
+    ativo: boolean
+    ordem: number
+  }>
+): Promise<Curado> {
+  const { curado } = await medusaJson<{ curado: Curado }>(`/admin/conjuntos/curados/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(input),
+  })
+  return curado
+}
+
+export async function conjuntoDeleteCurado(id: string): Promise<void> {
+  await medusaJson<{ id: string; deleted: boolean }>(`/admin/conjuntos/curados/${id}`, {
+    method: "DELETE",
+  })
+}
+
+export async function conjuntoPorProduto(productId: string): Promise<{
+  parceiras: { product_id: string; categoria_raiz: string; collection_id: string }[]
+  curados: Curado[]
+}> {
+  return medusaJson(`/admin/conjuntos/por-produto/${productId}`)
+}
+
+export async function conjuntoReconciliar(): Promise<{ regras: number; cupons: number }> {
+  return medusaJson(`/admin/conjuntos/reconciliar`, { method: "POST" })
 }
 
 // ---- Produtos & Estoque (Fase 3) ----
