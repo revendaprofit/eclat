@@ -166,6 +166,27 @@ medusaIntegrationTestRunner({
         "erro (2a tentativa, allocation across):",
         JSON.stringify(d2ErroTentativa2)
       )
+      // D3: forma que a F1 vai usar para CONVERTER cupom de pedido: cupom de ITENS, allocation "across"
+      // (o valor se reparte pelas unidades elegíveis, como "x% do pedido"), SEM max_quantity (o motor
+      // rejeita across + max_quantity), COM a regra de exclusão.
+      await api.post(
+        "/admin/promotions",
+        {
+          code: "PEDIDO10C",
+          type: "standard",
+          is_automatic: false,
+          status: "active",
+          application_method: {
+            type: "percentage",
+            target_type: "items",
+            allocation: "across",
+            value: 10,
+            currency_code: "brl",
+            target_rules: [{ attribute: "items.conjunto_desconto", operator: "eq", values: ["nenhum"] }],
+          },
+        },
+        { headers: admin }
+      )
     })
 
     async function novoCarrinho(linhas: { variantId: string; quantity: number }[], metadata?: Record<string, unknown>) {
@@ -275,6 +296,19 @@ medusaIntegrationTestRunner({
         // eslint-disable-next-line no-console
         console.log("[F0-D2] PEDIDO10X total =", pedido, "ajustes:", JSON.stringify(cart.items.map((i: any) => ({ v: i.variant_id, adj: i.adjustments }))))
         expect(pedido).toBeGreaterThan(0)
+      })
+    })
+
+    describe("D3 — conversão do cupom de pedido: cupom de itens across com exclusão", () => {
+      it("PEDIDO10C (items/across/sem max_quantity + exclusão) desconta só a legging", async () => {
+        const cart0 = await novoCarrinho([{ variantId: cat.top.variantId, quantity: 1 }, { variantId: cat.legging.variantId, quantity: 1 }])
+        await api.post(`/store/carts/${cart0.id}/promotions`, { promo_codes: ["PEDIDO10C"] }, { headers: cat.storeHeaders })
+        const cart = (await api.get(`/store/carts/${cart0.id}?fields=*items,*items.adjustments`, { headers: cat.storeHeaders })).data.cart
+        // eslint-disable-next-line no-console
+        console.log("[F0-D3] ajustes:", JSON.stringify(cart.items.map((i: any) => ({ v: i.variant_id, adj: i.adjustments }))))
+        expect(somaPorCodigo(cart, "PEDIDO10C")).toBeCloseTo(25.9, 2) // 10% só da legging (fora do conjunto)
+        expect(somaPorCodigo(cart, "CONJUNTO-POC")).toBeCloseTo(18.9, 2) // conjunto intacto no top
+        expect(Number(cart.discount_total)).toBeCloseTo(44.8, 2)
       })
     })
   },
