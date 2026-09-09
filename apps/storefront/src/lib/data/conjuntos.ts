@@ -20,6 +20,7 @@ import {
   precoMinDisponivel,
 } from "@lib/util/conjuntos"
 import { buildChain } from "@lib/util/category-chain"
+import { type ConjuntoFormadoStore, type Gatilho, type OportunidadeStore, montarGatilhos } from "@lib/util/carrinho-conjunto"
 import { HttpTypes } from "@medusajs/types"
 import { getCacheOptions } from "./cookies"
 import { listCategories } from "./categories"
@@ -247,4 +248,46 @@ export async function getElegibilidade(): Promise<
   return elegibilidade(vitrine, raizes)
 }
 
-export type { CardConjunto, ColecaoStore, CuradoStore, ParStore, RegraStore, VitrineStore }
+// Conjuntos formados + gatilhos "Feche mais um conjunto" do carrinho (F4, spec §7.5, ruling 1/4).
+// `no-store`: estado por carrinho, muda a cada linha adicionada. Uma chamada por render de página,
+// nunca por linha. Falha em qualquer ponto → vazio, nunca lança (o carrinho nunca quebra).
+export async function getCarrinhoConjunto(
+  cartId: string,
+  countryCode: string,
+  opts: { comGatilhos: boolean } = { comGatilhos: true }
+): Promise<{ conjuntos: ConjuntoFormadoStore[]; gatilhos: Gatilho[] }> {
+  const vazio = { conjuntos: [] as ConjuntoFormadoStore[], gatilhos: [] as Gatilho[] }
+  if (!cartId) return vazio
+  let raw: { conjuntos: ConjuntoFormadoStore[]; oportunidades: OportunidadeStore[] }
+  try {
+    raw = await sdk.client.fetch<{ conjuntos: ConjuntoFormadoStore[]; oportunidades: OportunidadeStore[] }>(
+      "/store/conjuntos/oportunidades",
+      { method: "GET", query: { cart_id: cartId }, cache: "no-store" }
+    )
+  } catch (err) {
+    console.error("[conjuntos] falha ao buscar oportunidades do carrinho", cartId, err)
+    return vazio
+  }
+  const conjuntos = raw.conjuntos ?? []
+  const oportunidades = raw.oportunidades ?? []
+  if (!opts.comGatilhos || !oportunidades.length) return { conjuntos, gatilhos: [] }
+
+  try {
+    const ids = Array.from(new Set(oportunidades.flatMap((o) => o.candidatos)))
+    const [produtos, vitrine, colecoesResp, categorias] = await Promise.all([
+      listProductsByIds(ids, countryCode),
+      fetchVitrineRaw(),
+      listCollections().catch(() => ({ collections: [] as HttpTypes.StoreCollection[], count: 0 })),
+      listCategories().catch(() => [] as HttpTypes.StoreProductCategory[]),
+    ])
+    const produtosMap = new Map(produtos.map((p) => [p.id, p]))
+    const nomesColecoes = new Map(colecoesResp.collections.map((c) => [c.id, c.title ?? ""]))
+    const nomesCategorias = new Map(categorias.map((c) => [c.handle, c.name ?? ""]))
+    return { conjuntos, gatilhos: montarGatilhos(oportunidades, produtosMap, vitrine.colecoes, nomesColecoes, nomesCategorias) }
+  } catch (err) {
+    console.error("[conjuntos] falha ao montar gatilhos do carrinho", cartId, err)
+    return { conjuntos, gatilhos: [] }
+  }
+}
+
+export type { CardConjunto, ColecaoStore, ConjuntoFormadoStore, CuradoStore, Gatilho, ParStore, RegraStore, VitrineStore }
