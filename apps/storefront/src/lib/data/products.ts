@@ -94,6 +94,37 @@ export const listProducts = async ({
     })
 }
 
+// Hidratação por ids (Benefício Conjunto, F3): busca produtos específicos em lotes de 100
+// (limite prático da Store API), dedupe antes de montar os lotes, sem paginação nem `region`
+// obrigatório além do já exigido por `listProducts`. Falha em um lote → loga e devolve `[]`
+// para aquele lote (nunca derruba a página inteira).
+export const listProductsByIds = async (
+  ids: string[],
+  countryCode: string
+): Promise<HttpTypes.StoreProduct[]> => {
+  const uniqueIds = Array.from(new Set(ids))
+  if (!uniqueIds.length) return []
+
+  const lotes: string[][] = []
+  for (let i = 0; i < uniqueIds.length; i += 100) {
+    lotes.push(uniqueIds.slice(i, i + 100))
+  }
+
+  const resultados = await Promise.all(
+    lotes.map((lote) =>
+      listProducts({
+        queryParams: { id: lote, limit: lote.length },
+        countryCode,
+      }).catch((err) => {
+        console.error("[conjuntos] listProductsByIds: falha ao buscar lote", err)
+        return { response: { products: [], count: 0 }, nextPage: null }
+      })
+    )
+  )
+
+  return resultados.flatMap((r) => r.response.products)
+}
+
 export type ListingScope = { categoryIds?: string[]; collectionId?: string; productIds?: string[]; q?: string }
 export type ListingResult = {
   products: HttpTypes.StoreProduct[]
