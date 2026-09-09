@@ -13,6 +13,7 @@ import {
   type ParStore,
   type RegraStore,
   type VitrineStore,
+  MAX_PARCEIRAS,
   elegibilidade,
   montarCardCurado,
   montarCardPar,
@@ -205,7 +206,11 @@ export async function getConjuntosDoProduto(
     return { parceiras: [], regra: null, curados: [] }
   }
 
-  const idsParceiras = raw.parceiras.map((p) => p.product_id)
+  // Hidrata só as parceiras que podem acabar na tela: o backend já devolve em ordem de
+  // relevância e o componente corta em `MAX_PARCEIRAS`, mas o filtro de disponibilidade
+  // (`precoMinDisponivel !== null`) só roda DEPOIS da hidratação — por isso a folga de 2×, para o
+  // corte final continuar tendo candidatas mesmo com parceiras esgotadas. Ordem preservada.
+  const idsParceiras = raw.parceiras.slice(0, MAX_PARCEIRAS * 2).map((p) => p.product_id)
   const idsCurados = raw.curados.flatMap((c) => c.product_ids)
   const todosIds = Array.from(new Set([productId, ...idsParceiras, ...idsCurados]))
   const produtos = await listProductsByIds(todosIds, countryCode)

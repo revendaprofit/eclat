@@ -128,7 +128,11 @@ const ProductTemplate = async ({
               {allOut && <NotifyMe productId={product.handle ?? product.id} />}
             </div>
           </div>
-          <CompleteSet product={product} countryCode={countryCode} colorMap={colorMap} />
+          {/* Achado #5: o bloco busca conjuntos no backend — sem `Suspense` a PDP inteira espera
+              por ele. Fallback `null`: o bloco simplesmente aparece quando os dados chegam. */}
+          <Suspense fallback={null}>
+            <CompleteSet product={product} countryCode={countryCode} colorMap={colorMap} />
+          </Suspense>
         </div>
       </ProductSelectionProvider>
       <div className="content-container max-w-4xl">

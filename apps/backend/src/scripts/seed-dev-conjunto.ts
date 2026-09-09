@@ -41,8 +41,16 @@ const CATEGORIAS = ["tops", "shorts", "leggings", "macaquinhos", "conjuntos"]
 
 export default async function seedDevConjunto({ container }: ExecArgs) {
   // ---------- GUARDA: nunca roda fora de um Postgres local. Precisa ser a primeira coisa. ----------
+  // Compara o HOST da URL, não a string inteira: um `includes("localhost")` aceitaria
+  // `postgres://user:senha@prod.exemplo.com/localhost_db` ou um usuário chamado "localhost".
   const dbUrl = process.env.DATABASE_URL ?? ""
-  if (!dbUrl.includes("localhost") && !dbUrl.includes("127.0.0.1")) {
+  let host: string | null = null
+  try {
+    host = new URL(dbUrl).hostname
+  } catch {
+    host = null
+  }
+  if (host !== "localhost" && host !== "127.0.0.1") {
     console.log("recusado: DATABASE_URL não é local")
     return
   }

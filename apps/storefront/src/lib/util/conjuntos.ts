@@ -24,6 +24,11 @@ export type CuradoStore = {
 }
 export type VitrineStore = { curados: CuradoStore[]; colecoes: ColecaoStore[] }
 
+// Máximo de parceiras exibidas no bloco "Complete o conjunto" da PDP (ruling 5 — a rota
+// `por-produto` não pagina). Vive aqui porque o leitor (`lib/data/conjuntos.ts`) precisa da mesma
+// constante para limitar quantos produtos hidrata, e o componente para cortar a lista.
+export const MAX_PARCEIRAS = 6
+
 // ---------- Cards da vitrine ----------
 export type PecaCard = { id: string; handle: string; title: string; thumbnail: string | null; precoMin: number | null }
 export type CardConjunto = {

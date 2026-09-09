@@ -44,11 +44,14 @@ export default async function ProductListing({
   const region = await getRegion(countryCode)
   if (!region) return null
   const colorMap = await getColorMap()
-  const result = await listProductsFiltered({ filters, scope, countryCode })
-  const base = getBaseURL()
   // Selo "Forma conjunto" (spec §7.3): predicado calculado UMA vez por listagem, aplicado por
-  // card — nunca uma chamada por produto (ver `getElegibilidade`).
-  const elegivel = await getElegibilidade()
+  // card — nunca uma chamada por produto (ver `getElegibilidade`). Em paralelo com a listagem:
+  // as duas leituras são independentes e a sequencial somava as duas latências.
+  const [result, elegivel] = await Promise.all([
+    listProductsFiltered({ filters, scope, countryCode }),
+    getElegibilidade(),
+  ])
+  const base = getBaseURL()
 
   return (
     <div className="content-container py-6" data-testid="category-container">

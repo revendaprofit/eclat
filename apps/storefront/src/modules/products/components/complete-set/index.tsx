@@ -6,12 +6,9 @@
 import type { HttpTypes } from "@medusajs/types"
 import type { ColorMap } from "@lib/util/colors"
 import { getConjuntosDoProduto } from "@lib/data/conjuntos"
-import { descricaoRegra } from "@lib/util/conjuntos"
+import { MAX_PARCEIRAS, descricaoRegra } from "@lib/util/conjuntos"
 import CardConjunto from "@modules/conjuntos/components/card-conjunto"
 import Parceira from "./parceira"
-
-// Ruling 5: até 6 parceiras no bloco da PDP (a rota `por-produto` não pagina).
-const MAX_PARCEIRAS = 6
 
 // `colorMap` entra na assinatura por paridade com o resto da PDP (`ProductTemplate` já o busca e
 // passa adiante) — `Parceira` não usa swatch de cor (a cor da parceira é derivada, não escolhida
