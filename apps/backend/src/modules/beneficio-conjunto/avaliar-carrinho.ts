@@ -41,29 +41,64 @@ export async function avaliarCarrinho(container: MedusaContainer, cart: { items?
   return { resultado: montarConjuntos(linhas, regras, pares, curados), linhas }
 }
 
-// Contexto para o motor de promoções (spec §6.1, ruling 4): cada linha vira até 3 entradas com o mesmo id —
-// unidades com desconto (conjunto_desconto = regra_id), em conjunto sem desconto ("conjunto") e livres ("nenhum").
+// Campos monetários de uma entrada de item que `escalar` pode reescalar (Controller ruling P4).
+// `unit_price` fica de fora de propósito: é valor POR unidade, não muda quando a quantidade da
+// entrada muda. `quantity` é tratado à parte (não é um campo monetário).
+const CAMPOS_MONETARIOS = [
+  "subtotal", "total", "original_total", "original_subtotal",
+  "discount_total", "discount_subtotal",
+  "tax_total", "original_tax_total", "discount_tax_total",
+] as const
+
+// Copia `it` como uma entrada de contexto com `n` das `q` unidades originais da linha, escalando
+// por `n / q` todo campo monetário presente (e o `.value` do respectivo `raw_<campo>`, se houver) —
+// não só `subtotal`. Hoje o motor de promoções só olha `subtotal`/`quantity` porque as promoções
+// do Benefício Conjunto não são `is_tax_inclusive`, mas se algum dia existir uma que seja, os
+// outros campos (tax_total, discount_total etc.) entram na conta do motor e precisam já estar
+// escalados aqui — do contrário eles carregariam o valor da linha inteira numa fração dela.
+function escalar(it: ItemCtx, n: number, q: number): ItemCtx {
+  const copia: ItemCtx = { ...it, quantity: n }
+  for (const campo of CAMPOS_MONETARIOS) {
+    const valor = (it as any)[campo]
+    if (valor !== undefined && valor !== null && Number.isFinite(Number(valor))) {
+      ;(copia as any)[campo] = (Number(valor) / q) * n
+    }
+    const rawCampo = `raw_${campo}`
+    const raw = (it as any)[rawCampo]
+    if (raw && typeof raw === "object" && Number.isFinite(Number(raw.value))) {
+      ;(copia as any)[rawCampo] = { ...raw, value: String((Number(raw.value) / q) * n) }
+    }
+  }
+  return copia
+}
+
+// Contexto para o motor de promoções (spec §6.1, ruling 4): cada linha vira até 3 entradas com o
+// mesmo id — unidades com desconto (conjunto_desconto = regra_id), em conjunto sem desconto
+// ("conjunto") e livres ("nenhum"). Não inclui `conjunto_id`: o motor de promoções não usa esse
+// campo, e uma mesma linha pode ter unidades em conjuntos DIFERENTES (ex.: top×2 pareado com
+// legging num conjunto e com short em outro — caso 3 do spec de carrinho), então um único
+// `conjunto_id` por item_id mentiria para qualquer consumidor que confiasse nele. Quem precisar
+// saber que conjunto formou cada unidade (vitrine) usa `/store/conjuntos/oportunidades` (Task 7),
+// que devolve `ConjuntoFormado[]` já com os `item_id`s corretos por conjunto.
 export function marcarContexto(items: ItemCtx[], resultado: ResultadoMontagem): ItemCtx[] {
   const porItem = new Map<string, Map<string, number>>() // item_id → marca → unidades
-  const conjuntoPorItem = new Map<string, string>()
   for (const c of resultado.conjuntos) for (const u of c.unidades) {
     const marca = u.desconto_unitario > 0 ? c.regra_id : MARCA_EM_CONJUNTO
     const m = porItem.get(u.item_id) ?? new Map<string, number>()
     m.set(marca, (m.get(marca) ?? 0) + 1)
     porItem.set(u.item_id, m)
-    conjuntoPorItem.set(u.item_id, c.id)
   }
   const saida: ItemCtx[] = []
   for (const it of items) {
-    const q = Math.max(1, Number(it.quantity)); const unit = Number(it.subtotal) / q
+    const q = Math.max(1, Number(it.quantity))
     const marcas = porItem.get(it.id)
     if (!marcas) { saida.push({ ...it, conjunto_desconto: MARCA_LIVRE }); continue }
     let usadas = 0
     for (const [marca, n] of Array.from(marcas.entries())) {
-      saida.push({ ...it, quantity: n, subtotal: unit * n, conjunto_desconto: marca, conjunto_id: conjuntoPorItem.get(it.id) })
+      saida.push({ ...escalar(it, n, q), conjunto_desconto: marca })
       usadas += n
     }
-    if (usadas < q) saida.push({ ...it, quantity: q - usadas, subtotal: unit * (q - usadas), conjunto_desconto: MARCA_LIVRE })
+    if (usadas < q) saida.push({ ...escalar(it, q - usadas, q), conjunto_desconto: MARCA_LIVRE })
   }
   return saida
 }

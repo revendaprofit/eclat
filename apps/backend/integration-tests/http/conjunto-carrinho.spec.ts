@@ -175,6 +175,7 @@ medusaIntegrationTestRunner({
       })
 
       it("top + legging + macaquinho → conjunto só top+legging (37,80); macaquinho fora (sem par)", async () => {
+        await setPadrao("menor_peca_percentual", 20)
         const cart = await novoCarrinho([
           { variantId: cat.top.variantId, quantity: 1 },
           { variantId: cat.legging.variantId, quantity: 1 },
@@ -250,6 +251,62 @@ medusaIntegrationTestRunner({
       expect(somaPorCodigo(cart, "CUPOM10")).toBeCloseTo(29.9, 2)
       expect(ajustes(legging).filter((a) => a.code === "CUPOM10")).toHaveLength(0)
       expect(Number(cart.discount_total)).toBeCloseTo(67.7, 2)
+    })
+
+    // 9 — Preço zero não forma conjunto: elegibilidade exige preço > 0 (spec §5, filtro
+    // `preco_unitario <= 0` em `linhasDoCarrinho`). Produto de preço zero criado na hora (não faz
+    // parte do catálogo base) para não afetar os demais casos. PRECO_TOP_BRINDE = 0: Medusa aceitou
+    // `amount: 0` na criação do produto (ver report, "preço usado no cenário de preço zero").
+    describe("caso 9: preço zero não forma conjunto", () => {
+      const PRECO_TOP_BRINDE = 0
+      let topBrindeVariantId: string
+
+      beforeAll(async () => {
+        const res = await api.post(
+          "/admin/products",
+          {
+            title: "Top Brinde",
+            handle: "top-brinde",
+            status: "published",
+            options: [{ title: "Tamanho", values: ["M"] }],
+            variants: [
+              {
+                title: "M",
+                sku: "top-brinde-m",
+                manage_inventory: false,
+                options: { Tamanho: "M" },
+                prices: [{ amount: PRECO_TOP_BRINDE, currency_code: "brl" }],
+              },
+            ],
+            sales_channels: [{ id: cat.salesChannelId }],
+            collection_id: cat.collections.black,
+            categories: [{ id: cat.categorias.tops }],
+          },
+          { headers: admin }
+        )
+        topBrindeVariantId = res.data.product.variants[0].id
+      })
+
+      it("top-brinde (preço 0) + legging → nenhum conjunto formado; discount_total 0", async () => {
+        await removerColecaoBlack()
+        await setPadrao("menor_peca_percentual", 20)
+        const cart = await novoCarrinho([
+          { variantId: topBrindeVariantId, quantity: 1 },
+          { variantId: cat.legging.variantId, quantity: 1 },
+        ])
+        const legging = cart.items.find((i: any) => i.variant_id === cat.legging.variantId)
+        expect(ajustes(legging)).toHaveLength(0)
+        expect(Number(cart.discount_total)).toBeCloseTo(0, 2)
+      })
+
+      it("top-brinde + legging + top regular → o top regular pareia com a legging (37,80); o brinde é ignorado", async () => {
+        const cart = await novoCarrinho([
+          { variantId: topBrindeVariantId, quantity: 1 },
+          { variantId: cat.legging.variantId, quantity: 1 },
+          { variantId: cat.top.variantId, quantity: 1 },
+        ])
+        expect(Number(cart.discount_total)).toBeCloseTo(37.8, 2)
+      })
     })
   },
 })
