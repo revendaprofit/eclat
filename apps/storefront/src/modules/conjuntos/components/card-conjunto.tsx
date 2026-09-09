@@ -51,7 +51,7 @@ export default function CardConjunto({
                 <div key={i} className="relative h-full">
                   <Image
                     src={src}
-                    alt=""
+                    alt={i === 0 ? `${card.nome} — use.ÉCLAT` : ""}
                     aria-hidden={i > 0}
                     fill
                     quality={80}
@@ -81,12 +81,15 @@ export default function CardConjunto({
         <p className="text-eclat-grafite" data-testid="card-conjunto-nome">
           {card.nome}
         </p>
-        <div className="flex items-center gap-x-2 mt-1">
+        <div className="mt-1">
+          <div className="flex items-baseline gap-x-1">
+            <span className="text-eclat-grafite/50 text-[10px] uppercase tracking-[0.15em]">a partir de</span>
+            <span className="text-eclat-terracota font-medium" data-testid="card-conjunto-preco-beneficio">
+              {formatarReais(card.precoComBeneficio)}
+            </span>
+          </div>
           <span className="line-through text-eclat-grafite/50 text-sm" data-testid="card-conjunto-preco-cheio">
             {formatarReais(card.precoCheio)}
-          </span>
-          <span className="text-eclat-terracota font-medium" data-testid="card-conjunto-preco-beneficio">
-            {formatarReais(card.precoComBeneficio)}
           </span>
         </div>
       </div>

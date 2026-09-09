@@ -100,7 +100,7 @@ function pecaCard(p: HttpTypes.StoreProduct): PecaCard {
     id: p.id,
     handle: p.handle ?? "",
     title: p.title ?? "",
-    thumbnail: p.thumbnail ?? null,
+    thumbnail: p.thumbnail ?? p.images?.[0]?.url ?? null,
     precoMin: precoMinDisponivel(p),
   }
 }

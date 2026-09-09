@@ -10,7 +10,7 @@ import LocalizedClientLink from "@modules/common/components/localized-client-lin
 import { ItemListJsonLd } from "@modules/seo/jsonld"
 import Track, { type EcommercePayload } from "@modules/analytics/track"
 import CardConjunto from "@modules/conjuntos/components/card-conjunto"
-import GradeColecao from "@modules/conjuntos/components/grade-colecao"
+import GradeColecao, { CARDS_INICIAIS } from "@modules/conjuntos/components/grade-colecao"
 
 // Payload GA4 (schema `EcommercePayload`) a partir dos cards de uma seção — mesma forma de
 // `productsToItemList` (item_id/item_name/price/index), mas com o preço COM benefício (é o preço
@@ -113,7 +113,7 @@ export default async function VitrineConjuntos({
                     url: `${base}/${countryCode}/conjuntos/${c.handle}`,
                   }))}
                 />
-                <Track event="view_item_list" ecommerce={itemListPayload(col.cards, listName)} />
+                <Track event="view_item_list" ecommerce={itemListPayload(col.cards.slice(0, CARDS_INICIAIS), listName)} />
                 <GradeColecao cards={col.cards} listName={listName} />
               </section>
             )

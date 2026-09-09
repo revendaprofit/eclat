@@ -4,7 +4,8 @@ import { useState } from "react"
 import type { CardConjunto as CardConjuntoData } from "@lib/util/conjuntos"
 import CardConjunto from "./card-conjunto"
 
-const LIMITE = 12
+export const CARDS_INICIAIS = 12
+const LIMITE = CARDS_INICIAIS
 
 // Grade de uma seção "por coleção" da vitrine de Conjuntos (spec §7.1, ruling 3): mostra até 12
 // pares e revela o restante sob demanda (estado local, sem navegação/query — a coleção inteira já

@@ -274,3 +274,22 @@ describe("formatarReais", () => {
     expect(formatarReais(0)).toBe("R$ 0,00")
   })
 })
+
+describe("pecaCard thumbnail fallback", () => {
+  it("fallback para images[0].url quando thumbnail é nulo", () => {
+    const regra: RegraStore = { tipo_desconto: "menor_peca_percentual", valor: 20 }
+    const top = {
+      id: "prod_top",
+      handle: "top-aura",
+      title: "Top Aura",
+      thumbnail: null,
+      images: [{ url: "fallback-top.jpg" }],
+      options: OPTS,
+      variants: [variante("v1", "M", "Verde Exército", 189)],
+    } as unknown as HttpTypes.StoreProduct
+    const par: ParStore = { handle: "top-aura", categoria_a: "tops", categoria_b: "tops", product_ids: ["prod_top"] }
+    const produtos = new Map([[top.id, top]])
+    const card = montarCardPar(par, "col_1", regra, produtos)
+    expect(card!.pecas[0].thumbnail).toBe("fallback-top.jpg")
+  })
+})
