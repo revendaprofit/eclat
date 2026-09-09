@@ -62,9 +62,17 @@ export const PUT = async (req: AuthenticatedMedusaRequest<AtualizarCuradoBody>, 
   res.json({ curado: { ...(await svc.retrieveConjuntoCurado(id)), regra: await svc.retrieveConjuntoRegra(atual.regra_id) } })
 }
 
-// Apaga curado, regra e promoção (spec) — idempotente quanto à promoção: se ela já não existe
-// (apagada por fora), o erro do workflow é engolido; o curado/regra em si não são idempotentes
-// (id inexistente → 404), só a etapa de promoção.
+// Apaga curado, regra e promoção (spec §4.4) — ORDEM (fix round 1, achado "DELETE pode deixar
+// promoção órfã"): (1) promoção primeiro, (2) regra, (3) curado. Se apagar a promoção falhar por
+// qualquer motivo QUE NÃO seja "ela já não existe", o erro sobe e NADA é apagado (curado e regra
+// continuam de pé) — não há mais o `.catch(() => {})` genérico que engolia qualquer erro do
+// workflow, incluindo falhas reais, e deixava a regra apontando para uma promoção que ninguém
+// mais teria como encontrar (órfã, spec §4.4). Só o caso "não encontrada" (idempotência de quem
+// já apagou a promoção por fora) é engolido, inspecionando `e.type`/mensagem do erro.
+function ehErroNaoEncontrada(e: any): boolean {
+  return e?.type === MedusaError.Types.NOT_FOUND || /n[ãa]o encontrad|not\s*found/i.test(String(e?.message ?? ""))
+}
+
 export const DELETE = async (req: AuthenticatedMedusaRequest, res: MedusaResponse) => {
   const svc: any = req.scope.resolve(BENEFICIO_CONJUNTO_MODULE)
   const { id } = req.params
@@ -73,15 +81,15 @@ export const DELETE = async (req: AuthenticatedMedusaRequest, res: MedusaRespons
   if (!atual) throw new MedusaError(MedusaError.Types.NOT_FOUND, `Conjunto curado ${id} não encontrado.`)
   const regra = await svc.retrieveConjuntoRegra(atual.regra_id).catch(() => null)
 
-  await svc.deleteConjuntoCurados([id])
-  if (regra) {
-    if (regra.promotion_id) {
-      await deletePromotionsWorkflow(req.scope)
-        .run({ input: { ids: [regra.promotion_id] } })
-        .catch(() => {})
+  if (regra?.promotion_id) {
+    try {
+      await deletePromotionsWorkflow(req.scope).run({ input: { ids: [regra.promotion_id] } })
+    } catch (e) {
+      if (!ehErroNaoEncontrada(e)) throw e
     }
-    await svc.deleteConjuntoRegras([regra.id])
   }
+  if (regra) await svc.deleteConjuntoRegras([regra.id])
+  await svc.deleteConjuntoCurados([id])
 
   res.json({ id, deleted: true })
 }

@@ -1,8 +1,9 @@
-import { MedusaError, MedusaService } from "@medusajs/framework/utils"
+import { MedusaService } from "@medusajs/framework/utils"
 import ConjuntoRegra from "./models/conjunto-regra"
 import ConjuntoPar from "./models/conjunto-par"
 import ConjuntoCurado from "./models/conjunto-curado"
 import type { Curado, Par, Regra } from "./utils/tipos"
+import { normalizarPar } from "./utils/pares"
 
 // Serviço do módulo: CRUD gerado pelo MedusaService + leituras agregadas usadas pelo gancho e pelas rotas.
 class BeneficioConjuntoService extends MedusaService({ ConjuntoRegra, ConjuntoPar, ConjuntoCurado }) {
@@ -31,10 +32,7 @@ class BeneficioConjuntoService extends MedusaService({ ConjuntoRegra, ConjuntoPa
   // unicidade do índice e o CHECK do modelo (spec §4.2) sempre vejam a mesma representação do
   // par não ordenado, independente da ordem em que o chamador informou as categorias.
   async criarPar(input: { categoria_a: string; categoria_b: string; ativo?: boolean }): Promise<Par> {
-    if (input.categoria_a === input.categoria_b) {
-      throw new MedusaError(MedusaError.Types.INVALID_DATA, "Um par precisa de duas categorias diferentes.")
-    }
-    const [categoria_a, categoria_b] = [input.categoria_a, input.categoria_b].sort()
+    const { categoria_a, categoria_b } = normalizarPar(input.categoria_a, input.categoria_b)
     const par = await this.createConjuntoPars({ categoria_a, categoria_b, ativo: input.ativo })
     return par as unknown as Par
   }

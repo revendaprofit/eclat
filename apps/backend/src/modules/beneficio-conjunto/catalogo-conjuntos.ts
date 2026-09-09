@@ -121,6 +121,15 @@ export async function parceirasDoProduto(
 // Resolve um handle de vitrine para um conjunto vendável (curado, ou par `handleA--handleB`
 // validado): mesma coleção, par ativo entre as raízes, regra efetiva ativa. `null` se o handle
 // não corresponder a nada vendável agora (curado inativo/apagado, produto despublicado, etc.).
+//
+// Ordem CANÔNICA apenas (fix round 1, achado "conjuntoPorHandle aceita handleA--handleB em
+// qualquer ordem"): `handleA--handleB` só resolve se a raiz de A for exatamente `par.categoria_a`
+// e a raiz de B for exatamente `par.categoria_b` — sem reordenar as raízes antes de comparar. Como
+// `ConjuntoPar` é sempre gravado com `categoria_a < categoria_b` (CHECK `conjunto_par_ordem`,
+// service.criarPar), isso implica que só a ordem alfabética das RAÍZES resolve; a ordem invertida
+// devolve `null`. `listarConjuntos` usa a mesma ordem (`ladoA`/`categoria_a` primeiro) para montar
+// o handle do par, então os dois lados ficam sempre de acordo — sem risco de canonicalização
+// divergente para as URLs/SEO da vitrine (Task 7).
 export async function conjuntoPorHandle(
   container: MedusaContainer,
   handle: string
@@ -146,8 +155,9 @@ export async function conjuntoPorHandle(
   const b = produtos.find((p) => p.handle === handleB)
   if (!a || !b || a.id === b.id || !a.collection_id || a.collection_id !== b.collection_id) return null
   if (!a.categoria_raiz || !b.categoria_raiz) return null
-  const [catA, catB] = [a.categoria_raiz, b.categoria_raiz].sort()
-  const par = pares.find((p) => p.ativo && p.categoria_a === catA && p.categoria_b === catB)
+  // Ordem canônica só: a raiz de A precisa bater com `categoria_a` e a de B com `categoria_b`
+  // exatamente como gravado — não normaliza/ordena as raízes antes de comparar (ver nota acima).
+  const par = pares.find((p) => p.ativo && p.categoria_a === a.categoria_raiz && p.categoria_b === b.categoria_raiz)
   if (!par) return null
   const regra = regraEfetiva(regras, a.collection_id)
   if (!regra) return null

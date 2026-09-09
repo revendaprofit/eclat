@@ -218,6 +218,13 @@ medusaIntegrationTestRunner({
         const promo: any = getContainer().resolve(Modules.PROMOTION)
         await expect(promo.retrievePromotion(promotionId)).rejects.toBeTruthy()
       })
+
+      // Fix round 1, ruling P5: DELETE apaga (1) promoção, (2) regra, (3) curado — nunca deixa a
+      // promoção órfã. Apagar de novo o mesmo curado (já soft-deletado) tem que dar 404, não 200
+      // silencioso nem erro ao tentar apagar a promoção/regra de novo.
+      it("DELETE de novo (curado já apagado) → 404", async () => {
+        await expect(api.delete(`/admin/conjuntos/curados/${curadoId}`, { headers: admin })).rejects.toMatchObject({ response: { status: 404 } })
+      })
     })
 
     describe("por-produto", () => {
