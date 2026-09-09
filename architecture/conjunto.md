@@ -278,8 +278,8 @@ Achados da execução F1 (Task 8, registrados aqui por não terem virado risco r
   - **`capa_url` nullable (Task 5 desta fase):** `apps/backend/src/api/middlewares.ts` — os schemas zod de
     criar/editar curado aceitam `capa_url: z.string().min(1).nullable().optional()` (antes só
     `.optional()`, sem `.nullable()`), para o Cockpit poder enviar `capa_url: null` e limpar a capa sem
-    precisar de uma rota separada. +2 testes de integração (`conjunto-admin.spec.ts`), suíte de integração
-    do módulo em 70 no total. **Isto exige redeploy do backend em produção** (`railway up` — o Railway não
+    precisar de uma rota separada. +2 testes de integração (`conjunto-admin.spec.ts`), suíte HTTP do backend
+    em 70 no total — 68 nos `conjunto-*.spec.ts` + 2 em `saude.spec.ts`. **Isto exige redeploy do backend em produção** (`railway up` — o Railway não
     está ligado ao GitHub deste serviço, ver entrada "DEPLOY em produção" de 2026-09-09 em `progress.md`)
     antes do roteiro de validação do dono: sem o redeploy, `capa_url: null` continua devolvendo `400` em
     produção mesmo com o Cockpit já pronto para enviá-lo.
