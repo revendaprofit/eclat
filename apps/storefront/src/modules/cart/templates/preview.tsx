@@ -9,9 +9,10 @@ import SkeletonLineItem from "@modules/skeletons/components/skeleton-line-item"
 
 type ItemsTemplateProps = {
   cart: HttpTypes.StoreCart
+  etiquetas?: Record<string, string>
 }
 
-const ItemsPreviewTemplate = ({ cart }: ItemsTemplateProps) => {
+const ItemsPreviewTemplate = ({ cart, etiquetas }: ItemsTemplateProps) => {
   const items = cart.items
   const hasOverflow = items && items.length > 4
 
@@ -36,6 +37,7 @@ const ItemsPreviewTemplate = ({ cart }: ItemsTemplateProps) => {
                       item={item}
                       type="preview"
                       currencyCode={cart.currency_code}
+                      etiqueta={etiquetas?.[item.id]}
                     />
                   )
                 })

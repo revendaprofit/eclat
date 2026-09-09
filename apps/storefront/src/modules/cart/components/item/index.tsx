@@ -18,9 +18,10 @@ type ItemProps = {
   item: HttpTypes.StoreCartLineItem
   type?: "full" | "preview"
   currencyCode: string
+  etiqueta?: string | null
 }
 
-const Item = ({ item, type = "full", currencyCode }: ItemProps) => {
+const Item = ({ item, type = "full", currencyCode, etiqueta }: ItemProps) => {
   const [updating, setUpdating] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -70,6 +71,14 @@ const Item = ({ item, type = "full", currencyCode }: ItemProps) => {
           {item.product_title}
         </Text>
         <LineItemOptions variant={item.variant} data-testid="product-variant" />
+        {etiqueta && (
+          <span
+            className="mt-1 inline-block rounded-sm bg-eclat-areia px-1.5 py-0.5 text-[11px] uppercase tracking-wider text-eclat-grafite"
+            data-testid="etiqueta-conjunto"
+          >
+            {etiqueta}
+          </span>
+        )}
       </Table.Cell>
 
       {type === "full" && (

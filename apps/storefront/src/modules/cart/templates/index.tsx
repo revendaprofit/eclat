@@ -4,13 +4,18 @@ import EmptyCartMessage from "../components/empty-cart-message"
 import SignInPrompt from "../components/sign-in-prompt"
 import Divider from "@modules/common/components/divider"
 import { HttpTypes } from "@medusajs/types"
+import type { Gatilho } from "@lib/util/carrinho-conjunto"
 
 const CartTemplate = ({
   cart,
   customer,
+  etiquetas,
+  gatilhos, // gatilhos: Task 4
 }: {
   cart: HttpTypes.StoreCart | null
   customer: HttpTypes.StoreCustomer | null
+  etiquetas?: Record<string, string>
+  gatilhos?: Gatilho[]
 }) => {
   return (
     <div className="py-12">
@@ -24,7 +29,7 @@ const CartTemplate = ({
                   <Divider />
                 </>
               )}
-              <ItemsTemplate cart={cart} />
+              <ItemsTemplate cart={cart} etiquetas={etiquetas} />
             </div>
             <div className="relative">
               <div className="flex flex-col gap-y-8 sticky top-12">

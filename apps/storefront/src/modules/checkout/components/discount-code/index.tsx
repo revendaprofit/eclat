@@ -4,6 +4,7 @@ import { Badge, Heading, Input, Label, Text } from "@modules/common/components/u
 import React from "react"
 
 import { applyPromotions } from "@lib/data/cart"
+import { avisoCupom, cuponsVisiveis } from "@lib/util/carrinho-conjunto"
 import { convertToLocale } from "@lib/util/money"
 import { HttpTypes } from "@medusajs/types"
 import Trash from "@modules/common/icons/trash"
@@ -18,7 +19,8 @@ const DiscountCode: React.FC<DiscountCodeProps> = ({ cart }) => {
   const [isOpen, setIsOpen] = React.useState(false)
   const [errorMessage, setErrorMessage] = React.useState("")
 
-  const { promotions = [] } = cart
+  const promotions = cuponsVisiveis(cart.promotions)
+  const mostrarAviso = avisoCupom(cart)
   const removePromotionCode = async (code: string) => {
     const validPromotions = promotions.filter(
       (promotion) => promotion.code !== code
@@ -167,6 +169,12 @@ const DiscountCode: React.FC<DiscountCodeProps> = ({ cart }) => {
               })}
             </div>
           </div>
+        )}
+
+        {mostrarAviso && (
+          <p className="txt-small text-eclat-grafite/70 mt-1" role="note" data-testid="aviso-cupom-conjunto">
+            Cupom não se aplica a peças com Benefício Conjunto.
+          </p>
         )}
       </div>
     </div>
