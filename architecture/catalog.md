@@ -146,3 +146,81 @@ Exemplos iniciais: **"Resplendor"** (carro-chefe), **"Luz Primeira"** (lançamen
   - **Ruling 7 (partida de toda ação que não mexe em tamanho):** `explicitFilters(filters, implicitSize)` — usado por `useFilterNavigation` como `base` — devolve o estado **sem** o tamanho implícito; o implícito nunca vira explícito só porque a cliente mexeu noutro filtro. Ordenar ou trocar de página parte de `base` (ou seja, sem o tamanho) → a URL sai sem `tamanho` → o servidor reaplica o preferido no próximo render → a chip continua. Um filtro explícito novo (cor, preço, disponível) parte do mesmo `base` (sem o tamanho implícito) → a URL fica só com esse filtro → `hasActiveFilters` vira `true` → o pré-filtro de tamanho desliga → a chip some (spec §10: o tamanho só se aplica em listagem **sem** filtro explícito nenhum). Remover esse último filtro explícito → URL volta a ficar limpa → o pré-filtro liga de novo → a chip **reaparece** — comportamento intencional (não um limite), decorrência direta da regra "sem filtro nenhum" do §10.
   - Opt-out `?tamanho=` (param presente, vazio): gravado por `listingHref(pathname, next, optOut, keepQ)` só quando `shouldOptOut` diz sim — ação "tamanho" (a cliente remove a chip "Seu tamanho" ou desmarca o tamanho no filtro) ou "limpar" ("Limpar tudo"/os dois links do estado vazio), **ou** quando a URL atual já está em opt-out (`optedOut = searchParams.get("tamanho") === ""`), preservando o opt-out ao mexer noutros filtros (`?tamanho=&cor=Licor`) até a cliente escolher um tamanho de novo.
 - Estilos do wizard: `orderByStyles` (`lib/util/style-order.ts`, `STYLE_HANDLES`) reordena `nav.feminine` em "Compre por peça" — os estilos escolhidos vêm primeiro, cada grupo (escolhido/não escolhido) preservando a ordem original entre si, nada some. Ex.: com `nav.feminine` = [Top, Short, Legging, Macaquinho] (ordem de rank) e `estilos: ["macacao","short"]`, o resultado é **Short, Macaquinho/Macacão, Top, Legging** (Short e Macaquinho, que já vinham nessa ordem relativa, sobem primeiro; Top e Legging seguem depois, na ordem relativa em que já estavam). O wizard chama `router.refresh()` ao fechar (pular ou terminar), para a home/listagem já renderizar com o cookie novo sem precisar de F5 manual.
+
+## Conjuntos na vitrine (Fase F3, 2026-09)
+
+> Spec: `docs/superpowers/specs/2026-09-08-beneficio-conjunto-design.md` (§7.1–7.4, 7.6, 7.7; §6.3 "Confirmado F3"; §11 itens 5–8) · Backend consumido: `architecture/conjunto.md` §8 (rotas Store) · Plano: `docs/superpowers/plans/2026-09-09-conjunto-f3-vitrine.md` · Pasta de execução: `.superpowers/sdd/2026-09-09-conjunto-f3-vitrine/` (briefs + relatórios das 6 tasks) · Branch `feat/conjunto-f3-vitrine`.
+> Status: **código concluído + aceite local completo (2026-09-09)** — critérios de aceite §11 itens 5–8 validados no navegador contra o backend local semeado (ver `progress.md`, entrada "Benefício Conjunto F3"). §7.5 (carrinho) fica para F4.
+
+### Páginas e rotas
+- **`/categories/conjuntos`**: a rota de categoria (`app/[countryCode]/(main)/categories/[...category]/page.tsx`) detecta o handle `conjuntos` com um early return e renderiza `VitrineConjuntos` (`modules/conjuntos/templates/vitrine.tsx`) em vez do `CategoryTemplate` genérico — mesma URL/canonical de categoria de sempre (ruling V1). Seções: "Escolhidos pela ÉCLAT" (curados, sem limite, ordem do admin) e uma seção "Conjuntos <Coleção>" por coleção com pares gerados (grade de `CARDS_INICIAIS = 12` + "Ver todos os conjuntos da coleção", expansão local via `useState`, sem navegação). Coleção sem nenhum par vendável não aparece. Estado vazio geral: "Em breve" + link para `/store`.
+- **`/conjuntos/[handle]`** (`app/[countryCode]/(main)/conjuntos/[handle]/page.tsx`): página de um conjunto (curado ou par de coleção). `generateMetadata` monta título/description/canonical/OG a partir de `getConjunto`; `notFound()` quando a região ou o conjunto não resolvem — inclusive quando o handle está na ordem invertida (`top--legging` em vez de `legging--top`, §8 de `conjunto.md`) ou quando o par foi ofuscado por um curado (ruling V2, ver abaixo).
+- PDP normal (`/products/[handle]`): ganha o bloco "Complete o conjunto" (§7.3) quando o produto tem parceiras ou curados; sem alteração de rota.
+
+### Componentes (`modules/conjuntos/**`)
+- `templates/vitrine.tsx` (server): monta as duas seções, `ItemListJsonLd` + `Track view_item_list` por seção.
+- `components/card-conjunto.tsx`: duas fotos lado a lado (peças) ou a `capa_url` do curado quando existe; nome; "A PARTIR DE" + preço com benefício + preço cheio riscado; selo "BENEFÍCIO CONJUNTO"; link para `/conjuntos/<handle>`; `pushSelectItem` síncrono no `onClick`, antes da navegação do `Link`.
+- `components/grade-colecao.tsx`: grade de pares de uma coleção, exporta `CARDS_INICIAIS = 12` (também usado por `vitrine.tsx` para cortar o `view_item_list` — ruling V1, só os cards de fato visíveis geram o evento; o `ItemListJsonLd` continua com a lista completa).
+- `templates/conjunto.tsx` (server): breadcrumb "Início › Conjuntos › <nome>", `Track view_item`, `ConjuntoJsonLd` (`modules/seo/jsonld.tsx`), `<h1>`, monta `<ConjuntoBuilder>`.
+- `components/conjunto-builder.tsx` (client): orquestra as N peças do conjunto. Cada peça vive num `<ProductSelectionProvider key={produto.id}>` **próprio** (não compartilhado) — reaproveita a PDP normal (`ColorSelect`, `SizeSelect`, `VariantGallery`) sem alterar suas assinaturas, exceto o novo prop `showGuide?: boolean` do `SizeSelect` (default `true`; a página do conjunto passa `false` porque o link fixo `#medidas` embutido no componente ficaria ambíguo com duas peças na mesma página — cada peça expõe seu próprio link "Guia de medidas — <peça>" apontando para a PDP daquela peça, `/products/<handle>#medidas`).
+- `components/peca-do-conjunto.tsx` (client): a "ponte" de cada peça — lê `useProductSelection()` do seu próprio provider e reporta `{ variant, completa }` ao builder via `onChange`.
+- `components/rodape-conjunto.tsx` (client): preço cheio riscado, total com benefício (`totalDoConjunto`, `lib/util/conjuntos.ts`), `descricaoRegra(regra, n)`, botão "Adicionar o conjunto"; painel lateral fixo no desktop, rodapé fixo no mobile (mesmo conteúdo, `display:none` alternado por breakpoint).
+- `modules/products/components/complete-set/index.tsx` (server, PDP) + `parceira.tsx` (client): bloco "Complete o conjunto" — até 6 parceiras (por coleção/par) com foto, nome, preço, chips de tamanho inline e "Adicionar as duas"; curados que incluem a peça aparecem como cards (`CardConjunto` reaproveitado) em "Looks com essa peça".
+
+### Fluxo de dados
+`lib/util/conjuntos.ts` (puro, 38 testes) — `descontoConjunto`/`precosConjunto` (espelho literal de `descontoDoConjunto` do backend), `precoMinDisponivel`, `montarCardPar`/`montarCardCurado`, `descricaoRegra`, `corParceira`, `elegibilidade(vitrine, raizes)`, `totalDoConjunto`, `slotMetadata(handle, i, agora)` (formato `"<handle>#<i>#<timestamp>"`), `formatarReais` (implementação manual, sem `Intl.NumberFormat`, para não depender de dados ICU do runtime).
+
+`lib/data/conjuntos.ts` (`server-only`, não `"use server"` — `getElegibilidade` devolve uma função, e closures não são serializáveis como retorno de Server Action):
+- `getVitrineConjuntos(countryCode)` — `GET /store/conjuntos` + hidrata **todos** os ids (curados + pares) numa única chamada a `listProductsByIds` (novo export de `lib/data/products.ts`: dedupe + lotes de 100 + `Promise.all`, mesmo teto de 100 já conhecido da Fase 2).
+- `getConjunto(handle, countryCode)` — `GET /store/conjuntos/:handle`; 404/erro → `null`; produtos hidratados na mesma ordem de `card.pecas` (não a ordem que a API devolveu).
+- `getConjuntosDoProduto(productId, countryCode)` — `GET /store/conjuntos/por-produto/:id`; parceiras filtradas a `precoMinDisponivel(p) !== null` (só parceira com variante disponível).
+- `getElegibilidade()` — fecha `Promise.all([vitrine, mapa de raízes])` uma vez e devolve `(productId, collection_id, categoryIds) => boolean` (T5 fix round 1 — assinatura ganhou `productId` como 1º argumento, ver ruling V4 abaixo).
+
+Toda função de leitura segue o padrão do resto do storefront: falha de rede/parse → `console.error("[conjuntos] …")` + estrutura vazia/`null`, nunca lança. `lib/data/cart.ts#addToCart` ganhou um parâmetro opcional `metadata?: Record<string, unknown>` (repassado direto para `sdk.store.cart.createLineItem`) — usado pelos dois fluxos de adição (`conjunto-builder.tsx`, `complete-set/parceira.tsx`) para marcar `conjunto_slot`.
+
+### Adição ao carrinho: resumível e em linhas separadas
+Os dois pontos de adição (página do conjunto, "Complete o conjunto" da PDP) seguem o mesmo padrão:
+1. `for` sequencial de `addToCart({ variantId, quantity: 1, metadata: slotMetadata(handle, i) })` — nunca `Promise.all` (preserva a ordem dos slots).
+2. **Progresso atrelado à seleção corrente** (ruling V5, não a um `useEffect` de reset): o estado de "quais peças já entraram nesta tentativa" é uma chave derivada das variantes selecionadas (`` `${variante0.id}|${variante1.id}|...` ``) + o conjunto de índices já adicionados; um retry com a MESMA seleção pula quem já entrou (sem duplicar linha); uma seleção NOVA começa do zero (a peça antiga adicionada na tentativa anterior fica no carrinho — a cliente ajusta manualmente se não quiser as duas, mesmo comportamento de trocar seleção na PDP comum).
+3. Seletores de cada peça ficam `disabled` durante o loop (ruling V3) — impede fisicamente trocar a seleção de uma peça enquanto outra está em voo.
+4. Mensagem de erro nomeia a peça que falhou ("Não foi possível adicionar `<título>`. Tente de novo.").
+5. Sucesso: toast "Ver sacola" no mobile; no desktop o `CartDropdown` já observa a contagem de itens e se auto-abre (mesmo mecanismo do `QuickAdd` existente, nenhum código novo).
+
+### Empírico confirmado nesta fase (spec §6.3 "Confirmado F3")
+Testado contra o Medusa local 2.15.5: `metadata.conjunto_slot` **não funde linhas** — repetir a adição do mesmo conjunto (mesma seleção) gera **2 → 4 linhas**, nunca 2 linhas com quantidade 2. Isso fecha o limite conhecido da F1 (linha dividida compartilha a base de desconto entre conjunto e cupom) **só para os fluxos dedicados** (página do conjunto, "Complete o conjunto"): toda peça adicionada por eles vai para uma linha própria de quantidade 1. Uma peça adicionada pelo botão comum "Adicionar à sacola" da PDP normal continua sem esse metadata — o limite antigo ainda vale para ela.
+
+### Selo "Forma conjunto" (badge no card, spec §7.4)
+`lib/util/product-card-data.ts#buildProductCardData` ganhou um 4º parâmetro opcional `formaConjunto` (chamada antiga sem o parâmetro continua válida); `product-preview`/`product-card` renderizam o selo quando `true`. `modules/store/templates/product-listing.tsx` chama `getElegibilidade()` **uma vez por listagem** (não por produto) e passa `elegivel(p.id, p.collection_id ?? null, categoryIds)` a cada card.
+
+**Ruling V4:** a elegibilidade original olhava só `vitrine.colecoes[].pares` — que a Ruling V2 (backend) já filtra, removendo o par cujo id-set bate com um curado ativo. Sem correção, uma peça que só forma conjunto através desse curado (ex.: a Legging do Look Blackout, quando o par `legging×top` está ofuscado) nunca ganharia o selo, mesmo aparecendo como parceira em "Complete o conjunto" na própria PDP — divergência encontrada na validação da Task 5. Corrigido somando as raízes dos produtos em `vitrine.curados[].product_ids` (ativos) à elegibilidade: uma peça é elegível se está num curado ativo **ou** sua raiz está num par listado da coleção com regra ativa.
+
+### Ruling V2 (backend, consumido por toda a F3)
+Um par gerado por coleção **some** de `GET /store/conjuntos` e `conjuntoPorHandle` devolve `null` quando o conjunto de ids do par bate exatamente com o de um curado ativo (`apps/backend/src/modules/beneficio-conjunto/catalogo-conjuntos.ts`) — o carrinho aplicaria a regra do curado, não a da coleção, então a vitrine não pode oferecer as duas URLs como se fossem conjuntos independentes. No ambiente local semeado isso é visível: o par `legging-vertice-blackout--top-aura-blackout` nunca aparece (ofuscado pelo curado `look-blackout`, que cobre exatamente os mesmos dois produtos) — só o par `short-eclipse-blackout--top-aura-blackout` aparece na seção da coleção. **Mudança de backend feita nesta fase (F3)** — precisa de `railway up` antes do deploy da vitrine, senão a produção roda contra o comportamento antigo (o par apareceria duplicado com o curado).
+
+### Limites conhecidos
+- **Teto de hidratação de 100 produtos** (`listProductsByIds`, mesmo padrão de `listProductsFiltered` da Fase 2): acima de 100 ids num único `getVitrineConjuntos`, o excedente não hidrata — cresce com o catálogo, mesma mitigação futura da Fase 2 (paginar/filtrar na Store API).
+- **Sem teste de componente React**: `conjunto-builder.tsx`/`peca-do-conjunto.tsx`/`complete-set/parceira.tsx` são `"use client"` sem harness de componente no repo — a lógica de resumibilidade (V3/V5) foi validada por leitura de código estruturada (code walk-through nos relatórios de Task 4/5) e, para o fluxo feliz, no navegador; não há teste automatizado de falha parcial simulada.
+- **"A partir de"** no card pode divergir do total final se as variantes tiverem preços diferentes (herdado da spec §12).
+- Em produção, a regra `padrao` está **inativa** (deploy da F1) — as páginas de conjuntos ficam vazias/404 até o dono ativar a regra no Cockpit (roteiro em `progress.md`).
+
+### Como validar localmente (com o seed)
+```bash
+# Postgres de teste (uma vez por sessão)
+docker start eclat-pg-test   # ou: cd apps/backend && npm run test:db:up
+
+# Seed local idempotente (Família Blackout: 4 produtos, par leggings+tops (ofuscado por V2),
+# par shorts+tops, curado "Look Blackout", regra padrão 20% ativa)
+cd apps/backend
+DATABASE_URL=postgres://postgres:postgres@localhost:55432/eclat_dev npx medusa exec ./src/scripts/seed-dev-conjunto.ts
+
+# Backend local
+DATABASE_URL=postgres://postgres:postgres@localhost:55432/eclat_dev DISABLE_ADMIN=true npx medusa develop
+# porta 9000
+
+# Storefront (repo raiz, outro terminal)
+COMING_SOON_BYPASS=1 NEXT_PUBLIC_MEDUSA_BACKEND_URL=http://localhost:9000 \
+  NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY=pk_dc1a9895a7d6f710d9bb44c83baa5582e20574268baa1aa897d68bc8e9ca7d1a \
+  npm run dev --workspace=apps/storefront
+# porta 8000
+```
+Rotas para conferir: `/br/categories/conjuntos` (curados + gerados), `/br/conjuntos/look-blackout` (curado — o par `legging×top` equivalente dá 404 por V2), `/br/products/top-aura-blackout` ("Complete o conjunto" + selo), `/br/store` (selo em Top/Legging/Short, ausente no Macaquinho). `apps/backend/src/scripts/seed-dev-conjunto.ts` é local-only: primeira linha executável recusa (`"recusado: DATABASE_URL não é local"`) se `DATABASE_URL` não apontar para `localhost`/`127.0.0.1`.

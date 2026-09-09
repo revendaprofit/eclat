@@ -1,7 +1,7 @@
 # architecture/conjunto.md — SOP do Benefício Conjunto (backend, F1)
 
 > Spec: `docs/superpowers/specs/2026-09-08-beneficio-conjunto-design.md` (Spec 2) · Plano F1: `docs/superpowers/plans/2026-09-08-conjunto-f1-backend.md` · Plano F0: `docs/superpowers/plans/2026-09-08-conjunto-f0-prova-de-conceito.md`.
-> Status: **F1 (backend) implementada, aguardando deploy** (Task 8 desta fase — nenhuma escrita em produção ainda). Branch `feat/conjunto-f1-backend`.
+> Status: **F1 (backend) e F2 (Cockpit) em produção; F3 (vitrine) entregue em código + aceite local, aguardando redeploy do backend (ruling V2) e deploy da vitrine** — ver §13. Regra padrão continua **inativa** em produção até o dono ativar. Branch original desta SOP: `feat/conjunto-f1-backend`.
 
 ## 1. O que é
 
@@ -253,7 +253,7 @@ Herdados da spec (§12):
 - **Volume de gerados** cresce com o catálogo — a vitrine (F3) precisa limitar/paginar.
 - **Cupons criados antes do deploy** precisam do script/rota de reconciliação para ganhar a exclusão.
 - O gancho roda a cada mudança de carrinho; custo em memória sobre poucas linhas, desprezível.
-- **I2 — linha dividida compartilha a base de desconto entre conjunto e cupom** (mesmo `item.id`, ver §4 acima): quando o gancho divide uma linha em mais de uma entrada de contexto (parte em conjunto, parte livre), o cupom que alcança a parte livre é calculado sobre o subtotal já líquido do desconto que o conjunto aplicou à mesma linha — não sobre o valor "ingênuo" da fração livre isolada. Regressão pinada em `conjunto-carrinho.spec.ts` ("caso 10"). F3/F4 adicionam peças elegíveis em linhas separadas (`metadata.conjunto_slot`) para que toda linha tenha no máximo uma marca e o problema não apareça na prática — spec §6.3 "Decisão F1".
+- **I2 — linha dividida compartilha a base de desconto entre conjunto e cupom** (mesmo `item.id`, ver §4 acima): quando o gancho divide uma linha em mais de uma entrada de contexto (parte em conjunto, parte livre), o cupom que alcança a parte livre é calculado sobre o subtotal já líquido do desconto que o conjunto aplicou à mesma linha — não sobre o valor "ingênuo" da fração livre isolada. Regressão pinada em `conjunto-carrinho.spec.ts` ("caso 10"). F3/F4 adicionam peças elegíveis em linhas separadas (`metadata.conjunto_slot`) para que toda linha tenha no máximo uma marca e o problema não apareça na prática — spec §6.3 "Decisão F1". **Confirmado F3 (2026-09-09):** testado com o Medusa local 2.15.5 que `metadata.conjunto_slot` de fato não funde linhas — repetir a adição do mesmo conjunto pela página do conjunto gerou 2 → 4 linhas, nunca 2 linhas com quantidade 2, cada uma com `conjunto_slot` distinto. Fecha o problema **só para os pontos de entrada da F3** (página do conjunto, "Complete o conjunto" da PDP); uma peça adicionada pelo botão comum "Adicionar à sacola" continua sem esse metadata e permanece sujeita ao I2 se acabar parcialmente marcada por um conjunto depois. Ver `architecture/catalog.md`, seção "Conjuntos na vitrine (Fase F3, 2026-09)".
 - **Pareamento guloso com permutações é máximo só para grafos de pares em formato de estrela** (o cadastro de hoje: `leggings—tops` e `shorts—tops`, ambos com `tops` como nó comum). Testar todas as ordens de processamento (`MAX_PARES_PERMUTAVEIS`, §4 acima) garante o máximo de conjuntos quando os pares ativos formam uma estrela, mas **não há essa garantia se os pares formarem um ciclo** — ex.: cadastrar também `leggings+shorts` fecha um triângulo `tops—leggings—shorts—tops`, e o pareamento guloso por ordem pode ficar aquém do máximo teórico (problema clássico de emparelhamento máximo em grafo geral, que greedy-por-permutação não resolve com garantia — precisaria de um algoritmo tipo Blossom). Limite documentado, não corrigido nesta fase; `PUT /admin/conjuntos/pares` pode ganhar um aviso quando os pares ativos deixarem de formar uma estrela.
 
 Achados da execução F1 (Task 8, registrados aqui por não terem virado risco real):
@@ -283,7 +283,28 @@ Achados da execução F1 (Task 8, registrados aqui por não terem virado risco r
     está ligado ao GitHub deste serviço, ver entrada "DEPLOY em produção" de 2026-09-09 em `progress.md`)
     antes do roteiro de validação do dono: sem o redeploy, `capa_url: null` continua devolvendo `400` em
     produção mesmo com o Cockpit já pronto para enviá-lo.
-- **F3 (Vitrine — §7.1–7.4, 7.6, 7.7):** as rotas `/store/conjuntos*` (§8 acima) para estrutura, hidratando preço/foto/estoque com `listProducts({ id })` da Store API que a vitrine já usa. Handle do par sempre vem pronto de `GET /store/conjuntos` — nunca remontado à mão.
+- **F3 (Vitrine — §7.1–7.4, 7.6, 7.7): ENTREGUE** (2026-09-09, branch `feat/conjunto-f3-vitrine`; código
+  concluído + aceite local completo — critérios de aceite §11 itens 5–8 validados no navegador contra o
+  backend local semeado, ver `progress.md`, entrada "Benefício Conjunto F3"). Consome as rotas
+  `/store/conjuntos*` (§8 acima) para estrutura, hidratando preço/foto/estoque com `listProducts({ id })`
+  da Store API que a vitrine já usa. Handle do par sempre vem pronto de `GET /store/conjuntos` — nunca
+  remontado à mão. Detalhe de páginas/componentes/fluxo de dados/selo: `architecture/catalog.md`, seção
+  "Conjuntos na vitrine (Fase F3, 2026-09)".
+  - **Mudança de backend nesta fase (ruling V2, `catalogo-conjuntos.ts`):** `listarConjuntos`/
+    `conjuntoPorHandle` agora omitem um par gerado por coleção quando seu conjunto de ids bate
+    exatamente com o de um curado ativo — evita a vitrine oferecer duas URLs (par + curado) para o
+    mesmo carrinho resultante, já que o gancho aplicaria a regra do curado, não a da coleção. **Exige
+    redeploy do backend (`railway up`) antes do deploy da vitrine** — sem ele, produção continua
+    mostrando o par duplicado com o curado. +2 testes de integração (`conjunto-catalogo.spec.ts`), suíte
+    HTTP do backend em **72** no total.
+  - **Seed local para validar a F3** (não roda contra produção nem contra o Postgres de desenvolvimento
+    padrão — só o `eclat_dev` no contêiner `eclat-pg-test`): `apps/backend/src/scripts/seed-dev-conjunto.ts`
+    (`npx medusa exec`, guarda de segurança na primeira linha executável: recusa se `DATABASE_URL` não
+    for `localhost`/`127.0.0.1`; idempotente). Cria a coleção "Família Blackout" (4 produtos: Top R$189,
+    Short R$159, Legging R$259, Macaquinho R$299), os pares `leggings+tops`/`shorts+tops`, o curado "Look
+    Blackout" (top+legging, `total_valor` R$45) e a regra padrão `menor_peca_percentual` 20% **ativa**
+    (diferente da regra inativa de produção — o seed liga o benefício de propósito para poder validar o
+    fluxo completo localmente). Comando e roteiro de validação em `architecture/catalog.md`.
 - **F4 (Carrinho — §7.5, aceite final §11 da spec):** o gancho já marca `conjunto_desconto` nos itens do carrinho (nenhuma leitura extra necessária para o cálculo); a etiqueta "Conjunto"/agrupamento do resumo por prefixo `CONJUNTO-` dos ajustes de promoção; os gatilhos "Feche mais um conjunto" vêm de `GET /store/conjuntos/oportunidades?cart_id=`.
 
 ## 14. Checklist de deploy (dono/controller — não executar nesta task)
