@@ -1,0 +1,18 @@
+# Só o backend vai para o Railway (railway up). Storefront/Cockpit ficam no Vercel.
+apps/storefront
+apps/cockpit
+docs
+architecture
+supabase
+scripts
+.superpowers
+.remember
+.git
+**/node_modules
+**/.next
+**/.medusa
+**/*.jpg
+**/*.jpeg
+**/*.png
+**/*.mp4
+**/*.pdf
