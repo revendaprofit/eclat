@@ -54,6 +54,18 @@ export async function listarConjuntos(container: MedusaContainer): Promise<{
   const produtos = comRaiz(produtosBrutos, raizes)
   const porId = new Map(produtos.map((p) => [p.id, p]))
 
+  const curadosAtivos = curados
+    .filter((c) => c.ativo && c.product_ids.every((id) => porId.has(id)))
+    .map((c) => ({ ...c, regra: regras.find((r) => r.id === c.regra_id) }))
+    .filter((c): c is Curado & { regra: Regra } => !!c.regra?.ativa)
+
+  // Ruling V2 (fix round 1, achado "par gerado pode duplicar curado ativo com o mesmo conjunto de
+  // produtos"): o carrinho aplica a regra do curado antes da regra de coleção (gancho, F1) quando
+  // os dois cobrem o mesmo par de produtos — então listar o par também mostraria, na vitrine, um
+  // preço que o carrinho nunca cobra. Um par cujo conjunto de ids bate com o de um curado ATIVO
+  // some da lista.
+  const conjuntosCurados = new Set(curadosAtivos.map((c) => [...c.product_ids].sort().join("|")))
+
   const colecoesIds = Array.from(new Set(produtos.map((p) => p.collection_id).filter((c): c is string => !!c)))
   const colecoes = colecoesIds
     .map((collection_id) => {
@@ -66,6 +78,7 @@ export async function listarConjuntos(container: MedusaContainer): Promise<{
         const ladoB = doColecao.filter((p) => p.categoria_raiz === par.categoria_b)
         for (const a of ladoA) {
           for (const b of ladoB) {
+            if (conjuntosCurados.has([a.id, b.id].sort().join("|"))) continue
             paresDaColecao.push({ handle: `${a.handle}--${b.handle}`, categoria_a: par.categoria_a, categoria_b: par.categoria_b, product_ids: [a.id, b.id] })
           }
         }
@@ -74,11 +87,6 @@ export async function listarConjuntos(container: MedusaContainer): Promise<{
       return { collection_id, regra: { tipo_desconto: regra.tipo_desconto, valor: regra.valor }, pares: paresDaColecao }
     })
     .filter((c): c is NonNullable<typeof c> => !!c)
-
-  const curadosAtivos = curados
-    .filter((c) => c.ativo && c.product_ids.every((id) => porId.has(id)))
-    .map((c) => ({ ...c, regra: regras.find((r) => r.id === c.regra_id) }))
-    .filter((c): c is Curado & { regra: Regra } => !!c.regra?.ativa)
 
   return { curados: curadosAtivos, colecoes }
 }
@@ -161,5 +169,15 @@ export async function conjuntoPorHandle(
   if (!par) return null
   const regra = regraEfetiva(regras, a.collection_id)
   if (!regra) return null
+  // Ruling V2 (fix round 1, mesmo achado de `listarConjuntos` acima): se este par de produtos é
+  // exatamente o conjunto de um curado ATIVO, o carrinho aplica a regra do curado, não a da
+  // coleção — resolver o par aqui devolveria um preço que o carrinho nunca cobra. `a`/`b` já vieram
+  // filtrados por `status: "published"`, então um curado cujo id-set bate com o deles já tem os
+  // dois produtos publicados; não precisa reconferir.
+  const idsParOrdenado = [a.id, b.id].sort().join("|")
+  const curadoMesmoConjunto = curados.some(
+    (c) => c.ativo && regras.find((r) => r.id === c.regra_id)?.ativa && [...c.product_ids].sort().join("|") === idsParOrdenado
+  )
+  if (curadoMesmoConjunto) return null
   return { tipo: "colecao", nome: `${a.title} + ${b.title}`, capa_url: null, product_ids: [a.id, b.id], regra }
 }

@@ -133,5 +133,50 @@ medusaIntegrationTestRunner({
         expect(await conjuntoPorHandle(getContainer(), curadoHandle)).toBeNull()
       })
     })
+
+    // Ruling V2 (fix round 1, achado "par gerado pode duplicar curado ativo com o mesmo conjunto
+    // de produtos"): quando um curado ATIVO cobre exatamente o mesmo par produto-a-produto de um
+    // par gerado por coleção, o par some de `listarConjuntos` e `conjuntoPorHandle` do par devolve
+    // null — o carrinho aplicaria a regra do curado de qualquer forma (gancho, F1), então listar o
+    // par mostraria um preço que o carrinho nunca cobra.
+    describe("Ruling V2 — par gerado some quando um curado ativo cobre o mesmo conjunto de produtos", () => {
+      let curadoMesmoParId: string
+
+      it("curado ativo com exatamente [legging, top] → par legging+top some de listarConjuntos (short+top continua); conjuntoPorHandle(legging--top) → null", async () => {
+        const res = await api.post(
+          "/admin/conjuntos/curados",
+          {
+            nome: "Dupla Vértice Aura",
+            capa_url: "https://exemplo.test/dupla.jpg",
+            product_ids: [cat.legging.productId, cat.top.productId],
+            tipo_desconto: "total_valor",
+            valor: 4000,
+          },
+          { headers: admin }
+        )
+        curadoMesmoParId = res.data.curado.id
+
+        const { colecoes } = await listarConjuntos(getContainer())
+        const black = colecoes.find((c) => c.collection_id === cat.collections.black)
+        expect(black).toBeTruthy()
+        const handles = black!.pares.map((p) => p.handle)
+        expect(handles).not.toContain("legging-vertice--top-aura")
+        expect(handles).toContain("short-nimble--top-aura")
+
+        expect(await conjuntoPorHandle(getContainer(), "legging-vertice--top-aura")).toBeNull()
+      })
+
+      it("desativando o curado → o par legging+top volta a aparecer e a resolver", async () => {
+        await api.put(`/admin/conjuntos/curados/${curadoMesmoParId}`, { ativo: false }, { headers: admin })
+
+        const { colecoes } = await listarConjuntos(getContainer())
+        const black = colecoes.find((c) => c.collection_id === cat.collections.black)
+        const handles = black!.pares.map((p) => p.handle)
+        expect(handles).toContain("legging-vertice--top-aura")
+
+        const resolvido = await conjuntoPorHandle(getContainer(), "legging-vertice--top-aura")
+        expect(resolvido).toMatchObject({ tipo: "colecao" })
+      })
+    })
   },
 })
