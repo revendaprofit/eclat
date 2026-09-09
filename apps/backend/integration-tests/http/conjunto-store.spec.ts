@@ -134,6 +134,39 @@ medusaIntegrationTestRunner({
         const short = res.data.parceiras.find((p: any) => p.product_id === cat.short.productId)
         expect(short.categoria_raiz).toBe("shorts")
       })
+
+      // Ruling V6 (fix round 3): mesma lógica do V2 (que já cobre `listarConjuntos`/
+      // `conjuntoPorHandle` em conjunto-catalogo.spec.ts), agora na rota `por-produto`. Com um
+      // curado ATIVO cobrindo exatamente {top, legging}, o carrinho aplica a regra do curado — a
+      // legging não pode aparecer em "Complete o conjunto" prometendo a regra da coleção; ela
+      // continua visível em "Looks com essa peça" (`curados`).
+      it("curado ativo top+legging → legging some de parceiras e o curado aparece em curados; desativado, a legging volta", async () => {
+        const criado = await api.post(
+          "/admin/conjuntos/curados",
+          {
+            nome: "Dupla Aura Vértice Store",
+            product_ids: [cat.top.productId, cat.legging.productId],
+            tipo_desconto: "total_valor",
+            valor: 4000,
+          },
+          { headers: admin }
+        )
+        const curadoId = criado.data.curado.id
+        const curadoHandle = criado.data.curado.handle
+
+        const comCurado = await api.get(`/store/conjuntos/por-produto/${cat.top.productId}`, { headers: cat.storeHeaders })
+        const idsComCurado = comCurado.data.parceiras.map((p: any) => p.product_id)
+        expect(idsComCurado).not.toContain(cat.legging.productId)
+        expect(idsComCurado).toContain(cat.short.productId)
+        expect(comCurado.data.curados.map((c: any) => c.handle)).toContain(curadoHandle)
+
+        await api.put(`/admin/conjuntos/curados/${curadoId}`, { ativo: false }, { headers: admin })
+
+        const semCurado = await api.get(`/store/conjuntos/por-produto/${cat.top.productId}`, { headers: cat.storeHeaders })
+        const idsSemCurado = semCurado.data.parceiras.map((p: any) => p.product_id).sort()
+        expect(idsSemCurado).toEqual([cat.legging.productId, cat.short.productId].sort())
+        expect(semCurado.data.curados.map((c: any) => c.handle)).not.toContain(curadoHandle)
+      })
     })
 
     describe("GET /store/conjuntos/oportunidades", () => {

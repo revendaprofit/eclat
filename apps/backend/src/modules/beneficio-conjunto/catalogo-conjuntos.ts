@@ -38,6 +38,26 @@ function comRaiz(produtos: ProdutoBruto[], raizes: Map<string, string>): Produto
   }))
 }
 
+// Chave canônica de um CONJUNTO de ids de produto (ordem indiferente) — usada pelos rulings V2 e
+// V6 para decidir se um par gerado e um curado cobrem exatamente os mesmos produtos.
+function chaveIdSet(productIds: string[]): string {
+  return productIds.slice().sort().join("|")
+}
+
+// Chaves dos conjuntos cobertos por um curado ATIVO com regra ATIVA (rulings V2/V6): quando o
+// id-set de um par gerado bate com uma destas, o carrinho aplica a regra do curado (curados
+// resolvem antes dos pares em `utils/montar-conjuntos.ts`), então o par não pode ser oferecido
+// com a regra da coleção.
+function conjuntosDeCuradosAtivos(curados: Curado[], regras: Regra[]): Set<string> {
+  const chaves = new Set<string>()
+  for (const c of curados) {
+    if (!c.ativo) continue
+    if (!regras.find((r) => r.id === c.regra_id)?.ativa) continue
+    chaves.add(chaveIdSet(c.product_ids))
+  }
+  return chaves
+}
+
 // Catálogo completo de conjuntos vendáveis (spec §5): curados ativos com todos os produtos ainda
 // publicados, e — por coleção com regra efetiva ativa — todo par de produtos publicados que
 // realiza um `Par` ativo (produto de categoria_a × produto de categoria_b da mesma coleção).
@@ -64,7 +84,7 @@ export async function listarConjuntos(container: MedusaContainer): Promise<{
   // os dois cobrem o mesmo par de produtos — então listar o par também mostraria, na vitrine, um
   // preço que o carrinho nunca cobra. Um par cujo conjunto de ids bate com o de um curado ATIVO
   // some da lista.
-  const conjuntosCurados = new Set(curadosAtivos.map((c) => [...c.product_ids].sort().join("|")))
+  const conjuntosCurados = new Set(curadosAtivos.map((c) => chaveIdSet(c.product_ids)))
 
   const colecoesIds = Array.from(new Set(produtos.map((p) => p.collection_id).filter((c): c is string => !!c)))
   const colecoes = colecoesIds
@@ -78,7 +98,7 @@ export async function listarConjuntos(container: MedusaContainer): Promise<{
         const ladoB = doColecao.filter((p) => p.categoria_raiz === par.categoria_b)
         for (const a of ladoA) {
           for (const b of ladoB) {
-            if (conjuntosCurados.has([a.id, b.id].sort().join("|"))) continue
+            if (conjuntosCurados.has(chaveIdSet([a.id, b.id]))) continue
             paresDaColecao.push({ handle: `${a.handle}--${b.handle}`, categoria_a: par.categoria_a, categoria_b: par.categoria_b, product_ids: [a.id, b.id] })
           }
         }
@@ -119,8 +139,16 @@ export async function parceirasDoProduto(
   }
   if (!raizesParceiras.size) return { parceiras: [], curados: curadosDoProduto, regras }
 
+  // Ruling V6 (fix round 3, achado "PDP promete o benefício da coleção onde o carrinho aplica o do
+  // curado"): mesma lógica do V2 em `listarConjuntos`/`conjuntoPorHandle`, aplicada aqui. Se um
+  // curado ATIVO cobre exatamente `{âncora, parceira}`, o carrinho aplica a regra do curado — o
+  // bloco "Complete o conjunto" mostraria um benefício que nunca é cobrado. A parceira sai de
+  // `parceiras` e continua saindo em `curados` ("Looks com essa peça").
+  const conjuntosCurados = conjuntosDeCuradosAtivos(curados, regras)
+
   const parceiras = comRaiz(produtosPublicadosBrutos, raizes)
     .filter((p) => p.id !== productId && p.collection_id === ancora.collection_id && p.categoria_raiz && raizesParceiras.has(p.categoria_raiz))
+    .filter((p) => !conjuntosCurados.has(chaveIdSet([productId, p.id])))
     .map((p) => ({ product_id: p.id, categoria_raiz: p.categoria_raiz as string, collection_id: p.collection_id as string }))
 
   return { parceiras, curados: curadosDoProduto, regras }
@@ -174,10 +202,6 @@ export async function conjuntoPorHandle(
   // coleção — resolver o par aqui devolveria um preço que o carrinho nunca cobra. `a`/`b` já vieram
   // filtrados por `status: "published"`, então um curado cujo id-set bate com o deles já tem os
   // dois produtos publicados; não precisa reconferir.
-  const idsParOrdenado = [a.id, b.id].sort().join("|")
-  const curadoMesmoConjunto = curados.some(
-    (c) => c.ativo && regras.find((r) => r.id === c.regra_id)?.ativa && [...c.product_ids].sort().join("|") === idsParOrdenado
-  )
-  if (curadoMesmoConjunto) return null
+  if (conjuntosDeCuradosAtivos(curados, regras).has(chaveIdSet([a.id, b.id]))) return null
   return { tipo: "colecao", nome: `${a.title} + ${b.title}`, capa_url: null, product_ids: [a.id, b.id], regra }
 }
