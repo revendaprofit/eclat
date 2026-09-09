@@ -19,11 +19,11 @@ export type SelecaoPeca = { variant: HttpTypes.StoreProductVariant | null; compl
 // que lado a lado com as outras peças. Este componente É a "ponte": lê `useProductSelection()` e
 // avisa o builder pai (`onChange`) toda vez que a variante escolhida ou a completude mudam.
 //
-// Guia de medidas: o link do `SizeSelect` (`href="#medidas"`, fixo — não dá pra alterar sem tocar
-// o componente da PDP) não tem alvo nesta página, já que não repetimos a tabela de medidas por
-// peça aqui (evita `id="medidas"` duplicado e colunas de tabela diferentes por categoria — ver
-// decisão no relatório da task). Em vez disso, este componente expõe seu próprio link "Guia de
-// medidas" apontando pra âncora `#medidas` da PDP da própria peça.
+// Guia de medidas: não repetimos a tabela de medidas por peça aqui (evita `id="medidas"` duplicado
+// e colunas de tabela diferentes por categoria — ver decisão no relatório da task). `SizeSelect`
+// recebe `showGuide={false}` (fix round 1) para não renderizar seu link fixo `#medidas`, que não
+// teria alvo nesta página; em vez disso, este componente expõe seu próprio link "Guia de medidas"
+// apontando pra âncora `#medidas` da PDP da própria peça.
 export default function PecaDoConjunto({
   peca,
   index,
@@ -50,7 +50,7 @@ export default function PecaDoConjunto({
       <VariantGallery ssrImages={ssrImages} productTitle={peca.title} />
       <div className="flex flex-col gap-y-4">
         <ColorSelect colorMap={colorMap} />
-        <SizeSelect />
+        <SizeSelect showGuide={false} />
       </div>
       <LocalizedClientLink
         href={`/products/${peca.handle}#medidas`}

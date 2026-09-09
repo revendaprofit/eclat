@@ -4,7 +4,18 @@ import { clx } from "@modules/common/components/ui"
 import { findOption, sizeValues, variantFor, variantLabel } from "@lib/util/pdp-variants"
 import { useProductSelection } from "../product-selection"
 
-export default function SizeSelect({ disabled, onNotify }: { disabled?: boolean; onNotify?: (variantId: string, label: string) => void }) {
+export default function SizeSelect({
+  disabled,
+  onNotify,
+  showGuide = true,
+}: {
+  disabled?: boolean
+  onNotify?: (variantId: string, label: string) => void
+  // `false` na página do conjunto (fix round 1, achado "dois links de Guia de medidas por peça, um
+  // morto"): lá o link funcional é o próprio de `PecaDoConjunto`, que aponta pra âncora certa na
+  // PDP da peça — este `href="#medidas"` fixo não tem alvo naquela página. PDP continua com `true`.
+  showGuide?: boolean
+}) {
   const { product, selection, setValue, color, sizeAvail } = useProductSelection()
   const opt = findOption(product, "Tamanho")
   if (!opt) return null
@@ -13,7 +24,7 @@ export default function SizeSelect({ disabled, onNotify }: { disabled?: boolean;
     <div className="flex flex-col gap-y-2" data-testid="size-select">
       <div className="flex items-center justify-between">
         <span className="text-sm">Tamanho{selection[opt.id] ? <>: <strong>{selection[opt.id]}</strong></> : null}</span>
-        <a href="#medidas" className="text-xs underline text-eclat-grafite/70">Guia de medidas</a>
+        {showGuide && <a href="#medidas" className="text-xs underline text-eclat-grafite/70">Guia de medidas</a>}
       </div>
       <div className="flex flex-wrap gap-2">
         {sizeValues(product).map((s) => {

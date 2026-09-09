@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import type { HttpTypes } from "@medusajs/types"
 import type { ColorMap } from "@lib/util/colors"
 import { addToCart } from "@lib/data/cart"
@@ -43,6 +43,12 @@ export default function ConjuntoBuilder({
   const [selecoes, setSelecoes] = useState<Record<string, SelecaoPeca>>({})
   const [adicionando, setAdicionando] = useState(false)
   const [erro, setErro] = useState<string | null>(null)
+  // Índices (posição em `produtos`/`card.pecas`) já adicionados ao carrinho na tentativa em
+  // curso — retry resumível (fix round 1, achado "retry duplica linhas já adicionadas"): o loop
+  // de `handleAdicionar` pula quem já está aqui, então uma falha na peça 2 não re-adiciona a peça
+  // 1 na tentativa seguinte. Zerado ao concluir com sucesso e sempre que `selecoes` muda — trocar a
+  // variante de uma peça já adicionada é um "adicionar de novo" deliberado, não um retry.
+  const [adicionados, setAdicionados] = useState<Set<number>>(new Set())
 
   const handleChange = useCallback(
     (index: number, info: SelecaoPeca) => {
@@ -56,6 +62,12 @@ export default function ConjuntoBuilder({
     },
     [produtos]
   )
+
+  // Ver comentário de `adicionados` acima — só dispara quando `selecoes` de fato muda (o bailout
+  // dentro do `setSelecoes` acima evita updates redundantes que disparariam isto à toa).
+  useEffect(() => {
+    setAdicionados(new Set())
+  }, [selecoes])
 
   // Preço de cada peça: o da variante escolhida quando há uma selecionada; senão o `precoMin` do
   // card (mesmo fallback do card da vitrine) — o rodapé mostra um total plausível desde o 1º render.
@@ -71,23 +83,41 @@ export default function ConjuntoBuilder({
     if (!podeAdicionar || adicionando) return
     setAdicionando(true)
     setErro(null)
+    // Índice da peça cuja `addToCart` falhou (ou que estava incompleta) — usado só para nomear a
+    // peça na mensagem de erro; a resumabilidade em si vem do `adicionados.has(i)` abaixo.
+    let indexComFalha: number | null = null
     try {
       for (let i = 0; i < produtos.length; i++) {
+        if (adicionados.has(i)) continue // já entrou nesta tentativa — não duplica (fix round 1)
         const produto = produtos[i]
         const variant = selecoes[produto.id]?.variant
-        if (!variant) throw new Error("Peça incompleta")
-        // eslint-disable-next-line no-await-in-loop -- linhas precisam entrar em sequência (spec §6.3)
-        await addToCart({
-          variantId: variant.id,
-          quantity: 1,
-          countryCode,
-          metadata: slotMetadata(card.handle, i),
+        if (!variant) {
+          indexComFalha = i
+          throw new Error("Peça incompleta")
+        }
+        try {
+          // eslint-disable-next-line no-await-in-loop -- linhas precisam entrar em sequência (spec §6.3)
+          await addToCart({
+            variantId: variant.id,
+            quantity: 1,
+            countryCode,
+            metadata: slotMetadata(card.handle, i),
+          })
+        } catch (e) {
+          indexComFalha = i
+          throw e
+        }
+        setAdicionados((prev) => {
+          const next = new Set(prev)
+          next.add(i)
+          return next
         })
         pushEcommerceEvent("add_to_cart", {
           ...variantToAddToCart(produto, variant, 1),
           item_list_name: `Conjunto: ${card.nome}`,
         })
       }
+      setAdicionados(new Set()) // sucesso completo: próximo clique começa uma tentativa nova
       // Desktop: o dropdown da sacola já abre sozinho ao detectar a troca de quantidade de itens
       // (mesmo mecanismo do `QuickAdd` — nada a fazer aqui). Mobile: toast, como no `QuickAdd`.
       if (isMobile()) {
@@ -97,7 +127,8 @@ export default function ConjuntoBuilder({
         })
       }
     } catch {
-      const msg = "Não foi possível adicionar o conjunto. Tente de novo."
+      const titulo = indexComFalha !== null ? card.pecas[indexComFalha]?.title : undefined
+      const msg = titulo ? `Não foi possível adicionar ${titulo}. Tente de novo.` : "Não foi possível adicionar o conjunto. Tente de novo."
       setErro(msg)
       showToast({ message: msg })
     } finally {
