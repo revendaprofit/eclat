@@ -143,9 +143,9 @@ export function montarCardPar(
   regra: RegraStore,
   produtos: Map<string, HttpTypes.StoreProduct>
 ): CardConjunto | null {
-  const titulos = par.product_ids.map((id) => produtos.get(id)?.title).filter((t): t is string => !!t)
-  if (titulos.length !== par.product_ids.length) return null
-  return montarCard("colecao", par.handle, titulos.join(" + "), null, par.product_ids, regra, colecaoId, produtos)
+  if (par.product_ids.some((id) => !produtos.has(id))) return null
+  const nome = par.product_ids.map((id) => produtos.get(id)!.title ?? "").join(" + ")
+  return montarCard("colecao", par.handle, nome, null, par.product_ids, regra, colecaoId, produtos)
 }
 
 // Curado: nome e capa vêm do cadastro (`CuradoStore`), não das peças. Sem `capa_url` cadastrada →
