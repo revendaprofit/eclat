@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react"
 import CoresEditor from "@/components/cores-editor"
 import MedidasEditor from "@/components/medidas-editor"
+import UploadImagem from "@/components/upload-imagem"
 
 type Hero = {
   banner_mobile_url?: string
@@ -48,44 +49,6 @@ const input =
 const label = "text-xs uppercase tracking-wider text-eclat-grafite/60 mb-1 block"
 const btn =
   "self-start bg-eclat-grafite text-eclat-luz uppercase tracking-widest text-xs px-6 py-3 rounded-md hover:bg-eclat-dourado hover:text-eclat-grafite disabled:opacity-50"
-
-function UploadImagem({
-  url,
-  onChange,
-}: {
-  url?: string
-  onChange: (url: string | undefined) => void
-}) {
-  const [enviando, setEnviando] = useState(false)
-  async function enviar(file: File) {
-    setEnviando(true)
-    try {
-      const fd = new FormData()
-      fd.append("file", file)
-      const r = await fetch("/api/site-upload", { method: "POST", body: fd })
-      const d = await r.json()
-      if (!r.ok) throw new Error(d.error || "Falha no upload")
-      onChange(d.url)
-    } catch (e) {
-      alert((e as Error).message)
-    } finally {
-      setEnviando(false)
-    }
-  }
-  return (
-    <div className="flex items-center gap-3">
-      {url && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={url} alt="prévia" className="w-24 h-16 object-cover rounded border border-eclat-pedra/40" />
-      )}
-      <input type="file" accept="image/*" onChange={(e) => e.target.files?.[0] && enviar(e.target.files[0])} className="text-xs" />
-      {enviando && <span className="text-xs text-eclat-grafite/50">enviando…</span>}
-      {url && (
-        <button onClick={() => onChange(undefined)} className="text-xs text-red-700 underline">remover</button>
-      )}
-    </div>
-  )
-}
 
 function Toggle({
   on,
