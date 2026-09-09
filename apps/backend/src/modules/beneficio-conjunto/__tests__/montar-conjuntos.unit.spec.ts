@@ -78,6 +78,58 @@ describe("montarConjuntos — pares de coleção", () => {
   })
 })
 
+describe("montarConjuntos — competição entre pares por coleção (spec §2.6, ruling P3)", () => {
+  it("competição entre pares favorece a cliente", () => {
+    const cart: Linha[] = [L("i_top", "p_top", "tops", 30000), L("i_leg", "p_leg", "leggings", 20000), L("i_sh", "p_sh", "shorts", 25000)]
+    const regra = { ...PADRAO, tipo_desconto: "menor_peca_percentual" as const, valor: 10 }
+
+    // Só cabe 1 conjunto: o top (30000) só pode ir para a legging OU para o short, nunca os dois.
+    // A legging (20000) daria desconto 2000; o short (25000) dá 2500 → deve ficar com o short.
+    const r = montarConjuntos(cart, [regra], PARES, [])
+    expect(r.conjuntos).toHaveLength(1)
+    const somaDesc = r.conjuntos.flatMap((c) => c.unidades).reduce((s, u) => s + u.desconto_unitario, 0)
+    expect(somaDesc).toBe(2500)
+    expect(r.conjuntos[0].unidades.some((u) => u.item_id === "i_sh")).toBe(true)
+    expect(r.conjuntos[0].unidades.some((u) => u.item_id === "i_leg")).toBe(false)
+
+    // Mesmo carrinho, pares na ordem inversa → mesmo resultado (independente da ordem cadastrada).
+    const paresInvertidos: Par[] = [PARES[1], PARES[0]]
+    const rInvertida = montarConjuntos(cart, [regra], paresInvertidos, [])
+    expect(rInvertida.conjuntos).toHaveLength(1)
+    const somaDescInvertida = rInvertida.conjuntos.flatMap((c) => c.unidades).reduce((s, u) => s + u.desconto_unitario, 0)
+    expect(somaDescInvertida).toBe(2500)
+    expect(rInvertida.conjuntos[0].unidades.some((u) => u.item_id === "i_sh")).toBe(true)
+  })
+
+  it("número de conjuntos vence o desconto", () => {
+    // Cadeia a-b-c-d (cada categoria com 1 unidade). Processar b+c primeiro forma só 1 conjunto
+    // (b,c) — mas com desconto altíssimo, pois b e c são caras. Processar a+b e c+d primeiro forma
+    // 2 conjuntos com desconto bem menor cada. O critério "mais conjuntos" deve vencer o desconto maior.
+    const cart: Linha[] = [L("i_a", "p_a", "a", 100), L("i_b", "p_b", "b", 100000), L("i_c", "p_c", "c", 100000), L("i_d", "p_d", "d", 100)]
+    const pares: Par[] = [
+      { id: "pab", categoria_a: "a", categoria_b: "b", ativo: true },
+      { id: "pbc", categoria_a: "b", categoria_b: "c", ativo: true },
+      { id: "pcd", categoria_a: "c", categoria_b: "d", ativo: true },
+    ]
+    const r = montarConjuntos(cart, [PADRAO], pares, [])
+    expect(r.conjuntos).toHaveLength(2)
+    const somaDesc = r.conjuntos.flatMap((c) => c.unidades).reduce((s, u) => s + u.desconto_unitario, 0)
+    expect(somaDesc).toBe(40) // 20% do menor de (a,b)=100 + 20% do menor de (c,d)=100 = 20+20
+  })
+
+  it("embaralhamento não muda o pareamento ótimo", () => {
+    // Mesmo cenário de "pareamento favorece a cliente", com as linhas em ordem embaralhada.
+    const r = montarConjuntos(
+      [L("t2", "pt2", "tops", 30000), L("l2", "pl2", "leggings", 40000), L("t1", "pt1", "tops", 10000), L("l1", "pl1", "leggings", 20000)],
+      [{ ...PADRAO, valor: 10 }],
+      PARES,
+      [],
+    )
+    const somaDesc = r.conjuntos.flatMap((c) => c.unidades).reduce((s, u) => s + u.desconto_unitario, 0)
+    expect(somaDesc).toBe(4000)
+  })
+})
+
 describe("montarConjuntos — curados", () => {
   const RC = R({ id: "creg_cur", escopo: "curado", tipo_desconto: "total_valor", valor: 5000 })
   const CUR: Curado = { id: "ccur_1", nome: "Look", handle: "look", capa_url: null, product_ids: ["p_top", "p_leg_b"], regra_id: "creg_cur", ativo: true, ordem: 0 }
