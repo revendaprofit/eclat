@@ -79,4 +79,5 @@ Nunca vincular a Éclat a nenhuma outra marca.
     (a enviar, conversas pendentes, leads novos, estoque baixo c/ lista, reativação). 
   - **COCKPIT COMPLETO (Fases 0–6).** Pendências: validações finais no navegador; integrações externas futuras
     (transportadora real via Melhor Envio — credenciais; Mercado Pago Parte 4 — inclui taxas no DRE).
-- Próxima ação: validações no navegador OU retomar Parte 4 (Mercado Pago) / Parte 1 (produtos reais) / Partes 8-10.
+- Benefício Conjunto (Spec 2) — F0 (prova de conceito) e F1 (backend: módulo, gancho, promoções, cupons, rotas admin/store) CONCLUÍDAS em código, SOP em architecture/conjunto.md; deploy em produção e seed (scripts/setup-conjunto.py --apply) PENDENTES de autorização do dono. Próximas: F2 Cockpit / F3 Vitrine (podem correr em paralelo) / F4 Carrinho.
+- Próxima ação: validações no navegador OU retomar Parte 4 (Mercado Pago) / Parte 1 (produtos reais) / Partes 8-10 / deploy do Benefício Conjunto F1 (autorização do dono).
