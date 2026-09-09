@@ -197,4 +197,5 @@ telas Regras e Curados); `alertaEstoque`; `slugConjunto` (handle a partir do nom
 - **C4** — ao editar um curado, ids de produto fora da página de 100 do `GET /api/products` são
   preservados no array salvo, nunca descartados silenciosamente.
 - **C5** — o motivo mostrado no painel da ficha do produto vem sempre da coleção/categorias **do próprio
-  produto** (`GET /admin/products/:id`), nunca inferido a partir da lista de produtos limitada a 100.
+  produto**, recebidas como props (`collectionId`/`catIds`) do estado do `ProductForm` que já os carregou,
+  nunca inferido a partir da lista de produtos limitada a 100.

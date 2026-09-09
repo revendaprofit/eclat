@@ -265,6 +265,7 @@ export default function ConjuntoCurados() {
           mode={formAberto.mode}
           curado={formAberto.mode === "edit" ? formAberto.curado : null}
           produtosMap={produtosMap}
+          contagemAtual={curados.length}
           onClose={() => setFormAberto(null)}
           onSaved={async () => {
             setFormAberto(null)
@@ -280,12 +281,14 @@ function CuradoForm({
   mode,
   curado,
   produtosMap,
+  contagemAtual,
   onClose,
   onSaved,
 }: {
   mode: "create" | "edit"
   curado: Curado | null
   produtosMap: Map<string, CockpitProduct>
+  contagemAtual: number
   onClose: () => void
   onSaved: () => Promise<void>
 }) {
@@ -394,6 +397,9 @@ function CuradoForm({
           tipo_desconto: tipo,
           valor: valorNumerico,
           ativo,
+          // Novo conjunto entra no fim da lista de exibição da vitrine; PUT (edição) nunca manda
+          // `ordem` — só muda via arrastar (persistirOrdem), para não sobrescrever reordenações.
+          ordem: contagemAtual,
         })
       } else if (curado) {
         await apiCall(`/api/conjuntos/curados/${curado.id}`, "PUT", {

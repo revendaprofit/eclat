@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { conjuntoUpdateCurado, conjuntoDeleteCurado } from "@/lib/medusa"
+import { conjuntoUpdateCurado, conjuntoDeleteCurado, MedusaHttpError } from "@/lib/medusa"
 import { respostaErro } from "@/lib/api-erro"
 
 export async function PUT(
@@ -7,8 +7,10 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params
-  const body = await req.json()
   try {
+    const body = await req.json().catch(() => {
+      throw new MedusaHttpError(400, "Corpo da requisição inválido.")
+    })
     return NextResponse.json({ curado: await conjuntoUpdateCurado(id, body) })
   } catch (e) {
     return respostaErro(e)

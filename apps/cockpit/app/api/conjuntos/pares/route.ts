@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { conjuntoGetPares, conjuntoSetPares } from "@/lib/medusa"
+import { conjuntoGetPares, conjuntoSetPares, MedusaHttpError } from "@/lib/medusa"
 import { respostaErro } from "@/lib/api-erro"
 
 export async function GET() {
@@ -11,10 +11,12 @@ export async function GET() {
 }
 
 export async function PUT(req: Request) {
-  const { pares } = (await req.json()) as {
-    pares: { categoria_a: string; categoria_b: string; ativo?: boolean }[]
-  }
   try {
+    const { pares } = (await req.json().catch(() => {
+      throw new MedusaHttpError(400, "Corpo da requisição inválido.")
+    })) as {
+      pares: { categoria_a: string; categoria_b: string; ativo?: boolean }[]
+    }
     return NextResponse.json({ pares: await conjuntoSetPares(pares) })
   } catch (e) {
     return respostaErro(e)

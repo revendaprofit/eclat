@@ -114,7 +114,9 @@ function BlocoPadrao({
   const [valorTexto, setValorTexto] = useState(
     regra ? valorParaEntrada(regra.tipo_desconto, regra.valor) : ""
   )
-  const [ativa, setAtiva] = useState(regra?.ativa ?? true)
+  // Create: benefício fica desligado até o dono decidir ligar (não liga sozinho na criação).
+  // Edit: mantém o valor vindo do servidor.
+  const [ativa, setAtiva] = useState(regra?.ativa ?? false)
   const [tentouSalvar, setTentouSalvar] = useState(false)
   const [salvando, setSalvando] = useState(false)
   const [erro, setErro] = useState<string | null>(null)
@@ -122,7 +124,7 @@ function BlocoPadrao({
   useEffect(() => {
     setTipo(regra?.tipo_desconto ?? TIPOS_DESCONTO[0].value)
     setValorTexto(regra ? valorParaEntrada(regra.tipo_desconto, regra.valor) : "")
-    setAtiva(regra?.ativa ?? true)
+    setAtiva(regra?.ativa ?? false)
     setTentouSalvar(false)
     setErro(null)
   }, [regra])
@@ -396,6 +398,17 @@ function BlocoExcecoes({
   )
 }
 
+type ParLocal = { categoria_a: string; categoria_b: string; ativo: boolean }
+
+// Assinatura estável (independe da ordem dos itens) para comparar a lista local com a carregada
+// do servidor e decidir se há alterações não salvas (M6).
+function assinaturaPares(lista: ParLocal[]): string {
+  return lista
+    .map((p) => `${p.categoria_a}|${p.categoria_b}:${p.ativo}`)
+    .sort()
+    .join(",")
+}
+
 function BlocoPares({
   pares,
   categoriasRaiz,
@@ -405,9 +418,13 @@ function BlocoPares({
   categoriasRaiz: Cat[]
   onSalvo: (pares: Par[]) => void
 }) {
-  const [locais, setLocais] = useState<{ categoria_a: string; categoria_b: string }[]>(
-    pares.filter((p) => p.ativo).map((p) => ({ categoria_a: p.categoria_a, categoria_b: p.categoria_b }))
-  )
+  // Mantém TODOS os pares (inclusive inativos), não só os ativos: o PUT /pares substitui a lista
+  // inteira e apaga (soft delete) qualquer par ausente do body — se só os ativos entrassem aqui,
+  // salvar apagaria pares inativos que nunca deveriam ter sido tocados.
+  const paresParaLocal = (lista: Par[]): ParLocal[] =>
+    lista.map((p) => ({ categoria_a: p.categoria_a, categoria_b: p.categoria_b, ativo: p.ativo }))
+
+  const [locais, setLocais] = useState<ParLocal[]>(() => paresParaLocal(pares))
   const [novoA, setNovoA] = useState("")
   const [novoB, setNovoB] = useState("")
   const [erro, setErro] = useState<string | null>(null)
@@ -415,8 +432,12 @@ function BlocoPares({
   const [msg, setMsg] = useState<string | null>(null)
 
   useEffect(() => {
-    setLocais(pares.filter((p) => p.ativo).map((p) => ({ categoria_a: p.categoria_a, categoria_b: p.categoria_b })))
+    setLocais(paresParaLocal(pares))
   }, [pares])
+
+  const carregados = paresParaLocal(pares)
+  const sujo = assinaturaPares(locais) !== assinaturaPares(carregados)
+  const ativos = locais.filter((p) => p.ativo)
 
   function nomeDaCategoria(handle: string) {
     return categoriasRaiz.find((c) => c.handle === handle)?.name ?? handle
@@ -428,16 +449,24 @@ function BlocoPares({
     if (!novoA || !novoB) return setErro("Escolha as duas categorias.")
     if (novoA === novoB) return setErro("Escolha duas categorias diferentes.")
     const [a, b] = [novoA, novoB].sort()
-    if (locais.some((p) => [p.categoria_a, p.categoria_b].sort().join("|") === `${a}|${b}`))
-      return setErro("Esse par já existe.")
-    setLocais((l) => [...l, { categoria_a: a, categoria_b: b }])
+    const idxExistente = locais.findIndex((p) => [p.categoria_a, p.categoria_b].sort().join("|") === `${a}|${b}`)
+    if (idxExistente >= 0) {
+      if (locais[idxExistente].ativo) return setErro("Esse par já existe.")
+      // Par existia inativo (ex.: removido antes e ainda não salvo, ou vindo do servidor): reativa
+      // em vez de duplicar a entrada.
+      setLocais((l) => l.map((p, i) => (i === idxExistente ? { ...p, ativo: true } : p)))
+    } else {
+      setLocais((l) => [...l, { categoria_a: a, categoria_b: b, ativo: true }])
+    }
     setNovoA("")
     setNovoB("")
   }
 
-  function remover(idx: number) {
+  function remover(par: ParLocal) {
     setMsg(null)
-    setLocais((l) => l.filter((_, i) => i !== idx))
+    // Remove de vez da lista local (não só marca inativo): ausente do body do PUT, é a exclusão
+    // pretendida pelo dono ao clicar no × de um par ativo.
+    setLocais((l) => l.filter((p) => !(p.categoria_a === par.categoria_a && p.categoria_b === par.categoria_b)))
   }
 
   async function salvar() {
@@ -445,9 +474,7 @@ function BlocoPares({
     setErro(null)
     setMsg(null)
     try {
-      const d = await apiCall<{ pares: Par[] }>("/api/conjuntos/pares", "PUT", {
-        pares: locais.map((p) => ({ ...p, ativo: true })),
-      })
+      const d = await apiCall<{ pares: Par[] }>("/api/conjuntos/pares", "PUT", { pares: locais })
       onSalvo(d.pares)
       setMsg("Pares salvos.")
     } catch (e) {
@@ -464,8 +491,8 @@ function BlocoPares({
         Só peças de categorias pareadas aqui formam um conjunto com benefício na vitrine.
       </p>
       <div className="flex flex-wrap gap-2">
-        {locais.length === 0 && <p className="text-sm text-eclat-grafite/50">Nenhum par cadastrado.</p>}
-        {locais.map((p, i) => (
+        {ativos.length === 0 && <p className="text-sm text-eclat-grafite/50">Nenhum par cadastrado.</p>}
+        {ativos.map((p) => (
           <span
             key={`${p.categoria_a}-${p.categoria_b}`}
             className="flex items-center gap-2 bg-eclat-areia/60 rounded-full px-3 py-1.5 text-sm"
@@ -476,7 +503,7 @@ function BlocoPares({
             <span className="text-[10px] text-eclat-grafite/40">
               ({p.categoria_a} + {p.categoria_b})
             </span>
-            <button onClick={() => remover(i)} className="text-eclat-grafite/50 hover:text-red-700">
+            <button onClick={() => remover(p)} className="text-eclat-grafite/50 hover:text-red-700">
               ×
             </button>
           </span>
@@ -517,9 +544,14 @@ function BlocoPares({
       )}
       {erro && <p className="text-xs text-red-700">{erro}</p>}
       {msg && <p className="text-xs text-eclat-grafite/60">{msg}</p>}
-      <button onClick={salvar} disabled={salvando} className={btn}>
-        {salvando ? "Salvando…" : "Salvar pares"}
-      </button>
+      <div className="flex items-center gap-3">
+        <button onClick={salvar} disabled={salvando || !sujo} className={btn}>
+          {salvando ? "Salvando…" : "Salvar pares"}
+        </button>
+        {sujo && !salvando && (
+          <span className="text-xs text-eclat-dourado">Alterações não salvas</span>
+        )}
+      </div>
     </section>
   )
 }
