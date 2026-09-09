@@ -69,6 +69,7 @@ export default function ConjuntoCurados() {
   const [carregando, setCarregando] = useState(true)
   const [erroCarregar, setErroCarregar] = useState<string | null>(null)
   const [dragId, setDragId] = useState<string | null>(null)
+  const [erroOrdem, setErroOrdem] = useState<string | null>(null)
   const [confirmandoExcluir, setConfirmandoExcluir] = useState<string | null>(null)
   const [excluindo, setExcluindo] = useState(false)
   const [erroLinha, setErroLinha] = useState<Record<string, string>>({})
@@ -105,8 +106,11 @@ export default function ConjuntoCurados() {
       for (const { c, i } of mudados) {
         await apiCall(`/api/conjuntos/curados/${c.id}`, "PUT", { ordem: i })
       }
+      setErroOrdem(null)
     } catch (e) {
-      setErroCarregar((e as Error).message || "Falha ao reordenar.")
+      // erro inline perto da lista (não usa erroCarregar — esse bloqueia a tela inteira); mostra
+      // antes de recarregar, para o dono ver o motivo mesmo se a lista voltar reordenada.
+      setErroOrdem((e as Error).message || "Falha ao reordenar.")
     } finally {
       await carregar()
     }
@@ -163,6 +167,8 @@ export default function ConjuntoCurados() {
           + Novo conjunto
         </button>
       </div>
+
+      {erroOrdem && <p className="text-xs text-red-700">{erroOrdem}</p>}
 
       {ordenados.length === 0 && <p className="text-sm text-eclat-grafite/50">Nenhum conjunto curado ainda.</p>}
 
@@ -290,6 +296,12 @@ function CuradoForm({
   const [escolhidos, setEscolhidos] = useState<CockpitProduct[]>(() =>
     (curado?.product_ids ?? []).map((id) => produtosMap.get(id)).filter((p): p is CockpitProduct => !!p)
   )
+  // Produtos deste curado que ficaram fora do mapa (limite de 100 do GET /api/products): sem isso,
+  // um edit qualquer reenviaria só os `product_ids` resolvidos e apagaria os demais silenciosamente.
+  const idsNaoResolvidos = useMemo(
+    () => (curado?.product_ids ?? []).filter((id) => !produtosMap.has(id)),
+    [curado, produtosMap]
+  )
   const [tipo, setTipo] = useState<TipoDesconto>(curado?.regra.tipo_desconto ?? TIPOS_DESCONTO[0].value)
   const [valorTexto, setValorTexto] = useState(
     curado ? valorParaEntrada(curado.regra.tipo_desconto, curado.regra.valor) : ""
@@ -320,21 +332,29 @@ function CuradoForm({
       return
     }
     setBuscando(true)
+    const controller = new AbortController()
     const t = setTimeout(async () => {
       try {
-        const r = await fetch(`/api/products?q=${encodeURIComponent(termo)}`, { cache: "no-store" })
+        const r = await fetch(`/api/products?q=${encodeURIComponent(termo)}`, {
+          cache: "no-store",
+          signal: controller.signal,
+        })
         const d = await r.json()
         if (!r.ok) throw new Error((d as { error?: string })?.error || "Falha ao buscar produtos.")
         setResultados(Array.isArray(d) ? d : [])
         setErroBusca(null)
       } catch (e) {
+        if ((e as Error).name === "AbortError") return
         setErroBusca((e as Error).message)
         setResultados([])
       } finally {
-        setBuscando(false)
+        if (!controller.signal.aborted) setBuscando(false)
       }
     }, 300)
-    return () => clearTimeout(t)
+    return () => {
+      clearTimeout(t)
+      controller.abort()
+    }
   }, [busca])
 
   function adicionar(p: CockpitProduct) {
@@ -344,7 +364,8 @@ function CuradoForm({
     setEscolhidos((prev) => prev.filter((p) => p.id !== id))
   }
 
-  const productIds = escolhidos.map((p) => p.id)
+  // Preserva os ids não resolvidos ao salvar (dedupe defensivo — não deveriam colidir com `escolhidos`).
+  const productIds = Array.from(new Set([...escolhidos.map((p) => p.id), ...idsNaoResolvidos]))
   const erroValidacao = validarCurado({ nome, product_ids: productIds, tipo_desconto: tipo, valorTexto })
   const erroHandle =
     mode === "create" && handle.trim() && !HANDLE_REGEX.test(handle.trim())
@@ -368,7 +389,7 @@ function CuradoForm({
         await apiCall("/api/conjuntos/curados", "POST", {
           nome: nome.trim(),
           handle: handle.trim() || undefined,
-          capa_url: capaUrl || "",
+          capa_url: capaUrl || null,
           product_ids: productIds,
           tipo_desconto: tipo,
           valor: valorNumerico,
@@ -377,7 +398,7 @@ function CuradoForm({
       } else if (curado) {
         await apiCall(`/api/conjuntos/curados/${curado.id}`, "PUT", {
           nome: nome.trim(),
-          capa_url: capaUrl || "",
+          capa_url: capaUrl || null,
           product_ids: productIds,
           tipo_desconto: tipo,
           valor: valorNumerico,
@@ -437,6 +458,12 @@ function CuradoForm({
 
           <div>
             <label className={label}>Produtos ({escolhidos.length} escolhido(s) — mínimo 2)</label>
+            {idsNaoResolvidos.length > 0 && (
+              <p className="text-xs text-amber-700 mb-2">
+                {idsNaoResolvidos.length} produto(s) deste conjunto estão fora da lista carregada (limite de 100) e
+                serão mantidos.
+              </p>
+            )}
             <input
               value={busca}
               onChange={(e) => setBusca(e.target.value)}
