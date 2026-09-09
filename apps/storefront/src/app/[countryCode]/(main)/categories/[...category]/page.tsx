@@ -7,6 +7,7 @@ import { isIndexable, legacyRedirectQuery, parseFilters } from "@lib/util/catalo
 import { resolveListingFilters } from "@lib/data/prefs"
 import { HttpTypes, StoreRegion } from "@medusajs/types"
 import CategoryTemplate from "@modules/categories/templates"
+import VitrineConjuntos from "@modules/conjuntos/templates/vitrine"
 
 type Props = {
   params: Promise<{ category: string[]; countryCode: string }>
@@ -83,6 +84,12 @@ export default async function CategoryPage(props: Props) {
 
   if (!productCategory) {
     notFound()
+  }
+
+  // Página dedicada do Benefício Conjunto (spec §7.1, F3): mesma URL/canonical de categoria,
+  // sem filtros de catálogo — curados + pares gerados por coleção, não uma listagem de produtos.
+  if (params.category.join("/") === "conjuntos") {
+    return <VitrineConjuntos category={productCategory} countryCode={params.countryCode} />
   }
 
   return (
