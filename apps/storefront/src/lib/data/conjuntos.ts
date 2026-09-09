@@ -16,6 +16,7 @@ import {
   elegibilidade,
   montarCardCurado,
   montarCardPar,
+  precoMinDisponivel,
 } from "@lib/util/conjuntos"
 import { buildChain } from "@lib/util/category-chain"
 import { HttpTypes } from "@medusajs/types"
@@ -166,7 +167,11 @@ export async function getConjunto(
         )
 
   if (!card) return null
-  return { card, produtos }
+  // mesma ordem de card.pecas
+  const produtosOrdenados = conjunto.product_ids
+    .map((id) => produtosMap.get(id))
+    .filter((p): p is HttpTypes.StoreProduct => !!p)
+  return { card, produtos: produtosOrdenados }
 }
 
 // Parceiras + curados de um produto (spec §7.3, bloco "Complete o conjunto" na PDP). `regra` é a
@@ -209,6 +214,7 @@ export async function getConjuntosDoProduto(
   const parceiras = idsParceiras
     .map((id) => produtosMap.get(id))
     .filter((p): p is HttpTypes.StoreProduct => !!p)
+    .filter((p) => precoMinDisponivel(p) !== null) // só parceiras com variante disponível — spec §7.3
 
   const curados = raw.curados
     .map((c) => montarCardCurado(c, produtosMap))
