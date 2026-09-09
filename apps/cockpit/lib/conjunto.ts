@@ -64,3 +64,43 @@ export function alertaEstoque(p: { status: string; variants: { stock: number | n
 }
 export const slugConjunto = (s: string) =>
   s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "")
+
+// Sobe a árvore (parent_id) da primeira categoria até a raiz e devolve o handle dela — mesma
+// regra do backend (raizPorCategoria em apps/backend/.../beneficio-conjunto/utils/categorias.ts).
+export function raizDeCategoria(cats: { id: string; handle: string; parent_id: string | null }[], categoryIds: string[]): string | null {
+  const primeiro = categoryIds[0]
+  if (!primeiro) return null
+  const porId = new Map(cats.map((c) => [c.id, c]))
+  let atual = porId.get(primeiro)
+  if (!atual) return null
+  let guarda = 0
+  while (atual.parent_id && porId.has(atual.parent_id) && guarda++ < 20) atual = porId.get(atual.parent_id)!
+  return atual.handle
+}
+
+// Mesma lógica de `regraEfetiva` do backend: exceção de coleção (ativa ou não) manda; senão a padrão.
+function temBeneficioAtivo(regras: Regra[], collectionId: string): boolean {
+  const excecao = regras.find((r) => r.escopo === "colecao" && r.collection_id === collectionId)
+  if (excecao) return excecao.ativa
+  const padrao = regras.find((r) => r.escopo === "padrao")
+  return !!padrao?.ativa
+}
+
+// Motivo (pt-BR) pelo qual o produto não forma nenhum conjunto — null quando tem parceiras
+// (o backend não devolve motivo; esta função espelha exatamente a mesma cadeia de regras dele:
+// regraEfetiva em montar-conjuntos.ts + raizPorCategoria em categorias.ts).
+export function motivoSemConjunto(input: {
+  collection_id: string | null
+  categoria_raiz: string | null
+  regras: Regra[]
+  pares: Par[]
+  temParceiras: boolean
+}): string | null {
+  if (input.temParceiras) return null
+  if (!input.collection_id) return "Produto sem coleção: não forma conjunto de coleção"
+  if (!temBeneficioAtivo(input.regras, input.collection_id)) return "Coleção sem benefício ativo"
+  const participa =
+    !!input.categoria_raiz && input.pares.some((p) => p.ativo && (p.categoria_a === input.categoria_raiz || p.categoria_b === input.categoria_raiz))
+  if (!participa) return "Categoria não participa dos pares permitidos"
+  return "Nenhuma peça parceira publicada nesta coleção"
+}

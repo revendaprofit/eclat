@@ -1,5 +1,17 @@
 import { describe, expect, it } from "vitest"
-import { alertaEstoque, entradaParaValor, formatarReais, previaBeneficio, slugConjunto, validarCurado, validarRegra, valorParaEntrada } from "./conjunto"
+import type { Par, Regra } from "./conjunto"
+import {
+  alertaEstoque,
+  entradaParaValor,
+  formatarReais,
+  motivoSemConjunto,
+  previaBeneficio,
+  raizDeCategoria,
+  slugConjunto,
+  validarCurado,
+  validarRegra,
+  valorParaEntrada,
+} from "./conjunto"
 
 describe("conversão de entrada", () => {
   it("percentual: inteiro 1–100", () => {
@@ -56,5 +68,65 @@ describe("alertaEstoque / slug", () => {
   })
   it("slug sem acento, minúsculo, hífens", () => {
     expect(slugConjunto("Look Blackout — Verão")).toBe("look-blackout-verao")
+  })
+})
+
+describe("raizDeCategoria", () => {
+  const cats = [
+    { id: "raiz-1", handle: "vestidos", parent_id: null },
+    { id: "filha-1", handle: "vestidos-longos", parent_id: "raiz-1" },
+  ]
+  it("categoria filha resolve para a raiz", () => {
+    expect(raizDeCategoria(cats, ["filha-1"])).toBe("vestidos")
+  })
+  it("categoria já raiz resolve para si mesma", () => {
+    expect(raizDeCategoria(cats, ["raiz-1"])).toBe("vestidos")
+  })
+  it("sem categorias ou categoria desconhecida → null", () => {
+    expect(raizDeCategoria(cats, [])).toBeNull()
+    expect(raizDeCategoria(cats, ["inexistente"])).toBeNull()
+  })
+})
+
+describe("motivoSemConjunto (espelha regraEfetiva do backend)", () => {
+  const padraoAtiva: Regra = { id: "r-padrao", nome: "Padrão", escopo: "padrao", collection_id: null, tipo_desconto: "total_percentual", valor: 10, ativa: true, promotion_id: null }
+  const padraoInativa: Regra = { ...padraoAtiva, ativa: false }
+  const excecaoInativa: Regra = { id: "r-excecao", nome: "Exceção", escopo: "colecao", collection_id: "col-1", tipo_desconto: "total_percentual", valor: 10, ativa: false, promotion_id: null }
+  const pares: Par[] = [{ id: "p-1", categoria_a: "vestidos", categoria_b: "saias", ativo: true }]
+
+  it("sem coleção", () => {
+    expect(
+      motivoSemConjunto({ collection_id: null, categoria_raiz: "vestidos", regras: [padraoAtiva], pares, temParceiras: false })
+    ).toBe("Produto sem coleção: não forma conjunto de coleção")
+  })
+
+  it("exceção inativa com padrão ativo → sem benefício (exceção cancela a padrão)", () => {
+    expect(
+      motivoSemConjunto({ collection_id: "col-1", categoria_raiz: "vestidos", regras: [padraoAtiva, excecaoInativa], pares, temParceiras: false })
+    ).toBe("Coleção sem benefício ativo")
+  })
+
+  it("padrão inativa sem exceção → sem benefício", () => {
+    expect(
+      motivoSemConjunto({ collection_id: "col-2", categoria_raiz: "vestidos", regras: [padraoInativa], pares, temParceiras: false })
+    ).toBe("Coleção sem benefício ativo")
+  })
+
+  it("categoria fora dos pares ativos → mensagem de pares", () => {
+    expect(
+      motivoSemConjunto({ collection_id: "col-1", categoria_raiz: "calcados", regras: [padraoAtiva], pares, temParceiras: false })
+    ).toBe("Categoria não participa dos pares permitidos")
+  })
+
+  it("tudo ok sem parceiras → nenhuma peça parceira publicada", () => {
+    expect(
+      motivoSemConjunto({ collection_id: "col-1", categoria_raiz: "vestidos", regras: [padraoAtiva], pares, temParceiras: false })
+    ).toBe("Nenhuma peça parceira publicada nesta coleção")
+  })
+
+  it("com parceiras → null", () => {
+    expect(
+      motivoSemConjunto({ collection_id: "col-1", categoria_raiz: "vestidos", regras: [padraoAtiva], pares, temParceiras: true })
+    ).toBeNull()
   })
 })

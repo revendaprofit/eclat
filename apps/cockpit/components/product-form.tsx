@@ -397,7 +397,9 @@ export default function ProductForm({
               </div>
             )}
 
-            {mode === "edit" && productId && <ConjuntoProdutoPanel productId={productId} />}
+            {mode === "edit" && productId && (
+              <ConjuntoProdutoPanel productId={productId} collectionId={collectionId || null} categoryIds={catIds} />
+            )}
 
             {mode === "create" && (
               <div className="border border-eclat-dourado/40 rounded-lg p-4 bg-white/60 flex flex-col gap-3">

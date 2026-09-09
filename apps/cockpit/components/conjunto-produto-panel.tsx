@@ -3,11 +3,12 @@
 // Painel só-leitura "Conjuntos" na ficha do produto (spec Benefício Conjunto §8.3, Task 5 F2).
 // Carrega por-produto/regras/pares/produtos/categorias e mostra: parceiras (par de coleção),
 // conjuntos curados, e — quando os dois estão vazios — o motivo inferido no cliente (o backend
-// não devolve motivo).
+// não devolve motivo). A coleção/categorias do produto visto vêm do próprio formulário (props),
+// nunca do mapa `/api/products` (que é limitado a 100 itens e pode não conter o produto atual).
 import { useCallback, useEffect, useState } from "react"
 import Link from "next/link"
-import type { Regra, Par, Curado } from "@/lib/conjunto"
-import { TIPOS_DESCONTO, formatarReais, valorParaEntrada } from "@/lib/conjunto"
+import type { Regra, Par, Curado, TipoDesconto } from "@/lib/conjunto"
+import { TIPOS_DESCONTO, formatarReais, motivoSemConjunto, raizDeCategoria, valorParaEntrada } from "@/lib/conjunto"
 
 type ProdutoLista = {
   id: string
@@ -18,10 +19,11 @@ type ProdutoLista = {
 }
 type Categoria = { id: string; name: string; handle: string; parent_id: string | null; is_active: boolean }
 type Parceira = { product_id: string; categoria_raiz: string; collection_id: string }
+type CuradoWire = Array<Omit<Curado, "regra"> & { regra: { tipo_desconto: TipoDesconto; valor: number } }>
 
 type Dados = {
   parceiras: Parceira[]
-  curados: Curado[]
+  curados: CuradoWire
   regras: Regra[]
   pares: Par[]
   produtos: ProdutoLista[]
@@ -30,79 +32,82 @@ type Dados = {
 
 const labelCls = "text-xs uppercase tracking-wider text-eclat-grafite/60 mb-1 block"
 
-// Sobe a árvore (parent_id) até a raiz e devolve o handle dela — mesma regra do backend
-// (raizPorCategoria em apps/backend/.../beneficio-conjunto/utils/categorias.ts).
-function raizHandle(categoryId: string | undefined, porId: Map<string, Categoria>): string | null {
-  if (!categoryId) return null
-  let atual = porId.get(categoryId)
-  if (!atual) return null
-  let guarda = 0
-  while (atual.parent_id && porId.has(atual.parent_id) && guarda++ < 20) atual = porId.get(atual.parent_id)!
-  return atual.handle
-}
+// Usada só para o nome de exibição das parceiras (título/miniatura ficam no mapa de `/api/products`
+// mesmo — a limitação de 100 itens só afeta o fallback visual dessas linhas, nunca o motivo inferido).
 const nomeDaRaiz = (handle: string, categorias: Categoria[]) => categorias.find((c) => c.handle === handle)?.name ?? handle
 
-// Mesma lógica de `regraEfetiva` do backend: exceção de coleção (ativa ou não) manda; senão a padrão.
-function temBeneficioAtivo(regras: Regra[], collectionId: string): boolean {
-  const excecao = regras.find((r) => r.escopo === "colecao" && r.collection_id === collectionId)
-  if (excecao) return excecao.ativa
-  const padrao = regras.find((r) => r.escopo === "padrao")
-  return !!padrao?.ativa
+// Lê o body de erro com segurança: se não for JSON válido (ex.: HTML de um 502), cai no status HTTP.
+async function erroDe(r: Response, fallback: string): Promise<string> {
+  try {
+    const d = await r.json()
+    return d?.error || fallback
+  } catch {
+    return `HTTP ${r.status}`
+  }
 }
 
-function motivoVazio(d: Dados, productId: string): string {
-  const atual = d.produtos.find((p) => p.id === productId)
-  const collectionId = atual?.collection_id ?? null
-  if (!collectionId) return "Produto sem coleção: não forma conjunto de coleção"
-  if (!temBeneficioAtivo(d.regras, collectionId)) return "Coleção sem benefício ativo"
-  const porId = new Map(d.categorias.map((c) => [c.id, c]))
-  const categoriaRaiz = raizHandle(atual?.categories?.[0]?.id, porId)
-  const participa = !!categoriaRaiz && d.pares.some((p) => p.ativo && (p.categoria_a === categoriaRaiz || p.categoria_b === categoriaRaiz))
-  if (!participa) return "Categoria não participa dos pares permitidos"
-  return "Nenhuma peça parceira publicada nesta coleção"
-}
-
-export default function ConjuntoProdutoPanel({ productId }: { productId: string }) {
+export default function ConjuntoProdutoPanel({
+  productId,
+  collectionId,
+  categoryIds,
+}: {
+  productId: string
+  collectionId: string | null
+  categoryIds: string[]
+}) {
   const [dados, setDados] = useState<Dados | null>(null)
   const [erro, setErro] = useState<string | null>(null)
 
-  const carregar = useCallback(async () => {
-    setErro(null)
-    try {
-      const [porProdutoR, regrasR, paresR, produtosR, categoriasR] = await Promise.all([
-        fetch(`/api/conjuntos/por-produto/${productId}`, { cache: "no-store" }),
-        fetch(`/api/conjuntos/regras`, { cache: "no-store" }),
-        fetch(`/api/conjuntos/pares`, { cache: "no-store" }),
-        fetch(`/api/products`, { cache: "no-store" }),
-        fetch(`/api/taxonomy/categories`, { cache: "no-store" }),
-      ])
-      const [porProdutoD, regrasD, paresD, produtosD, categoriasD] = await Promise.all([
-        porProdutoR.json(),
-        regrasR.json(),
-        paresR.json(),
-        produtosR.json(),
-        categoriasR.json(),
-      ])
-      if (!porProdutoR.ok) throw new Error(porProdutoD.error || "Falha ao carregar conjuntos do produto")
-      if (!regrasR.ok) throw new Error(regrasD.error || "Falha ao carregar regras")
-      if (!paresR.ok) throw new Error(paresD.error || "Falha ao carregar pares")
-      if (!produtosR.ok) throw new Error(produtosD.error || "Falha ao carregar produtos")
-      if (!categoriasR.ok) throw new Error(categoriasD.error || "Falha ao carregar categorias")
-      setDados({
-        parceiras: porProdutoD.parceiras ?? [],
-        curados: porProdutoD.curados ?? [],
-        regras: regrasD.regras ?? [],
-        pares: paresD.pares ?? [],
-        produtos: produtosD ?? [],
-        categorias: categoriasD ?? [],
-      })
-    } catch (e) {
-      setErro((e as Error).message || "Falha ao carregar conjuntos do produto")
-    }
-  }, [productId])
+  // `aindaAtivo` é fornecido pelo efeito (ou `() => true` pelo botão "tentar novamente"); evita
+  // aplicar uma resposta atrasada depois que `productId` mudou ou o componente desmontou.
+  const carregar = useCallback(
+    async (aindaAtivo: () => boolean) => {
+      setErro(null)
+      try {
+        const [porProdutoR, regrasR, paresR, produtosR, categoriasR] = await Promise.all([
+          fetch(`/api/conjuntos/por-produto/${productId}`, { cache: "no-store" }),
+          fetch(`/api/conjuntos/regras`, { cache: "no-store" }),
+          fetch(`/api/conjuntos/pares`, { cache: "no-store" }),
+          fetch(`/api/products`, { cache: "no-store" }),
+          fetch(`/api/taxonomy/categories`, { cache: "no-store" }),
+        ])
+        if (!porProdutoR.ok) throw new Error(await erroDe(porProdutoR, "Falha ao carregar conjuntos do produto"))
+        if (!regrasR.ok) throw new Error(await erroDe(regrasR, "Falha ao carregar regras"))
+        if (!paresR.ok) throw new Error(await erroDe(paresR, "Falha ao carregar pares"))
+        if (!produtosR.ok) throw new Error(await erroDe(produtosR, "Falha ao carregar produtos"))
+        if (!categoriasR.ok) throw new Error(await erroDe(categoriasR, "Falha ao carregar categorias"))
+        const [porProdutoD, regrasD, paresD, produtosD, categoriasD] = await Promise.all([
+          porProdutoR.json(),
+          regrasR.json(),
+          paresR.json(),
+          produtosR.json(),
+          categoriasR.json(),
+        ])
+        if (!aindaAtivo()) return
+        setDados({
+          parceiras: porProdutoD.parceiras ?? [],
+          curados: porProdutoD.curados ?? [],
+          regras: regrasD.regras ?? [],
+          pares: paresD.pares ?? [],
+          produtos: produtosD ?? [],
+          categorias: categoriasD ?? [],
+        })
+      } catch (e) {
+        if (!aindaAtivo()) return
+        setErro((e as Error).message || "Falha ao carregar conjuntos do produto")
+      }
+    },
+    [productId]
+  )
 
   useEffect(() => {
-    carregar()
+    let ativo = true
+    setDados(null)
+    setErro(null)
+    carregar(() => ativo)
+    return () => {
+      ativo = false
+    }
   }, [carregar])
 
   if (erro)
@@ -111,7 +116,7 @@ export default function ConjuntoProdutoPanel({ productId }: { productId: string 
         <label className={labelCls}>Conjuntos</label>
         <div className="text-xs text-red-700 flex items-center gap-2">
           <span>{erro}</span>
-          <button onClick={() => carregar()} className="underline">tentar novamente</button>
+          <button onClick={() => carregar(() => true)} className="underline">tentar novamente</button>
         </div>
       </div>
     )
@@ -131,6 +136,16 @@ export default function ConjuntoProdutoPanel({ productId }: { productId: string 
     categoriaNome: nomeDaRaiz(par.categoria_raiz, dados.categorias),
   }))
   const semNada = !parceiras.length && !dados.curados.length
+  const categoriaRaiz = raizDeCategoria(dados.categorias, categoryIds)
+  const motivo = semNada
+    ? motivoSemConjunto({
+        collection_id: collectionId,
+        categoria_raiz: categoriaRaiz,
+        regras: dados.regras,
+        pares: dados.pares,
+        temParceiras: false,
+      })
+    : null
 
   return (
     <div className="border border-eclat-pedra/40 rounded-lg p-4 bg-white/60 flex flex-col gap-3">
@@ -184,7 +199,7 @@ export default function ConjuntoProdutoPanel({ productId }: { productId: string 
         </Link>
       </div>
 
-      {semNada && <p className="text-xs text-amber-700">{motivoVazio(dados, productId)}</p>}
+      {semNada && motivo && <p className="text-xs text-amber-700">{motivo}</p>}
     </div>
   )
 }
