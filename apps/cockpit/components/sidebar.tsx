@@ -11,6 +11,7 @@ const ITEMS = [
   { href: "/pedidos", label: "Pedidos" },
   { href: "/leads", label: "Leads" },
   { href: "/produtos", label: "Produtos & Estoque" },
+  { href: "/conjuntos", label: "Conjuntos (benefício)" },
   { href: "/vitrine", label: "Vitrine (site)" },
   { href: "/editorial", label: "Editorial (artigos)" },
   { href: "/personas", label: "Personas (Minha ÉCLAT)" },
