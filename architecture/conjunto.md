@@ -266,7 +266,23 @@ Achados da execução F1 (Task 8, registrados aqui por não terem virado risco r
 
 ## 13. O que F2/F3/F4 consomem
 
-- **F2 (Cockpit — telas §8 da spec):** só as rotas `/admin/conjuntos/*` (§7 acima). Tela Regras (padrão + exceções), tela Curados (CRUD, drag para `ordem`, upload de `capa_url` via `/admin/uploads` já existente), painel da ficha do produto (`GET /admin/conjuntos/por-produto/:product_id`). "Sem variante disponível" vira aviso da tela (§2 acima), não bloqueio do backend.
+- **F2 (Cockpit — telas §8 da spec): ENTREGUE** (2026-09-09, branch `feat/conjunto-f2-cockpit`; código
+  concluído, **validação visual pendente do dono** — roteiro em `progress.md`, entrada "Benefício Conjunto
+  F2"). Consome só as rotas `/admin/conjuntos/*` (§7 acima), via proxies finos em
+  `apps/cockpit/app/api/conjuntos/**`. Tela Regras (padrão + exceções — só o toggle "Ativa", sem "Usar
+  padrão" porque não há `DELETE` de regra, ver pendência abaixo), tela Curados (CRUD, drag para `ordem`,
+  upload de `capa_url` via `/api/site-upload` do Cockpit, que chama `/admin/uploads`), painel só-leitura da
+  ficha do produto (`GET /admin/conjuntos/por-produto/:product_id`). "Sem variante disponível" vira aviso
+  da tela (§2 acima), não bloqueio do backend. Detalhe de telas/rotas/módulo puro:
+  `architecture/cockpit.md` §7.
+  - **`capa_url` nullable (Task 5 desta fase):** `apps/backend/src/api/middlewares.ts` — os schemas zod de
+    criar/editar curado aceitam `capa_url: z.string().min(1).nullable().optional()` (antes só
+    `.optional()`, sem `.nullable()`), para o Cockpit poder enviar `capa_url: null` e limpar a capa sem
+    precisar de uma rota separada. +2 testes de integração (`conjunto-admin.spec.ts`), suíte de integração
+    do módulo em 70 no total. **Isto exige redeploy do backend em produção** (`railway up` — o Railway não
+    está ligado ao GitHub deste serviço, ver entrada "DEPLOY em produção" de 2026-09-09 em `progress.md`)
+    antes do roteiro de validação do dono: sem o redeploy, `capa_url: null` continua devolvendo `400` em
+    produção mesmo com o Cockpit já pronto para enviá-lo.
 - **F3 (Vitrine — §7.1–7.4, 7.6, 7.7):** as rotas `/store/conjuntos*` (§8 acima) para estrutura, hidratando preço/foto/estoque com `listProducts({ id })` da Store API que a vitrine já usa. Handle do par sempre vem pronto de `GET /store/conjuntos` — nunca remontado à mão.
 - **F4 (Carrinho — §7.5, aceite final §11 da spec):** o gancho já marca `conjunto_desconto` nos itens do carrinho (nenhuma leitura extra necessária para o cálculo); a etiqueta "Conjunto"/agrupamento do resumo por prefixo `CONJUNTO-` dos ajustes de promoção; os gatilhos "Feche mais um conjunto" vêm de `GET /store/conjuntos/oportunidades?cart_id=`.
 

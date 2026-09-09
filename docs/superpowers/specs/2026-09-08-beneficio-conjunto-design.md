@@ -171,9 +171,17 @@ Selo "Forma conjunto" no card de peças cuja categoria raiz está em algum par a
 
 Área **Conjuntos** no menu. Só Admin API do backend (rotas §6.6); nada no Supabase.
 
+**Status (2026-09-09): F2 implementada em código** (branch `feat/conjunto-f2-cockpit`; SOP completo em
+`architecture/cockpit.md` §7). **Validação visual pendente do dono** — roteiro em `progress.md`, entrada
+"Benefício Conjunto F2". Ver também `architecture/conjunto.md` §13.
+
 ### 8.1 Tela Regras
 - "Benefício padrão": tipo (select com os quatro rótulos em português), valor (campo em % ou R$ conforme o tipo), ativo; prévia ao vivo com exemplo fixo (top R$ 189 + legging R$ 259).
 - "Exceções por coleção": tabela coleção · tipo · valor · ativo; "Usar padrão" remove a exceção; coleções sem exceção listadas em cinza com "padrão".
+  - **Pendência de backend (F2):** implementado só o toggle "Ativa" — não existe "Usar padrão"/remover a
+    exceção porque o backend não tem `DELETE /admin/conjuntos/regras/:id` (§6.6 só permite desativar
+    `padrao`/`colecao`, nunca excluir). Reintroduzir a rota de exclusão fica como pendência de backend
+    para uma fase futura; até lá, uma exceção "removida" fica apenas desativada e continua listada.
 - "Pares permitidos": chips `Top + Short`, `Top + Legging`; adicionar par escolhendo duas categorias raiz; remover.
 - Salvar → backend cria/atualiza/reconcilia promoções. Erro do backend aparece inline.
 
@@ -197,7 +205,7 @@ Painel lateral só leitura "Conjuntos": curados que incluem o produto e parceira
 |---|---|---|
 | **F0 Prova de conceito** | gancho + promoção-alvo num carrinho de teste; decide §6.3 | — |
 | **F1 Backend** | módulo, migração, seed, `montarConjuntos`, gancho, promoções, exclusividade do cupom, rotas store/admin, testes; deploy Railway; **primeira escrita em produção** (migração, regra padrão inativa, pares) só com "pode aplicar" — **implementada, aguardando deploy** (código e testes completos em `feat/conjunto-f1-backend`; nada escrito em produção ainda, ver checklist em `architecture/conjunto.md` §14) | F0 |
-| **F2 Cockpit** | telas §8 | F1 |
+| **F2 Cockpit** | telas §8 — **implementada em código** (branch `feat/conjunto-f2-cockpit`); validação visual pendente do dono, ver `progress.md` | F1 |
 | **F3 Vitrine** | §7.1–7.4, 7.6, 7.7 | F1 |
 | **F4 Carrinho** | §7.5, aceite final §11 | F1, F3 |
 

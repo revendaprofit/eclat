@@ -33,6 +33,7 @@ Conversas            (Chat WhatsApp / Evolution)
 Clientes             (lista · ficha 360° · pedidos · envios · follow-up · segmentos)
 Leads                (Kanban · lista · ficha · captação)
 Produtos & Estoque   (produtos · criar/editar · coleções/categorias/tags · estoque · alertas)
+Conjuntos (benefício) (regras padrão/exceções/pares · conjuntos curados · painel na ficha do produto)
 Financeiro           (DRE · receita · despesas · COGS/margem · categorias)
 Configurações        (conexões · WhatsApp · automações · categorias de despesa · usuários)
 ```
@@ -106,3 +107,94 @@ Consolida tudo: vendas do dia, pedidos a enviar, leads novos, conversas pendente
 - **IA do chat (Fase 1B):** modo sugestão (IA redige, operador aprova). Auto-resposta só em casos definidos, depois.
 - **Evolution API:** caminho não-oficial, já configurado. (Mitigação futura: migrar para a API oficial.)
 - **Financeiro:** P&L híbrido — receita do Medusa + despesas/COGS no Supabase.
+
+## 7. Conjuntos (benefício) — Fase F2 (2026-09-09)
+
+> Tela do Cockpit para o Benefício Conjunto (Spec 2). SOP do backend/módulo: `architecture/conjunto.md`
+> (dono do modelo de dados, do gancho de carrinho e das rotas). Este bloco documenta só a parte do Cockpit
+> (código concluído nesta fase; **validação visual pendente do dono** — ver roteiro em `progress.md`,
+> entrada "2026-09-09 — Benefício Conjunto F2").
+
+**Telas** — item de menu "Conjuntos (benefício)" (`components/sidebar.tsx`), rota `/conjuntos`
+(`app/(painel)/conjuntos/page.tsx`, abas por query string `?aba=regras|curados`, sem index):
+- **Regras** (`components/conjunto-regras.tsx`): benefício padrão (tipo/valor/ativo, prévia ao vivo com o
+  exemplo fixo da spec — Top R$ 189,00 + Legging R$ 259,00); exceções por coleção (só o toggle "Ativa" —
+  não existe "Usar padrão"/remover exceção, ver Limites abaixo); pares permitidos como chips (adicionar/
+  remover categoria raiz); botão "Reconciliar" com confirmação inline antes de chamar
+  `POST /api/conjuntos/reconciliar`. Trocar o tipo de desconto sempre limpa o campo de valor (regra e
+  exceções), para nunca salvar um número na unidade errada (% virando centavos ou vice-versa).
+- **Conjuntos curados** (`components/conjunto-curados.tsx`): lista ordenável (arrastar nativo do HTML5,
+  mesmo padrão do Kanban de Leads — cada item solto dispara `PUT /api/conjuntos/curados/:id { ordem }`
+  imediatamente, sem "salvar" separado); drawer de criar/editar com busca de produtos
+  (`GET /api/products?q=`, debounce 300 ms, `AbortController` cancela a busca anterior), badge de estoque
+  por produto via `alertaEstoque` (rascunho/sem estoque/estoque baixo — nunca bloqueia a escolha), upload
+  de capa via `/api/site-upload` (componente compartilhado `components/upload-imagem.tsx`, também usado na
+  Vitrine), prévia do card, e `capa_url: null` explícito para limpar a capa (ver Limites/rulings).
+- **Painel na ficha do produto** (`components/conjunto-produto-panel.tsx`, montado em
+  `components/product-form.tsx` só no modo edição, logo após "Fotos por cor"): só leitura — lista as
+  parceiras (par de coleção) e os curados que incluem o produto (`GET /api/conjuntos/por-produto/:id`);
+  quando não há nenhum, mostra o motivo em pt-BR via `motivoSemConjunto` (lib pura), calculado a partir da
+  coleção/categorias **do próprio produto** (nunca da lista de produtos limitada a 100 — ver ruling C5).
+
+**Rotas** `apps/cockpit/app/api/conjuntos/**` — proxies finos para `MEDUSA_ADMIN_URL` (mesmo padrão dos
+outros domínios do Cockpit: login programático em `lib/medusa.ts`, token em cache 10 min). Status e
+mensagem de erro do backend são preservados via `MedusaHttpError`/`respostaErro` (`lib/api-erro.ts`) — não
+há tradução ou remapeamento de status no Cockpit; `400` de validação e `422 duplicate_error` (regra padrão
+duplicada, exceção de coleção duplicada, handle de curado duplicado) chegam ao formulário com a mensagem
+pt-BR do backend.
+```
+GET/POST   /api/conjuntos/regras
+PUT        /api/conjuntos/regras/[id]
+GET/PUT    /api/conjuntos/pares
+GET/POST   /api/conjuntos/curados
+PUT/DELETE /api/conjuntos/curados/[id]
+GET        /api/conjuntos/por-produto/[id]
+POST       /api/conjuntos/reconciliar
+```
+
+**Módulo puro** `apps/cockpit/lib/conjunto.ts` (sem fetch, sem React — espelha a matemática do backend,
+`apps/backend/.../beneficio-conjunto/utils/montar-conjuntos.ts`, para a prévia bater com o que o carrinho
+vai calcular): `TIPOS_DESCONTO` (os 4 rótulos em pt-BR); `entradaParaValor`/`valorParaEntrada` (texto do
+formulário ↔ inteiro — percentual 1–100 ou centavos, nunca float); `formatarReais`; `validarRegra`/
+`validarCurado`; `previaBeneficio` (mesmo algoritmo de desconto por tipo do backend, usado nas prévias das
+telas Regras e Curados); `alertaEstoque`; `slugConjunto` (handle a partir do nome); `raizDeCategoria` (sobe
+`parent_id` até a raiz, mesma regra de `raizPorCategoria` do backend); `motivoSemConjunto` (espelha
+`regraEfetiva` do backend para explicar por que um produto não forma conjunto). 17 testes unitários em
+`lib/conjunto.test.ts` (suíte do cockpit passa de 19 para **36**).
+
+**Como validar** — dois níveis, nenhum React component test no projeto (decisão preexistente do Cockpit):
+1. **Automatizado:** `npx tsc -p apps/cockpit --noEmit` (tipos) + `npm test --workspace=apps/cockpit`
+   (36 testes puros — `conjunto.test.ts` cobre conversão de dinheiro, validação e a prévia; nenhum teste
+   de componente/integração de UI, mesmo padrão das fases anteriores do Cockpit).
+2. **Backend local** (para exercitar os helpers de `lib/medusa.ts` contra rotas reais antes do dono
+   validar em produção): subir `medusa develop` local (`architecture/conjunto.md` §10) e apontar
+   `MEDUSA_ADMIN_URL` do Cockpit para `http://localhost:9000` — ver a nota de memória do projeto
+   (`eclat-validacao-cockpit-producao.md`) sobre o override dessa variável para validar sem depender do
+   backend de produção.
+3. **Roteiro de validação do dono** (obrigatório, é quem tem o login do Cockpit): os seis passos completos
+   estão em `progress.md`, entrada "2026-09-09 — Benefício Conjunto F2 (Cockpit)".
+
+**Limites conhecidos desta fase:**
+- **`GET /api/products` tem teto de 100 produtos** (mesmo teto de outras telas do Cockpit) — o formulário
+  de curado busca por nome/handle (`?q=`) para contornar, mas ao **editar** um curado cujo `product_ids`
+  inclui um id fora dos 100 primeiros, esse produto some do mapa local; a tela preserva o id (não descarta
+  do array salvo) e mostra um aviso, com o título caindo para o próprio id quando não resolvido.
+- **Não existe "Usar padrão"** na tela Regras (a spec original previa remover a exceção de coleção) porque
+  o backend não tem `DELETE /admin/conjuntos/regras/:id` — uma exceção só pode ser desativada
+  (`ativa: false`), nunca apagada. Pendência de backend registrada em
+  `docs/superpowers/specs/2026-09-08-beneficio-conjunto-design.md` §8.1 e em `architecture/conjunto.md`.
+- **Sem tela de cupom** — a spec previa a possibilidade, mas a F2 só oferece o botão "Reconciliar"
+  (`POST /admin/conjuntos/reconciliar`), que converte cupons de pedido inteiro existentes; criar/editar
+  cupom continua no admin nativo do Medusa.
+- **`npm run lint` no Cockpit está quebrado** por um problema de toolchain preexistente (`ajv`/`eslintrc`),
+  sem relação com esta fase — não é regressão desta task.
+
+**Rulings de execução (F2, verbatim das tasks 1–5):**
+- **C1/C3** — `capa_url: null` explícito é a única forma de "sem capa"; `capa_url: ""` é rejeitado pelo
+  backend (schema `.nullable()`, string vazia não passa em `min(1)`).
+- **C2** — trocar o tipo de desconto sempre limpa o campo de valor (padrão, exceção e curado), para nunca
+  salvar um número interpretado na unidade errada.
+- **C4** — ao editar um curado, ids de produto fora da página de 100 do `GET /api/products` são
+  preservados no array salvo, nunca descartados silenciosamente.
+- **C5** — o motivo mostrado no painel da ficha do produto vem sempre da coleção/categorias **do próprio
+  produto** (`GET /admin/products/:id`), nunca inferido a partir da lista de produtos limitada a 100.
