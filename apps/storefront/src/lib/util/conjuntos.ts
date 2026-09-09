@@ -91,6 +91,20 @@ export function precosConjunto(
   return { cheio, comBeneficio: cheio - economia, economia }
 }
 
+// Total do conjunto na página do conjunto (F3): preço de cada peça é o da variante escolhida
+// (cor+tamanho completos), com fallback pro `precoMin` do card enquanto a peça não está
+// completa — assim o rodapé mostra um total plausível desde o primeiro render, antes de
+// qualquer escolha. `precosSelecionados[i]` é `null` quando a peça `i` ainda não tem variante
+// selecionada com preço calculado.
+export function totalDoConjunto(
+  precosSelecionados: (number | null)[],
+  pecas: PecaCard[],
+  regra: RegraStore
+): { cheio: number; comBeneficio: number; economia: number } {
+  const precos = pecas.map((p, i) => precosSelecionados[i] ?? p.precoMin ?? 0)
+  return precosConjunto(regra, precos)
+}
+
 export function conjuntoDisponivel(pecas: PecaCard[]): boolean {
   return pecas.every((p) => p.precoMin !== null)
 }

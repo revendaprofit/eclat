@@ -228,6 +228,49 @@ export function WebPageJsonLd({
   )
 }
 
+// Conjunto (Benefício Conjunto, F3): `Product` cujo preço é o TOTAL com benefício (o preço que a
+// cliente paga pelo conjunto), com as peças relacionadas via `isRelatedTo` — não há um `sku`/GTIN
+// único de "conjunto" no catálogo (cada peça é vendida como linha própria, spec §6.3).
+export function ConjuntoJsonLd({
+  nome,
+  url,
+  imagem,
+  precoTotal,
+  moeda,
+  pecas,
+}: {
+  nome: string
+  url: string
+  imagem?: string | null
+  precoTotal: number
+  moeda: string
+  pecas: { nome: string; url: string }[]
+}) {
+  return (
+    <JsonLd
+      data={{
+        "@context": "https://schema.org",
+        "@type": "Product",
+        name: nome,
+        ...(imagem ? { image: [imagem] } : {}),
+        brand: { "@type": "Brand", name: "use.ÉCLAT" },
+        offers: {
+          "@type": "Offer",
+          price: precoTotal.toFixed(2),
+          priceCurrency: moeda,
+          url,
+          itemCondition: "https://schema.org/NewCondition",
+        },
+        isRelatedTo: pecas.map((p) => ({
+          "@type": "Product",
+          name: p.nome,
+          url: p.url,
+        })),
+      }}
+    />
+  )
+}
+
 export function FaqJsonLd({
   items,
 }: {

@@ -12,6 +12,7 @@ import {
   precoMinDisponivel,
   precosConjunto,
   slotMetadata,
+  totalDoConjunto,
   type CuradoStore,
   type ParStore,
   type PecaCard,
@@ -291,5 +292,30 @@ describe("pecaCard thumbnail fallback", () => {
     const produtos = new Map([[top.id, top]])
     const card = montarCardPar(par, "col_1", regra, produtos)
     expect(card!.pecas[0].thumbnail).toBe("fallback-top.jpg")
+  })
+})
+
+describe("totalDoConjunto", () => {
+  const pecas: PecaCard[] = [
+    { id: "p1", handle: "legging", title: "Legging", thumbnail: null, precoMin: 18900 },
+    { id: "p2", handle: "top", title: "Top", thumbnail: null, precoMin: 25900 },
+  ]
+  const regra: RegraStore = { tipo_desconto: "menor_peca_percentual", valor: 20 }
+
+  it("nenhuma peça selecionada: usa o precoMin de cada uma (mesmo total do card)", () => {
+    expect(totalDoConjunto([null, null], pecas, regra)).toEqual({ cheio: 44800, comBeneficio: 41020, economia: 3780 })
+  })
+
+  it("peça selecionada usa o preço da variante escolhida, não o precoMin", () => {
+    expect(totalDoConjunto([19900, null], pecas, regra)).toEqual({ cheio: 45800, comBeneficio: 41820, economia: 3980 })
+  })
+
+  it("as duas peças selecionadas: total só com os preços escolhidos", () => {
+    expect(totalDoConjunto([19900, 24900], pecas, regra)).toEqual({ cheio: 44800, comBeneficio: 40820, economia: 3980 })
+  })
+
+  it("peça sem precoMin (null) e sem seleção conta como 0", () => {
+    const semPreco: PecaCard[] = [{ id: "p3", handle: "x", title: "X", thumbnail: null, precoMin: null }]
+    expect(totalDoConjunto([null], semPreco, regra)).toEqual({ cheio: 0, comBeneficio: 0, economia: 0 })
   })
 })
