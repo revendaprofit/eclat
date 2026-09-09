@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useCallback, useState } from "react"
 import type { HttpTypes } from "@medusajs/types"
 import type { ColorMap } from "@lib/util/colors"
 import { addToCart } from "@lib/data/cart"
@@ -9,6 +9,7 @@ import { variantToAddToCart } from "@modules/analytics/items"
 import { showToast } from "@modules/common/components/toast"
 import { colorValues, firstAvailableVariantId } from "@lib/util/pdp-variants"
 import { slotMetadata, totalDoConjunto, type CardConjunto } from "@lib/util/conjuntos"
+import { adicionarEmSequencia, mensagemFalha, type ProgressoAdicao, type SlotAdicao } from "@lib/util/adicao-conjunto"
 import { ProductSelectionProvider } from "@modules/products/components/product-selection"
 import PecaDoConjunto, { type SelecaoPeca } from "./peca-do-conjunto"
 import RodapeConjunto from "./rodape-conjunto"
@@ -43,24 +44,13 @@ export default function ConjuntoBuilder({
   const [selecoes, setSelecoes] = useState<Record<string, SelecaoPeca>>({})
   const [adicionando, setAdicionando] = useState(false)
   const [erro, setErro] = useState<string | null>(null)
-  // Índices (posição em `produtos`/`card.pecas`) já adicionados ao carrinho na tentativa em
-  // curso — retry resumível (fix round 1, achado "retry duplica linhas já adicionadas"): o loop
-  // de `handleAdicionar` pula quem já está aqui, então uma falha na peça 2 não re-adiciona a peça
-  // 1 na tentativa seguinte. Zerado ao concluir com sucesso e sempre que `selecoes` muda fora de
-  // uma tentativa em curso — trocar a variante de uma peça já adicionada é um "adicionar de novo"
-  // deliberado, não um retry.
-  const [adicionados, setAdicionados] = useState<Set<number>>(new Set())
-  // Espelha `adicionando` em ref (fix round 2, achado "seleção durante o loop derruba
-  // `adicionados`"): o loop de `handleAdicionar` grava a variante escolhida em `selecoes` via
-  // `onChange`/`handleChange` mesmo quando o usuário não mexeu em nada (primeira leitura de cada
-  // peça), o que dispararia o efeito de reset abaixo NO MEIO da própria tentativa. Com os
-  // seletores desabilitados durante o loop (ver `disabled={adicionando}` no JSX) o usuário não
-  // consegue mais gerar esse changes, mas o ref é a garantia definitiva: o efeito só zera
-  // `adicionados` quando não há uma adição em voo.
-  const adicionandoRef = useRef(false)
-  useEffect(() => {
-    adicionandoRef.current = adicionando
-  }, [adicionando])
+  // Progresso POR PEÇA da adição (ruling V7, módulo puro `@lib/util/adicao-conjunto`): índice da
+  // peça → variante que já entrou na sacola nesta página. Um retry com a mesma variante pula quem
+  // já entrou; trocar a variante de UMA peça faz só ela ser adicionada de novo. Sem efeito de
+  // reset e sem ref: quem decide o que é pendente é `pendentes()` no módulo, comparando a variante
+  // atual de cada slot com a registrada aqui. `adicionando` continua desabilitando os seletores
+  // durante a adição (ruling V3).
+  const [progresso, setProgresso] = useState<ProgressoAdicao>({})
 
   const handleChange = useCallback(
     (index: number, info: SelecaoPeca) => {
@@ -74,16 +64,6 @@ export default function ConjuntoBuilder({
     },
     [produtos]
   )
-
-  // Ver comentário de `adicionados`/`adicionandoRef` acima — só dispara quando `selecoes` de fato
-  // muda (o bailout dentro do `setSelecoes` acima evita updates redundantes que disparariam isto
-  // à toa) E não há uma tentativa de `handleAdicionar` em voo. Sem essa guarda, trocar a seleção
-  // da peça 1 enquanto a peça 0 já foi adicionada e a peça 1 está em `addToCart` apagaria
-  // `adicionados={0}`; se a peça 1 então falhasse, o retry re-adicionaria a peça 0 (duplicata).
-  useEffect(() => {
-    if (adicionandoRef.current) return
-    setAdicionados(new Set())
-  }, [selecoes])
 
   // Preço de cada peça: o da variante escolhida quando há uma selecionada; senão o `precoMin` do
   // card (mesmo fallback do card da vitrine) — o rodapé mostra um total plausível desde o 1º render.
@@ -99,41 +79,37 @@ export default function ConjuntoBuilder({
     if (!podeAdicionar || adicionando) return
     setAdicionando(true)
     setErro(null)
-    // Índice da peça cuja `addToCart` falhou (ou que estava incompleta) — usado só para nomear a
-    // peça na mensagem de erro; a resumabilidade em si vem do `adicionados.has(i)` abaixo.
-    let indexComFalha: number | null = null
+    // Um slot por peça, na ordem de `produtos` (= `card.pecas`). `podeAdicionar` garante que toda
+    // peça tem variante completa selecionada, então nenhum slot fica sem `variantId`.
+    const slots: SlotAdicao[] = []
+    produtos.forEach((produto, i) => {
+      const variant = selecoes[produto.id]?.variant
+      if (!variant) return
+      slots.push({ indice: i, variantId: variant.id, titulo: produto.title ?? "", metadata: slotMetadata(card.handle, i) })
+    })
     try {
-      for (let i = 0; i < produtos.length; i++) {
-        if (adicionados.has(i)) continue // já entrou nesta tentativa — não duplica (fix round 1)
-        const produto = produtos[i]
+      const r = await adicionarEmSequencia(slots, progresso, (s) =>
+        addToCart({ variantId: s.variantId, quantity: 1, countryCode, metadata: s.metadata })
+      )
+      setProgresso(r.progresso)
+      // Tracking só do que ENTROU agora — o que já estava na sacola de uma tentativa anterior não
+      // é re-adicionado nem re-reportado.
+      for (const adicionado of r.adicionadosAgora) {
+        const produto = produtos[adicionado.indice]
         const variant = selecoes[produto.id]?.variant
-        if (!variant) {
-          indexComFalha = i
-          throw new Error("Peça incompleta")
-        }
-        try {
-          // eslint-disable-next-line no-await-in-loop -- linhas precisam entrar em sequência (spec §6.3)
-          await addToCart({
-            variantId: variant.id,
-            quantity: 1,
-            countryCode,
-            metadata: slotMetadata(card.handle, i),
-          })
-        } catch (e) {
-          indexComFalha = i
-          throw e
-        }
-        setAdicionados((prev) => {
-          const next = new Set(prev)
-          next.add(i)
-          return next
-        })
+        if (!produto || !variant) continue
         pushEcommerceEvent("add_to_cart", {
           ...variantToAddToCart(produto, variant, 1),
           item_list_name: `Conjunto: ${card.nome}`,
         })
       }
-      setAdicionados(new Set()) // sucesso completo: próximo clique começa uma tentativa nova
+      if (r.falha) {
+        const msg = mensagemFalha(r.falha, slots, r.progresso)
+        setErro(msg)
+        showToast({ message: msg })
+        return
+      }
+      setProgresso({}) // sucesso completo: próximo clique começa uma tentativa nova
       // Desktop: o dropdown da sacola já abre sozinho ao detectar a troca de quantidade de itens
       // (mesmo mecanismo do `QuickAdd` — nada a fazer aqui). Mobile: toast, como no `QuickAdd`.
       if (isMobile()) {
@@ -142,11 +118,6 @@ export default function ConjuntoBuilder({
           action: { label: "Ver sacola", href: "/cart" },
         })
       }
-    } catch {
-      const titulo = indexComFalha !== null ? card.pecas[indexComFalha]?.title : undefined
-      const msg = titulo ? `Não foi possível adicionar ${titulo}. Tente de novo.` : "Não foi possível adicionar o conjunto. Tente de novo."
-      setErro(msg)
-      showToast({ message: msg })
     } finally {
       setAdicionando(false)
     }

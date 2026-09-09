@@ -10,6 +10,7 @@ import { showToast } from "@modules/common/components/toast"
 import { Button, clx } from "@modules/common/components/ui"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import { corParceira, formatarReais, precoMinDisponivel, slotMetadata } from "@lib/util/conjuntos"
+import { adicionarEmSequencia, mensagemFalha, type ProgressoAdicao, type SlotAdicao } from "@lib/util/adicao-conjunto"
 import { findOption, imagesForColor, sizeAvailability, sizeValues, variantFor } from "@lib/util/pdp-variants"
 import { useProductSelection } from "@modules/products/components/product-selection"
 
@@ -37,18 +38,12 @@ export default function Parceira({
   const cor = useMemo(() => corParceira(parceira, anchorColor), [parceira, anchorColor])
   const [tamanho, setTamanho] = useState<string | null>(null)
   const [adicionando, setAdicionando] = useState(false)
-  // Progresso da tentativa em curso (retry resumível, fix round 1, achado "retry duplica linha
-  // da âncora"), atrelado à SELEÇÃO à qual pertence — `chave` é `${anchorVariant.id}|${parceiraVariant.id}`
-  // capturados no clique que gerou o progresso. Sem isso (fix round 2, achado "retry pula slot 0
-  // com seleção nova"): se a página troca a peça-âncora (ou o tamanho da parceira muda) enquanto
-  // uma adição está em voo e ela falha, um `useEffect` de reset com guarda por ref não reagia —
-  // React já tinha memorizado as deps novas, o efeito nunca re-executava, e o retry seguinte
-  // herdava `adicionados={0}` de uma seleção que não é mais a atual. Guardar o progresso junto da
-  // chave elimina o efeito: no clique, comparamos a chave atual com a do progresso salvo — se
-  // bater, retomamos; se não, começamos do zero (nenhum ref, nenhum efeito).
-  const [progresso, setProgresso] = useState<{ chave: string; adicionados: Set<0 | 1> } | null>(
-    null
-  )
+  // Progresso POR PEÇA da adição (ruling V7, módulo puro `@lib/util/adicao-conjunto` — o MESMO
+  // mecanismo da página do conjunto): slot 0 = âncora, slot 1 = parceira; o valor é a variante que
+  // já entrou na sacola nesta página. Um retry com as mesmas variantes só re-tenta quem faltou;
+  // trocar a variante de UMA peça (a página troca a âncora, ou a cliente troca o tamanho da
+  // parceira) faz só ela ser adicionada de novo — sem chave composta, sem efeito de reset, sem ref.
+  const [progresso, setProgresso] = useState<ProgressoAdicao>({})
 
   const colorOpt = findOption(parceira, "Cor")
   const sizeOpt = findOption(parceira, "Tamanho")
@@ -73,64 +68,37 @@ export default function Parceira({
 
   async function handleAdicionar() {
     if (!podeAdicionar || !anchorVariant || !parceiraVariant) return
-    // Captura a seleção UMA VEZ no clique: os dois `addToCart` abaixo e `chaveAtual` usam sempre
-    // estas variáveis, nunca `anchorVariant`/`parceiraVariant` de novo — se a página trocar a
-    // peça-âncora (ou o tamanho da parceira) enquanto esta tentativa está em voo, ela não muda de
-    // seleção no meio do caminho.
+    // Captura a seleção UMA VEZ no clique: os slots abaixo usam sempre estas variáveis, nunca
+    // `anchorVariant`/`parceiraVariant` de novo — se a página trocar a peça-âncora (ou o tamanho da
+    // parceira) enquanto esta tentativa está em voo, ela não muda de seleção no meio do caminho.
     const anchorVarAtual = anchorVariant
     const parceiraVarAtual = parceiraVariant
-    const chaveAtual = `${anchorVarAtual.id}|${parceiraVarAtual.id}`
-    // Retoma o progresso salvo só se ele pertence a esta MESMA seleção; caso contrário (seleção
-    // mudou desde a última tentativa) começa do zero — ver comentário do `useState` acima.
-    let adicionadosAtual =
-      progresso?.chave === chaveAtual ? progresso.adicionados : new Set<0 | 1>()
-    setAdicionando(true)
     const conjuntoHandle = `${anchor.handle}--${parceira.handle}`
-    // Título da peça cuja `addToCart` falhou — só para nomear a peça na mensagem de erro; a
-    // resumabilidade em si vem do `adicionadosAtual.has(slot)` abaixo (fix round 1).
-    let tituloComFalha: string | null = null
+    const slots: SlotAdicao[] = [
+      { indice: 0, variantId: anchorVarAtual.id, titulo: anchor.title ?? "", metadata: slotMetadata(conjuntoHandle, 0) },
+      { indice: 1, variantId: parceiraVarAtual.id, titulo: parceira.title ?? "", metadata: slotMetadata(conjuntoHandle, 1) },
+    ]
+    const produtoDoSlot = [anchor, parceira]
+    const varianteDoSlot = [anchorVarAtual, parceiraVarAtual]
+    setAdicionando(true)
     try {
-      if (!adicionadosAtual.has(0)) {
-        try {
-          await addToCart({
-            variantId: anchorVarAtual.id,
-            quantity: 1,
-            countryCode,
-            metadata: slotMetadata(conjuntoHandle, 0),
-          })
-        } catch (e) {
-          tituloComFalha = anchor.title ?? null
-          throw e
-        }
-        adicionadosAtual = new Set<0 | 1>(Array.from(adicionadosAtual))
-        adicionadosAtual.add(0)
-        setProgresso({ chave: chaveAtual, adicionados: adicionadosAtual })
+      const r = await adicionarEmSequencia(slots, progresso, (s) =>
+        addToCart({ variantId: s.variantId, quantity: 1, countryCode, metadata: s.metadata })
+      )
+      setProgresso(r.progresso)
+      // Tracking só do que ENTROU agora — o que já estava na sacola não é re-adicionado nem
+      // re-reportado.
+      for (const adicionado of r.adicionadosAgora) {
         pushEcommerceEvent("add_to_cart", {
-          ...variantToAddToCart(anchor, anchorVarAtual, 1),
+          ...variantToAddToCart(produtoDoSlot[adicionado.indice], varianteDoSlot[adicionado.indice], 1),
           item_list_name: "Complete o conjunto",
         })
       }
-      if (!adicionadosAtual.has(1)) {
-        try {
-          await addToCart({
-            variantId: parceiraVarAtual.id,
-            quantity: 1,
-            countryCode,
-            metadata: slotMetadata(conjuntoHandle, 1),
-          })
-        } catch (e) {
-          tituloComFalha = parceira.title ?? null
-          throw e
-        }
-        adicionadosAtual = new Set<0 | 1>(Array.from(adicionadosAtual))
-        adicionadosAtual.add(1)
-        setProgresso({ chave: chaveAtual, adicionados: adicionadosAtual })
-        pushEcommerceEvent("add_to_cart", {
-          ...variantToAddToCart(parceira, parceiraVarAtual, 1),
-          item_list_name: "Complete o conjunto",
-        })
+      if (r.falha) {
+        showToast({ message: mensagemFalha(r.falha, slots, r.progresso) })
+        return
       }
-      setProgresso(null) // sucesso completo: próximo clique começa uma tentativa nova
+      setProgresso({}) // sucesso completo: próximo clique começa uma tentativa nova
       // Desktop: o dropdown da sacola já abre sozinho ao detectar a troca de quantidade de itens
       // (mesmo mecanismo do `QuickAdd`/`ConjuntoBuilder`). Mobile: toast.
       if (isMobile()) {
@@ -139,13 +107,6 @@ export default function Parceira({
           action: { label: "Ver sacola", href: "/cart" },
         })
       }
-    } catch {
-      // Progresso parcial já foi salvo (sob `chaveAtual`) logo após o add que teve sucesso, antes
-      // do que falhou — nada a fazer aqui além de avisar o usuário.
-      const msg = tituloComFalha
-        ? `Não foi possível adicionar ${tituloComFalha}. Tente de novo.`
-        : "Não foi possível adicionar. Tente de novo."
-      showToast({ message: msg })
     } finally {
       setAdicionando(false)
     }
