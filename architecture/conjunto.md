@@ -254,6 +254,7 @@ Herdados da spec (§12):
 - **Cupons criados antes do deploy** precisam do script/rota de reconciliação para ganhar a exclusão.
 - O gancho roda a cada mudança de carrinho; custo em memória sobre poucas linhas, desprezível.
 - **I2 — linha dividida compartilha a base de desconto entre conjunto e cupom** (mesmo `item.id`, ver §4 acima): quando o gancho divide uma linha em mais de uma entrada de contexto (parte em conjunto, parte livre), o cupom que alcança a parte livre é calculado sobre o subtotal já líquido do desconto que o conjunto aplicou à mesma linha — não sobre o valor "ingênuo" da fração livre isolada. Regressão pinada em `conjunto-carrinho.spec.ts` ("caso 10"). F3/F4 adicionam peças elegíveis em linhas separadas (`metadata.conjunto_slot`) para que toda linha tenha no máximo uma marca e o problema não apareça na prática — spec §6.3 "Decisão F1". **Confirmado F3 (2026-09-09):** testado com o Medusa local 2.15.5 que `metadata.conjunto_slot` de fato não funde linhas — repetir a adição do mesmo conjunto pela página do conjunto gerou 2 → 4 linhas, nunca 2 linhas com quantidade 2, cada uma com `conjunto_slot` distinto. Fecha o problema **só para os pontos de entrada da F3** (página do conjunto, "Complete o conjunto" da PDP); uma peça adicionada pelo botão comum "Adicionar à sacola" continua sem esse metadata e permanece sujeita ao I2 se acabar parcialmente marcada por um conjunto depois. Ver `architecture/catalog.md`, seção "Conjuntos na vitrine (Fase F3, 2026-09)".
+- **Capa de curado (`capa_url`) com host fora do allowlist do `next/image`** derruba a página Conjuntos da vitrine (`images.remotePatterns` em `apps/storefront/next.config.js`): só o uploader do Cockpit (Supabase Storage) é suportado; URL colada à mão de outro host quebra a página inteira. Guarda de host (validar no cadastro ou cair para as fotos das peças) fica para a F4.
 - **Pareamento guloso com permutações é máximo só para grafos de pares em formato de estrela** (o cadastro de hoje: `leggings—tops` e `shorts—tops`, ambos com `tops` como nó comum). Testar todas as ordens de processamento (`MAX_PARES_PERMUTAVEIS`, §4 acima) garante o máximo de conjuntos quando os pares ativos formam uma estrela, mas **não há essa garantia se os pares formarem um ciclo** — ex.: cadastrar também `leggings+shorts` fecha um triângulo `tops—leggings—shorts—tops`, e o pareamento guloso por ordem pode ficar aquém do máximo teórico (problema clássico de emparelhamento máximo em grafo geral, que greedy-por-permutação não resolve com garantia — precisaria de um algoritmo tipo Blossom). Limite documentado, não corrigido nesta fase; `PUT /admin/conjuntos/pares` pode ganhar um aviso quando os pares ativos deixarem de formar uma estrela.
 
 Achados da execução F1 (Task 8, registrados aqui por não terem virado risco real):
@@ -262,7 +263,7 @@ Achados da execução F1 (Task 8, registrados aqui por não terem virado risco r
 - Atualizar `target_type` de um cupom existente (`order` → `items`) funcionou via `promo.updatePromotions` direto no serviço do módulo Promotion, sem passar pelo workflow (evita reentrância no próprio gancho).
 - **Mapeamento 409→422:** o brief pedia `409 Conflict` para duplicidade; o framework do Medusa só mapeia `409` para `MedusaError.Types.CONFLICT` (que sobrescreve a mensagem por um texto genérico de retry). As rotas usam `DUPLICATE_ERROR` (`422`) para manter a mensagem em pt-BR — documentado nas rotas e aqui.
 - **`conjuntoPorHandle` só aceita a ordem canônica** do handle (`handleA--handleB` com A = `categoria_a`) — decisão deliberada para não ter duas URLs válidas para o mesmo conjunto; a vitrine (F3) precisa sempre montar o link a partir de `listarConjuntos`, nunca invertendo os handles à mão.
-- **Testes:** 30 unitários (`__tests__/*.unit.spec.ts`) + 68 de integração HTTP (`integration-tests/http/conjunto-*.spec.ts`, após a onda final de revisão — C1/I1/I2/buyget) + `saude.spec.ts` do harness, todos verdes contra o Postgres de teste em Docker.
+- **Testes:** 30 unitários (`__tests__/*.unit.spec.ts`) + integração HTTP (`integration-tests/http/conjunto-*.spec.ts` + `saude.spec.ts` do harness), todos verdes contra o Postgres de teste em Docker. Total da suíte HTTP hoje: **73** (68 após a onda final da F1 — C1/I1/I2/buyget —, +2 do `capa_url` nullable da F2, +2 do ruling V2 e +1 do ruling V6 da F3).
 
 ## 13. O que F2/F3/F4 consomem
 
@@ -297,6 +298,20 @@ Achados da execução F1 (Task 8, registrados aqui por não terem virado risco r
     redeploy do backend (`railway up`) antes do deploy da vitrine** — sem ele, produção continua
     mostrando o par duplicado com o curado. +2 testes de integração (`conjunto-catalogo.spec.ts`), suíte
     HTTP do backend em **72** no total.
+  - **Ruling V6 (fix wave final da F3, mesmo arquivo):** `parceirasDoProduto` — a rota
+    `GET /store/conjuntos/por-produto/:id` — aplica a MESMA regra do V2: a parceira cujo conjunto
+    `{âncora, parceira}` bate com o `product_ids` de um curado ativo **sai** de `parceiras` (o carrinho
+    aplicaria a regra do curado, então "Complete o conjunto" prometia um benefício que nunca é cobrado);
+    ela continua saindo em `curados`, que a PDP mostra como "Looks com essa peça". V2 e V6 usam o mesmo
+    helper de comparação de id-set (`chaveIdSet`/`conjuntosDeCuradosAtivos`). **Entra no mesmo `railway up`
+    do V2.** +1 teste de integração (`conjunto-store.spec.ts`), suíte HTTP do backend em **73** no total.
+  - **Ruling V7 (fix wave final da F3, só vitrine):** o "retry resumível" da adição ao carrinho virou UM
+    mecanismo — o módulo puro `apps/storefront/src/lib/util/adicao-conjunto.ts` (`pendentes`,
+    `adicionarEmSequencia`, `mensagemFalha`), usado tanto pela página do conjunto quanto pelo bloco
+    "Complete o conjunto" (antes: duas implementações diferentes, nenhuma testada). Progresso **por peça**
+    (`{ [indice]: variantId }`): retry com a mesma variante pula quem já entrou; trocar a variante de uma
+    peça re-adiciona só ela. 11 testes Vitest; storefront em **172** no total. Detalhe em
+    `architecture/catalog.md`, "Adição ao carrinho".
   - **Seed local para validar a F3** (não roda contra produção nem contra o Postgres de desenvolvimento
     padrão — só o `eclat_dev` no contêiner `eclat-pg-test`): `apps/backend/src/scripts/seed-dev-conjunto.ts`
     (`npx medusa exec`, guarda de segurança na primeira linha executável: recusa se `DATABASE_URL` não

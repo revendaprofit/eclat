@@ -146,31 +146,39 @@ Handle do gerado: `<handle_A>--<handle_B>` na ordem **canônica** (`categoria_a 
 
 **Status (2026-09-09): F3 implementada em código e com aceite local completo** (branch
 `feat/conjunto-f3-vitrine`; SOP em `architecture/catalog.md`, seção "Conjuntos na vitrine (Fase F3,
-2026-09)"; testes: storefront 161, backend 72 integração + 30 unitário, cockpit 36; aceite §11 itens
+2026-09)"; testes: storefront 172, backend 73 integração + 30 unitário, cockpit 36; aceite §11 itens
 5–8 validados no navegador contra o backend local semeado — ver `progress.md`, entrada "Benefício
 Conjunto F3"). §7.5 (carrinho) fica para F4. Dois ajustes que a implementação impôs, registrados como
-rulings do controller e refletidos abaixo: **V1** (card usa "a partir de" e `view_item_list` só dos
+rulings do controller e refletidos abaixo (V1–V5 na entrega, **V6** e **V7** na fix wave final da
+revisão): **V1** (card usa "a partir de" e `view_item_list` só dos
 cards inicialmente visíveis; fallback de thumbnail do produto quando não há foto do conjunto — ver
 §7.1/§7.4), **V2** (um par gerado por coleção some da vitrine quando um curado ativo cobre exatamente
 o mesmo conjunto de produtos — o carrinho aplicaria a regra do curado, não a da coleção; mudança no
 backend, `apps/backend/src/modules/beneficio-conjunto/catalogo-conjuntos.ts`, precisa de redeploy antes
 do deploy da vitrine — ver §12), **V3/V5** (§7.2/§7.3 — os dois fluxos de adição ("Adicionar o
-conjunto" na página do conjunto, "Adicionar as duas" na PDP) são resumíveis após falha parcial, por
-mecanismos diferentes: V5 é a PDP — progresso atrelado à seleção corrente, sem `useEffect` de reset;
-V3 é a página do conjunto, que mantém um `useEffect` de reset guardado por `adicionandoRef` durante a
-adição; em ambos os fluxos os seletores de cada peça ficam travados durante a adição), **V4**
+conjunto" na página do conjunto, "Adicionar as duas" na PDP) são resumíveis após falha parcial; os
+seletores de cada peça ficam travados durante a adição. Os mecanismos eram diferentes por fluxo (V5 na
+PDP, V3 na página do conjunto) — **substituídos pelo V7**, abaixo), **V4**
 (§7.4 — o selo "Forma conjunto" também aparece numa peça que só forma conjunto através de um curado
 ativo, não só via par de coleção listado — sem isso a Legging do curado Look Blackout, ofuscada pelo
-V2, nunca ganharia o selo apesar de aparecer em "Complete o conjunto" na própria PDP).
+V2, nunca ganharia o selo apesar de aparecer em "Complete o conjunto" na própria PDP). **V6**
+(§7.3 — a mesma lógica do V2 aplicada à rota `por-produto`: a parceira cujo conjunto `{âncora,
+parceira}` bate com o `product_ids` de um curado ativo sai de `parceiras` e fica só em "Looks com essa
+peça"; mudança no mesmo arquivo de backend do V2, entra no mesmo redeploy). **V7** (§7.2/§7.3 — o
+retry resumível virou UM mecanismo só: o módulo puro `lib/util/adicao-conjunto.ts`, com progresso
+**por peça** (`{ [índice do slot]: variantId já adicionado }`), usado pelos dois fluxos; retry com a
+mesma variante pula quem já entrou, trocar a variante de uma peça re-adiciona só ela. Substitui o V5
+(chave composta) e o `useEffect` de reset do V3 — a trava dos seletores durante a adição, também do
+V3, continua).
 
 ### 7.1 Página Conjuntos (`/categories/conjuntos`)
 A rota de categoria detecta o handle `conjuntos` e renderiza `ConjuntosTemplate` em vez da listagem de produtos. Seções: "Escolhidos pela ÉCLAT" (curados, ordem do admin) e uma seção por coleção com os gerados (12 por coleção + "Ver todos os conjuntos da coleção", que expande na mesma página). Card: duas fotos lado a lado (thumbnail de cada peça), nome "Top Aura + Legging Vértice", "a partir de R$ X" com preço cheio riscado, selo "Benefício Conjunto". Sem filtros/ordenação. Breadcrumb "Início › Conjuntos". Conjuntos sem peça disponível não aparecem.
 
 ### 7.2 Página do conjunto (`/conjuntos/[handle]`)
-Peças empilhadas (mobile) ou lado a lado (desktop); cada peça com galeria por cor, seletor de cor e de tamanho (mesmos componentes da PDP: esgotado riscado, "Avise-me"), guia de medidas por tipo. Rodapé fixo com total: preço cheio riscado, total com benefício e a linha explicativa ("Benefício Conjunto: −R$ 45 na peça de menor valor"). Botão "Adicionar o conjunto" habilita quando todas as peças têm variante escolhida; adiciona todas de uma vez (uma chamada por variante, transação visual única) e abre o mini-cart. Curado indisponível → 404 com link para Conjuntos.
+Peças empilhadas (mobile) ou lado a lado (desktop); cada peça com galeria por cor, seletor de cor e de tamanho (mesmos componentes da PDP: esgotado riscado, "Avise-me"), guia de medidas por tipo. Rodapé fixo com total: preço cheio riscado, total com benefício e a linha explicativa ("Benefício Conjunto: −R$ 45 na peça de menor valor"). Botão "Adicionar o conjunto" habilita quando todas as peças têm variante escolhida; adiciona todas de uma vez (uma chamada por variante, **em sequência**, transação visual única) e abre o mini-cart. Falha parcial é resumível (V7): o retry só re-tenta as peças que ainda não entraram com a variante atual. Curado indisponível → 404 com link para Conjuntos.
 
 ### 7.3 PDP das peças — "Complete o conjunto"
-Bloco abaixo das ações, só quando `por-produto` devolve algo. Lista as parceiras (até 6, por coleção e par) com foto, nome, preço e seletor de tamanho inline (cor = a cor da parceira mais parecida com a escolhida, senão a primeira disponível); botão "Adicionar as duas" usa a seleção atual da peça da página + a da parceira. Curados que incluem a peça aparecem como cards com link para a página do conjunto.
+Bloco abaixo das ações, só quando `por-produto` devolve algo (renderizado dentro de `Suspense`, para não bloquear o resto da PDP). Lista as parceiras (até 6, por coleção e par; **V6:** parceira coberta por um curado ativo com exatamente esse par de produtos não entra aqui — aparece só em "Looks com essa peça", com a regra do curado) com foto, nome, preço e seletor de tamanho inline (cor = a cor da parceira mais parecida com a escolhida, senão a primeira disponível); botão "Adicionar as duas" usa a seleção atual da peça da página + a da parceira, adicionando em sequência e de forma resumível (V7, mesmo módulo da página do conjunto). Curados que incluem a peça aparecem como cards com link para a página do conjunto.
 
 ### 7.4 Card de listagem
 Selo "Forma conjunto" no card de peças cuja categoria raiz está em algum par ativo e cuja coleção tem regra efetiva ativa. Calculado com os dados que o card já tem (categorias, coleção) + lista de pares/regras (busca única, cache 5 min).
