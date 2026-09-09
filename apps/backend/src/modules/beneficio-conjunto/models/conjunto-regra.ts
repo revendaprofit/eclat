@@ -15,6 +15,12 @@ const ConjuntoRegra = model
     ativa: model.boolean().default(true),
     promotion_id: model.text().nullable(),
   })
-  .indexes([{ on: ["collection_id"], unique: true, where: "escopo = 'colecao' AND deleted_at IS NULL" }])
+  .indexes([
+    { on: ["collection_id"], unique: true, where: "escopo = 'colecao' AND deleted_at IS NULL" },
+    // Índice único parcial sobre `escopo`: todas as linhas que passam no `where` compartilham o
+    // mesmo valor ('padrao'), então o índice único só permite UMA linha 'padrao' ativa por vez
+    // (fix round 1 — achado "no DB constraint enforces exactly one padrao rule").
+    { on: ["escopo"], unique: true, where: "escopo = 'padrao' AND deleted_at IS NULL" },
+  ])
 
 export default ConjuntoRegra

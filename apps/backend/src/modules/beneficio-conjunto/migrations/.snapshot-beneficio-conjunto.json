@@ -366,7 +366,13 @@
           "unique": true
         }
       ],
-      "checks": [],
+      "checks": [
+        {
+          "name": "conjunto_par_ordem",
+          "expression": "categoria_a < categoria_b",
+          "definition": "check ((categoria_a < categoria_b))"
+        }
+      ],
       "foreignKeys": {},
       "nativeEnums": {}
     },
@@ -578,6 +584,15 @@
           "primary": false,
           "unique": false,
           "expression": "CREATE UNIQUE INDEX IF NOT EXISTS \"IDX_conjunto_regra_collection_id_unique\" ON \"conjunto_regra\" (\"collection_id\") WHERE escopo = 'colecao' AND deleted_at IS NULL"
+        },
+        {
+          "keyName": "IDX_conjunto_regra_escopo_unique",
+          "columnNames": [],
+          "composite": false,
+          "constraint": false,
+          "primary": false,
+          "unique": false,
+          "expression": "CREATE UNIQUE INDEX IF NOT EXISTS \"IDX_conjunto_regra_escopo_unique\" ON \"conjunto_regra\" (\"escopo\") WHERE escopo = 'padrao' AND deleted_at IS NULL"
         },
         {
           "keyName": "conjunto_regra_pkey",
