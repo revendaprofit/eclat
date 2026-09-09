@@ -19,4 +19,5 @@ module.exports = defineConfig({
   admin: {
     disable: process.env.DISABLE_ADMIN === "true",
   },
+  modules: [{ resolve: "./src/modules/beneficio-conjunto" }],
 })
