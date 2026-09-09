@@ -72,9 +72,12 @@ function escalar(it: ItemCtx, n: number, q: number): ItemCtx {
   return copia
 }
 
-// Contexto para o motor de promoções (spec §6.1, ruling 4): cada linha vira até 3 entradas com o
-// mesmo id — unidades com desconto (conjunto_desconto = regra_id), em conjunto sem desconto
-// ("conjunto") e livres ("nenhum"). Não inclui `conjunto_id`: o motor de promoções não usa esse
+// Contexto para o motor de promoções (spec §6.1, ruling 4, M4): cada linha vira uma entrada de
+// contexto por marca presente — regra_id de cada conjunto que consumiu unidades dela (uma linha
+// pode ter unidades em conjuntos de regras DIFERENTES, ex. um curado e um par de coleção, não só
+// um `regra_id`), "conjunto" (em conjunto mas sem desconto próprio, ex. a peça mais cara em
+// "menor peça") e "nenhum" (livres) — "até 3 entradas" era impreciso: o teto real é o número de
+// marcas distintas que tocaram a linha, não 3. Não inclui `conjunto_id`: o motor de promoções não usa esse
 // campo, e uma mesma linha pode ter unidades em conjuntos DIFERENTES (ex.: top×2 pareado com
 // legging num conjunto e com short em outro — caso 3 do spec de carrinho), então um único
 // `conjunto_id` por item_id mentiria para qualquer consumidor que confiasse nele. Quem precisar

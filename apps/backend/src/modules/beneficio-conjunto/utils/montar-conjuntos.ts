@@ -65,8 +65,9 @@ type ParConjunto = { par: Par; unidades: [Unidade, Unidade] }
 
 // Passada gulosa de pareamento (ruling 5) numa ordem fixa de pares, sobre uma cópia livre das
 // unidades da coleção — não muta `unidadesLivresDaColecao`. Devolve os conjuntos formados
-// (ainda sem desconto/id — só as unidades pareadas) e o conjunto das unidades consumidas.
-function parearOrdem(unidadesLivresDaColecao: Unidade[], ordemDePares: Par[]): { conjuntos: ParConjunto[]; consumidas: Set<Unidade> } {
+// (ainda sem desconto/id — só as unidades pareadas). Quem chama já sabe quais unidades foram
+// consumidas a partir dos próprios `conjuntos` (M2: `consumidas` não tinha consumidor).
+function parearOrdem(unidadesLivresDaColecao: Unidade[], ordemDePares: Par[]): { conjuntos: ParConjunto[] } {
   const disponiveis = new Set(unidadesLivresDaColecao)
   const conjuntos: ParConjunto[] = []
   for (const par of ordemDePares) {
@@ -78,8 +79,7 @@ function parearOrdem(unidadesLivresDaColecao: Unidade[], ordemDePares: Par[]): {
       conjuntos.push({ par, unidades: [ladoA[i], ladoB[i]] })
     }
   }
-  const consumidas = new Set(unidadesLivresDaColecao.filter((u) => !disponiveis.has(u)))
-  return { conjuntos, consumidas }
+  return { conjuntos }
 }
 
 // Desconto total (soma de todas as unidades) que uma ordem de pareamento gera, para comparar ordens.

@@ -63,12 +63,27 @@ export async function sincronizarTodas(container: MedusaContainer): Promise<numb
 // promotionsCreated/promotionsUpdated com a própria escrita desta função (idempotência sem StepResponse
 // extra) — ver `updatePromotions`/`addPromotionTargetRules` em node_modules/@medusajs/promotion, que
 // não disparam createPromotionsWorkflow/updatePromotionsWorkflow.
-export async function converterCupom(container: MedusaContainer, promotionId: string): Promise<"convertido" | "ja_ok" | "ignorado"> {
+// `promotionJaCarregada` (M7): quando quem chama já tem a promoção com `application_method`/
+// `target_rules` carregados (ex.: `converterTodosCupons` pagina com essas relations), evita um
+// `retrievePromotion` redundante por item da página.
+export async function converterCupom(container: MedusaContainer, promotionId: string, promotionJaCarregada?: any): Promise<"convertido" | "ja_ok" | "ignorado"> {
   const promo: any = container.resolve(Modules.PROMOTION)
-  const p = await promo
-    .retrievePromotion(promotionId, { relations: ["application_method", "application_method.target_rules", "application_method.target_rules.values"] })
-    .catch(() => null)
+  const p =
+    promotionJaCarregada ??
+    (await promo
+      .retrievePromotion(promotionId, { relations: ["application_method", "application_method.target_rules", "application_method.target_rules.values"] })
+      .catch((e: unknown) => {
+        console.error("[conjunto] converterCupom retrieve", promotionId, e)
+        return null
+      }))
   if (!p?.code || p.code.startsWith(CODIGO_PREFIXO) || !p.application_method) return "ignorado"
+
+  // Promoção de frete (spec/ruling C1): uma promoção `target_type: "shipping_methods"` nunca
+  // alcança unidade de item — a regra de exclusão `items.conjunto_desconto eq nenhum` seria
+  // avaliada no escopo de shipping method (que não tem esse atributo) e falharia sempre,
+  // desativando o cupom em silêncio (ele nunca desconta nada, sem erro visível). Melhor ignorar
+  // e deixar a promoção de frete intocada do que "consertar" um escopo que não é o dela.
+  if (p.application_method.target_type === "shipping_methods") return "ignorado"
 
   let mudou = false
 
@@ -103,10 +118,16 @@ export async function converterTodosCupons(container: MedusaContainer): Promise<
   let skip = 0
   let convertidas = 0
   while (true) {
-    const pagina = await promo.listPromotions({}, { take, skip })
+    // `order: { id: "ASC" }` (M7): paginação estável — sem ordem explícita, uma escrita concorrente
+    // entre páginas pode reordenar linhas e pular/repetir uma promoção. As relations aqui evitam um
+    // `retrievePromotion` por item dentro de `converterCupom` (mesmo shape usado lá).
+    const pagina = await promo.listPromotions(
+      {},
+      { take, skip, order: { id: "ASC" }, relations: ["application_method", "application_method.target_rules", "application_method.target_rules.values"] }
+    )
     if (!pagina.length) break
     for (const p of pagina) {
-      const resultado = await converterCupom(container, p.id)
+      const resultado = await converterCupom(container, p.id, p)
       if (resultado === "convertido") convertidas++
     }
     if (pagina.length < take) break

@@ -12,6 +12,13 @@ const valorSchema = z.number().int().min(1)
 const valorCoerenteComTipo = (tipo_desconto: string, valor: number) => !(tipo_desconto.endsWith("percentual") && valor > 100)
 const MENSAGEM_VALOR_PERCENTUAL = "Valor percentual não pode passar de 100."
 
+// M5: `handle` de curado é imutável após criar (§ AtualizarCuradoSchema abaixo), então a única
+// janela de validação é a criação — sem essa checagem, um handle vindo do cliente com espaço,
+// maiúscula ou acento passaria para a URL/índice único e quebraria silenciosamente mais tarde
+// (rota de vitrine não bate, ou um segundo curado colide na normalização e vira 422 confuso).
+const HANDLE_REGEX = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
+const MENSAGEM_HANDLE = "Handle deve ser só letras minúsculas, números e hífen (ex.: kit-verao)."
+
 export const CriarRegraSchema = z
   .object({
     nome: z.string().min(1),
@@ -44,7 +51,7 @@ export const AtualizarParesSchema = z.object({ pares: z.array(ParInputSchema) })
 export const CriarCuradoSchema = z
   .object({
     nome: z.string().min(1),
-    handle: z.string().min(1).optional(),
+    handle: z.string().min(1).regex(HANDLE_REGEX, MENSAGEM_HANDLE).optional(),
     capa_url: z.string().min(1).optional(),
     product_ids: z.array(z.string().min(1)).min(1),
     tipo_desconto: z.enum(TIPOS_DESCONTO),
