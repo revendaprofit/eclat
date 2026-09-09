@@ -1,4 +1,5 @@
 import repeat from "@lib/util/repeat"
+import { etiquetaDoPedido } from "@lib/util/carrinho-conjunto"
 import { HttpTypes } from "@medusajs/types"
 import { Table } from "@modules/common/components/ui"
 
@@ -29,6 +30,7 @@ const Items = ({ order }: ItemsProps) => {
                       key={item.id}
                       item={item}
                       currencyCode={order.currency_code}
+                      etiqueta={etiquetaDoPedido(item)}
                     />
                   )
                 })

@@ -1,6 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useState } from "react"
+import { agruparDescontosPedido, etiquetaConjunto } from "@/lib/pedido-conjunto"
 
 type Order = {
   id: string
@@ -18,10 +19,13 @@ type OrderItem = {
   quantity: number
   unit_price: number
   total: number
+  metadata?: Record<string, unknown> | null
+  adjustments?: { code?: string | null; amount?: number | null }[] | null
 }
 type OrderDetail = Order & {
   status: string
   subtotal: number
+  discount_total: number
   shipping_total: number
   tax_total: number
   items: OrderItem[]
@@ -168,6 +172,7 @@ export default function PedidosPage() {
   const selectCls =
     "border border-eclat-pedra/50 rounded-md px-2 py-2 text-sm bg-white focus:outline-none focus:border-eclat-dourado"
   const itensTotal = det ? det.items.reduce((s, i) => s + (i.total ?? 0), 0) : 0
+  const descontos = det ? agruparDescontosPedido(det.items) : { conjunto: 0, cupom: 0 }
 
   return (
     <div>
@@ -305,6 +310,9 @@ export default function PedidosPage() {
                           <tr key={idx} className="border-b border-eclat-pedra/10 last:border-0">
                             <td className="px-3 py-2">
                               <div>{i.title}</div>
+                              {etiquetaConjunto(i) && (
+                                <span className="inline-block mt-0.5 rounded-sm bg-eclat-areia px-1.5 text-[10px] uppercase tracking-wider text-eclat-grafite" data-testid="etiqueta-conjunto">Conjunto</span>
+                              )}
                               <div className="text-xs text-eclat-grafite/50">{i.variant_title}</div>
                             </td>
                             <td className="px-3 py-2 text-center text-eclat-grafite/70">{i.quantity}×</td>
@@ -320,6 +328,12 @@ export default function PedidosPage() {
                 {/* Totais */}
                 <section className="text-sm">
                   <div className="flex justify-between py-1"><span className="text-eclat-grafite/60">Itens</span><span>{brl(itensTotal)}</span></div>
+                  {descontos.conjunto > 0 && (
+                    <div className="flex justify-between py-1"><span className="text-eclat-grafite/60">Benefício Conjunto</span><span>- {brl(descontos.conjunto)}</span></div>
+                  )}
+                  {descontos.cupom > 0 && (
+                    <div className="flex justify-between py-1"><span className="text-eclat-grafite/60">Cupom</span><span>- {brl(descontos.cupom)}</span></div>
+                  )}
                   <div className="flex justify-between py-1"><span className="text-eclat-grafite/60">Frete</span><span>{brl(det.shipping_total)}</span></div>
                   <div className="flex justify-between py-2 border-t border-eclat-pedra/30 font-medium text-base"><span>Total</span><span>{brl(det.total)}</span></div>
                 </section>

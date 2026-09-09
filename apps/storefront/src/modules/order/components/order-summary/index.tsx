@@ -1,3 +1,4 @@
+import { agruparDescontos } from "@lib/util/carrinho-conjunto"
 import { convertToLocale } from "@lib/util/money"
 import { HttpTypes } from "@medusajs/types"
 
@@ -17,6 +18,13 @@ const OrderSummary = ({ order }: OrderSummaryProps) => {
     })
   }
 
+  const grupos = agruparDescontos(order.items)
+  // Ruling 2: o que não for conjunto nem cupom de linha (ex.: ajuste de frete) fica na linha genérica.
+  const restante = Math.max(
+    0,
+    Math.round((order.discount_total ?? 0) * 100) - grupos.conjunto - grupos.cupom
+  )
+
   return (
     <div>
       <h2 className="text-base-semi">Resumo do pedido</h2>
@@ -26,10 +34,22 @@ const OrderSummary = ({ order }: OrderSummaryProps) => {
           <span>{getAmount(order.subtotal)}</span>
         </div>
         <div className="flex flex-col gap-y-1">
-          {order.discount_total > 0 && (
+          {grupos.conjunto > 0 && (
+            <div className="flex items-center justify-between">
+              <span>Benefício Conjunto</span>
+              <span>- {getAmount(grupos.conjunto / 100)}</span>
+            </div>
+          )}
+          {grupos.cupom > 0 && (
+            <div className="flex items-center justify-between">
+              <span>Cupom</span>
+              <span>- {getAmount(grupos.cupom / 100)}</span>
+            </div>
+          )}
+          {restante > 0 && (
             <div className="flex items-center justify-between">
               <span>Desconto</span>
-              <span>- {getAmount(order.discount_total)}</span>
+              <span>- {getAmount(restante / 100)}</span>
             </div>
           )}
           {order.gift_card_total > 0 && (
