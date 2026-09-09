@@ -96,8 +96,9 @@ export default function ConjuntoBuilder({
       // é re-adicionado nem re-reportado.
       for (const adicionado of r.adicionadosAgora) {
         const produto = produtos[adicionado.indice]
+        if (!produto) continue
         const variant = selecoes[produto.id]?.variant
-        if (!produto || !variant) continue
+        if (!variant) continue
         pushEcommerceEvent("add_to_cart", {
           ...variantToAddToCart(produto, variant, 1),
           item_list_name: `Conjunto: ${card.nome}`,

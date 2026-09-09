@@ -184,7 +184,7 @@ Em `oportunidades`, os candidatos **não excluem** produtos já no carrinho — 
 
 ## 9. Como rodar os testes (Windows + Docker)
 
-Suítes: `apps/backend/src/modules/beneficio-conjunto/__tests__/*.unit.spec.ts` (30 testes puros) e `apps/backend/integration-tests/http/conjunto-{modulo,promocao,carrinho,cupom,admin,catalogo,store}.spec.ts` (68 testes de integração HTTP, mais `saude.spec.ts` do harness). **Nunca aponta para produção nem para o Postgres nativo de desenvolvimento** — sempre o contêiner Docker `eclat-pg-test`.
+Suítes: `apps/backend/src/modules/beneficio-conjunto/__tests__/*.unit.spec.ts` (30 testes puros) e `apps/backend/integration-tests/http/conjunto-{modulo,promocao,carrinho,cupom,admin,catalogo,store}.spec.ts` (71 testes de integração HTTP, mais 2 em `saude.spec.ts` do harness — 73 no total). **Nunca aponta para produção nem para o Postgres nativo de desenvolvimento** — sempre o contêiner Docker `eclat-pg-test`.
 
 ```bash
 # 1) subir o Postgres de teste (uma vez por sessão de trabalho)
