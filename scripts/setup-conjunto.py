@@ -109,8 +109,58 @@ def passo_pares(H):
         print("  pares agora:", len(rr.json()["pares"]))
 
 
+def passo_preview_cupons(H):
+    # I3: pré-visualização do que `reconciliar` mudaria em cada cupom não-CONJUNTO — em modo
+    # simulação é a única forma de ver o efeito antes de gravar; com --apply imprime a mesma coisa
+    # ANTES de chamar o POST, para o log ficar com "antes" e "depois" (passo 4).
+    print("\n3a) pré-visualização dos cupons não-CONJUNTO (o que reconciliar mudaria)")
+    try:
+        campos = (
+            "code,type,status,application_method.target_type,application_method.allocation,"
+            "application_method.target_rules.attribute,application_method.target_rules.values.value"
+        )
+        r = requests.get(BASE + "/admin/promotions", headers=H, params={"limit": 100, "fields": campos}, timeout=30)
+        r.raise_for_status()
+        promos = r.json().get("promotions", [])
+    except Exception as e:
+        print("  (não foi possível listar promoções:", e, ") — seguindo sem preview")
+        return
+
+    algum = False
+    for p in promos:
+        code = p.get("code") or ""
+        if code.startswith("CONJUNTO-"):
+            continue
+        algum = True
+        am = p.get("application_method") or {}
+        target_type = am.get("target_type")
+        allocation = am.get("allocation")
+        regras_alvo = am.get("target_rules") or []
+        tem_exclusao = any(
+            (rg.get("attribute") == "items.conjunto_desconto")
+            and any((v.get("value") if isinstance(v, dict) else v) == "nenhum" for v in (rg.get("values") or []))
+            for rg in regras_alvo
+        )
+        mudancas = []
+        if target_type == "shipping_methods":
+            mudancas.append("shipping → ignorada (nunca convertida)")
+        else:
+            if p.get("type") != "buyget" and target_type == "order":
+                mudancas.append("order → items (allocation across, sem max_quantity)")
+            if not tem_exclusao:
+                mudancas.append("+ regra de exclusão items.conjunto_desconto eq nenhum")
+        resumo = "; ".join(mudancas) if mudancas else "já ok — nada muda"
+        print(
+            "  - %-20s target_type=%-16s allocation=%-8s exclusao=%-5s -> %s"
+            % (code or p.get("id"), target_type, allocation, tem_exclusao, resumo)
+        )
+    if not algum:
+        print("  (nenhuma promoção não-CONJUNTO encontrada)")
+
+
 def passo_reconciliar(H):
     print("\n3) reconciliar (promoções das regras + conversão de cupons antigos)")
+    passo_preview_cupons(H)
     if not APPLY:
         print("  (simulação — rode com --apply para chamar POST /admin/conjuntos/reconciliar)")
         return
