@@ -5,17 +5,20 @@ import SignInPrompt from "../components/sign-in-prompt"
 import Divider from "@modules/common/components/divider"
 import { HttpTypes } from "@medusajs/types"
 import type { Gatilho } from "@lib/util/carrinho-conjunto"
+import GatilhosConjunto from "../components/gatilhos-conjunto"
 
 const CartTemplate = ({
   cart,
   customer,
   etiquetas,
-  gatilhos, // gatilhos: Task 4
+  gatilhos,
+  countryCode,
 }: {
   cart: HttpTypes.StoreCart | null
   customer: HttpTypes.StoreCustomer | null
   etiquetas?: Record<string, string>
   gatilhos?: Gatilho[]
+  countryCode: string
 }) => {
   return (
     <div className="py-12">
@@ -30,6 +33,7 @@ const CartTemplate = ({
                 </>
               )}
               <ItemsTemplate cart={cart} etiquetas={etiquetas} />
+              <GatilhosConjunto gatilhos={gatilhos ?? []} countryCode={countryCode} />
             </div>
             <div className="relative">
               <div className="flex flex-col gap-y-8 sticky top-12">

@@ -22,5 +22,5 @@ export default async function Cart({ params }: { params: Promise<{ countryCode: 
   const { conjuntos, gatilhos } = cart ? await getCarrinhoConjunto(cart.id, countryCode) : { conjuntos: [], gatilhos: [] }
   const etiquetas = etiquetasDoCarrinho(conjuntos, cart?.items ?? [])
 
-  return <CartTemplate cart={cart} customer={customer} etiquetas={etiquetas} gatilhos={gatilhos} />
+  return <CartTemplate cart={cart} customer={customer} etiquetas={etiquetas} gatilhos={gatilhos} countryCode={countryCode} />
 }
