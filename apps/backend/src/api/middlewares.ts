@@ -52,7 +52,7 @@ export const CriarCuradoSchema = z
   .object({
     nome: z.string().min(1),
     handle: z.string().min(1).regex(HANDLE_REGEX, MENSAGEM_HANDLE).optional(),
-    capa_url: z.string().min(1).optional(),
+    capa_url: z.string().min(1).nullable().optional(),
     product_ids: z.array(z.string().min(1)).min(1),
     tipo_desconto: z.enum(TIPOS_DESCONTO),
     valor: valorSchema,
@@ -66,7 +66,7 @@ export const CriarCuradoSchema = z
 export const AtualizarCuradoSchema = z
   .object({
     nome: z.string().min(1).optional(),
-    capa_url: z.string().min(1).optional(),
+    capa_url: z.string().min(1).nullable().optional(),
     product_ids: z.array(z.string().min(1)).min(1).optional(),
     tipo_desconto: z.enum(TIPOS_DESCONTO).optional(),
     valor: valorSchema.optional(),

@@ -212,6 +212,41 @@ medusaIntegrationTestRunner({
         expect(Number(p.application_method.value)).toBeCloseTo(15.0, 2) // 3000 / 2 / 100
       })
 
+      // Fix round 1, ruling C3: `capa_url` aceita `null` explícito (curado sem capa) mas continua
+      // rejeitando `""` — só `null` é o valor de "sem capa".
+      it("cria curado sem capa_url → 200 e capa_url null", async () => {
+        const res = await api.post(
+          "/admin/conjuntos/curados",
+          { nome: "Sem Capa", product_ids: [cat.short.productId, cat.macaquinho.productId], tipo_desconto: "total_valor", valor: 1000 },
+          { headers: admin }
+        )
+        expect(res.status).toBe(200)
+        expect(res.data.curado.capa_url).toBeNull()
+      })
+
+      it("cria curado com capa_url; PUT capa_url:null remove a capa; PUT capa_url:'' → 400", async () => {
+        const criado = await api.post(
+          "/admin/conjuntos/curados",
+          {
+            nome: "Com Capa",
+            product_ids: [cat.short.productId, cat.macaquinho.productId],
+            tipo_desconto: "total_valor",
+            valor: 1000,
+            capa_url: "https://exemplo.test/capa.jpg",
+          },
+          { headers: admin }
+        )
+        expect(criado.data.curado.capa_url).toBe("https://exemplo.test/capa.jpg")
+        const id = criado.data.curado.id
+
+        const semCapa = await api.put(`/admin/conjuntos/curados/${id}`, { capa_url: null }, { headers: admin })
+        expect(semCapa.data.curado.capa_url).toBeNull()
+
+        await expect(
+          api.put(`/admin/conjuntos/curados/${id}`, { capa_url: "" }, { headers: admin })
+        ).rejects.toMatchObject({ response: { status: 400 } })
+      })
+
       it("DELETE apaga curado, regra e promoção (promoção some)", async () => {
         const res = await api.delete(`/admin/conjuntos/curados/${curadoId}`, { headers: admin })
         expect(res.data).toEqual({ id: curadoId, deleted: true })
