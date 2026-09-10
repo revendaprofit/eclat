@@ -291,7 +291,7 @@ export default function SizeRecommender({
                   sem buraco quando a categoria só tem 2 medidas. */}
               <div
                 className={
-                  cols.length >= 3 ? "grid grid-cols-3 gap-3" : "grid grid-cols-2 gap-3"
+                  cols.length >= 3 ? "grid grid-cols-3 gap-3" : cols.length === 2 ? "grid grid-cols-2 gap-3" : "grid grid-cols-1 gap-3"
                 }
               >
                 {cols.map((c) => {
