@@ -11,7 +11,6 @@ const requiredEnvs = [
 
 function checkEnvVariables() {
   const missingEnvs = requiredEnvs.filter(function (env) {
-    c;
     return !process.env[env.key];
   });
 

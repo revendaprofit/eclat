@@ -31,7 +31,6 @@ const ImageGallery = ({ images, productTitle, productHandle, youtubeId }: ImageG
   useEffect(() => {
     setActive(0)
     trackRef.current?.scrollTo({ left: 0 })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [listKey])
 
   useEffect(() => {
@@ -46,7 +45,7 @@ const ImageGallery = ({ images, productTitle, productHandle, youtubeId }: ImageG
     )
     els.forEach((el) => io.observe(el))
     return () => io.disconnect()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- reobserva só quando a lista de itens muda (items.length deriva de listKey)
   }, [listKey])
 
   let fotoN = 0

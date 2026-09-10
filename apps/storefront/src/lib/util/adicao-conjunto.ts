@@ -32,7 +32,6 @@ export async function adicionarEmSequencia(
   const adicionadosAgora: SlotAdicao[] = []
   for (const slot of fila) {
     try {
-      // eslint-disable-next-line no-await-in-loop -- linhas precisam entrar em sequência (spec §6.3)
       await adicionar(slot)
     } catch {
       return { progresso: acumulado, adicionadosAgora, falha: slot }

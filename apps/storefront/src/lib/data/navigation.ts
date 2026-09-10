@@ -17,8 +17,11 @@ export async function getNavigation(countryCode: string): Promise<NavData> {
       getColorMap(),
     ])
     return buildNavData({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
       categories: categories as any,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
       products: productsRes.response.products as any,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
       collections: collectionsRes.collections as any,
       colorMap,
     })

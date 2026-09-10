@@ -152,7 +152,7 @@ export default function SearchBar({ variant = "inline", nav }: { variant?: "inli
   )
 }
 
-function Dropdown({ id, sugestoes, termo, cc, onPick, className }: { id: string; sugestoes: Suggestions; termo: string; cc: string; onPick: (t: SuggestionType, v: string) => void; className: string }) {
+function Dropdown({ id, sugestoes, termo, cc: _cc, onPick, className }: { id: string; sugestoes: Suggestions; termo: string; cc: string; onPick: (t: SuggestionType, v: string) => void; className: string }) {
   const vazio = sugestoes.categories.length + sugestoes.colors.length + sugestoes.products.length === 0
   const titulo = "px-4 pt-3 pb-1 text-[10px] uppercase tracking-[0.2em] text-eclat-grafite/50"
   const item = "block px-4 py-2 text-sm text-eclat-grafite hover:bg-eclat-areia/40 focus:bg-eclat-areia/40 outline-none"
