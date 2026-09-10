@@ -1,6 +1,12 @@
 import { HttpTypes } from "@medusajs/types"
 import { NextRequest, NextResponse } from "next/server"
-import { COMING_SOON, COMING_SOON_PATH } from "@lib/coming-soon"
+import {
+  COMING_SOON,
+  COMING_SOON_PATH,
+  VIP_COOKIE,
+  VIP_KEY,
+  VIP_PATH,
+} from "@lib/coming-soon"
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL
 const PUBLISHABLE_API_KEY = process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY
@@ -107,10 +113,15 @@ export async function middleware(request: NextRequest) {
   }
 
   if (COMING_SOON) {
-    if (request.nextUrl.pathname === COMING_SOON_PATH) {
+    const path = request.nextUrl.pathname
+    if (path === COMING_SOON_PATH || path === VIP_PATH) {
       return NextResponse.next()
     }
-    return NextResponse.rewrite(new URL(COMING_SOON_PATH, request.url))
+    // Porta VIP: cookie válido atravessa o gate (acesso antecipado do Clube Éclat).
+    const vip = request.cookies.get(VIP_COOKIE)?.value
+    if (vip !== VIP_KEY) {
+      return NextResponse.rewrite(new URL(COMING_SOON_PATH, request.url))
+    }
   }
 
   const cacheIdCookie = request.cookies.get("_medusa_cache_id")

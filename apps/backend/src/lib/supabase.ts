@@ -34,6 +34,28 @@ export async function findLeadIdByWhatsapp(
   return data?.[0]?.id ?? null
 }
 
+// Lead pelo WhatsApp com os campos usados pelas automações (ex.: Clube Éclat).
+export async function getLeadByWhatsapp(
+  whatsapp: string
+): Promise<{ id: string; interesse: string | null; origem: string | null } | null> {
+  const res = await fetch(
+    rest(`lead?whatsapp=eq.${encodeURIComponent(whatsapp)}&select=id,interesse,origem&limit=1`),
+    { headers: headers() }
+  )
+  if (!res.ok) throw new Error(`getLead falhou: ${res.status} ${await res.text()}`)
+  const data = (await res.json()) as Array<{ id: string; interesse: string | null; origem: string | null }>
+  return data?.[0] ?? null
+}
+
+export async function updateLead(id: string, fields: Record<string, unknown>): Promise<void> {
+  const res = await fetch(rest(`lead?id=eq.${encodeURIComponent(id)}`), {
+    method: "PATCH",
+    headers: headers({ Prefer: "return=minimal" }),
+    body: JSON.stringify(fields),
+  })
+  if (!res.ok) throw new Error(`updateLead falhou: ${res.status} ${await res.text()}`)
+}
+
 export async function createLead(fields: Record<string, unknown>): Promise<{ id: string }> {
   const res = await fetch(rest("lead"), {
     method: "POST",

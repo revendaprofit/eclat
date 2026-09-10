@@ -8,6 +8,7 @@ import {
   uploadToStorage,
 } from "../../../lib/supabase"
 import { getMediaBase64 } from "../../../lib/evolution"
+import { ehGatilhoDoClube, responderClube } from "../../../lib/clube"
 
 const MEDIA_TIPOS = new Set(["audio", "imagem", "video", "doc"])
 
@@ -123,6 +124,20 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
         timestamp: ts,
         evolution_msg_id: key.id,
       })
+
+      // Clube Éclat: resposta automática com o link do grupo (só entrada, uma vez por contato).
+      if (!fromMe && tipo === "texto" && ehGatilhoDoClube(texto, m)) {
+        try {
+          await responderClube({
+            number,
+            conversationId,
+            mensagem: m,
+            log: (msg) => logger.info(msg),
+          })
+        } catch (e) {
+          logger.warn(`[clube] resposta automática falhou (${number}): ${(e as Error).message}`)
+        }
+      }
 
       // Mídia: baixa da Evolution, guarda no Storage e atualiza a mensagem (best-effort).
       if (MEDIA_TIPOS.has(tipo) && key.id) {

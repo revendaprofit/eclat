@@ -1,5 +1,12 @@
 import { Metadata } from "next"
 import Image from "next/image"
+import WaitlistForm from "./waitlist-form"
+
+// WhatsApp da marca (o mesmo conectado ao Cockpit). A mensagem pré-preenchida é o
+// gatilho da resposta automática que entrega o link do grupo do Clube Éclat.
+const CLUBE_WHATSAPP_URL =
+  "https://wa.me/5531991184431?text=" +
+  encodeURIComponent("Quero entrar no Clube Éclat ✨")
 
 export const metadata: Metadata = {
   title: "use.ÉCLAT — Em breve",
@@ -46,6 +53,31 @@ export default function EmBrevePage() {
           <p className="anim-3 uppercase tracking-[0.45em] indent-[0.45em] text-eclat-luz text-sm small:text-base">
             Em breve
           </p>
+
+          {/* Clube Éclat: entrada pelo WhatsApp da marca (vira lead no Cockpit) + e-mail como plano B */}
+          <div className="anim-3 w-full max-w-md flex flex-col items-center gap-5 text-center">
+            <p className="text-eclat-luz/80 text-sm small:text-base leading-relaxed">
+              O lote de estreia abre <strong className="text-eclat-luz font-semibold">24 horas antes</strong>{" "}
+              para quem está no <strong className="text-eclat-luz font-semibold">Clube Éclat</strong>.
+              Poucas peças, quem chega primeiro leva.
+            </p>
+            <a
+              href={CLUBE_WHATSAPP_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center justify-center gap-2 bg-eclat-luz text-eclat-terracota-escuro uppercase tracking-widest text-xs font-semibold px-8 py-4 hover:bg-white transition-colors"
+            >
+              Entrar no Clube Éclat pelo WhatsApp
+            </a>
+            <details className="w-full text-left">
+              <summary className="cursor-pointer text-xs text-eclat-luz/55 text-center list-none hover:text-eclat-luz/80">
+                Prefere e-mail? Deixe o seu aqui
+              </summary>
+              <div className="mt-4">
+                <WaitlistForm />
+              </div>
+            </details>
+          </div>
         </div>
 
         {/* foto — desktop: painel fixo à direita */}
