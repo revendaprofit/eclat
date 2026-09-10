@@ -13,26 +13,23 @@ function setConsent(granted: boolean) {
   // gtag pode não existir se o GTM não injetou o gtag; usamos dataLayer.push direto
   const push = (obj: unknown) => (w.dataLayer as unknown[]).push(obj)
   const value = granted ? "granted" : "denied"
-  // formato consent update via dataLayer
-  push(function () {
-    // eslint-disable-next-line prefer-rest-params
-    ;(w.dataLayer as unknown[]).push(arguments)
-  })
-  push({
-    event: "consent_update",
+  const consent = {
     ad_storage: value,
     ad_user_data: value,
     ad_personalization: value,
     analytics_storage: value,
-  })
-  if (w.gtag) {
-    w.gtag("consent", "update", {
-      ad_storage: value,
-      ad_user_data: value,
-      ad_personalization: value,
-      analytics_storage: value,
-    })
   }
+  // Consent Mode v2: o comando precisa chegar ao dataLayer como um objeto `arguments`
+  // (formato gtag). Usa o gtag global do ConsentDefault; se não existir, replica o formato.
+  // (Antes, empurrava-se uma função que fazia push(arguments) vazio → GTM logava
+  // "Command name not specified" e o consentimento não era atualizado por esse caminho.)
+  const gtagLike = function (..._args: unknown[]) {
+    // eslint-disable-next-line prefer-rest-params
+    ;(w.dataLayer as unknown[]).push(arguments)
+  }
+  ;(w.gtag ?? gtagLike)("consent", "update", consent)
+  // Evento próprio para acionadores do GTM (ex.: carregar o Pixel após o aceite).
+  push({ event: "consent_update", ...consent })
 }
 
 // Consent default: PRECISA rodar antes do snippet do GTM. Script inline puro
