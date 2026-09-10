@@ -257,6 +257,8 @@ Herdados da spec (§12):
 - **Capa de curado (`capa_url`) com host fora do allowlist do `next/image`** derruba a página Conjuntos da vitrine (`images.remotePatterns` em `apps/storefront/next.config.js`): só o uploader do Cockpit (Supabase Storage) é suportado; URL colada à mão de outro host quebra a página inteira. Guarda de host (validar no cadastro ou cair para as fotos das peças) fica para a F4.
 - **Pareamento guloso com permutações é máximo só para grafos de pares em formato de estrela** (o cadastro de hoje: `leggings—tops` e `shorts—tops`, ambos com `tops` como nó comum). Testar todas as ordens de processamento (`MAX_PARES_PERMUTAVEIS`, §4 acima) garante o máximo de conjuntos quando os pares ativos formam uma estrela, mas **não há essa garantia se os pares formarem um ciclo** — ex.: cadastrar também `leggings+shorts` fecha um triângulo `tops—leggings—shorts—tops`, e o pareamento guloso por ordem pode ficar aquém do máximo teórico (problema clássico de emparelhamento máximo em grafo geral, que greedy-por-permutação não resolve com garantia — precisaria de um algoritmo tipo Blossom). Limite documentado, não corrigido nesta fase; `PUT /admin/conjuntos/pares` pode ganhar um aviso quando os pares ativos deixarem de formar uma estrela.
 
+- **Etiqueta "Conjunto" na página do pedido não cobre a unidade sem desconto (F4)**: sem carrinho, a etiqueta é derivada do ajuste `CONJUNTO-` da linha **ou** de `metadata.conjunto_slot` (`etiquetaDoPedido`, `apps/storefront/src/lib/util/carrinho-conjunto.ts`; espelho no Cockpit em `apps/cockpit/lib/pedido-conjunto.ts#etiquetaConjunto`). Numa regra de "menor peça", a unidade que **não** recebeu o desconto e entrou pelo botão comum "Adicionar à sacola" da PDP (sem slot e sem ajuste) fica sem etiqueta na página do pedido e no detalhe do pedido do Cockpit — embora apareça corretamente etiquetada no carrinho e no checkout, onde as unidades vêm de `GET /store/conjuntos/oportunidades`. Limite aceito na F4 (ruling 1); resolver exigiria persistir as unidades do conjunto no pedido no momento da conversão do carrinho. Ver `architecture/catalog.md`, seção "Carrinho e pedido (Fase F4, 2026-09)".
+
 Achados da execução F1 (Task 8, registrados aqui por não terem virado risco real):
 - `model.array()` do DML gerou `text[]` nativo sem precisar do fallback `json` cogitado no plano.
 - `updatePromotionsWorkflow` aceitou `application_method.type`/`allocation`/`max_quantity`/`target_type` sem problema — não foi preciso o fallback de recriar a promoção em vez de atualizar.
@@ -320,7 +322,20 @@ Achados da execução F1 (Task 8, registrados aqui por não terem virado risco r
     Blackout" (top+legging, `total_valor` R$45) e a regra padrão `menor_peca_percentual` 20% **ativa**
     (diferente da regra inativa de produção — o seed liga o benefício de propósito para poder validar o
     fluxo completo localmente). Comando e roteiro de validação em `architecture/catalog.md`.
-- **F4 (Carrinho — §7.5, aceite final §11 da spec):** o gancho já marca `conjunto_desconto` nos itens do carrinho (nenhuma leitura extra necessária para o cálculo); a etiqueta "Conjunto"/agrupamento do resumo por prefixo `CONJUNTO-` dos ajustes de promoção; os gatilhos "Feche mais um conjunto" vêm de `GET /store/conjuntos/oportunidades?cart_id=`.
+- **F4 (Carrinho — §7.5, aceite final §11): ENTREGUE (2026-09-09**, branch `feat/conjunto-f4-carrinho`;
+  código concluído + aceite local — §11 itens 1–4 e 10 validados no navegador contra o backend local
+  semeado, item 9 **parcial** por falta de frete/pagamento na região Brasil do seed, fechado pelo dono no
+  primeiro pedido real (ruling 7). Ver `progress.md`, entrada "Benefício Conjunto F4"). **Nenhuma mudança
+  de backend nesta fase** — a F4 é só vitrine + Cockpit, então não há `railway up` novo por causa dela (os
+  redeploys pendentes continuam sendo os da F2 `capa_url` nullable e os da F3 rulings V2/V6).
+  Consome, sem escrever nada novo: os `adjustments` das linhas do carrinho/pedido com código
+  `CONJUNTO-<regra_id>` (§5 acima) para separar "Benefício Conjunto" de "Cupom" no resumo; a marca
+  `conjunto_desconto` que o gancho já põe nos itens (§4) para a exclusividade do cupom (§6); e
+  `GET /store/conjuntos/oportunidades?cart_id=` (§8) para as etiquetas numeradas ("Conjunto 1/2") e os
+  gatilhos "Feche mais um conjunto". A regra exibida no título do gatilho vem de `GET /store/conjuntos`
+  (§8), cacheada 300 s na vitrine. Detalhe de componentes/fluxo de dados/limites:
+  `architecture/catalog.md`, seção "Carrinho e pedido (Fase F4, 2026-09)"; parte do Cockpit em
+  `architecture/cockpit.md` §7 ("Detalhe do pedido (F4)").
 
 ## 14. Checklist de deploy (dono/controller — não executar nesta task)
 

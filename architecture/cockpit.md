@@ -199,3 +199,29 @@ telas Regras e Curados); `alertaEstoque`; `slugConjunto` (handle a partir do nom
 - **C5** — o motivo mostrado no painel da ficha do produto vem sempre da coleção/categorias **do próprio
   produto**, recebidas como props (`collectionId`/`catIds`) do estado do `ProductForm` que já os carregou,
   nunca inferido a partir da lista de produtos limitada a 100.
+
+**Detalhe do pedido (F4, 2026-09-09)** — a F4 do Benefício Conjunto não criou tela nem rota nova no
+Cockpit: é só apresentação dentro do detalhe de pedido que já existia em `/pedidos`
+(`app/(painel)/pedidos/page.tsx`), ruling 6 da fase.
+- **Campos a mais em `medusaGetOrder`** (`lib/medusa.ts`): o `fields` do `GET /admin/orders/:id` ganhou
+  `discount_total` (ao lado de `total`) e `items.metadata,items.adjustments.code,items.adjustments.amount`
+  (ao lado dos demais `items.*`). Os tipos acompanham: `OrderItem` ganhou
+  `metadata?: Record<string, unknown> | null` e `adjustments?: { code?: string | null; amount?: number | null }[] | null`;
+  `CockpitOrderDetail` ganhou `discount_total: number`.
+- **Módulo puro** `lib/pedido-conjunto.ts` (+ `.test.ts`, 3 testes — suíte do Cockpit passa de 36 para
+  **39**): `agruparDescontosPedido(items)` separa os ajustes de linha em `{ conjunto, cupom }` pelo prefixo
+  `CONJUNTO-` do `code` (o mesmo prefixo que o backend usa nas promoções automáticas, `architecture/conjunto.md`
+  §5); `etiquetaConjunto(item)` devolve `"Conjunto"` quando a linha tem ajuste `CONJUNTO-` **ou**
+  `metadata.conjunto_slot`. Soma internamente em centavos e devolve **decimal**, que é a unidade do `brl()`
+  desta tela — diferente do espelho da vitrine (`carrinho-conjunto.ts#agruparDescontos`, que devolve
+  centavos); a diferença é intencional e está comentada nos dois arquivos.
+- **Tela**: badge "Conjunto" (`data-testid="etiqueta-conjunto"`) sob o título de cada item da tabela, e dois
+  blocos condicionais **"Benefício Conjunto"** e **"Cupom"** entre "Itens" e "Frete" na seção Totais, cada um
+  só quando > 0. Sem numeração ("Conjunto 1/2" só existe onde há carrinho — ruling 1); a unidade não
+  descontada de uma regra "menor peça" adicionada pelo botão comum da PDP fica sem badge (limite conhecido,
+  ver `architecture/conjunto.md` §12 e `architecture/catalog.md`, "Carrinho e pedido (Fase F4, 2026-09)").
+- **Validação**: o aceite local da F4 não conseguiu fechar um pedido (o seed local não tem opção de frete
+  nem provedor de pagamento para a região Brasil), então **não há pedido local com ajuste `CONJUNTO-` para
+  inspecionar** — o contrato dos campos novos foi conferido por tipo contra o schema da Admin API do Medusa
+  v2, e a conferência na tela fica com o dono no primeiro pedido real (ruling 7; roteiro em `progress.md`,
+  entrada "Benefício Conjunto F4").

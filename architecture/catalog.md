@@ -229,3 +229,69 @@ COMING_SOON_BYPASS=1 NEXT_PUBLIC_MEDUSA_BACKEND_URL=http://localhost:9000 \
 # porta 8000
 ```
 Rotas para conferir: `/br/categories/conjuntos` (curados + gerados), `/br/conjuntos/look-blackout` (curado — o par `legging×top` equivalente dá 404 por V2), `/br/products/top-aura-blackout` ("Complete o conjunto" + selo), `/br/store` (selo em Top/Legging/Short, ausente no Macaquinho). `apps/backend/src/scripts/seed-dev-conjunto.ts` é local-only: primeira linha executável recusa (`"recusado: DATABASE_URL não é local"`) se `DATABASE_URL` não apontar para `localhost`/`127.0.0.1`.
+
+## Carrinho e pedido (Fase F4, 2026-09)
+
+> Spec: `docs/superpowers/specs/2026-09-08-beneficio-conjunto-design.md` (§7.5; §11 itens 1–4, 9, 10) · Backend consumido: `architecture/conjunto.md` §4 (gancho/marcas), §5 (promoções `CONJUNTO-<regra_id>`), §6 (exclusividade do cupom), §8 (rota `oportunidades`) · Cockpit: `architecture/cockpit.md` §7 ("Detalhe do pedido (F4)") · Plano: `docs/superpowers/plans/2026-09-09-conjunto-f4-carrinho.md` · Pasta de execução: `.superpowers/sdd/2026-09-09-conjunto-f4-carrinho/` (briefs + relatórios das 6 tasks) · Branch `feat/conjunto-f4-carrinho`.
+> Status: **código concluído + aceite local (2026-09-09)** — §11 itens 1–4 e 10 validados no navegador contra o backend local semeado; item 9 **parcial** (o seed local não tem frete nem provedor de pagamento para a região Brasil — ver "Limites conhecidos"), fechado pelo dono no primeiro pedido real (ruling 7). Detalhe em `progress.md`, entrada "Benefício Conjunto F4".
+
+### O que existe na tela
+
+- **Etiqueta "Conjunto" por linha** — `modules/cart/components/item/index.tsx` ganhou a prop `etiqueta?: string | null`, renderizada como `<span data-testid="etiqueta-conjunto">` logo abaixo de `<LineItemOptions/>`, na célula do título (vale para os dois `type`, "full" e "preview"). As templates repassam um mapa `etiquetas?: Record<string, string>` indexado por `item.id` (`templates/items.tsx`, `templates/preview.tsx`, `templates/index.tsx`, `checkout/templates/checkout-summary`). Texto: "Conjunto" com um conjunto só; "Conjunto n/T" por conjunto do qual a linha participa (linha em dois conjuntos → "Conjunto 1/2 · Conjunto 2/2"); sufixo "(K de N)" quando só K das N unidades da linha estão em conjunto.
+- **Resumo desdobrado** — `modules/common/components/cart-totals/index.tsx` (carrinho e checkout) e `modules/order/components/order-summary/index.tsx` (páginas do pedido) trocaram o bloco único "Desconto" por três blocos condicionais, cada um só quando > 0: **"Benefício Conjunto"** (`data-testid="cart-beneficio-conjunto"`), **"Cupom"** (`data-testid="cart-cupom"`) e o **"Desconto"** residual (`data-testid="cart-discount"`), este último para a diferença entre `discount_subtotal` e a soma dos dois grupos (ruling 2 — ajustes que não são de linha, ex. frete).
+- **Aviso de cupom** — `modules/checkout/components/discount-code/index.tsx` esconde as promoções automáticas `CONJUNTO-*` da lista de cupons aplicados (`cuponsVisiveis`) e mostra `<p data-testid="aviso-cupom-conjunto">Cupom não se aplica a peças com Benefício Conjunto.</p>` quando há cupom visível **e** o grupo "Benefício Conjunto" > 0 (`avisoCupom`).
+- **Bloco "Feche mais um conjunto"** — `modules/cart/components/gatilhos-conjunto/index.tsx` (server, `data-testid="gatilhos-conjunto"`) + `candidata.tsx` (client). Uma subseção por oportunidade, na ordem do backend, com o título de `tituloGatilho` (`data-testid="gatilho-titulo"`, ex.: "Mais uma peça de Tops da coleção Família Blackout fecha outro conjunto — 20% na peça de menor valor.") e até 3 candidatas em grade. Cada card: foto na primeira cor disponível (`corParceira`), nome, preço "a partir de" (`precoMinDisponivel`), chips de tamanho inline (mesmo estilo de `complete-set/parceira.tsx`) e botão "Adicionar", que adiciona **1 unidade em linha própria** (`slotGatilho(categoria)` → `metadata.conjunto_slot`), dispara `conjunto_trigger_click` e `add_to_cart` (`item_list_name` = "Feche mais um conjunto") e mostra toast. Só na página do carrinho (rulings 4 e 5).
+- **Checkout** — `(checkout)/checkout/page.tsx` monta as mesmas etiquetas (`getCarrinhoConjunto(cart.id, countryCode, { comGatilhos: false })`) e as passa a `CheckoutSummary`; o resumo já vem desdobrado pelo `CartTotals` compartilhado. Sem gatilhos.
+- **Páginas do pedido** (confirmação e `account/orders/details/[id]`) — `modules/order/components/items` passa `etiquetaDoPedido(item)` a cada `<Item/>`; sem carrinho não há numeração, a etiqueta é sempre "Conjunto".
+- **Cockpit › Pedidos** — badge "Conjunto" no item e linhas "Benefício Conjunto"/"Cupom" nos Totais; ver `architecture/cockpit.md` §7.
+
+### De onde vem cada dado
+
+Duas fontes, deliberadamente separadas:
+
+1. **`adjustments` das linhas (o carrinho é a verdade)** — dinheiro. `lib/data/cart.ts#retrieveCart` e `lib/data/orders.ts#retrieveOrder` pedem `*items.adjustments` no `fields`; o módulo puro soma por prefixo do `code`: `CONJUNTO-*` → "Benefício Conjunto", o resto → "Cupom". Nada é recalculado na vitrine — o que aparece no resumo é literalmente o que o motor de promoções do Medusa já cobrou.
+2. **`GET /store/conjuntos/oportunidades?cart_id=`** — apresentação. Devolve `conjuntos` (quais unidades de quais linhas formam cada conjunto, para a numeração das etiquetas) e `oportunidades` (o que falta para fechar mais um, para os gatilhos). Consumida por `lib/data/conjuntos.ts#getCarrinhoConjunto(cartId, countryCode, { comGatilhos })` com `cache: "no-store"`; falha de rede/parse → `console.error("[conjuntos] …")` + `{ conjuntos: [], gatilhos: [] }`, nunca lança. Com gatilhos, hidrata as candidatas por `listProductsByIds` e busca os nomes de coleção/categoria (`listCollections()`/`listCategories()`, cada um com `.catch` próprio); a **regra** exibida no título do gatilho vem de `fetchVitrineRaw()` (`GET /store/conjuntos`, `revalidate: 300`).
+
+### Módulo puro e testes
+
+`apps/storefront/src/lib/util/carrinho-conjunto.ts` (sem I/O, sem React; 14 testes em `carrinho-conjunto.test.ts`): `PREFIXO_CONJUNTO`/`ehAjusteConjunto`, `agruparDescontos` (devolve **centavos inteiros**, dividido por 100 só na exibição), `etiquetasDoCarrinho`, `etiquetaDoPedido`, `cuponsVisiveis`, `avisoCupom`, `montarGatilhos`, `tituloGatilho`, `slotGatilho` + tipos `AjusteLinha`, `LinhaComAjustes`, `GruposDesconto`, `UnidadeStore`, `ConjuntoFormadoStore`, `OportunidadeStore`, `Gatilho`. Storefront: **186 testes** (16 arquivos).
+
+No Cockpit o espelho é `apps/cockpit/lib/pedido-conjunto.ts` (`agruparDescontosPedido`, `etiquetaConjunto`, 3 testes; suíte do Cockpit em **39**). Diferença intencional e comentada nos dois módulos: `agruparDescontos` (storefront) devolve **centavos**, `agruparDescontosPedido` (Cockpit) devolve **decimal**, que é a unidade do `brl()` daquela tela.
+
+### Rulings do controller (F4)
+
+1. **Etiquetas numeradas só onde existe carrinho** (carrinho e checkout), a partir de `conjuntos` da rota `oportunidades`. Nas páginas de **pedido** e no **Cockpit** a etiqueta é só "Conjunto", derivada de ajuste `CONJUNTO-` **ou** de `metadata.conjunto_slot`.
+2. **Resumo:** "Benefício Conjunto" = ajustes `CONJUNTO-*` das linhas; "Cupom" = os demais ajustes de linha; ajustes de método de envio não entram; a diferença para `discount_subtotal` cai na linha genérica "Desconto". Cada linha só aparece quando > 0.
+3. **Lista de cupons** esconde as promoções `CONJUNTO-*` (são automáticas, não cupons); o **aviso** aparece quando há cupom visível aplicado **e** o grupo "Benefício Conjunto" > 0.
+4. **Gatilhos só na página do carrinho**, uma seção por oportunidade na ordem do backend, até 3 candidatas (só com variante disponível), adição de 1 unidade com `slotGatilho`, toast de sucesso/falha.
+5. **Mini-cart (dropdown do header) não muda** nesta fase — a prop `etiquetas` existe em `templates/preview.tsx` mas ninguém a preenche a partir do header.
+6. **Cockpit:** só apresentação no detalhe do pedido existente, com campos a mais em `medusaGetOrder`; sem rota nova, sem escrita.
+7. **Aceite §11 item 9:** se o checkout local não fechar (seed sem frete/pagamento), o item fica "validado pelo dono no primeiro pedido real" — nunca criar pedido em produção.
+8. **Sem teste de componente React** (padrão do repo): toda lógica testável fica no módulo puro; componentes só mapeiam dados → JSX.
+
+Ruling extra registrado no aceite: **contagem Cockpit 39** (36 preexistentes + 3 de `pedido-conjunto.test.ts`) — o plano dizia 40, o número correto é 39.
+
+### Limites conhecidos
+
+- **Etiqueta no pedido para a unidade não descontada** — numa regra de "menor peça", a unidade que não recebeu desconto e foi adicionada pelo botão comum "Adicionar à sacola" da PDP (sem `conjunto_slot` e sem ajuste) fica **sem** etiqueta na página do pedido e no Cockpit. No carrinho e no checkout ela aparece corretamente, porque lá a etiqueta vem da rota `oportunidades` (que sabe as unidades), não do ajuste.
+- **Mini-cart sem etiqueta** (ruling 5) e **gatilhos só no carrinho** (ruling 4) — o checkout e o dropdown do header não mostram "Feche mais um conjunto".
+- **Título do gatilho pode ficar até 5 min desatualizado** depois de trocar a regra no Cockpit: a descrição do benefício ("20% na peça de menor valor") vem de `GET /store/conjuntos`, cacheada com `revalidate: 300` em `fetchVitrineRaw`. Observado no aceite (item 1) ao alternar os quatro tipos de desconto em sequência: os **valores** do resumo acompanham na hora (vêm dos `adjustments`), só o **texto** do gatilho fica velho até o cache expirar.
+- **Checkout local não fecha** com o seed atual: o único `fulfillment_set`/`service_zone` semeado ("European Warehouse delivery" / "Europe") cobre só `gb, de, dk, se, fr, es, it` — não há geo zone `br`, então `GET /store/shipping-options?cart_id=` devolve `[]` e o passo "Entrega › Forma de envio" fica vazio; além disso `region_payment_provider` liga `pp_system_default` só à região **Europe**, então a região **Brasil** também não tem provedor de pagamento. Por isso o §11 item 9 ficou parcial (ruling 7).
+- Herdado da F1 (§12 de `architecture/conjunto.md`, limite **I2**): linha dividida compartilha a base de desconto entre conjunto e cupom. Os pontos de adição da F3 e o gatilho da F4 sempre usam linha própria (`conjunto_slot`), então o problema não aparece por esses caminhos.
+- Em produção a regra `padrao` está **inativa** — carrinho, resumo e gatilhos ficam sem benefício até o dono ativar a regra no Cockpit (roteiro em `progress.md`).
+
+### Como validar localmente
+
+Mesmo ambiente da F3 (ver "Como validar localmente (com o seed)" acima: `docker start eclat-pg-test`, `seed-dev-conjunto.ts`, `medusa develop` na 9000, storefront na 8000). Para os passos que precisam da Admin API local (trocar o tipo da regra, criar cupom), use o **usuário admin local**:
+
+```bash
+# uma vez, de apps/backend (se o usuário ainda não existir)
+DATABASE_URL=postgres://postgres:postgres@localhost:55432/eclat_dev npx medusa user -e admin@local.test -p senha-local-123
+
+# token (o mesmo Bearer serve para todo /admin/*)
+curl -s -X POST http://localhost:9000/auth/user/emailpass \
+  -H "Content-Type: application/json" \
+  -d '{"email":"admin@local.test","password":"senha-local-123"}'
+```
+
+Rotas para conferir: `/br/cart` (etiquetas, "Benefício Conjunto", "Feche mais um conjunto") e `/br/checkout` (mesmas etiquetas, sem gatilhos). **Cuidado com o cache do carrinho:** `retrieveCart` usa `cache: "force-cache"` com tag revalidada pelas Server Actions do próprio storefront — mexer no carrinho por fora (Store API direto) **não** invalida essa entrada; para ver a mudança, faça uma mutação pela própria tela (mudar a quantidade de uma linha, remover um item, aplicar/remover cupom), que dispara `revalidateTag`.

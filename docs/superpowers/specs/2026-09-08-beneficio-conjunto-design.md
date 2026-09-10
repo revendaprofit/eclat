@@ -190,6 +190,17 @@ Selo "Forma conjunto" no card de peças cuja categoria raiz está em algum par a
 - Cupom coexistindo com conjunto: aviso "Cupom não se aplica a peças com Benefício Conjunto".
 - Checkout e página do pedido: mesmas etiquetas e linhas.
 
+**Entregue F4 (2026-09-09)** — branch `feat/conjunto-f4-carrinho`; sem mudança de backend. Módulo puro `apps/storefront/src/lib/util/carrinho-conjunto.ts` (14 testes) + `getCarrinhoConjunto` em `lib/data/conjuntos.ts` (rota `oportunidades`, `no-store`) + `*items.adjustments` no `fields` de `retrieveCart`/`retrieveOrder`; espelho no Cockpit em `apps/cockpit/lib/pedido-conjunto.ts` (3 testes). Detalhe: `architecture/catalog.md`, "Carrinho e pedido (Fase F4, 2026-09)" e `architecture/cockpit.md` §7 ("Detalhe do pedido (F4)"). Rulings do controller desta fase:
+1. **Etiquetas numeradas só onde existe carrinho** (carrinho e checkout), vindas de `conjuntos` da rota `oportunidades`: "Conjunto" com um conjunto só, "Conjunto n/T" por conjunto do qual a linha participa (linha em dois → "Conjunto 1/2 · Conjunto 2/2"), sufixo "(K de N)" quando só K das N unidades da linha estão em conjunto. Nas páginas de **pedido** e no **Cockpit** a etiqueta é só "Conjunto", derivada de ajuste `CONJUNTO-` **ou** de `metadata.conjunto_slot` — limite documentado: a unidade não descontada de uma regra "menor peça" adicionada pelo botão comum da PDP (sem slot e sem ajuste) fica sem etiqueta no pedido.
+2. **Resumo:** "Benefício Conjunto" = soma dos ajustes `CONJUNTO-*` das linhas; "Cupom" = soma dos demais ajustes de linha; ajustes de método de envio não entram; se `discount_subtotal` > a soma dos dois, a diferença aparece na linha genérica "Desconto". Cada linha só aparece quando > 0.
+3. **Lista de cupons** esconde promoções `CONJUNTO-*` (são automáticas, não cupons); o **aviso** aparece quando há pelo menos um cupom visível aplicado **e** o grupo "Benefício Conjunto" > 0.
+4. **Gatilhos só na página do carrinho** (não no checkout, não no mini-cart): uma seção por oportunidade, na ordem do backend, até 3 candidatas (só as com variante disponível); card com foto na primeira cor disponível, nome, "a partir de", chips de tamanho inline e "Adicionar", que adiciona 1 unidade em linha própria (`slotGatilho`); toast de sucesso e de falha.
+5. **Mini-cart (dropdown do header) não muda** nesta fase.
+6. **Cockpit:** só apresentação no detalhe do pedido existente, com campos a mais em `medusaGetOrder`; sem rota nova, sem escrita.
+7. **Aceite §11 item 9 (pedido concluído):** metade storefront validada localmente **se** o checkout local fechar; se não fechar, o item fica "validado pelo dono no primeiro pedido real" — nunca criar pedido em produção. Metade Cockpit é do dono (login Supabase), com a resposta da Admin API conferida pelo implementador.
+8. **Sem teste de componente React** (padrão do repo): toda lógica testável fica no módulo puro; componentes só mapeiam dados → JSX.
+9. **Contagem Cockpit 39** (registrado no aceite): a suíte do Cockpit fica em **39** testes (36 preexistentes + 3 de `pedido-conjunto.test.ts`), não 40 como dizia o plano.
+
 ### 7.6 SEO
 `/categories/conjuntos` e `/conjuntos/[handle]` indexáveis, canonical sem query, `ItemList` JSON-LD na vitrine, `Product` (com `offers` do total) na página do conjunto. Curado inativo/indisponível → 404.
 
@@ -236,22 +247,24 @@ Painel lateral só leitura "Conjuntos": curados que incluem o produto e parceira
 | **F1 Backend** | módulo, migração, seed, `montarConjuntos`, gancho, promoções, exclusividade do cupom, rotas store/admin, testes; deploy Railway; **primeira escrita em produção** (migração, regra padrão inativa, pares) só com "pode aplicar" — **implementada, aguardando deploy** (código e testes completos em `feat/conjunto-f1-backend`; nada escrito em produção ainda, ver checklist em `architecture/conjunto.md` §14) | F0 |
 | **F2 Cockpit** | telas §8 — **implementada em código** (branch `feat/conjunto-f2-cockpit`); validação visual pendente do dono, ver `progress.md` | F1 |
 | **F3 Vitrine** | §7.1–7.4, 7.6, 7.7 — **ENTREGUE em código e aceite local (2026-09-09)**, branch `feat/conjunto-f3-vitrine`; aceite §11 itens 5–8 validados contra backend local semeado (ver `progress.md`, entrada "Benefício Conjunto F3"); backend ganhou um ajuste nesta fase (Ruling V2, §6.3/§12) que precisa de redeploy (`railway up`) antes do deploy da vitrine | F1 |
-| **F4 Carrinho** | §7.5, aceite final §11 | F1, F3 |
+| **F4 Carrinho** | §7.5, aceite final §11 — **ENTREGUE em código e aceite local (2026-09-09)**, branch `feat/conjunto-f4-carrinho`; §11 itens 1–4 e 10 validados contra o backend local semeado, item 9 **parcial** (checkout local não fecha: o seed não tem frete nem provedor de pagamento para a região Brasil), fechado pelo dono no primeiro pedido real (ruling 7 de §7.5). **Sem mudança de backend nesta fase** — nenhum `railway up` novo por causa da F4. Ver `progress.md`, entrada "Benefício Conjunto F4" | F1, F3 |
 
 F2 e F3 podem correr em paralelo.
 
 ## 11. Critérios de aceite (navegador, backend de produção, regra padrão ativa em teste)
 
-1. Carrinho com top + legging da mesma coleção recebe o benefício correto em cada um dos quatro tipos (troca da regra no Cockpit reflete no próximo recálculo).
-2. 2 tops + 1 legging + 1 short (mesma coleção) → 2 conjuntos; 1 top + 2 leggings → 1 conjunto + gatilho "adicione um top".
-3. Cupom aplicado junto: desconta só a peça fora do conjunto; aviso visível.
-4. Curado formado com peças de coleções diferentes recebe a regra do curado; curado consome unidades antes do par de coleção.
-5. `/categories/conjuntos` lista curados e gerados; conjunto sem peça disponível não aparece.
-6. `/conjuntos/<handle>` permite escolher cor/tamanho de cada peça, mostra o total com benefício e adiciona as duas variantes de uma vez.
-7. PDP de um top mostra "Complete o conjunto" com leggings/shorts da coleção; "Adicionar as duas" adiciona as variantes certas.
-8. Card de peça elegível mostra "Forma conjunto".
-9. Pedido concluído e tela do pedido no Cockpit mostram "Benefício Conjunto" separado de cupom.
-10. Módulo desligado/erro → carrinho funciona sem benefício.
+> **Resultado do aceite local** (backend local semeado — `eclat_dev`/`eclat-pg-test`, regra padrão **ativa** só nesse seed, ≠ produção): itens 5–8 na F3 (2026-09-09), itens 1–4, 9 e 10 na F4 (2026-09-09). Valores observados e roteiro do dono em `progress.md` (entradas "Benefício Conjunto F3" e "Benefício Conjunto F4").
+
+1. Carrinho com top + legging da mesma coleção recebe o benefício correto em cada um dos quatro tipos (troca da regra no Cockpit reflete no próximo recálculo). — **PASSOU (F4).** Carrinho Top M + Short M (o par top+legging é coberto pelo curado, ruling V2, então o par que recebe a regra padrão é shorts+tops): `menor_peca_percentual` 20 → R$ 31,80; `menor_peca_valor` 3000 → R$ 30,00; `total_percentual` 10 → R$ 34,80; `total_valor` 5000 → R$ 50,00, com etiqueta "Conjunto" nas duas linhas em todos os casos.
+2. 2 tops + 1 legging + 1 short (mesma coleção) → 2 conjuntos; 1 top + 2 leggings → 1 conjunto + gatilho "adicione um top". — **PASSOU (F4).** (a) "Conjunto 1/2" na legging, "Conjunto 2/2" no short, "Conjunto 1/2 · Conjunto 2/2" na linha do top (quantidade 2), resumo R$ 76,80 = curado R$ 45,00 + par shorts+tops R$ 31,80. (b) 1 conjunto (R$ 45,00), legging com "Conjunto (1 de 2)" e gatilho "Mais uma peça de Tops…"; "Adicionar" fechou o 2º conjunto (R$ 90,00) e a seção sumiu.
+3. Cupom aplicado junto: desconta só a peça fora do conjunto; aviso visível. — **PASSOU (F4).** Top + Legging + Macaquinho com `CUPOM10`: "Benefício Conjunto − R$ 45,00", "Cupom − R$ 29,90" (10% só do macaquinho), aviso visível, lista de cupons só com `CUPOM10`. Removendo o cupom, a linha "Benefício Conjunto" permanece e "Cupom"/aviso somem.
+4. Curado formado com peças de coleções diferentes recebe a regra do curado; curado consome unidades antes do par de coleção. — **PASSOU (F4).** Top + Legging + Short: curado (top+legging) formado primeiro — etiqueta só no top e na legging, short sem etiqueta, resumo R$ 45,00 e gatilho "Mais uma peça de Tops…" (o short precisa de outro top).
+5. `/categories/conjuntos` lista curados e gerados; conjunto sem peça disponível não aparece. — **PASSOU (F3).**
+6. `/conjuntos/<handle>` permite escolher cor/tamanho de cada peça, mostra o total com benefício e adiciona as duas variantes de uma vez. — **PASSOU (F3).**
+7. PDP de um top mostra "Complete o conjunto" com leggings/shorts da coleção; "Adicionar as duas" adiciona as variantes certas. — **PASSOU (F3)** (com a nota do ruling V6).
+8. Card de peça elegível mostra "Forma conjunto". — **PASSOU (F3).**
+9. Pedido concluído e tela do pedido no Cockpit mostram "Benefício Conjunto" separado de cupom. — **PARCIAL (F4).** `/br/checkout` mostrou as mesmas etiquetas e o resumo desdobrado. O pedido **não** pôde ser concluído localmente: o checkout para no passo **"Entrega › Forma de envio"**, porque o único `fulfillment_set`/`service_zone` do seed cobre só países europeus (não há geo zone `br`) e `GET /store/shipping-options?cart_id=` devolve `[]`; a região Brasil também não tem provedor de pagamento (`region_payment_provider` liga `pp_system_default` só à região Europe). Páginas do pedido e tela do Cockpit ficam para o **dono validar no primeiro pedido real** (ruling 7 de §7.5).
+10. Módulo desligado/erro → carrinho funciona sem benefício. — **PASSOU (F4).** Com o backend parado, `/br/cart` continuou respondendo **200** (renderizado do cache do carrinho), sem nenhuma etiqueta e sem a seção "Feche mais um conjunto", com `[conjuntos] falha ao buscar oportunidades do carrinho … ECONNREFUSED` no log do servidor da vitrine e nenhum 500.
 
 ## 12. Riscos e limites conhecidos
 
