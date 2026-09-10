@@ -22,6 +22,13 @@ export type Recomendacao = {
 }
 
 const ALTERNATIVA_MAX_DIFF_CM = 4
+const ORDEM_TAMANHOS = ["P", "M", "G", "GG"]
+
+// Devolve o índice do tamanho na ordem padrão (P → M → G → GG); -1 se desconhecido.
+// Usado para desempate: quando dois tamanhos têm o mesmo score, prefere-se o maior.
+function indiceTamanho(tamanho: string): number {
+  return ORDEM_TAMANHOS.indexOf(tamanho)
+}
 
 // "82–88 cm" | "82-88" | "82 a 88" | "88" | "88,5 – 90" → {min,max}; sem número → null
 export function parseRange(cell: string): Range | null {
@@ -82,8 +89,14 @@ export function recommendSize(
     .filter((s) => s.tamanho && s.detalhes.length > 0)
   if (scored.length === 0) return null
 
-  // "<=" faz o ÚLTIMO empate vencer → tamanho maior (linhas em ordem P→GG)
-  const best = scored.reduce((a, b) => (b.score <= a.score ? b : a))
+  // Desempate independente da ordem das linhas: na igualdade de score, prefere-se o maior tamanho
+  const best = scored.reduce((a, b) => {
+    if (a.score !== b.score) {
+      return a.score < b.score ? a : b
+    }
+    // Em caso de empate, prefere o tamanho maior (índice mais alto em ORDEM_TAMANHOS)
+    return indiceTamanho(b.tamanho) > indiceTamanho(a.tamanho) ? b : a
+  })
   const second = scored
     .filter((s) => s !== best)
     .sort((a, b) => a.score - b.score)[0]

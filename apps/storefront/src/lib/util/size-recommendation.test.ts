@@ -82,6 +82,23 @@ describe("recommendSize", () => {
     expect(r?.recomendado).toBe("G")
     expect(r?.alternativa).toBe("M")
   })
+  it("empate com tabela em ordem diferente → o maior tamanho vence", () => {
+    // Tabela com linhas fora de ordem (GG, G, M, P) para verificar que o desempate não depende da ordem
+    const TABLE_DESORDENADA = {
+      columns: ["Busto", "Cintura", "Quadril"],
+      rows: [
+        ["GG", "100–108 cm", "80–88 cm", "106–114 cm"],
+        ["G", "94–100 cm", "74–80 cm", "100–106 cm"],
+        ["M", "88–94 cm", "68–74 cm", "94–100 cm"],
+        ["P", "82–88 cm", "62–68 cm", "88–94 cm"],
+      ],
+    }
+    // busto 94 está no limite de M (88–94) e de G (94–100): ambos ideais, distância 0
+    // mesmo com tabela desordenada, G (maior) deve ser recomendado
+    const r = recommendSize(TABLE_DESORDENADA, { busto: 94 })
+    expect(r?.recomendado).toBe("G")
+    expect(r?.alternativa).toBe("M")
+  })
   it("usa só as medidas informadas e só as colunas comparáveis", () => {
     const r = recommendSize(CAMISETA, { busto: 100, cintura: 80 })
     expect(r?.recomendado).toBe("M")
