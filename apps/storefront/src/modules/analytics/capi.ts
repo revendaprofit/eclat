@@ -20,14 +20,25 @@ type CapiOpts = {
   contents?: { id: string; quantity: number; item_price?: number }[]
   email?: string
   sourceUrl?: string
+  // Código da aba "Eventos de teste" do Gerenciador de Eventos (ex.: TEST12345).
+  // Quando presente, o evento aparece só lá e não conta como conversão real.
+  testEventCode?: string
 }
 
-async function sendCapi(eventName: string, opts: CapiOpts): Promise<void> {
+// Resultado resumido da chamada à Meta — NUNCA inclui o token.
+export type CapiResult = {
+  configured: { pixel: boolean; token: boolean }
+  sent: boolean
+  status?: number
+  meta?: unknown // resposta bruta da Graph API (events_received, fbtrace_id, error)
+}
+
+async function sendCapi(eventName: string, opts: CapiOpts): Promise<CapiResult> {
   const token = process.env.META_CAPI_TOKEN
-  if (!token) return
   const marketing = await getSiteContent<Marketing>("marketing")
   const pixel = marketing?.meta_pixel_id
-  if (!pixel) return
+  const configured = { pixel: Boolean(pixel), token: Boolean(token) }
+  if (!token || !pixel) return { configured, sent: false }
 
   const h = await headers()
   const c = await cookies()
@@ -62,10 +73,11 @@ async function sendCapi(eventName: string, opts: CapiOpts): Promise<void> {
         },
       },
     ],
+    ...(opts.testEventCode ? { test_event_code: opts.testEventCode } : {}),
   }
 
   try {
-    await fetch(
+    const r = await fetch(
       `https://graph.facebook.com/v19.0/${pixel}/events?access_token=${token}`,
       {
         method: "POST",
@@ -75,9 +87,30 @@ async function sendCapi(eventName: string, opts: CapiOpts): Promise<void> {
         signal: AbortSignal.timeout(3000),
       }
     )
+    const meta = await r.json().catch(() => undefined)
+    return { configured, sent: r.ok, status: r.status, meta }
   } catch {
     /* nunca quebra a página */
+    return { configured, sent: false }
   }
+}
+
+// Diagnóstico: dispara um PageView de teste para a aba "Eventos de teste" do
+// Gerenciador de Eventos. Sem código de teste, só informa se pixel/token existem.
+export async function fireCapiTest(testEventCode?: string): Promise<CapiResult> {
+  if (!testEventCode) {
+    const token = process.env.META_CAPI_TOKEN
+    const marketing = await getSiteContent<Marketing>("marketing")
+    return {
+      configured: { pixel: Boolean(marketing?.meta_pixel_id), token: Boolean(token) },
+      sent: false,
+    }
+  }
+  return sendCapi("PageView", {
+    eventId: `capi_test_${Date.now()}`,
+    sourceUrl: `${getBaseURL()}/`,
+    testEventCode,
+  })
 }
 
 // Dispara Purchase server-side a partir do pedido concluído.
