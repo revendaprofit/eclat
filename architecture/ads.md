@@ -225,3 +225,45 @@ Estado verificado:
 - [x] Domínio `useeclat.com.br` VERIFICADO no BM (10/09 18:50) (Segurança da marca → Domínios, id 1354366457752076),
       método metatag. Valor gravado em `site_content.marketing.meta_domain_verification` (10/09) e
       injetado no `<head>` pelo storefront (commit 810f0db). Pendente: "Conectar ativos" (pixel + Página).
+
+## 7. Pré-lançamento F0 — Clube Éclat (montado em 10/09/2026, D0 previsto ~25/09)
+
+Contexto: peças chegam 20/09; estoque baixo → objetivo é ESGOTAR para a lista quente no D0, não escalar frio.
+Centro do funil = grupo do WhatsApp **Clube Éclat** (link em `apps/backend/src/lib/clube.ts`, override
+`CLUBE_ECLAT_GRUPO_URL`). Entrada preferencial pelo WhatsApp da marca (vira lead no Cockpit) e não pelo link direto.
+
+### Campanhas (todas PAUSADAS — ativar campanha → conjunto → anúncio, nessa ordem)
+| Campanha | ID | Conjunto | Anúncio | Diária |
+|---|---|---|---|---|
+| ECLAT_F0_Clube_WhatsApp_2026-09 | 120250160264690107 | 120250160265150107 (Conversas → WhatsApp; IG 90d + site 30d + seguidoras; BR F 25-45) | 120250160320210107 Reel "um novo ciclo" → WhatsApp | R$30 |
+| ECLAT_F0_Aquecimento_Reels_2026-09 | 120250160265440107 | 120250160320680107 (ThruPlay; seguidoras + IG 365d; BR F 25-45) | 120250160321780107 "ponto de virada" · 120250160321930107 "seu estilo" | R$20 |
+Cascas a apagar no Gerenciador (conector não exclui): campanha `[VAZIA - apagar]` 120250160265650107 e
+conjunto `[VAZIO - apagar]` 120250160314820107.
+
+Criativos (vídeos na biblioteca da conta: 1382587606835888 novo-ciclo · 1609958923873568 ponto-de-virada ·
+4383604935190225 seu-estilo; cópias em Supabase storage `site/ads/reels/`): 928282040345507 (Clube, CTA
+WhatsApp), 999051599862989 e 1415592054058654 (aquecimento, CTA "Saiba mais" → loja com UTM f0_aquecimento).
+Criativos v1 sem uso: 1401114071989058, 1630973052092955, 1411710847557116.
+
+Limitações descobertas do conector Meta Ads (MCP): não impulsiona post do IG (`instagram_media_id` sem
+permissão), não faz upload de vídeo (rollout gradual), não exclui/arquiva (força PAUSED). Upload de vídeo
+funcionou pela Marketing API com o token EclatAds (lido do banco do Always Insta, `accounts.ads_token`), mas
+criar criativo com esse token falha ("app em modo de desenvolvimento") → criativos e anúncios pelo conector.
+
+### Loja / Cockpit (commit ff4c0ce)
+- `/em-breve`: botão "Entrar no Clube Éclat pelo WhatsApp" (wa.me/5531991184431 + texto pré-preenchido) e
+  formulário de e-mail como plano B (tabela `newsletter_signup`, source `em-breve`).
+- Porta VIP: `GET /clube?k=<chave>` grava cookie `eclat_vip` (30d) e libera a loja atrás do gate. Chave em
+  `COMING_SOON_VIP_KEY` (Vercel) ou padrão em `lib/coming-soon.ts`. Enviar o link SÓ no grupo, no D0 (24h antes).
+- Resposta automática (backend, webhook do WhatsApp): gatilho "clube/quero entrar/primeira mão/lançamento/vip/
+  lista" ou mensagem vinda de anúncio (externalAdReply) → boas-vindas com o link do grupo, 1x por contato,
+  lead marcado `interesse = "Clube Éclat"` (origem "anuncio" quando vier de anúncio).
+- Webhook da Evolution REAPONTADO (10/09) para o Railway
+  (`.../webhooks/whatsapp?token=<WHATSAPP_WEBHOOK_SECRET do Railway>`); antes apontava para um túnel morto de
+  junho — nenhuma mensagem chegava ao Cockpit desde então. Obs.: `WHATSAPP_WEBHOOK_SECRET` do `.env` local
+  DIFERE do Railway; o do Railway é o válido em produção. Deploy do backend via `railway up` (10/09 ~20:37).
+
+### Cronograma (D0 = sexta 25/09, sugestão)
+- 11–24/09: campanhas ligadas (R$50/dia). Roteiro diário no grupo (bastidor, peça por dia, enquete, preço, data).
+- 24/09 noite: "amanhã 10h o link chega aqui". 25/09 10h: link `/clube?k=…` no grupo. 26/09 10h: loja aberta
+  (`COMING_SOON=false` + deploy). 25/09–02/10: remarketing de vendas R$50–70/dia (engajou + clube + site).
