@@ -1,8 +1,12 @@
 import { describe, expect, it } from "vitest"
+import { SIZE_ORDER } from "./catalog-facets"
 import {
   columnToKey,
   estimateMeasurements,
+  indiceTamanho,
   measurableColumns,
+  normalizarTamanho,
+  ORDEM_TAMANHOS,
   parseRange,
   recommendSize,
 } from "./size-recommendation"
@@ -128,5 +132,94 @@ describe("estimateMeasurements (Decisão 2 — heurística de pré-preenchimento
     expect(estimateMeasurements(0, 60)).toBeNull()
     expect(estimateMeasurements(165, 0)).toBeNull()
     expect(estimateMeasurements(NaN, 60)).toBeNull()
+  })
+})
+
+describe("normalizarTamanho / ORDEM_TAMANHOS", () => {
+  it("normaliza espaços e caixa do rótulo", () => {
+    expect(normalizarTamanho(" m ")).toBe("M")
+    expect(normalizarTamanho("gg")).toBe("GG")
+  })
+  it("indiceTamanho usa a ordem canônica da vitrine e aceita rótulo cru", () => {
+    expect(ORDEM_TAMANHOS).toEqual(SIZE_ORDER)
+    expect(indiceTamanho(" g ")).toBe(ORDEM_TAMANHOS.indexOf("G"))
+    expect(indiceTamanho("XPTO")).toBe(-1)
+  })
+})
+
+describe("recommendSize — fora da tabela", () => {
+  it("medidas 20 cm acima de toda a tabela → foraDaTabela", () => {
+    const r = recommendSize(MACAQUINHO, { busto: 128, cintura: 108, quadril: 134 })
+    expect(r?.foraDaTabela).toBe(true)
+    // a linha menos ruim continua vindo (a UI mostra "a mais próxima seria X"), sem alternativa
+    expect(r?.recomendado).toBe("GG")
+    expect(r?.alternativa).toBeNull()
+    expect(r?.caimento).toBe("justo")
+  })
+  it("medidas 20 cm abaixo de toda a tabela → foraDaTabela", () => {
+    const r = recommendSize(MACAQUINHO, { busto: 62, cintura: 42, quadril: 68 })
+    expect(r?.foraDaTabela).toBe(true)
+    expect(r?.recomendado).toBe("P")
+    expect(r?.alternativa).toBeNull()
+  })
+  it("medidas dentro da faixa → não é fora da tabela", () => {
+    const r = recommendSize(MACAQUINHO, { busto: 90, cintura: 70, quadril: 96 })
+    expect(r?.foraDaTabela).toBeFalsy()
+  })
+  it("uma medida 4 cm fora e soma ≤ 10 cm → ainda dentro da tabela", () => {
+    // busto 112: GG (100–108) fica 4 cm acima — abaixo dos 5 cm por medida e dos 10 cm de soma
+    const r = recommendSize(MACAQUINHO, { busto: 112 })
+    expect(r?.recomendado).toBe("GG")
+    expect(r?.foraDaTabela).toBe(false)
+  })
+})
+
+describe("recommendSize — desempate da alternativa", () => {
+  // G é o melhor sozinho (0); M e GG empatam em 1 cm — a alternativa deve ser a MAIOR (GG),
+  // independentemente da ordem das linhas na tabela.
+  const LINHAS = {
+    P: ["P", "80-85"],
+    M: ["M", "90-92"],
+    G: ["G", "93-93"],
+    GG: ["GG", "94-96"],
+  }
+  it("empate no 2º lugar → o maior tamanho, com a tabela em ordem", () => {
+    const t = { columns: ["Busto"], rows: [LINHAS.P, LINHAS.M, LINHAS.G, LINHAS.GG] }
+    const r = recommendSize(t, { busto: 93 })
+    expect(r?.recomendado).toBe("G")
+    expect(r?.alternativa).toBe("GG")
+  })
+  it("empate no 2º lugar → o maior tamanho, com a tabela desordenada", () => {
+    const t = { columns: ["Busto"], rows: [LINHAS.GG, LINHAS.M, LINHAS.P, LINHAS.G] }
+    const r = recommendSize(t, { busto: 93 })
+    expect(r?.recomendado).toBe("G")
+    expect(r?.alternativa).toBe("GG")
+  })
+})
+
+describe("recommendSize — célula em branco", () => {
+  it("ignora a coluna sem número na linha e pontua as demais", () => {
+    const PARCIAL = {
+      columns: ["Busto", "Cintura", "Quadril"],
+      rows: [
+        ["P", "82–88 cm", "", "88–94 cm"],
+        ["M", "88–94 cm", "68–74 cm", "94–100 cm"],
+      ],
+    }
+    const r = recommendSize(PARCIAL, { busto: 85, cintura: 64, quadril: 90 })
+    expect(r?.recomendado).toBe("P")
+    // a cintura da linha P não tem faixa: só busto e quadril entram nos detalhes
+    expect(r?.detalhes.map((d) => d.medida)).toEqual(["busto", "quadril"])
+  })
+})
+
+describe("estimateMeasurements — bordas", () => {
+  it("altura e peso no limite superior excluído → null", () => {
+    expect(estimateMeasurements(230, 60)).toBeNull()
+    expect(estimateMeasurements(165, 250)).toBeNull()
+  })
+  it("valores negativos → null", () => {
+    expect(estimateMeasurements(-165, 60)).toBeNull()
+    expect(estimateMeasurements(165, -60)).toBeNull()
   })
 })
