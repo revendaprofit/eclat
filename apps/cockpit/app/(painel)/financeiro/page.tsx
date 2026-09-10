@@ -47,7 +47,7 @@ export default function FinanceiroPage() {
   const [fDesc, setFDesc] = useState("")
   const [fValor, setFValor] = useState("")
   const [fForn, setFForn] = useState("")
-  const [fRec, setFRec] = useState("")
+  const [fRec] = useState("")
   const [salvando, setSalvando] = useState(false)
   const [gerenciarCat, setGerenciarCat] = useState(false)
 

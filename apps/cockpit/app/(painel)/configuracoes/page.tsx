@@ -44,13 +44,6 @@ export default function ConfiguracoesPage() {
     else alert((await r.json()).error || "Falha")
   }
 
-  const Param = ({ label, valor }: { label: string; valor: string }) => (
-    <div className="border border-eclat-pedra/40 rounded-lg bg-white/60 p-4">
-      <div className="text-xs uppercase tracking-wider text-eclat-grafite/50">{label}</div>
-      <div className="text-lg text-eclat-grafite mt-1">{valor}</div>
-    </div>
-  )
-
   return (
     <div className="flex flex-col gap-10">
       <div>
@@ -113,6 +106,17 @@ export default function ConfiguracoesPage() {
           <div className="text-eclat-grafite/50 text-xs mt-1">Sair pelo menu lateral (canto inferior esquerdo).</div>
         </div>
       </section>
+    </div>
+  )
+}
+
+// Fora do componente da página: declarado dentro dele, o React recriava o tipo a cada render
+// (react-hooks/static-components).
+function Param({ label, valor }: { label: string; valor: string }) {
+  return (
+    <div className="border border-eclat-pedra/40 rounded-lg bg-white/60 p-4">
+      <div className="text-xs uppercase tracking-wider text-eclat-grafite/50">{label}</div>
+      <div className="text-lg text-eclat-grafite mt-1">{valor}</div>
     </div>
   )
 }
