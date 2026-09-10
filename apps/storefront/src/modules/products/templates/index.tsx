@@ -30,6 +30,7 @@ import Breadcrumb from "@modules/common/components/breadcrumb"
 import { getDeepestCategoryChain } from "@lib/data/category-path"
 import { getMeasureMap } from "@lib/data/measurements"
 import { pickMeasurements } from "@lib/util/measurements"
+import { parseYoutubeId } from "@lib/util/product-video"
 
 type ProductTemplateProps = {
   product: HttpTypes.StoreProduct
@@ -72,6 +73,9 @@ const ProductTemplate = async ({
 
   const productUrl = `${getBaseURL()}/${countryCode}/products/${product.handle}`
 
+  // vídeo da galeria: product.metadata.youtube_id (ID ou URL), preenchido no Cockpit
+  const youtubeId = parseYoutubeId(product.metadata?.youtube_id)
+
   // esgotado total: nenhuma variante disponível (mesma regra do JSON-LD/feed)
   const variants = (product.variants ?? []) as {
     manage_inventory?: boolean
@@ -108,6 +112,8 @@ const ProductTemplate = async ({
                 images={images}
                 personaMedia={personaMedia}
                 productTitle={product.title}
+                productHandle={product.handle ?? undefined}
+                youtubeId={youtubeId}
               />
             </div>
             <div className="flex flex-col small:sticky small:top-48 small:py-0 small:max-w-[300px] w-full py-8 gap-y-12">

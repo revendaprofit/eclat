@@ -17,10 +17,14 @@ export default function PersonaGallery({
   images,
   personaMedia,
   productTitle,
+  productHandle,
+  youtubeId,
 }: {
   images: HttpTypes.StoreProductImage[]
   personaMedia: PersonaMedia[]
   productTitle?: string
+  productHandle?: string
+  youtubeId?: string | null
 }) {
   const [personaId, setPersonaId] = useState<string | undefined>(undefined)
 
@@ -41,9 +45,19 @@ export default function PersonaGallery({
   return (
     <div className="relative">
       {hasPersonaPhotos ? (
-        <ImageGallery images={personaImages} productTitle={productTitle} />
+        <ImageGallery
+          images={personaImages}
+          productTitle={productTitle}
+          productHandle={productHandle}
+          youtubeId={youtubeId}
+        />
       ) : (
-        <VariantGallery ssrImages={images} productTitle={productTitle} />
+        <VariantGallery
+          ssrImages={images}
+          productTitle={productTitle}
+          productHandle={productHandle}
+          youtubeId={youtubeId}
+        />
       )}
       {hasPersonaPhotos && (
         <p className="text-[10px] text-eclat-grafite/40 text-center mt-1">

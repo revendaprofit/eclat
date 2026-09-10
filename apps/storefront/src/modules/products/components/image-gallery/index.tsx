@@ -4,18 +4,29 @@ import { HttpTypes } from "@medusajs/types"
 import { Container, clx } from "@modules/common/components/ui"
 import Image from "next/image"
 import { useEffect, useRef, useState } from "react"
+import ProductVideo from "@modules/products/components/product-video"
+import { buildGalleryItems } from "@lib/util/product-video"
 
-type ImageGalleryProps = { images: HttpTypes.StoreProductImage[]; productTitle?: string }
+type ImageGalleryProps = {
+  images: HttpTypes.StoreProductImage[]
+  productTitle?: string
+  productHandle?: string
+  // product.metadata.youtube_id já validado por parseYoutubeId (no template)
+  youtubeId?: string | null
+}
 
 // Desktop: pilha vertical (como antes). Mobile: carrossel horizontal com scroll-snap
 // e indicadores — sem biblioteca. Mesmo markup nos dois; só CSS muda.
-const ImageGallery = ({ images, productTitle }: ImageGalleryProps) => {
+// Item de vídeo (quando youtubeId existe) entra como slide no meio das fotos —
+// buildGalleryItems decide a posição (2º item, LCP intacto no hero).
+const ImageGallery = ({ images, productTitle, productHandle, youtubeId }: ImageGalleryProps) => {
   const trackRef = useRef<HTMLDivElement>(null)
   const [active, setActive] = useState(0)
-  // Chave estável da lista de fotos (não a referência do array, que muda a cada
+  const items = buildGalleryItems(images, youtubeId)
+  // Chave estável da lista de itens (não a referência do array, que muda a cada
   // render): troca de cor real -> listKey muda -> carrossel volta pro início.
   // Re-render sem troca de fotos (ex.: outro estado do pai) -> listKey igual -> não mexe.
-  const listKey = images.map((i) => i.id).join("|")
+  const listKey = items.map((i) => i.id).join("|")
 
   useEffect(() => {
     setActive(0)
@@ -25,20 +36,20 @@ const ImageGallery = ({ images, productTitle }: ImageGalleryProps) => {
 
   useEffect(() => {
     const track = trackRef.current
-    if (!track || images.length < 2) return
-    const items = Array.from(track.children) as HTMLElement[]
+    if (!track || items.length < 2) return
+    const els = Array.from(track.children) as HTMLElement[]
     const io = new IntersectionObserver(
       (entries) => {
-        for (const e of entries) if (e.isIntersecting && e.intersectionRatio >= 0.6) setActive(items.indexOf(e.target as HTMLElement))
+        for (const e of entries) if (e.isIntersecting && e.intersectionRatio >= 0.6) setActive(els.indexOf(e.target as HTMLElement))
       },
       { root: track, threshold: [0.6] }
     )
-    items.forEach((el) => io.observe(el))
+    els.forEach((el) => io.observe(el))
     return () => io.disconnect()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [listKey])
 
-  const alt = (i: number) => (productTitle ? `${productTitle} — use.ÉCLAT — foto ${i + 1}` : `Foto ${i + 1} do produto`)
+  let fotoN = 0
 
   return (
     <div className="flex flex-col items-start relative">
@@ -47,18 +58,32 @@ const ImageGallery = ({ images, productTitle }: ImageGalleryProps) => {
         className="flex w-full gap-x-2 overflow-x-auto snap-x snap-mandatory no-scrollbar small:flex-col small:overflow-visible small:gap-y-4 small:mx-16 small:w-auto small:flex-1"
         data-testid="image-gallery"
       >
-        {images.map((image, index) => (
-          <Container key={image.id} className="relative aspect-[29/34] w-full shrink-0 snap-center overflow-hidden bg-ui-bg-subtle" id={image.id}>
-            {!!image.url && (
-              <Image src={image.url} priority={index <= 1} className="absolute inset-0 rounded-rounded" alt={alt(index)} fill quality={80}
+        {items.map((item, index) => {
+          if (item.kind === "video") {
+            return (
+              <Container
+                key={item.id}
+                className="relative aspect-[29/34] w-full shrink-0 snap-center overflow-hidden bg-ui-bg-subtle"
+                id={item.id}
+                data-testid="product-video"
+              >
+                <ProductVideo youtubeId={item.youtubeId} productTitle={productTitle} productHandle={productHandle} />
+              </Container>
+            )
+          }
+          fotoN += 1
+          const alt = productTitle ? `${productTitle} — use.ÉCLAT — foto ${fotoN}` : `Foto ${fotoN} do produto`
+          return (
+            <Container key={item.id} className="relative aspect-[29/34] w-full shrink-0 snap-center overflow-hidden bg-ui-bg-subtle" id={item.id}>
+              <Image src={item.url} priority={index <= 2} className="absolute inset-0 rounded-rounded" alt={alt} fill quality={80}
                 sizes="(max-width: 576px) 100vw, (max-width: 1024px) 60vw, 800px" style={{ objectFit: "cover" }} />
-            )}
-          </Container>
-        ))}
+            </Container>
+          )
+        })}
       </div>
-      {images.length > 1 && (
+      {items.length > 1 && (
         <div className="flex justify-center gap-1.5 w-full mt-3 small:hidden" aria-hidden>
-          {images.map((img, i) => <span key={img.id} className={clx("w-1.5 h-1.5 rounded-full", i === active ? "bg-eclat-grafite" : "bg-eclat-grafite/25")} />)}
+          {items.map((it, i) => <span key={it.id} className={clx("w-1.5 h-1.5 rounded-full", i === active ? "bg-eclat-grafite" : "bg-eclat-grafite/25")} />)}
         </div>
       )}
     </div>

@@ -48,6 +48,11 @@ const nextConfig = {
         protocol: "https",
         hostname: "*.supabase.co",
       },
+      {
+        // thumbnail do vídeo de produto (PDP) — img.youtube.com/vi/{id}/hqdefault.jpg
+        protocol: "https",
+        hostname: "img.youtube.com",
+      },
       ...(S3_HOSTNAME && S3_PATHNAME
         ? [
             {
