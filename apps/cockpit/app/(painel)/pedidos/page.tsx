@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useState } from "react"
-import { agruparDescontosPedido, etiquetaConjunto } from "@/lib/pedido-conjunto"
+import { agruparDescontosPedido, etiquetaConjunto, residualDesconto } from "@/lib/pedido-conjunto"
 
 type Order = {
   id: string
@@ -25,6 +25,7 @@ type OrderItem = {
 type OrderDetail = Order & {
   status: string
   subtotal: number
+  item_subtotal: number
   discount_total: number
   shipping_total: number
   tax_total: number
@@ -171,8 +172,8 @@ export default function PedidosPage() {
 
   const selectCls =
     "border border-eclat-pedra/50 rounded-md px-2 py-2 text-sm bg-white focus:outline-none focus:border-eclat-dourado"
-  const itensTotal = det ? det.items.reduce((s, i) => s + (i.total ?? 0), 0) : 0
   const descontos = det ? agruparDescontosPedido(det.items) : { conjunto: 0, cupom: 0 }
+  const residual = det ? residualDesconto(det.discount_total, descontos) : 0
 
   return (
     <div>
@@ -327,12 +328,15 @@ export default function PedidosPage() {
 
                 {/* Totais */}
                 <section className="text-sm">
-                  <div className="flex justify-between py-1"><span className="text-eclat-grafite/60">Itens</span><span>{brl(itensTotal)}</span></div>
+                  <div className="flex justify-between py-1"><span className="text-eclat-grafite/60">Itens</span><span>{brl(det.item_subtotal)}</span></div>
                   {descontos.conjunto > 0 && (
                     <div className="flex justify-between py-1"><span className="text-eclat-grafite/60">Benefício Conjunto</span><span>- {brl(descontos.conjunto)}</span></div>
                   )}
                   {descontos.cupom > 0 && (
                     <div className="flex justify-between py-1"><span className="text-eclat-grafite/60">Cupom</span><span>- {brl(descontos.cupom)}</span></div>
+                  )}
+                  {residual > 0 && (
+                    <div className="flex justify-between py-1"><span className="text-eclat-grafite/60">Desconto</span><span>- {brl(residual)}</span></div>
                   )}
                   <div className="flex justify-between py-1"><span className="text-eclat-grafite/60">Frete</span><span>{brl(det.shipping_total)}</span></div>
                   <div className="flex justify-between py-2 border-t border-eclat-pedra/30 font-medium text-base"><span>Total</span><span>{brl(det.total)}</span></div>

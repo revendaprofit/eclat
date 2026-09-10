@@ -27,3 +27,18 @@ export function etiquetaConjunto(item: ItemComAjustes): "Conjunto" | null {
   const porSlot = typeof item.metadata?.conjunto_slot === "string"
   return porAjuste || porSlot ? "Conjunto" : null
 }
+
+// Residual do desconto do pedido que não é Benefício Conjunto nem cupom de linha (ex.: ajuste de
+// frete) — mesma regra 2 do storefront (`carrinho-conjunto.ts#CartTotals`). `discount_total` é o
+// único campo de desconto do pedido na Admin API que a tela já tinha (ver architecture/catalog.md
+// F4). Decimal, nunca negativo, soma em centavos.
+export function residualDesconto(
+  discountTotal: number,
+  grupos: { conjunto: number; cupom: number }
+): number {
+  const residualCents = Math.max(
+    0,
+    cents(discountTotal) - cents(grupos.conjunto) - cents(grupos.cupom)
+  )
+  return residualCents / 100
+}
