@@ -669,6 +669,7 @@ export type CockpitOrderDetail = CockpitOrder & {
   item_subtotal: number
   discount_total: number
   shipping_total: number
+  shipping_subtotal: number
   tax_total: number
   items: OrderItem[]
   shipping_address: OrderAddress | null
@@ -678,7 +679,7 @@ export type CockpitOrderDetail = CockpitOrder & {
 
 export async function medusaGetOrder(id: string): Promise<CockpitOrderDetail> {
   const fields =
-    "id,display_id,status,payment_status,fulfillment_status,email,customer_id,currency_code,created_at,subtotal,item_subtotal,discount_total,shipping_total,tax_total,total," +
+    "id,display_id,status,payment_status,fulfillment_status,email,customer_id,currency_code,created_at,subtotal,item_subtotal,discount_total,shipping_total,shipping_subtotal,tax_total,total," +
     "items.id,items.title,items.variant_title,items.quantity,items.unit_price,items.total,items.metadata,items.adjustments.code,items.adjustments.amount," +
     "shipping_address.first_name,shipping_address.last_name,shipping_address.address_1,shipping_address.city,shipping_address.province,shipping_address.postal_code,shipping_address.country_code,shipping_address.phone," +
     "shipping_methods.name,shipping_methods.total," +

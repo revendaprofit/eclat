@@ -223,7 +223,7 @@ Cockpit: é só apresentação dentro do detalhe de pedido que já existia em `/
   seção Totais: **"Itens"** passou a usar `item_subtotal` (bruto, sem desconto/imposto — o `total` da linha
   já vem líquido dos ajustes, e usá-lo ali descontava Benefício Conjunto/Cupom duas vezes), seguido de três
   blocos condicionais — **"Benefício Conjunto"**, **"Cupom"** e **"Desconto"** (residual de
-  `residualDesconto`) — cada um só quando > 0, e por fim "Frete"/"Total". Resultado esperado com imposto
+  `residualDesconto`) — cada um só quando > 0, e por fim "Frete" (= `shipping_subtotal`, bruto — `shipping_total` já vem líquido de desconto de frete, que faria o residual descontar duas vezes) e "Total". Resultado esperado com imposto
   zero: Itens − Benefício − Cupom − Desconto + Frete = Total. Sem numeração ("Conjunto 1/2" só existe onde
   há carrinho — ruling 1); a unidade não descontada de uma regra "menor peça" adicionada pelo botão comum
   da PDP fica sem badge (limite conhecido, ver `architecture/conjunto.md` §12 e `architecture/catalog.md`,

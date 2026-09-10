@@ -28,6 +28,7 @@ type OrderDetail = Order & {
   item_subtotal: number
   discount_total: number
   shipping_total: number
+  shipping_subtotal: number
   tax_total: number
   items: OrderItem[]
   shipping_address: {
@@ -338,7 +339,7 @@ export default function PedidosPage() {
                   {residual > 0 && (
                     <div className="flex justify-between py-1"><span className="text-eclat-grafite/60">Desconto</span><span>- {brl(residual)}</span></div>
                   )}
-                  <div className="flex justify-between py-1"><span className="text-eclat-grafite/60">Frete</span><span>{brl(det.shipping_total)}</span></div>
+                  <div className="flex justify-between py-1"><span className="text-eclat-grafite/60">Frete</span><span>{brl(det.shipping_subtotal ?? det.shipping_total)}</span></div>
                   <div className="flex justify-between py-2 border-t border-eclat-pedra/30 font-medium text-base"><span>Total</span><span>{brl(det.total)}</span></div>
                 </section>
 
