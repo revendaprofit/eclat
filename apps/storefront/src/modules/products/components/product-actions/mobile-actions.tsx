@@ -14,6 +14,7 @@ import { HttpTypes } from "@medusajs/types"
 import { isSimpleProduct } from "@lib/util/product"
 import { variantLabel } from "@lib/util/pdp-variants"
 import type { ColorMap } from "@lib/util/colors"
+import type { MeasureTable } from "@lib/util/measurements"
 
 type MobileActionsProps = {
   product: HttpTypes.StoreProduct
@@ -27,6 +28,7 @@ type MobileActionsProps = {
   optionsDisabled: boolean
   colorMap: ColorMap
   onNotify?: (variantId: string, label: string) => void
+  measureTable?: MeasureTable | null
 }
 
 const MobileActions: React.FC<MobileActionsProps> = ({
@@ -41,6 +43,7 @@ const MobileActions: React.FC<MobileActionsProps> = ({
   optionsDisabled,
   colorMap,
   onNotify,
+  measureTable,
 }) => {
   const { state, open, close } = useToggleState()
 
@@ -181,7 +184,7 @@ const MobileActions: React.FC<MobileActionsProps> = ({
                     {(product.variants?.length ?? 0) > 1 && (
                       <div className="flex flex-col gap-y-6">
                         <ColorSelect colorMap={colorMap} disabled={optionsDisabled} />
-                        <SizeSelect disabled={optionsDisabled} onNotify={onNotify} />
+                        <SizeSelect disabled={optionsDisabled} onNotify={onNotify} measureTable={measureTable} />
                         {(product.options ?? [])
                           .filter((o) => !/^(tamanho|cor)$/i.test(o.title ?? ""))
                           .map((option) => (

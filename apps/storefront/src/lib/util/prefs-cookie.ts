@@ -10,6 +10,15 @@ export type EclatPrefs = {
   tamanho?: string // um dos valores de SIZE_ORDER (PP…XG); o wizard oferece P/M/G/GG
   estilos?: string[] // ex.: ["legging", "top"] — chaves de STYLE_HANDLES (style-order.ts)
   wizard_done?: boolean
+  // medidas informadas no "Qual é o meu tamanho?" (cm/kg) — só no navegador, nunca lidas
+  // por `parsePrefsCookie` (não entram no fluxo server-side de personalização)
+  medidas?: {
+    altura_cm?: number
+    peso_kg?: number
+    busto?: number
+    cintura?: number
+    quadril?: number
+  }
 }
 
 export const PREFS_COOKIE = "eclat_prefs"

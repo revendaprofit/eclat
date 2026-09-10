@@ -15,14 +15,22 @@ import { pushEcommerceEvent } from "@modules/analytics/push"
 import { isVariantAvailable, type StockVariant } from "@lib/util/availability"
 import { findOption, variantLabel } from "@lib/util/pdp-variants"
 import type { ColorMap } from "@lib/util/colors"
+import type { MeasureTable } from "@lib/util/measurements"
 import { useProductSelection } from "../product-selection"
 import ColorSelect from "./color-select"
 import SizeSelect from "./size-select"
 import NotifyMe from "../notify-me"
 
-type ProductActionsProps = { product: HttpTypes.StoreProduct; region: HttpTypes.StoreRegion; colorMap: ColorMap; disabled?: boolean }
+type ProductActionsProps = {
+  product: HttpTypes.StoreProduct
+  region: HttpTypes.StoreRegion
+  colorMap: ColorMap
+  disabled?: boolean
+  // tabela de medidas da categoria do produto (null = sem recomendação, ex.: acessórios)
+  measureTable?: MeasureTable | null
+}
 
-export default function ProductActions({ product, colorMap, disabled }: ProductActionsProps) {
+export default function ProductActions({ product, colorMap, disabled, measureTable }: ProductActionsProps) {
   const { selection, setValue, selectedVariant, isComplete } = useProductSelection()
   const [isAdding, setIsAdding] = useState(false)
   const [notifyFor, setNotifyFor] = useState<{ variantId: string; label: string } | null>(null)
@@ -58,7 +66,13 @@ export default function ProductActions({ product, colorMap, disabled }: ProductA
       {hasVariants && (
         <div className="flex flex-col gap-y-4">
           {findOption(product, "Cor") && <ColorSelect colorMap={colorMap} disabled={!!disabled || isAdding} />}
-          {findOption(product, "Tamanho") && <SizeSelect disabled={!!disabled || isAdding} onNotify={(variantId, label) => setNotifyFor({ variantId, label })} />}
+          {findOption(product, "Tamanho") && (
+            <SizeSelect
+              disabled={!!disabled || isAdding}
+              onNotify={(variantId, label) => setNotifyFor({ variantId, label })}
+              measureTable={measureTable}
+            />
+          )}
           {outrasOpcoes.map((option) => (
             <OptionSelect key={option.id} option={option} current={selection[option.id]} updateOption={setValue} title={option.title ?? ""} disabled={!!disabled || isAdding} data-testid="product-options" />
           ))}
@@ -89,6 +103,7 @@ export default function ProductActions({ product, colorMap, disabled }: ProductA
         optionsDisabled={!!disabled || isAdding}
         colorMap={colorMap}
         onNotify={(variantId, label) => setNotifyFor({ variantId, label })}
+        measureTable={measureTable}
       />
     </div>
   )

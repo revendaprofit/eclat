@@ -125,10 +125,16 @@ const ProductTemplate = async ({
                     product={product}
                     region={region}
                     colorMap={colorMap}
+                    measureTable={measureTable}
                   />
                 }
               >
-                <ProductActionsWrapper id={product.id} region={region} colorMap={colorMap} />
+                <ProductActionsWrapper
+                  id={product.id}
+                  region={region}
+                  colorMap={colorMap}
+                  measureTable={measureTable}
+                />
               </Suspense>
               <GuaranteeSeals />
               {allOut && <NotifyMe productId={product.handle ?? product.id} />}

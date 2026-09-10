@@ -3,11 +3,14 @@
 import { clx } from "@modules/common/components/ui"
 import { findOption, sizeValues, variantFor, variantLabel } from "@lib/util/pdp-variants"
 import { useProductSelection } from "../product-selection"
+import SizeRecommender from "@modules/products/components/size-recommender"
+import type { MeasureTable } from "@lib/util/measurements"
 
 export default function SizeSelect({
   disabled,
   onNotify,
   showGuide = true,
+  measureTable,
 }: {
   disabled?: boolean
   onNotify?: (variantId: string, label: string) => void
@@ -15,6 +18,9 @@ export default function SizeSelect({
   // morto"): lá o link funcional é o próprio de `PecaDoConjunto`, que aponta pra âncora certa na
   // PDP da peça — este `href="#medidas"` fixo não tem alvo naquela página. PDP continua com `true`.
   showGuide?: boolean
+  // tabela de medidas da categoria (site_content.medidas) — alimenta "Qual é o meu tamanho?";
+  // undefined/null = sem tabela (ex.: acessório), o botão simplesmente não aparece.
+  measureTable?: MeasureTable | null
 }) {
   const { product, selection, setValue, color, sizeAvail } = useProductSelection()
   const opt = findOption(product, "Tamanho")
@@ -50,6 +56,14 @@ export default function SizeSelect({
           )
         })}
       </div>
+      {measureTable && (
+        <SizeRecommender
+          table={measureTable}
+          availableSizes={sizeValues(product)}
+          onSelect={(size) => setValue(opt.id, size)}
+          productHandle={product.handle ?? undefined}
+        />
+      )}
       {color === null && corOpt && <p className="text-xs text-eclat-grafite/60">Escolha a cor para ver os tamanhos disponíveis.</p>}
     </div>
   )
