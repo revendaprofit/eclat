@@ -49,7 +49,7 @@ const CartTotals: React.FC<CartTotalsProps> = ({ totals }) => {
         {grupos.conjunto > 0 && (
           <div className="flex items-center justify-between">
             <span>Benefício Conjunto</span>
-            <span className="text-ui-fg-interactive" data-testid="cart-beneficio-conjunto" data-value={grupos.conjunto}>
+            <span className="text-ui-fg-interactive" data-testid="cart-beneficio-conjunto" data-value={grupos.conjunto / 100}>
               - {convertToLocale({ amount: grupos.conjunto / 100, currency_code })}
             </span>
           </div>
@@ -57,7 +57,7 @@ const CartTotals: React.FC<CartTotalsProps> = ({ totals }) => {
         {grupos.cupom > 0 && (
           <div className="flex items-center justify-between">
             <span>Cupom</span>
-            <span className="text-ui-fg-interactive" data-testid="cart-cupom" data-value={grupos.cupom}>
+            <span className="text-ui-fg-interactive" data-testid="cart-cupom" data-value={grupos.cupom / 100}>
               - {convertToLocale({ amount: grupos.cupom / 100, currency_code })}
             </span>
           </div>
@@ -65,7 +65,7 @@ const CartTotals: React.FC<CartTotalsProps> = ({ totals }) => {
         {restante > 0 && (
           <div className="flex items-center justify-between">
             <span>Desconto</span>
-            <span className="text-ui-fg-interactive" data-testid="cart-discount" data-value={restante}>
+            <span className="text-ui-fg-interactive" data-testid="cart-discount" data-value={restante / 100}>
               - {convertToLocale({ amount: restante / 100, currency_code })}
             </span>
           </div>

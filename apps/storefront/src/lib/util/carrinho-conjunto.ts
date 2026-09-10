@@ -7,6 +7,11 @@ import { type ColecaoStore, type RegraStore, descricaoRegra, precoMinDisponivel,
 // Mesmo prefixo de `CODIGO_PREFIXO` no backend (`utils/promocao.ts`).
 export const PREFIXO_CONJUNTO = "CONJUNTO-"
 
+// Título da seção "Feche mais um conjunto" (ruling 4) — também usado como item_list_name dos
+// eventos de analytics ao adicionar uma candidata (`candidata.tsx`). Módulo puro: nunca importar
+// de um componente cliente.
+export const LISTA_GATILHO = "Feche mais um conjunto"
+
 export type AjusteLinha = { code?: string | null; amount?: number | null }
 export type LinhaComAjustes = {
   id: string
@@ -58,7 +63,7 @@ export function etiquetasDoCarrinho(
   if (!total) return {}
   const porItem: Record<string, { numeros: number[]; unidades: number }> = {}
   conjuntos.forEach((c, idx) => {
-    for (const u of c.unidades) {
+    for (const u of c.unidades ?? []) {
       if (!porItem[u.item_id]) porItem[u.item_id] = { numeros: [], unidades: 0 }
       const e = porItem[u.item_id]
       if (e.numeros.indexOf(idx + 1) === -1) e.numeros.push(idx + 1)
@@ -110,11 +115,15 @@ export function montarGatilhos(
       .map((id) => produtos.get(id))
       .filter((p): p is HttpTypes.StoreProduct => !!p && precoMinDisponivel(p) !== null)
     if (!candidatas.length) continue
+    // Ruling 6: sem nome de categoria resolvível, a oportunidade é descartada — nunca mostrar
+    // o slug/handle em prosa (colecaoNome vazio segue permitido: título sem "da coleção …").
+    const categoriaNome = nomesCategorias.get(o.categoria_faltante)
+    if (!categoriaNome) continue
     out.push({
       collection_id: o.collection_id,
       colecaoNome: nomesColecoes.get(o.collection_id) ?? "",
       categoria_faltante: o.categoria_faltante,
-      categoriaNome: nomesCategorias.get(o.categoria_faltante) ?? o.categoria_faltante,
+      categoriaNome,
       regra: col.regra,
       candidatas,
     })

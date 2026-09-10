@@ -268,8 +268,8 @@ export async function getCarrinhoConjunto(
     console.error("[conjuntos] falha ao buscar oportunidades do carrinho", cartId, err)
     return vazio
   }
-  const conjuntos = raw.conjuntos ?? []
-  const oportunidades = raw.oportunidades ?? []
+  const conjuntos = Array.isArray(raw?.conjuntos) ? raw.conjuntos : []
+  const oportunidades = Array.isArray(raw?.oportunidades) ? raw.oportunidades : []
   if (!opts.comGatilhos || !oportunidades.length) return { conjuntos, gatilhos: [] }
 
   try {

@@ -19,10 +19,13 @@ const OrderSummary = ({ order }: OrderSummaryProps) => {
   }
 
   const grupos = agruparDescontos(order.items)
-  // Ruling 2: o que não for conjunto nem cupom de linha (ex.: ajuste de frete) fica na linha genérica.
+  // Ruling 2: mesma base do CartTotals (discount_subtotal). O tipo StoreOrder não declara o
+  // campo (ver relatório da fix wave F4) — cai para discount_total quando ausente.
+  const discountSubtotal =
+    (order as { discount_subtotal?: number | null }).discount_subtotal ?? order.discount_total
   const restante = Math.max(
     0,
-    Math.round((order.discount_total ?? 0) * 100) - grupos.conjunto - grupos.cupom
+    Math.round((discountSubtotal ?? 0) * 100) - grupos.conjunto - grupos.cupom
   )
 
   return (
@@ -54,7 +57,7 @@ const OrderSummary = ({ order }: OrderSummaryProps) => {
           )}
           {order.gift_card_total > 0 && (
             <div className="flex items-center justify-between">
-              <span>Desconto</span>
+              <span>Vale-presente</span>
               <span>- {getAmount(order.gift_card_total)}</span>
             </div>
           )}

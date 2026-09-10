@@ -83,6 +83,11 @@ describe("etiquetasDoCarrinho", () => {
   it("sem conjuntos → objeto vazio", () => {
     expect(etiquetasDoCarrinho([], itens)).toEqual({})
   })
+  it("conjunto sem unidades não lança e não gera etiqueta", () => {
+    const semUnidades = { ...conj("c1", []), unidades: undefined as unknown as ConjuntoFormadoStore["unidades"] }
+    expect(() => etiquetasDoCarrinho([semUnidades], itens)).not.toThrow()
+    expect(etiquetasDoCarrinho([semUnidades], itens)).toEqual({})
+  })
 })
 
 describe("etiquetaDoPedido", () => {
@@ -128,10 +133,13 @@ describe("montarGatilhos / tituloGatilho / slotGatilho", () => {
     expect(montarGatilhos([{ ...oportunidade, candidatos: ["p2"] }], produtos, colecoes, new Map(), new Map())).toEqual([])
     expect(montarGatilhos([{ ...oportunidade, collection_id: "col_x" }], produtos, colecoes, new Map(), new Map())).toEqual([])
   })
-  it("cai para o handle quando não há nome de categoria", () => {
-    const g = montarGatilhos([oportunidade], produtos, colecoes, new Map(), new Map())
-    expect(g[0].categoriaNome).toBe("tops")
+  it("descarta oportunidade sem nome de categoria (colecaoNome vazio continua permitido)", () => {
+    // sem nome de categoria → descartada, nunca mostra o slug em prosa
+    expect(montarGatilhos([oportunidade], produtos, colecoes, new Map(), new Map())).toEqual([])
+    // colecaoNome vazio (sem nome de coleção) continua permitido: título sem "da coleção …"
+    const g = montarGatilhos([oportunidade], produtos, colecoes, new Map(), new Map([["tops", "Tops"]]))
     expect(g[0].colecaoNome).toBe("")
+    expect(g[0].categoriaNome).toBe("Tops")
   })
   it("título nomeia categoria, coleção e a regra", () => {
     const g: Gatilho = { collection_id: "col_1", colecaoNome: "Família Blackout", categoria_faltante: "tops", categoriaNome: "Tops", regra: colecoes[0].regra, candidatas: [] }

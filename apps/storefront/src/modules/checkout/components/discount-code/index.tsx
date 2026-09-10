@@ -171,11 +171,13 @@ const DiscountCode: React.FC<DiscountCodeProps> = ({ cart }) => {
           </div>
         )}
 
-        {mostrarAviso && (
-          <p className="txt-small text-eclat-grafite/70 mt-1" role="note" data-testid="aviso-cupom-conjunto">
-            Cupom não se aplica a peças com Benefício Conjunto.
-          </p>
-        )}
+        <div aria-live="polite">
+          {mostrarAviso && (
+            <p className="txt-small text-eclat-grafite/70 mt-1" data-testid="aviso-cupom-conjunto">
+              Cupom não se aplica a peças com Benefício Conjunto.
+            </p>
+          )}
+        </div>
       </div>
     </div>
   )

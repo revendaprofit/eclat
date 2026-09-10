@@ -10,10 +10,8 @@ import { showToast } from "@modules/common/components/toast"
 import { Button, clx } from "@modules/common/components/ui"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import { corParceira, formatarReais, precoMinDisponivel } from "@lib/util/conjuntos"
-import { type Gatilho, slotGatilho } from "@lib/util/carrinho-conjunto"
+import { LISTA_GATILHO, type Gatilho, slotGatilho } from "@lib/util/carrinho-conjunto"
 import { findOption, imagesForColor, sizeAvailability, sizeValues, variantFor } from "@lib/util/pdp-variants"
-
-export const LISTA_GATILHO = "Feche mais um conjunto"
 
 // Card de uma candidata do gatilho (ruling 4): foto na primeira cor disponível, nome, preço
 // "a partir de", chips de tamanho (mesmo estilo de `complete-set/parceira.tsx`) e "Adicionar".
@@ -74,7 +72,7 @@ export default function Candidata({ produto, gatilho, countryCode }: { produto: 
         )}
       </div>
       {sizeOpt && (
-        <div className="flex flex-wrap gap-1.5">
+        <div className="flex flex-wrap gap-1.5" role="group" aria-label="Tamanho">
           {sizes.map((s) => {
             const esgotado = avail[s] === false
             const on = tamanho === s
