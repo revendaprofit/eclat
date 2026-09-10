@@ -186,7 +186,7 @@ telas Regras e Curados); `alertaEstoque`; `slugConjunto` (handle a partir do nom
 - **Sem tela de cupom** — a spec previa a possibilidade, mas a F2 só oferece o botão "Reconciliar"
   (`POST /admin/conjuntos/reconciliar`), que converte cupons de pedido inteiro existentes; criar/editar
   cupom continua no admin nativo do Medusa.
-- **`npm run lint` no Cockpit está quebrado** por um problema de toolchain preexistente (`ajv`/`eslintrc`),
+- **`npm run lint` no Cockpit** voltou a rodar em 2026-09-10 (override global do `ajv` removido na raiz — ver `progress.md`) e reporta 38 erros de `react-hooks/set-state-in-effect` — pendência;
   sem relação com esta fase — não é regressão desta task.
 
 **Rulings de execução (F2, verbatim das tasks 1–5):**
