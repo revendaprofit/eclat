@@ -204,9 +204,13 @@ Estado verificado:
 - [x] Token da CAPI gerado (Dataset Quality API, só o pixel ÉCLAT) e gravado na Vercel como
       `META_CAPI_TOKEN` (10/09). Validado em produção: `GET /api/marketing/capi-test` →
       `configured.pixel=true, token=true`. Teste de evento: `?code=TESTxxxx` (aba Eventos de teste).
-- [ ] GTM `GTM-55868KTG`: tag Pixel base com ID `1612810719469817` + tags de evento lendo o
-      dataLayer (view_item→ViewContent, add_to_cart→AddToCart, begin_checkout→InitiateCheckout,
-      purchase→Purchase) passando `event_id` do dataLayer para deduplicar com a CAPI.
+- [x] GTM `GTM-55868KTG` Versão 2 "Meta Pixel + eventos" PUBLICADA (10/09 20:09) a partir de
+      `docs/marketing/gtm-meta-pixel-container.json`: tag base (All Pages + consent_update, exige
+      ad_storage) + ViewContent/AddToCart/InitiateCheckout/Purchase lendo o dataLayer, eventID =
+      `event_id` (Purchase = `purchase_<order.id>`, mesmo da CAPI). Validado em produção 10/09 20:10:
+      `fbq` carregado, pixel 1612810719469817 inicializado, PageView disparado, cookie `_fbp` criado.
+      Bug corrigido no caminho (commit fe9b444): consent update era um push de função vazia →
+      "Command name not specified" no GTM. Eventos de produto/carrinho só testáveis após sair do "Em breve".
 - [ ] Gerenciador de Anúncios: arquivar as 3 campanhas `[TWB-ARQUIVO]`.
 - [ ] BM → Configurações → Contas de anúncios → renomear para "ÉCLAT - Conta de anúncio".
 - [x] Página do Facebook renomeada para "ÉCLAT" (10/09 19:10), foto de perfil (nó) e capa C aplicadas,
