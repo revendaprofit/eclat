@@ -59,9 +59,13 @@ export default function SizeSelect({
       {measureTable && (
         <SizeRecommender
           table={measureTable}
-          availableSizes={sizeValues(product)}
+          // só tamanhos ainda disponíveis nesta cor (achado #1 da revisão): com cor escolhida,
+          // exclui os esgotados (`sizeAvail[s] === false`); sem cor, mostra todos (ainda não dá
+          // pra saber disponibilidade por tamanho).
+          availableSizes={sizeValues(product).filter((s) => color === null || sizeAvail[s] !== false)}
           onSelect={(size) => setValue(opt.id, size)}
           productHandle={product.handle ?? undefined}
+          disabled={disabled}
         />
       )}
       {color === null && corOpt && <p className="text-xs text-eclat-grafite/60">Escolha a cor para ver os tamanhos disponíveis.</p>}

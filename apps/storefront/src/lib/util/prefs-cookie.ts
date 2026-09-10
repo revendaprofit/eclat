@@ -10,8 +10,9 @@ export type EclatPrefs = {
   tamanho?: string // um dos valores de SIZE_ORDER (PP…XG); o wizard oferece P/M/G/GG
   estilos?: string[] // ex.: ["legging", "top"] — chaves de STYLE_HANDLES (style-order.ts)
   wizard_done?: boolean
-  // medidas informadas no "Qual é o meu tamanho?" (cm/kg) — só no navegador, nunca lidas
-  // por `parsePrefsCookie` (não entram no fluxo server-side de personalização)
+  // medidas informadas no "Qual é o meu tamanho?" (cm/kg) — fica só no navegador: excluído do
+  // cookie espelho por `setPrefs` (modules/personalization/prefs.ts), então nunca chega aqui em
+  // `raw`; o campo só existe neste tipo porque o localStorage (fonte completa) o inclui.
   medidas?: {
     altura_cm?: number
     peso_kg?: number

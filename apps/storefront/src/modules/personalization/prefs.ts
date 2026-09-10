@@ -21,8 +21,11 @@ export function setPrefs(patch: Partial<EclatPrefs>) {
   if (typeof window === "undefined") return
   const next = { ...getPrefs(), ...patch }
   window.localStorage.setItem(KEY, JSON.stringify(next))
-  // cookie espelho (1 ano) — permite personalização server-side futura
-  document.cookie = `eclat_prefs=${encodeURIComponent(JSON.stringify(next))}; path=/; max-age=31536000; SameSite=Lax`
+  // cookie espelho (1 ano) — permite personalização server-side futura. `medidas` (altura/peso/
+  // busto/cintura/quadril) fica só no navegador: excluído do cookie espelho (achado #2 da revisão —
+  // dado de corpo não deve viajar ao servidor em toda request; localStorage continua completo).
+  const { medidas: _medidas, ...forCookie } = next
+  document.cookie = `eclat_prefs=${encodeURIComponent(JSON.stringify(forCookie))}; path=/; max-age=31536000; SameSite=Lax`
   window.dispatchEvent(new CustomEvent("eclat:prefs", { detail: next }))
 }
 

@@ -36,6 +36,11 @@ type Props = {
   availableSizes: string[]
   onSelect: (size: string) => void
   productHandle?: string
+  // fix round 1, achado #7: durante o fallback do Suspense (ProductActions inteiro desabilitado),
+  // o link continua clicável e abre um modal funcional enquanto os demais controles estão
+  // desabilitados. Mesmo tratamento dos botões de tamanho (visível, porém desabilitado) — não
+  // escondido — para consistência com o resto do seletor.
+  disabled?: boolean
 }
 
 type Step = "corpo" | "medidas" | "resultado"
@@ -44,7 +49,22 @@ type Form = Record<MedidaKey, string>
 const inputCls =
   "w-full h-10 rounded-rounded border border-ui-border-base bg-white px-3 text-sm text-eclat-grafite focus:outline-none focus:border-eclat-terracota"
 
-export default function SizeRecommender({ table, availableSizes, onSelect, productHandle }: Props) {
+const MEDIDA_MIN_CM = 40
+const MEDIDA_MAX_CM = 200
+
+function medidaValida(v: string): boolean {
+  if (v === "") return true // campo vazio é opcional — validação só entra em cena quando preenchido
+  const n = Number(v)
+  return Number.isFinite(n) && n >= MEDIDA_MIN_CM && n <= MEDIDA_MAX_CM
+}
+
+export default function SizeRecommender({
+  table,
+  availableSizes,
+  onSelect,
+  productHandle,
+  disabled,
+}: Props) {
   const { state: isOpen, open, close } = useToggleState()
   const cols = measurableColumns(table)
   const [step, setStep] = useState<Step>("corpo")
@@ -71,7 +91,10 @@ export default function SizeRecommender({ table, availableSizes, onSelect, produ
     open()
   }
 
-  const corpoValido = Number(altura) > 100 && Number(peso) > 30
+  // fix round 1, achado #3: `estimateMeasurements` rejeita altura >= 230 / peso >= 250 (faixa
+  // plausível de corpo humano) — usar o mesmo critério aqui evita "Continuar" habilitado com
+  // valores como 165/300 que resultariam num passo 2 sem pré-preenchimento.
+  const corpoValido = estimateMeasurements(Number(altura), Number(peso)) !== null
 
   function continuar() {
     const est = estimateMeasurements(Number(altura), Number(peso))
@@ -87,6 +110,10 @@ export default function SizeRecommender({ table, availableSizes, onSelect, produ
   }
 
   const medidasInformadas = cols.some((c) => Number(form[c.key]) > 0)
+  // fix round 1, achado #4: cada campo preenchido precisa estar em 40–200 cm (rejeita erro de
+  // unidade, ex.: "1,65" digitado em metros) antes de liberar o cálculo.
+  const medidasValidas = cols.every((c) => medidaValida(form[c.key]))
+  const podeCalcular = medidasInformadas && medidasValidas
 
   function calcular() {
     const m: Medidas = {}
@@ -97,8 +124,12 @@ export default function SizeRecommender({ table, availableSizes, onSelect, produ
     const r = recommendSize(table, m)
     setResultado(r)
     setStep("resultado")
+    // fix round 1, achado #5: mescla com as medidas já salvas em vez de substituir o objeto
+    // inteiro — a tabela desta categoria pode não pedir todas as colunas, e um campo salvo antes
+    // (ex.: busto, numa categoria de 2 colunas atual) não pode ser apagado por este cálculo.
     setPrefs({
       medidas: {
+        ...getPrefs().medidas,
         altura_cm: Number(altura) > 0 ? Number(altura) : undefined,
         peso_kg: Number(peso) > 0 ? Number(peso) : undefined,
         ...m,
@@ -122,7 +153,13 @@ export default function SizeRecommender({ table, availableSizes, onSelect, produ
 
   function usar(size: string) {
     onSelect(size)
-    setPrefs({ tamanho: size })
+    // fix round 1, achado #6: uma falha de storage (modo privado/quota) não pode impedir o
+    // fechamento do modal nem a seleção do tamanho — só a persistência da preferência é perdida.
+    try {
+      setPrefs({ tamanho: size })
+    } catch {
+      /* noop */
+    }
     close()
   }
 
@@ -133,7 +170,8 @@ export default function SizeRecommender({ table, availableSizes, onSelect, produ
       <button
         type="button"
         onClick={abrir}
-        className="self-start text-xs underline underline-offset-2 text-eclat-terracota hover:text-eclat-terracota-claro"
+        disabled={disabled}
+        className="self-start text-xs underline underline-offset-2 text-eclat-terracota hover:text-eclat-terracota-claro disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:text-eclat-terracota"
         data-testid="size-recommender-open"
       >
         Qual é o meu tamanho?
@@ -196,22 +234,32 @@ export default function SizeRecommender({ table, availableSizes, onSelect, produ
               fina, quadril na mais cheia. Ajuste os valores se precisar.
             </p>
             <div className="grid grid-cols-3 gap-3">
-              {cols.map((c) => (
-                <label key={c.key} className="flex flex-col gap-1 text-xs text-eclat-grafite/60">
-                  {LABEL[c.key]} (cm)
-                  <input
-                    type="number"
-                    inputMode="numeric"
-                    min={40}
-                    max={200}
-                    value={form[c.key]}
-                    onChange={(e) => setForm((prev) => ({ ...prev, [c.key]: e.target.value }))}
-                    className={inputCls}
-                  />
-                </label>
-              ))}
+              {cols.map((c) => {
+                const valor = form[c.key]
+                const invalida = valor !== "" && !medidaValida(valor)
+                return (
+                  <label key={c.key} className="flex flex-col gap-1 text-xs text-eclat-grafite/60">
+                    {LABEL[c.key]} (cm)
+                    <input
+                      type="number"
+                      inputMode="numeric"
+                      min={MEDIDA_MIN_CM}
+                      max={MEDIDA_MAX_CM}
+                      value={valor}
+                      onChange={(e) => setForm((prev) => ({ ...prev, [c.key]: e.target.value }))}
+                      className={inputCls}
+                      aria-invalid={invalida}
+                    />
+                    {invalida && (
+                      <span className="text-[10px] text-eclat-terracota">
+                        Informe a medida em cm, entre 40 e 200
+                      </span>
+                    )}
+                  </label>
+                )
+              })}
             </div>
-            <Button variant="primary" className="w-full h-10" onClick={calcular} disabled={!medidasInformadas}>
+            <Button variant="primary" className="w-full h-10" onClick={calcular} disabled={!podeCalcular}>
               Encontrar meu tamanho
             </Button>
             <button
