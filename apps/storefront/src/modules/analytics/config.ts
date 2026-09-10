@@ -6,4 +6,5 @@ export type Marketing = {
   meta_pixel_id?: string // usado pela CAPI server-side
   google_ads_id?: string // AW-XXXXXXX (informativo)
   gsc_verification?: string // conteúdo da meta google-site-verification
+  meta_domain_verification?: string // conteúdo da meta facebook-domain-verification (BM → Domínios)
 }

@@ -48,8 +48,16 @@ export async function generateMetadata(): Promise<Metadata> {
       statusBarStyle: "default",
       title: "ÉCLAT",
     },
-    ...(marketing?.gsc_verification
-      ? { verification: { google: marketing.gsc_verification } }
+    // Verificações de domínio (Search Console e Meta) — só entram se preenchidas no Cockpit.
+    ...(marketing?.gsc_verification || marketing?.meta_domain_verification
+      ? {
+          verification: {
+            ...(marketing.gsc_verification ? { google: marketing.gsc_verification } : {}),
+            ...(marketing.meta_domain_verification
+              ? { other: { "facebook-domain-verification": marketing.meta_domain_verification } }
+              : {}),
+          },
+        }
       : {}),
   }
 }

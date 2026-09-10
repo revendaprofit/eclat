@@ -8,6 +8,7 @@ type Marketing = {
   meta_pixel_id?: string
   google_ads_id?: string
   gsc_verification?: string
+  meta_domain_verification?: string
 }
 
 const STORE_URL = "https://www.useeclat.com.br"
@@ -139,6 +140,18 @@ export default function MarketingPage() {
             propriedade → método <em>Tag HTML</em> → copie <strong>só o valor</strong> de{" "}
             <code className={code}>content=&quot;…&quot;</code>. A loja insere a meta-tag no{" "}
             <code className={code}>&lt;head&gt;</code> e você clica em Verificar.
+          </p>
+        </div>
+
+        <div>
+          <label className={label}>Verificação de domínio Meta</label>
+          <input value={m.meta_domain_verification || ""} onChange={(e) => setM({ ...m, meta_domain_verification: e.target.value.trim() })} placeholder="cole só o conteúdo do content=&quot;…&quot;" className={input} />
+          <p className={hint}>
+            <strong>Onde pegar:</strong> business.facebook.com/settings → Segurança da marca →
+            Domínios → <em>useeclat.com.br</em> → método <em>Adicionar uma metatag</em> → copie{" "}
+            <strong>só o valor</strong> de <code className={code}>content=&quot;…&quot;</code>.
+            A loja insere <code className={code}>facebook-domain-verification</code> no{" "}
+            <code className={code}>&lt;head&gt;</code>; depois clique em Verificar domínio no BM.
           </p>
         </div>
 
