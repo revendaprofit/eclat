@@ -184,7 +184,7 @@ const MobileActions: React.FC<MobileActionsProps> = ({
                     {(product.variants?.length ?? 0) > 1 && (
                       <div className="flex flex-col gap-y-6">
                         <ColorSelect colorMap={colorMap} disabled={optionsDisabled} />
-                        <SizeSelect disabled={optionsDisabled} onNotify={onNotify} measureTable={measureTable} />
+                        <SizeSelect disabled={optionsDisabled} onNotify={onNotify} measureTable={measureTable} testIdSuffix="-mobile" />
                         {(product.options ?? [])
                           .filter((o) => !/^(tamanho|cor)$/i.test(o.title ?? ""))
                           .map((option) => (

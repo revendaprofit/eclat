@@ -58,7 +58,7 @@ const ImageGallery = ({ images, productTitle, productHandle, youtubeId }: ImageG
         className="flex w-full gap-x-2 overflow-x-auto snap-x snap-mandatory no-scrollbar small:flex-col small:overflow-visible small:gap-y-4 small:mx-16 small:w-auto small:flex-1"
         data-testid="image-gallery"
       >
-        {items.map((item, index) => {
+        {items.map((item) => {
           if (item.kind === "video") {
             return (
               <Container
@@ -75,7 +75,10 @@ const ImageGallery = ({ images, productTitle, productHandle, youtubeId }: ImageG
           const alt = productTitle ? `${productTitle} — use.ÉCLAT — foto ${fotoN}` : `Foto ${fotoN} do produto`
           return (
             <Container key={item.id} className="relative aspect-[29/34] w-full shrink-0 snap-center overflow-hidden bg-ui-bg-subtle" id={item.id}>
-              <Image src={item.url} priority={index <= 2} className="absolute inset-0 rounded-rounded" alt={alt} fill quality={80}
+              {/* follow-up #2: `priority` conta FOTOS, não itens da galeria — o slide de vídeo não
+                  pode consumir uma das duas prioridades. Sem vídeo o HTML sai idêntico ao de antes
+                  desta feature (as 2 primeiras imagens com fetchpriority=high). */}
+              <Image src={item.url} priority={fotoN <= 2} className="absolute inset-0 rounded-rounded" alt={alt} fill quality={80}
                 sizes="(max-width: 576px) 100vw, (max-width: 1024px) 60vw, 800px" style={{ objectFit: "cover" }} />
             </Container>
           )

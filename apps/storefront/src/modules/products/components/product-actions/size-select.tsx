@@ -11,6 +11,7 @@ export default function SizeSelect({
   onNotify,
   showGuide = true,
   measureTable,
+  testIdSuffix = "",
 }: {
   disabled?: boolean
   onNotify?: (variantId: string, label: string) => void
@@ -21,6 +22,9 @@ export default function SizeSelect({
   // tabela de medidas da categoria (site_content.medidas) — alimenta "Qual é o meu tamanho?";
   // undefined/null = sem tabela (ex.: acessório), o botão simplesmente não aparece.
   measureTable?: MeasureTable | null
+  // follow-up #9: este seletor aparece duas vezes na PDP (inline e no bottom sheet do mobile).
+  // O sufixo ("-mobile") mantém os `data-testid` do recomendador únicos no DOM.
+  testIdSuffix?: string
 }) {
   const { product, selection, setValue, color, sizeAvail } = useProductSelection()
   const opt = findOption(product, "Tamanho")
@@ -66,6 +70,7 @@ export default function SizeSelect({
           onSelect={(size) => setValue(opt.id, size)}
           productHandle={product.handle ?? undefined}
           disabled={disabled}
+          testIdSuffix={testIdSuffix}
         />
       )}
       {color === null && corOpt && <p className="text-xs text-eclat-grafite/60">Escolha a cor para ver os tamanhos disponíveis.</p>}
