@@ -1,0 +1,553 @@
+{
+  "exportFormatVersion": 2,
+  "exportTime": "2026-09-10 22:12:40",
+  "containerVersion": {
+    "path": "accounts/0/containers/0/versions/0",
+    "accountId": "0",
+    "containerId": "0",
+    "container": {
+      "path": "accounts/0/containers/0",
+      "accountId": "0",
+      "containerId": "0",
+      "name": "use.ÉCLAT - Meta Pixel",
+      "publicId": "GTM-55868KTG",
+      "usageContext": [
+        "WEB"
+      ]
+    },
+    "tag": [
+      {
+        "name": "Meta Pixel - Base (PageView)",
+        "type": "html",
+        "parameter": [
+          {
+            "type": "TEMPLATE",
+            "key": "html",
+            "value": "<script>\n!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');\nif(!window._eclatPixelInit){window._eclatPixelInit=true;fbq('init','1612810719469817');fbq('track','PageView');}\n</script>\n<noscript><img height=\"1\" width=\"1\" style=\"display:none\" src=\"https://www.facebook.com/tr?id=1612810719469817&ev=PageView&noscript=1\"/></noscript>"
+          },
+          {
+            "type": "BOOLEAN",
+            "key": "supportDocumentWrite",
+            "value": "false"
+          }
+        ],
+        "firingTriggerId": [
+          "2147479553",
+          "10"
+        ],
+        "tagFiringOption": "ONCE_PER_EVENT",
+        "consentSettings": {
+          "consentStatus": "NEEDED",
+          "consentType": {
+            "type": "LIST",
+            "list": [
+              {
+                "type": "TEMPLATE",
+                "value": "ad_storage"
+              }
+            ]
+          }
+        },
+        "tagId": "1",
+        "parentFolderId": "1"
+      },
+      {
+        "name": "Meta Pixel - ViewContent",
+        "type": "html",
+        "parameter": [
+          {
+            "type": "TEMPLATE",
+            "key": "html",
+            "value": "<script>fbq('track','ViewContent',{content_type:'product',content_ids:{{CJS - Meta content_ids}},contents:{{CJS - Meta contents}},content_name:'{{CJS - Meta content_name}}',value:{{CJS - Meta value}},currency:'{{CJS - Meta currency}}'},{eventID:'{{CJS - Meta event_id}}'});</script>"
+          },
+          {
+            "type": "BOOLEAN",
+            "key": "supportDocumentWrite",
+            "value": "false"
+          }
+        ],
+        "firingTriggerId": [
+          "11"
+        ],
+        "tagFiringOption": "ONCE_PER_EVENT",
+        "consentSettings": {
+          "consentStatus": "NEEDED",
+          "consentType": {
+            "type": "LIST",
+            "list": [
+              {
+                "type": "TEMPLATE",
+                "value": "ad_storage"
+              }
+            ]
+          }
+        },
+        "setupTag": [
+          {
+            "tagName": "Meta Pixel - Base (PageView)",
+            "stopOnSetupFailure": true
+          }
+        ],
+        "tagId": "2",
+        "parentFolderId": "1"
+      },
+      {
+        "name": "Meta Pixel - AddToCart",
+        "type": "html",
+        "parameter": [
+          {
+            "type": "TEMPLATE",
+            "key": "html",
+            "value": "<script>fbq('track','AddToCart',{content_type:'product',content_ids:{{CJS - Meta content_ids}},contents:{{CJS - Meta contents}},content_name:'{{CJS - Meta content_name}}',value:{{CJS - Meta value}},currency:'{{CJS - Meta currency}}'},{eventID:'{{CJS - Meta event_id}}'});</script>"
+          },
+          {
+            "type": "BOOLEAN",
+            "key": "supportDocumentWrite",
+            "value": "false"
+          }
+        ],
+        "firingTriggerId": [
+          "12"
+        ],
+        "tagFiringOption": "ONCE_PER_EVENT",
+        "consentSettings": {
+          "consentStatus": "NEEDED",
+          "consentType": {
+            "type": "LIST",
+            "list": [
+              {
+                "type": "TEMPLATE",
+                "value": "ad_storage"
+              }
+            ]
+          }
+        },
+        "setupTag": [
+          {
+            "tagName": "Meta Pixel - Base (PageView)",
+            "stopOnSetupFailure": true
+          }
+        ],
+        "tagId": "3",
+        "parentFolderId": "1"
+      },
+      {
+        "name": "Meta Pixel - InitiateCheckout",
+        "type": "html",
+        "parameter": [
+          {
+            "type": "TEMPLATE",
+            "key": "html",
+            "value": "<script>fbq('track','InitiateCheckout',{content_type:'product',content_ids:{{CJS - Meta content_ids}},contents:{{CJS - Meta contents}},content_name:'{{CJS - Meta content_name}}',value:{{CJS - Meta value}},currency:'{{CJS - Meta currency}}',num_items:{{CJS - Meta num_items}}},{eventID:'{{CJS - Meta event_id}}'});</script>"
+          },
+          {
+            "type": "BOOLEAN",
+            "key": "supportDocumentWrite",
+            "value": "false"
+          }
+        ],
+        "firingTriggerId": [
+          "13"
+        ],
+        "tagFiringOption": "ONCE_PER_EVENT",
+        "consentSettings": {
+          "consentStatus": "NEEDED",
+          "consentType": {
+            "type": "LIST",
+            "list": [
+              {
+                "type": "TEMPLATE",
+                "value": "ad_storage"
+              }
+            ]
+          }
+        },
+        "setupTag": [
+          {
+            "tagName": "Meta Pixel - Base (PageView)",
+            "stopOnSetupFailure": true
+          }
+        ],
+        "tagId": "4",
+        "parentFolderId": "1"
+      },
+      {
+        "name": "Meta Pixel - Purchase",
+        "type": "html",
+        "parameter": [
+          {
+            "type": "TEMPLATE",
+            "key": "html",
+            "value": "<script>fbq('track','Purchase',{content_type:'product',content_ids:{{CJS - Meta content_ids}},contents:{{CJS - Meta contents}},content_name:'{{CJS - Meta content_name}}',value:{{CJS - Meta value}},currency:'{{CJS - Meta currency}}',num_items:{{CJS - Meta num_items}},order_id:'{{DLV - ecommerce.transaction_id}}'},{eventID:'{{CJS - Meta event_id}}'});</script>"
+          },
+          {
+            "type": "BOOLEAN",
+            "key": "supportDocumentWrite",
+            "value": "false"
+          }
+        ],
+        "firingTriggerId": [
+          "14"
+        ],
+        "tagFiringOption": "ONCE_PER_EVENT",
+        "consentSettings": {
+          "consentStatus": "NEEDED",
+          "consentType": {
+            "type": "LIST",
+            "list": [
+              {
+                "type": "TEMPLATE",
+                "value": "ad_storage"
+              }
+            ]
+          }
+        },
+        "setupTag": [
+          {
+            "tagName": "Meta Pixel - Base (PageView)",
+            "stopOnSetupFailure": true
+          }
+        ],
+        "tagId": "5",
+        "parentFolderId": "1"
+      }
+    ],
+    "trigger": [
+      {
+        "triggerId": "10",
+        "name": "CE - consent_update",
+        "type": "CUSTOM_EVENT",
+        "customEventFilter": [
+          {
+            "type": "EQUALS",
+            "parameter": [
+              {
+                "type": "TEMPLATE",
+                "key": "arg0",
+                "value": "{{_event}}"
+              },
+              {
+                "type": "TEMPLATE",
+                "key": "arg1",
+                "value": "consent_update"
+              }
+            ]
+          }
+        ],
+        "parentFolderId": "1"
+      },
+      {
+        "triggerId": "11",
+        "name": "CE - view_item",
+        "type": "CUSTOM_EVENT",
+        "customEventFilter": [
+          {
+            "type": "EQUALS",
+            "parameter": [
+              {
+                "type": "TEMPLATE",
+                "key": "arg0",
+                "value": "{{_event}}"
+              },
+              {
+                "type": "TEMPLATE",
+                "key": "arg1",
+                "value": "view_item"
+              }
+            ]
+          }
+        ],
+        "parentFolderId": "1"
+      },
+      {
+        "triggerId": "12",
+        "name": "CE - add_to_cart",
+        "type": "CUSTOM_EVENT",
+        "customEventFilter": [
+          {
+            "type": "EQUALS",
+            "parameter": [
+              {
+                "type": "TEMPLATE",
+                "key": "arg0",
+                "value": "{{_event}}"
+              },
+              {
+                "type": "TEMPLATE",
+                "key": "arg1",
+                "value": "add_to_cart"
+              }
+            ]
+          }
+        ],
+        "parentFolderId": "1"
+      },
+      {
+        "triggerId": "13",
+        "name": "CE - begin_checkout",
+        "type": "CUSTOM_EVENT",
+        "customEventFilter": [
+          {
+            "type": "EQUALS",
+            "parameter": [
+              {
+                "type": "TEMPLATE",
+                "key": "arg0",
+                "value": "{{_event}}"
+              },
+              {
+                "type": "TEMPLATE",
+                "key": "arg1",
+                "value": "begin_checkout"
+              }
+            ]
+          }
+        ],
+        "parentFolderId": "1"
+      },
+      {
+        "triggerId": "14",
+        "name": "CE - purchase",
+        "type": "CUSTOM_EVENT",
+        "customEventFilter": [
+          {
+            "type": "EQUALS",
+            "parameter": [
+              {
+                "type": "TEMPLATE",
+                "key": "arg0",
+                "value": "{{_event}}"
+              },
+              {
+                "type": "TEMPLATE",
+                "key": "arg1",
+                "value": "purchase"
+              }
+            ]
+          }
+        ],
+        "parentFolderId": "1"
+      }
+    ],
+    "variable": [
+      {
+        "name": "DLV - ecommerce.items",
+        "type": "v",
+        "parameter": [
+          {
+            "type": "INTEGER",
+            "key": "dataLayerVersion",
+            "value": "2"
+          },
+          {
+            "type": "BOOLEAN",
+            "key": "setDefaultValue",
+            "value": "false"
+          },
+          {
+            "type": "TEMPLATE",
+            "key": "name",
+            "value": "ecommerce.items"
+          }
+        ],
+        "variableId": "1",
+        "parentFolderId": "1"
+      },
+      {
+        "name": "DLV - ecommerce.value",
+        "type": "v",
+        "parameter": [
+          {
+            "type": "INTEGER",
+            "key": "dataLayerVersion",
+            "value": "2"
+          },
+          {
+            "type": "BOOLEAN",
+            "key": "setDefaultValue",
+            "value": "false"
+          },
+          {
+            "type": "TEMPLATE",
+            "key": "name",
+            "value": "ecommerce.value"
+          }
+        ],
+        "variableId": "2",
+        "parentFolderId": "1"
+      },
+      {
+        "name": "DLV - ecommerce.currency",
+        "type": "v",
+        "parameter": [
+          {
+            "type": "INTEGER",
+            "key": "dataLayerVersion",
+            "value": "2"
+          },
+          {
+            "type": "BOOLEAN",
+            "key": "setDefaultValue",
+            "value": "false"
+          },
+          {
+            "type": "TEMPLATE",
+            "key": "name",
+            "value": "ecommerce.currency"
+          }
+        ],
+        "variableId": "3",
+        "parentFolderId": "1"
+      },
+      {
+        "name": "DLV - ecommerce.transaction_id",
+        "type": "v",
+        "parameter": [
+          {
+            "type": "INTEGER",
+            "key": "dataLayerVersion",
+            "value": "2"
+          },
+          {
+            "type": "BOOLEAN",
+            "key": "setDefaultValue",
+            "value": "false"
+          },
+          {
+            "type": "TEMPLATE",
+            "key": "name",
+            "value": "ecommerce.transaction_id"
+          }
+        ],
+        "variableId": "4",
+        "parentFolderId": "1"
+      },
+      {
+        "name": "DLV - event_id",
+        "type": "v",
+        "parameter": [
+          {
+            "type": "INTEGER",
+            "key": "dataLayerVersion",
+            "value": "2"
+          },
+          {
+            "type": "BOOLEAN",
+            "key": "setDefaultValue",
+            "value": "false"
+          },
+          {
+            "type": "TEMPLATE",
+            "key": "name",
+            "value": "event_id"
+          }
+        ],
+        "variableId": "5",
+        "parentFolderId": "1"
+      },
+      {
+        "name": "CJS - Meta content_ids",
+        "type": "jsm",
+        "parameter": [
+          {
+            "type": "TEMPLATE",
+            "key": "javascript",
+            "value": "function(){var it={{DLV - ecommerce.items}}||[];return JSON.stringify(it.map(function(i){return String(i.item_id||'')}));}"
+          }
+        ],
+        "variableId": "6",
+        "parentFolderId": "1"
+      },
+      {
+        "name": "CJS - Meta contents",
+        "type": "jsm",
+        "parameter": [
+          {
+            "type": "TEMPLATE",
+            "key": "javascript",
+            "value": "function(){var it={{DLV - ecommerce.items}}||[];return JSON.stringify(it.map(function(i){return {id:String(i.item_id||''),quantity:Number(i.quantity||1),item_price:Number(i.price||0)}}));}"
+          }
+        ],
+        "variableId": "7",
+        "parentFolderId": "1"
+      },
+      {
+        "name": "CJS - Meta num_items",
+        "type": "jsm",
+        "parameter": [
+          {
+            "type": "TEMPLATE",
+            "key": "javascript",
+            "value": "function(){var it={{DLV - ecommerce.items}}||[];return it.reduce(function(a,i){return a+Number(i.quantity||1)},0);}"
+          }
+        ],
+        "variableId": "8",
+        "parentFolderId": "1"
+      },
+      {
+        "name": "CJS - Meta content_name",
+        "type": "jsm",
+        "parameter": [
+          {
+            "type": "TEMPLATE",
+            "key": "javascript",
+            "value": "function(){var it={{DLV - ecommerce.items}}||[];return it.length&&it[0].item_name?String(it[0].item_name).replace(/'/g,\"\\'\"):'';}"
+          }
+        ],
+        "variableId": "9",
+        "parentFolderId": "1"
+      },
+      {
+        "name": "CJS - Meta event_id",
+        "type": "jsm",
+        "parameter": [
+          {
+            "type": "TEMPLATE",
+            "key": "javascript",
+            "value": "function(){var e={{DLV - event_id}};if(e)return String(e);return 'gtm_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,10);}"
+          }
+        ],
+        "variableId": "10",
+        "parentFolderId": "1"
+      },
+      {
+        "name": "CJS - Meta value",
+        "type": "jsm",
+        "parameter": [
+          {
+            "type": "TEMPLATE",
+            "key": "javascript",
+            "value": "function(){var v={{DLV - ecommerce.value}};return (typeof v==='number'&&!isNaN(v))?v:0;}"
+          }
+        ],
+        "variableId": "11",
+        "parentFolderId": "1"
+      },
+      {
+        "name": "CJS - Meta currency",
+        "type": "jsm",
+        "parameter": [
+          {
+            "type": "TEMPLATE",
+            "key": "javascript",
+            "value": "function(){var c={{DLV - ecommerce.currency}};return c?String(c).toUpperCase():'BRL';}"
+          }
+        ],
+        "variableId": "12",
+        "parentFolderId": "1"
+      }
+    ],
+    "builtInVariable": [
+      {
+        "type": "EVENT",
+        "name": "Event"
+      }
+    ],
+    "folder": [
+      {
+        "folderId": "1",
+        "name": "Meta Pixel"
+      }
+    ]
+  }
+}

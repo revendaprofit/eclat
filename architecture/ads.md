@@ -200,16 +200,24 @@ Estado verificado:
   `[TWB-ARQUIVO]` e pausadas; arquivar de fato = dono no Gerenciador (selecionar 3 → Arquivar).
 
 ### Pendências do dono (painéis Meta) — atualizado 10/09/2026
-- [ ] Gerenciador de Eventos → conjunto `1612810719469817` → renomear para "ÉCLAT - Pixel".
-- [ ] Mesmo conjunto → Configurações → API de Conversões → Gerar token de acesso (via
-      "Conversions API System User") → Vercel projeto `eclat-loja` env `META_CAPI_TOKEN` (Prod+Preview).
+- [x] Gerenciador de Eventos → conjunto `1612810719469817` renomeado para "ECLAT - Pixel" (10/09).
+- [x] Token da CAPI gerado (Dataset Quality API, só o pixel ÉCLAT) e gravado na Vercel como
+      `META_CAPI_TOKEN` (10/09). Validado em produção: `GET /api/marketing/capi-test` →
+      `configured.pixel=true, token=true`. Teste de evento: `?code=TESTxxxx` (aba Eventos de teste).
 - [ ] GTM `GTM-55868KTG`: tag Pixel base com ID `1612810719469817` + tags de evento lendo o
       dataLayer (view_item→ViewContent, add_to_cart→AddToCart, begin_checkout→InitiateCheckout,
       purchase→Purchase) passando `event_id` do dataLayer para deduplicar com a CAPI.
 - [ ] Gerenciador de Anúncios: arquivar as 3 campanhas `[TWB-ARQUIVO]`.
 - [ ] BM → Configurações → Contas de anúncios → renomear para "ÉCLAT - Conta de anúncio".
-- [ ] Página do Facebook "Team WOD Brasil" → renomear para ÉCLAT (o IG @eclat.use já está feito).
-- [ ] BM → Contas do Instagram → confirmar que @eclat.use está atribuído à conta de anúncios
-      (API retorna vazio hoje).
+- [x] Página do Facebook renomeada para "ÉCLAT" (10/09 19:10), foto de perfil (nó) e capa C aplicadas,
+      bio, categoria "Roupas e vestuário", site, e-mail useeclatbr@gmail.com, tel +55 31 99118-4431,
+      IG eclat.use e YouTube vinculados. Assets em docs/design/brand/facebook/. Falta: @ da Página,
+      botão de ação "Comprar agora" (link com UTM) e conferir o número do WhatsApp (apareceu com 8 dígitos).
+- [x] API confirma (10/09 19:10): Página "ÉCLAT" 341930388993742 e IG @eclat.use 17841405904471948
+      visíveis para a conta de anúncios — anúncios já sairão assinados pela ÉCLAT.
 - [ ] Opcional: remover a Página "PWRD by Coffee Floripa" da conta de anúncios (higiene).
 - [ ] Always Insta: `accounts.username` 'teamwodbr' → 'eclat.use'.
+
+- [x] Domínio `useeclat.com.br` VERIFICADO no BM (10/09 18:50) (Segurança da marca → Domínios, id 1354366457752076),
+      método metatag. Valor gravado em `site_content.marketing.meta_domain_verification` (10/09) e
+      injetado no `<head>` pelo storefront (commit 810f0db). Pendente: "Conectar ativos" (pixel + Página).
