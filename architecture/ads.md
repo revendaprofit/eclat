@@ -226,13 +226,13 @@ Estado verificado:
       método metatag. Valor gravado em `site_content.marketing.meta_domain_verification` (10/09) e
       injetado no `<head>` pelo storefront (commit 810f0db). Pendente: "Conectar ativos" (pixel + Página).
 
-## 7. Pré-lançamento F0 — Clube Éclat (montado em 10/09/2026, D0 previsto ~25/09)
+## 7. Pré-lançamento F0 — Clube Éclat (montado em 10/09/2026, **D0 = domingo 20/09/2026**, decisão do dono 11/09)
 
 Contexto: peças chegam 20/09; estoque baixo → objetivo é ESGOTAR para a lista quente no D0, não escalar frio.
 Centro do funil = grupo do WhatsApp **Clube Éclat** (link em `apps/backend/src/lib/clube.ts`, override
 `CLUBE_ECLAT_GRUPO_URL`). Entrada preferencial pelo WhatsApp da marca (vira lead no Cockpit) e não pelo link direto.
 
-### Campanhas (todas PAUSADAS — ativar campanha → conjunto → anúncio, nessa ordem)
+### Campanhas (ATIVADAS em 11/09/2026 07:50 com "pode ativar" do dono; fim programado: aquecimento 19/09 23:59, Clube 20/09 10:00)
 | Campanha | ID | Conjunto | Anúncio | Diária |
 |---|---|---|---|---|
 | ECLAT_F0_Clube_WhatsApp_2026-09 | 120250160264690107 | 120250160265150107 (Conversas → WhatsApp; IG 90d + site 30d + seguidoras; BR F 25-45) | 120250160320210107 Reel "um novo ciclo" → WhatsApp | R$30 |
@@ -263,7 +263,9 @@ criar criativo com esse token falha ("app em modo de desenvolvimento") → criat
   junho — nenhuma mensagem chegava ao Cockpit desde então. Obs.: `WHATSAPP_WEBHOOK_SECRET` do `.env` local
   DIFERE do Railway; o do Railway é o válido em produção. Deploy do backend via `railway up` (10/09 ~20:37).
 
-### Cronograma (D0 = sexta 25/09, sugestão)
-- 11–24/09: campanhas ligadas (R$50/dia). Roteiro diário no grupo (bastidor, peça por dia, enquete, preço, data).
-- 24/09 noite: "amanhã 10h o link chega aqui". 25/09 10h: link `/clube?k=…` no grupo. 26/09 10h: loja aberta
-  (`COMING_SOON=false` + deploy). 25/09–02/10: remarketing de vendas R$50–70/dia (engajou + clube + site).
+### Cronograma (D0 = domingo 20/09/2026)
+- 11–19/09: campanhas ligadas (R$50/dia). Roteiro diário no grupo (bastidor, peça por dia, enquete, preço, data).
+- 19/09 noite: "amanhã 10h o link chega aqui". 20/09 10h: link `/clube?k=…` no grupo (porta VIP).
+- 21/09 10h: loja aberta para todos (`COMING_SOON=false` + deploy da vitrine).
+- 20–27/09: remarketing de vendas R$50–70/dia (engajou + clube + site), otimizado por AddToCart. Sem frio até repor.
+- Mudança de data: o dono avisa no chat; ajustar `end_time` dos conjuntos e o roteiro.
