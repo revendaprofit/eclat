@@ -877,3 +877,7 @@ PRÓXIMO (usuário, guiado): Railway (Postgres + serviço do repo, root /, vars,
 
 ## 2026-09-13 — Texto livre em "Informações do produto"
 - Nova chave de ficha técnica `informacoes` (Cockpit → Produto → "Ficha técnica (metadata)"; parágrafos separados por linha em branco) renderizada no topo da aba "Informações do produto" (`product-tabs/index.tsx`), acima da grade Material/Composição/Tipo. Sem a chave, a aba fica como antes. Validado localmente (2 parágrafos no acordeão). Primeiro uso: macaquinhos da Lumière (texto do dono, 13/09) — gravação em produção só com "pode aplicar".
+
+## 2026-09-13 — PDP desktop: coluna esquerda rola; aba "Informações do produto" só com o texto livre
+- A coluna de texto (título, descrição, DSB, acordeões) deixou de ser `sticky` no desktop: com o texto mais longo que a viewport, a página parecia travada e parte do texto ficava inalcançável enquanto as fotos rolavam. A coluna de compra (direita) continua fixa (`small:sticky`), como buy box.
+- A aba "Informações do produto" agora mostra somente os parágrafos de `metadata.informacoes`; a grade Material/Composição/Tipo/Peso/Dimensões saiu (pedido do dono). Produto sem o texto não tem a aba (só "Envio e trocas"). Validado localmente: aba com 2 parágrafos e sem a grade; produto sem texto sem a aba.

@@ -12,11 +12,12 @@ type ProductTabsProps = {
 }
 
 const ProductTabs = ({ product }: ProductTabsProps) => {
+  // "Informações do produto" só existe quando a ficha técnica tem o texto livre (chave `informacoes`,
+  // Cockpit → Produto → "Ficha técnica (metadata)"). Sem texto, a aba não aparece (pedido do dono, 13/09).
   const tabs = [
-    {
-      label: "Informações do produto",
-      component: <ProductInfoTab product={product} />,
-    },
+    ...(paragrafosDe(product).length > 0
+      ? [{ label: "Informações do produto", component: <ProductInfoTab product={product} /> }]
+      : []),
     {
       label: "Envio e trocas",
       component: <ShippingInfoTab />,
@@ -41,54 +42,21 @@ const ProductTabs = ({ product }: ProductTabsProps) => {
   )
 }
 
-const ProductInfoTab = ({ product }: ProductTabsProps) => {
-  const composicao =
-    typeof product.metadata?.composicao === "string" ? product.metadata.composicao : null
-  // Texto livre da ficha técnica (Cockpit → Produto → "Ficha técnica (metadata)", chave `informacoes`):
-  // parágrafos separados por linha em branco. Sem a chave, a aba fica como antes.
+// Parágrafos do texto livre da ficha técnica (separados por linha em branco).
+function paragrafosDe(product: HttpTypes.StoreProduct): string[] {
   const informacoes =
     typeof product.metadata?.informacoes === "string" ? product.metadata.informacoes.trim() : ""
-  const paragrafos = informacoes ? informacoes.split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean) : []
+  return informacoes ? informacoes.split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean) : []
+}
+
+const ProductInfoTab = ({ product }: ProductTabsProps) => {
+  const paragrafos = paragrafosDe(product)
   return (
     <div className="text-small-regular py-8">
-      {paragrafos.length > 0 && (
-        <div className="flex flex-col gap-y-3 mb-8 max-w-prose" data-testid="product-informacoes">
-          {paragrafos.map((p, i) => (
-            <p key={i}>{p}</p>
-          ))}
-        </div>
-      )}
-      <div className="grid grid-cols-2 gap-x-8">
-        <div className="flex flex-col gap-y-4">
-          <div>
-            <span className="font-semibold">Material</span>
-            <p>{product.material ? product.material : "-"}</p>
-          </div>
-          {composicao && (
-            <div>
-              <span className="font-semibold">Composição</span>
-              <p>{composicao}</p>
-            </div>
-          )}
-          <div>
-            <span className="font-semibold">Tipo</span>
-            <p>{product.type ? product.type.value : "-"}</p>
-          </div>
-        </div>
-        <div className="flex flex-col gap-y-4">
-          <div>
-            <span className="font-semibold">Peso</span>
-            <p>{product.weight ? `${product.weight} g` : "-"}</p>
-          </div>
-          <div>
-            <span className="font-semibold">Dimensões</span>
-            <p>
-              {product.length && product.width && product.height
-                ? `${product.length}C x ${product.width}L x ${product.height}A`
-                : "-"}
-            </p>
-          </div>
-        </div>
+      <div className="flex flex-col gap-y-3 max-w-prose" data-testid="product-informacoes">
+        {paragrafos.map((p, i) => (
+          <p key={i}>{p}</p>
+        ))}
       </div>
     </div>
   )
