@@ -1,6 +1,5 @@
 "use client"
 
-import { useState, useEffect } from "react"
 import { clx } from "@modules/common/components/ui"
 import { hasActiveFilters, isSelected, type FilterState } from "@lib/util/catalog-filters"
 import type { Facets } from "@lib/util/catalog-facets"
@@ -11,28 +10,11 @@ const grupo = "text-[11px] uppercase tracking-[0.2em] text-eclat-grafite/60 mb-3
 
 export default function FilterPanel({ facets, filters, colorMap, onApplied }: { facets: Facets; filters: FilterState; colorMap: ColorMap; onApplied?: () => void }) {
   const nav = useFilterNavigation(filters)
-  const [min, setMin] = useState(filters.preco?.min?.toString() ?? "")
-  const [max, setMax] = useState(filters.preco?.max?.toString() ?? "")
   const apply = (fn: () => void) => { fn(); onApplied?.() }
 
-  // Ressincroniza os inputs de/até com o filtro ativo quando alterado externamente (atalho, chip, limpar, voltar)
-  useEffect(() => {
-    setMin(filters.preco?.min?.toString() ?? "")
-    setMax(filters.preco?.max?.toString() ?? "")
-  }, [filters.preco?.min, filters.preco?.max])
-
-  const faixas = facets.preco
-    ? (() => {
-        const lo = Math.floor(facets.preco.min), hi = Math.ceil(facets.preco.max)
-        if (hi - lo < 20) return []
-        const t = Math.round(lo + (hi - lo) / 3), u = Math.round(lo + (2 * (hi - lo)) / 3)
-        return [
-          { label: `até R$ ${t}`, preco: { min: null, max: t } },
-          { label: `R$ ${t + 1}–${u}`, preco: { min: t + 1, max: u } },
-          { label: `acima de R$ ${u}`, preco: { min: u + 1, max: null } },
-        ]
-      })()
-    : []
+  // Filtro de faixa de preço retirado da interface a pedido do dono (2026-09-13). O parâmetro `preco`
+  // da URL continua aceito (link antigo ainda filtra e a chip ativa permite remover), só não há mais
+  // controle para criá-lo aqui.
 
   return (
     <div className="flex flex-col gap-8 text-sm" data-testid="filter-panel">
@@ -79,30 +61,6 @@ export default function FilterPanel({ facets, filters, colorMap, onApplied }: { 
               )
             })}
           </ul>
-        </section>
-      )}
-      {facets.preco && (
-        <section>
-          <p className={grupo}>Preço</p>
-          <div className="flex flex-wrap gap-2 mb-3">
-            {faixas.map((fx) => (
-              <button key={fx.label} onClick={() => apply(() => nav.setPrice(fx.preco))} className="text-xs px-3 h-8 rounded-full border border-eclat-pedra/60 hover:border-eclat-grafite">{fx.label}</button>
-            ))}
-          </div>
-          <form
-            onSubmit={(e) => {
-              e.preventDefault()
-              const mi = min.trim() === "" ? null : Math.max(0, Math.round(Number(min)))
-              const ma = max.trim() === "" ? null : Math.max(0, Math.round(Number(max)))
-              apply(() => nav.setPrice(mi === null && ma === null ? null : { min: mi, max: ma }))
-            }}
-            className="flex items-center gap-2"
-          >
-            <input value={min} onChange={(e) => setMin(e.target.value)} inputMode="numeric" placeholder="de" aria-label="Preço mínimo" className="w-20 h-9 border border-eclat-pedra/60 rounded px-2" />
-            <span>–</span>
-            <input value={max} onChange={(e) => setMax(e.target.value)} inputMode="numeric" placeholder="até" aria-label="Preço máximo" className="w-20 h-9 border border-eclat-pedra/60 rounded px-2" />
-            <button type="submit" className="h-9 px-3 text-xs uppercase tracking-wider bg-eclat-grafite text-eclat-luz rounded">Aplicar</button>
-          </form>
         </section>
       )}
       <section>
