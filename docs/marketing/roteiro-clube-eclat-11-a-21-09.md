@@ -169,9 +169,9 @@ Imagem: `banner-mobile-1080x1350.jpg`
 
 Está aberto. Só para vocês, até amanhã às 10h.
 
-https://www.useeclat.com.br/clube?k=eclat-clube-2026-lumiere-8h4k
+https://www.useeclat.com.br/clube?k=brilha01
 
-O link libera a loja no seu celular. Escolha, finalize, e me conta aqui depois qual você pegou.
+O link libera a loja no seu celular. Se abrir o site e cair na página "Em breve", toque em "Tenho o convite do Clube" e digite a senha: brilha01. Escolha, finalize, e me conta aqui depois qual você pegou.
 
 Obrigada por estar desde o começo. Hoje é o dia em que a ÉCLAT deixa de ser uma ideia.
 Camila

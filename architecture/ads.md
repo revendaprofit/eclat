@@ -254,7 +254,9 @@ criar criativo com esse token falha ("app em modo de desenvolvimento") → criat
 - `/em-breve`: botão "Entrar no Clube Éclat pelo WhatsApp" (wa.me/5531991184431 + texto pré-preenchido) e
   formulário de e-mail como plano B (tabela `newsletter_signup`, source `em-breve`).
 - Porta VIP: `GET /clube?k=<chave>` grava cookie `eclat_vip` (30d) e libera a loja atrás do gate. Chave em
-  `COMING_SOON_VIP_KEY` (Vercel) ou padrão em `lib/coming-soon.ts`. Enviar o link SÓ no grupo, no D0 (24h antes).
+  `COMING_SOON_VIP_KEY` (Vercel) ou padrão em `lib/coming-soon.ts` (desde 13/09/2026: `brilha01`, escolhida pelo dono;
+  comparação ignora maiúsculas). A página Em breve também tem o campo "Tenho o convite do Clube" que envia a senha
+  digitada para a mesma rota (erro → `/em-breve?convite=invalido`). Enviar link/senha SÓ no grupo, no D0 (24h antes).
 - Resposta automática (backend, webhook do WhatsApp): gatilho "clube/quero entrar/primeira mão/lançamento/vip/
   lista" ou mensagem vinda de anúncio (externalAdReply) → boas-vindas com o link do grupo, 1x por contato,
   lead marcado `interesse = "Clube Éclat"` (origem "anuncio" quando vier de anúncio).
