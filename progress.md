@@ -881,3 +881,6 @@ PRÓXIMO (usuário, guiado): Railway (Postgres + serviço do repo, root /, vars,
 ## 2026-09-13 — PDP desktop: coluna esquerda rola; aba "Informações do produto" só com o texto livre
 - A coluna de texto (título, descrição, DSB, acordeões) deixou de ser `sticky` no desktop: com o texto mais longo que a viewport, a página parecia travada e parte do texto ficava inalcançável enquanto as fotos rolavam. A coluna de compra (direita) continua fixa (`small:sticky`), como buy box.
 - A aba "Informações do produto" agora mostra somente os parágrafos de `metadata.informacoes`; a grade Material/Composição/Tipo/Peso/Dimensões saiu (pedido do dono). Produto sem o texto não tem a aba (só "Envio e trocas"). Validado localmente: aba com 2 parágrafos e sem a grade; produto sem texto sem a aba.
+
+## 2026-09-13 — Bloco "dor → solução → benefícios" (DSB) retirado da PDP
+- Pedido do dono: sem as descrições extras em todos os produtos. O componente `dsb-hero` foi removido da PDP (e apagado); as chaves `dsb_dor`/`dsb_solucao`/`dsb_beneficios` continuam na ficha técnica dos produtos, só não são exibidas. "Para quem é" (`quem_sim`/`quem_nao`), depoimentos e FAQ seguem na página.

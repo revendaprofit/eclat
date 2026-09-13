@@ -12,7 +12,6 @@ import { notFound } from "next/navigation"
 import { HttpTypes } from "@medusajs/types"
 
 import ProductActionsWrapper from "./product-actions-wrapper"
-import DsbHero from "@modules/products/components/dsb-hero"
 import GuaranteeSeals from "@modules/products/components/guarantee-seals"
 import QuemE from "@modules/products/components/quem-e"
 import PdpTestimonials from "@modules/products/components/pdp-testimonials"
@@ -104,7 +103,6 @@ const ProductTemplate = async ({
           >
             <div className="flex flex-col small:py-0 small:max-w-[300px] w-full py-8 gap-y-6">
               <ProductInfo product={product} />
-              <DsbHero product={product} />
               <ProductTabs product={product} />
             </div>
             <div className="block w-full relative">
