@@ -51,7 +51,7 @@ const ImageGallery = ({ images, productTitle, productHandle, youtubeId }: ImageG
   let fotoN = 0
 
   return (
-    <div className="flex flex-col items-start relative">
+    <div className="flex flex-col relative">
       <div
         ref={trackRef}
         className="flex w-full gap-x-2 overflow-x-auto snap-x snap-mandatory no-scrollbar small:flex-col small:overflow-visible small:gap-y-4 small:mx-16 small:w-auto small:flex-1"

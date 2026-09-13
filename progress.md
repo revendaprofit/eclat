@@ -870,3 +870,7 @@ PRÓXIMO (usuário, guiado): Railway (Postgres + serviço do repo, root /, vars,
 
 ## 2026-09-13 — Filtro de faixa de preço retirado da listagem
 - Pedido do dono: sem o bloco "Preço" (faixas sugeridas + de/até + Aplicar) em `modules/store/components/filters/filter-panel.tsx` (desktop e gaveta mobile). O parâmetro `preco` da URL continua aceito (link antigo ainda filtra; a chip ativa permite remover) — utilitários puros e testes intocados. Verificação: tsc, lint e 221 testes; sem conferência visual local (backend local parado) — a listagem em produção mostra só Tamanho, Cor e "Só disponíveis".
+
+## 2026-09-13 — Galeria da PDP colapsada no desktop (corrigido)
+- Sintoma (produção, Macaquinho Solaris): a galeria virava uma coluna de miniaturas de 32 px. Causa: a raiz da galeria (`image-gallery/index.tsx`) era `flex flex-col items-start` (carrossel mobile) e, no desktop, a faixa de fotos fica `small:w-auto` dentro dessa coluna — com `items-start` a faixa encolhe ao conteúdo e as fotos (`w-full` em `absolute`) colapsam para o padding. Correção: raiz sem `items-start` (stretch padrão). Validado localmente com as 21 fotos do Solaris: desktop 1440 → foto a 649 px; mobile 375 → carrossel de 327 px, sem overflow horizontal, dots ok.
+- Infra de validação: `E:/Projetos/ECLAT/.claude/launch.json` (fora do repo) ganhou `backend-local` e `storefront-local` (scripts `.cmd` na mesma pasta) para o painel de preview; a pasta lida pelo painel é a pai (`E:/Projetos/ECLAT`), não `eclat/`.
