@@ -12,8 +12,10 @@ import SideMenu from "@modules/layout/components/side-menu"
 import SearchBar from "@modules/layout/components/search-bar"
 import CategoryBar from "@modules/layout/components/category-bar"
 import PersonalizeTrigger from "@modules/personalization/trigger"
+import { personasAtivas } from "@lib/data/personas"
 
 export default async function Nav() {
+  const personasLigadas = await personasAtivas()
   const regions = await listRegions().then((regions: StoreRegion[]) => regions)
   const countryCode = regions?.[0]?.countries?.[0]?.iso_2 ?? "br"
 
@@ -49,7 +51,7 @@ export default async function Nav() {
 
           <div className="flex items-center gap-x-6 h-full flex-1 basis-0 justify-end">
             <div className="hidden small:flex items-center gap-x-6 h-full">
-              <PersonalizeTrigger />
+              {personasLigadas && <PersonalizeTrigger />}
               <LocalizedClientLink
                 className="hover:text-eclat-terracota transition-colors"
                 href="/account"

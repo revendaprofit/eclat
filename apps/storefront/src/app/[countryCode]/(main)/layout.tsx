@@ -2,7 +2,7 @@ import { Metadata } from "next"
 
 import { listCartOptions, retrieveCart } from "@lib/data/cart"
 import { retrieveCustomer } from "@lib/data/customer"
-import { listPersonas } from "@lib/data/personas"
+import { listPersonas, personasAtivas } from "@lib/data/personas"
 import { getBaseURL } from "@lib/util/env"
 import { StoreCartShippingOption } from "@medusajs/types"
 import CartMismatchBanner from "@modules/layout/components/cart-mismatch-banner"
@@ -19,7 +19,8 @@ export const metadata: Metadata = {
 export default async function PageLayout(props: { children: React.ReactNode }) {
   const customer = await retrieveCustomer()
   const cart = await retrieveCart()
-  const personas = await listPersonas()
+  // "Minha ÉCLAT" desligada no Cockpit → sem wizard (o menu e a PDP também escondem a função).
+  const [personas, personasLigadas] = await Promise.all([listPersonas(), personasAtivas()])
   let shippingOptions: StoreCartShippingOption[] = []
 
   if (cart) {
@@ -44,7 +45,7 @@ export default async function PageLayout(props: { children: React.ReactNode }) {
       )}
       {props.children}
       <Footer />
-      {personas.length > 0 && <Wizard personas={personas} />}
+      {personasLigadas && personas.length > 0 && <Wizard personas={personas} />}
       <ToastHost />
     </>
   )

@@ -27,6 +27,9 @@ export default function PersonasPage() {
   const [personas, setPersonas] = useState<Persona[]>([])
   const [form, setForm] = useState<typeof emptyP | null>(null)
   const [msg, setMsg] = useState("")
+  // interruptor global "Minha ÉCLAT no site" (site_content.personas = { ativo }); null = carregando
+  const [ativo, setAtivo] = useState<boolean | null>(null)
+  const [salvandoAtivo, setSalvandoAtivo] = useState(false)
   // mídia por produto
   const [productId, setProductId] = useState("")
   const [media, setMedia] = useState<Media[]>([])
@@ -89,6 +92,33 @@ export default function PersonasPage() {
     loadMedia()
   }
 
+  useEffect(() => {
+    fetch("/api/site-content/personas", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : {}))
+      .then((v: { ativo?: unknown }) => setAtivo(typeof v?.ativo === "boolean" ? v.ativo : true))
+      .catch(() => setAtivo(true))
+  }, [])
+
+  async function alternarAtivo() {
+    if (ativo === null || salvandoAtivo) return
+    const proximo = !ativo
+    setSalvandoAtivo(true)
+    setMsg("")
+    try {
+      const r = await fetch("/api/site-content/personas", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ativo: proximo }),
+      })
+      if (!r.ok) throw new Error((await r.json()).error || "Falha ao salvar")
+      setAtivo(proximo)
+    } catch (e) {
+      setMsg(e instanceof Error ? e.message : "Falha ao salvar")
+    } finally {
+      setSalvandoAtivo(false)
+    }
+  }
+
   return (
     <div className="flex flex-col gap-8 max-w-3xl">
       <div>
@@ -99,6 +129,31 @@ export default function PersonasPage() {
           aparece na loja automaticamente).
         </p>
       </div>
+
+      {/* INTERRUPTOR GLOBAL */}
+      <section className="border border-eclat-dourado/40 rounded-lg bg-white/60 p-5 flex items-center justify-between gap-4">
+        <div>
+          <h2 className="font-serif text-xl text-eclat-grafite">Minha ÉCLAT no site</h2>
+          <p className="text-xs text-eclat-grafite/55 mt-1">
+            Desativada, o site esconde o wizard, o botão &quot;Minha ÉCLAT&quot; do menu e as fotos por
+            persona; o cadastro abaixo fica guardado. O site reflete em até 30 segundos.
+          </p>
+        </div>
+        <button
+          type="button"
+          role="switch"
+          aria-checked={ativo === true}
+          aria-label="Minha ÉCLAT no site"
+          disabled={ativo === null || salvandoAtivo}
+          onClick={alternarAtivo}
+          className="flex items-center gap-2 text-sm text-eclat-grafite disabled:opacity-50 shrink-0"
+        >
+          <span className={`relative inline-block h-6 w-11 rounded-full transition-colors ${ativo ? "bg-eclat-dourado" : "bg-eclat-pedra/60"}`}>
+            <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${ativo ? "translate-x-5" : "translate-x-0.5"}`} />
+          </span>
+          <span className="min-w-[80px] text-left">{ativo === null ? "carregando…" : ativo ? "ativa" : "desativada"}</span>
+        </button>
+      </section>
 
       {/* PERSONAS */}
       <section className="border border-eclat-dourado/40 rounded-lg bg-white/60 p-5 flex flex-col gap-3">

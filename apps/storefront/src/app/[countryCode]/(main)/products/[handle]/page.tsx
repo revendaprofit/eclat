@@ -1,7 +1,7 @@
 import { Metadata } from "next"
 import { notFound } from "next/navigation"
 import { listProducts } from "@lib/data/products"
-import { getPersonaMediaForProduct } from "@lib/data/personas"
+import { getPersonaMediaForProduct, personasAtivas } from "@lib/data/personas"
 import { getRegion, listRegions } from "@lib/data/regions"
 import ProductTemplate from "@modules/products/templates"
 import { imagesForColor, initialSelection, selectedColor } from "@lib/util/pdp-variants"
@@ -125,11 +125,11 @@ export default async function ProductPage(props: Props) {
   const cor = selectedColor(pricedProduct, sel)
   const images = cor ? imagesForColor(pricedProduct, cor) : pricedProduct.images ?? []
 
-  // fotos por persona ("Minha ÉCLAT") — busca por id E handle do produto
-  const personaMedia = await getPersonaMediaForProduct(
-    pricedProduct.id,
-    pricedProduct.handle ?? undefined
-  )
+  // fotos por persona ("Minha ÉCLAT") — busca por id E handle do produto; função desligada no
+  // Cockpit → lista vazia (galeria padrão, mesmo com persona salva no navegador da visitante)
+  const personaMedia = (await personasAtivas())
+    ? await getPersonaMediaForProduct(pricedProduct.id, pricedProduct.handle ?? undefined)
+    : []
 
   return (
     <ProductTemplate

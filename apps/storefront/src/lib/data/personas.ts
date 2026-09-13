@@ -3,6 +3,9 @@ import "server-only"
 // "Minha ÉCLAT": personas (modelos das fotos) e mídia por produto × persona.
 // Leitura pública via anon (RLS: só personas ativas). Revalida a cada 60s.
 
+import { getSiteContent } from "./site-content"
+import { personasAtivasDe } from "@lib/util/personas-flag"
+
 const URL = process.env.NEXT_PUBLIC_SUPABASE_URL
 const ANON = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
@@ -52,4 +55,10 @@ export async function getPersonaMediaForProduct(
     `product_persona_media?product_id=in.(${encodeURIComponent(filter).replace(/%2C/g, ",")})&select=persona_id,images`
   )
   return rows ?? []
+}
+
+// Interruptor global da "Minha ÉCLAT" (Cockpit → Personas): `site_content.personas = { ativo }`.
+// Ausente/erro → ativo. Revalida em ~30s (mesmo cache do `getSiteContent`). Nunca lança.
+export async function personasAtivas(): Promise<boolean> {
+  return personasAtivasDe(await getSiteContent("personas"))
 }
