@@ -42,17 +42,19 @@ COLECOES = {"lumiere": {"title": "Lumière", "handle": "lumiere"}}
 # Ficha comercial por modelo (chave = nome do modelo normalizado). Preço em REAIS decimais (Medusa v2).
 # `cores` = chaves de CORES na ordem da vitrine (a 1ª cor dá a capa do produto).
 # Ficha de produção "Família Canelado" (Telha e Grafitti), 25/08/2026.
+# Aplicação e forro por cor conforme a planilha de SKUs (14/09): Telha = forro mousse + logo off-white;
+# Grafitti = forro grafitti + logo holográfico.
 COMPOSICAO_CANELADO = (
     "Tecido canelado: 79% poliamida, 13% poliéster, 8% elastano (385 g/m²).\n"
-    "Forro: 91% poliamida, 9% elastano.\n"
-    "Logo em aplicação holográfica termocolante."
+    "Forro: 91% poliamida, 9% elastano (mousse na cor Telha, grafitti na cor Grafitti).\n"
+    "Logo termocolante: off-white na cor Telha, holográfico na cor Grafitti."
 )
 
 MODELOS = {
     "macaquinho solaris": {
         "title": "Macaquinho Solaris",
         "handle": "macaquinho-solaris",
-        "sku_tipo": "MS",
+        "refs": {"telha": 1005, "grafitti": 1006},   # REF da etiqueta (ECLAT-SKU-Lumina.xlsx, 14/09)
         "categoria": "macaquinhos",
         "cores": ["telha", "grafitti"],
         "tamanhos": ["P", "M", "G"],
@@ -63,7 +65,7 @@ MODELOS = {
     "top aurora": {
         "title": "Top Aurora",
         "handle": "top-aurora",
-        "sku_tipo": "TA",
+        "refs": {"telha": 1001, "grafitti": 1002},   # REF da etiqueta (ECLAT-SKU-Lumina.xlsx, 14/09)
         "categoria": "tops",
         "cores": ["telha", "grafitti"],
         "tamanhos": ["P", "M", "G"],
@@ -74,7 +76,7 @@ MODELOS = {
     "short aurora": {
         "title": "Short Aurora",
         "handle": "short-aurora",
-        "sku_tipo": "SA",
+        "refs": {"telha": 1003, "grafitti": 1004},   # REF da etiqueta (ECLAT-SKU-Lumina.xlsx, 14/09)
         "categoria": "shorts",
         "cores": ["telha", "grafitti"],
         "tamanhos": ["P", "M", "G"],
@@ -85,7 +87,7 @@ MODELOS = {
     "top orvalho": {
         "title": "Top Orvalho",
         "handle": "top-orvalho",
-        "sku_tipo": "TO",
+        "refs": {"telha": 1007, "grafitti": 1008},   # REF da etiqueta (ECLAT-SKU-Lumina.xlsx, 14/09)
         "categoria": "tops",
         "cores": ["grafitti", "telha"],
         "tamanhos": ["P", "M", "G"],
@@ -96,7 +98,7 @@ MODELOS = {
     "short orvalho": {
         "title": "Short Orvalho",
         "handle": "short-orvalho",
-        "sku_tipo": "SO",
+        "refs": {"telha": 1009, "grafitti": 1010},   # REF da etiqueta (ECLAT-SKU-Lumina.xlsx, 14/09)
         "categoria": "shorts",
         "cores": ["grafitti", "telha"],
         "tamanhos": ["P", "M", "G"],
@@ -150,7 +152,7 @@ CONJUNTOS = [
 # Cores: chave = como o dono escreve no arquivo (normalizado); nome = como aparece no site;
 # código de SKU e hex amostrado do tecido nas fotos do ensaio.
 CORES = {
-    "telha": {"nome": "Telha", "sku": "TEL", "hex": "#C27050"},
+    "telha": {"nome": "Telha", "sku": "TEL", "hex": "#C27050"},   # "sku" (3 letras) é só histórico: o SKU usa as REFs de MODELOS
     "grafitti": {"nome": "Grafitti", "sku": "GRA", "hex": "#3A363A"},   # reamostrado das fotos refeitas (14/09)   # nome escolhido pelo dono (13/09), não "Grafite"
 }
 
@@ -356,7 +358,9 @@ def main():
         # 2) produto
         variants = [{
             "title": "%s / %s" % (t, CORES[c]["nome"]),
-            "sku": "ECL-%s-%s-%s" % (f["sku_tipo"], CORES[c]["sku"], t),
+            # SKU da etiqueta = ECL-<REF do modelo+cor>-<TAM>; o código de barras (Code 128) carrega o mesmo texto
+            "sku": "ECL-%d-%s" % (f["refs"][c], t),
+            "barcode": "ECL-%d-%s" % (f["refs"][c], t),
             "options": {"Tamanho": t, "Cor": CORES[c]["nome"]},
             "manage_inventory": True,
             "prices": [{"amount": f["preco"], "currency_code": "brl"}],
