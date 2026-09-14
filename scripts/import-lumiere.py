@@ -10,7 +10,9 @@ sua cor → estoque por tamanho no CD Brasil → registra a cor em site_content.
 Uso:
   python scripts/import-lumiere.py --dry-run             # só mostra o que faria
   python scripts/import-lumiere.py --wipe                # exclui TODOS os produtos atuais antes
-  python scripts/import-lumiere.py --modelo "Macaquinho Solaris"   # filtra um modelo
+  python scripts/import-lumiere.py --modelo "Macaquinho Solaris"   # filtra um modelo (não mexe nos conjuntos)
+  python scripts/import-lumiere.py --estoque             # também SOBRESCREVE estoque existente com a grade
+Configuração: MODELOS (ficha), GALERIA (curadoria de fotos por produto/cor), CONJUNTOS (curados), CORES.
 Requisitos: pip install requests pillow · Credenciais: apps/cockpit/.env.local
 Exige backup prévio em brand-assets/backup-catalogo-*.json quando --wipe é usado.
 """
@@ -38,12 +40,24 @@ JPEG_Q = 85
 COLECOES = {"lumiere": {"title": "Lumière", "handle": "lumiere"}}
 
 # Ficha comercial por modelo (chave = nome do modelo normalizado). Preço em REAIS decimais (Medusa v2).
+# `cores` = chaves de CORES na ordem da vitrine (a 1ª cor dá a capa do produto).
+FAQ_TAMANHO = {"q": "Como escolho meu tamanho?", "a": "Use a tabela de medidas acima, medindo busto na parte mais cheia, cintura na parte mais fina e quadril na parte mais cheia, sempre com a fita paralela ao chão. Entre dois tamanhos: o menor sustenta mais, o maior é mais confortável."}
+FAQ_TROCA = {"q": "Posso trocar ou devolver?", "a": "Sim. Você tem 7 dias corridos após o recebimento para desistir da compra com reembolso integral (CDC), peça sem uso e com etiquetas. Para troca de tamanho, chame no WhatsApp com o número do pedido. Defeito de fabricação: 30 dias, sem custo."}
+FAQ_CONJUNTO = {"q": "Tem desconto se eu levar o conjunto?", "a": "Sim. Levando o top e o short do mesmo modelo, o conjunto sai com 10% de desconto no total, aplicado automaticamente na sacola."}
+# Ficha de produção "Família Canelado" (Telha e Grafitti), 25/08/2026.
+COMPOSICAO_CANELADO = (
+    "Tecido canelado: 79% poliamida, 13% poliéster, 8% elastano (385 g/m²).\n"
+    "Forro: 91% poliamida, 9% elastano.\n"
+    "Logo em aplicação holográfica termocolante."
+)
+
 MODELOS = {
     "macaquinho solaris": {
         "title": "Macaquinho Solaris",
         "handle": "macaquinho-solaris",
         "sku_tipo": "MS",
         "categoria": "macaquinhos",
+        "cores": ["telha", "grafitti"],
         "tamanhos": ["P", "M", "G"],
         "estoque": {"P": 10, "M": 20, "G": 10},
         "preco": 299.00,          # provisório — precificação pendente (dono, 13/09/2026)
@@ -53,6 +67,7 @@ MODELOS = {
             "lettering ÉCLAT na perna. Peça única: veste em segundos, sustenta o treino e segue o dia."
         ),
         "metadata": {
+            "composicao": COMPOSICAO_CANELADO,
             "dsb_dor": "cós descendo, blusa subindo — no meio da série, de novo?",
             "dsb_solucao": (
                 "O Macaquinho Solaris é a peça única que resolve: nada desalinha, nada precisa de ajuste. "
@@ -65,19 +80,162 @@ MODELOS = {
                 {"q": "É prático no dia a dia?", "a": "Sim — a peça é pensada para vestir e esquecer: nada desalinha no treino e o caimento segura o resto do dia."},
                 {"q": "As costas são abertas?", "a": "As alças se cruzam nas costas em um recorte vazado — sustentação com respiro. Veja as fotos de costas na galeria."},
                 {"q": "O canelado marca?", "a": "O canelado é encorpado e opaco: modela a silhueta sem transparecer quando estica."},
-                {"q": "Como escolho meu tamanho?", "a": "Use a tabela de medidas acima, medindo busto na parte mais cheia, cintura na parte mais fina e quadril na parte mais cheia, sempre com a fita paralela ao chão. Entre dois tamanhos: o menor sustenta mais, o maior é mais confortável."},
-                {"q": "Posso trocar ou devolver?", "a": "Sim. Você tem 7 dias corridos após o recebimento para desistir da compra com reembolso integral (CDC), peça sem uso e com etiquetas. Para troca de tamanho, chame no WhatsApp com o número do pedido. Defeito de fabricação: 30 dias, sem custo."},
+                FAQ_TAMANHO, FAQ_TROCA,
+            ], ensure_ascii=False),
+        },
+    },
+    "top aurora": {
+        "title": "Top Aurora",
+        "handle": "top-aurora",
+        "sku_tipo": "TA",
+        "categoria": "tops",
+        "cores": ["telha", "grafitti"],
+        "tamanhos": ["P", "M", "G"],
+        "estoque": {"P": 10, "M": 15, "G": 10},   # grade da ficha de produção (dono, 13/09)
+        "preco": 169.00,          # provisório (dono, 13/09/2026)
+        "peso_g": 200,
+        "description": (
+            "Top cropped canelado com zíper frontal, gola alta e costas abertas em recorte arredondado, "
+            "fechado por uma faixa com o lettering ÉCLAT. Forrado, com o logo no peito."
+        ),
+        "metadata": {
+            "composicao": COMPOSICAO_CANELADO,
+            "dsb_dor": "top que abre, alça que escorrega — e você ajustando no meio da série?",
+            "dsb_solucao": (
+                "O Top Aurora fecha no zíper e fica onde você deixou: gola alta na frente, costas livres "
+                "atrás e a faixa ÉCLAT segurando a base."
+            ),
+            "dsb_beneficios": "Zíper frontal: você escolhe o decote\nCostas abertas que respiram no treino\nForrado e opaco, do agachamento ao café",
+            "quem_sim": "Gosta de top com cara de peça de roupa, não só de academia\nQuer ajustar o decote sem trocar de peça\nMonta look com o Short Aurora",
+            "quem_nao": "Precisa de sustentação máxima para corrida ou salto\nPrefere costas totalmente fechadas",
+            "faq": json.dumps([
+                {"q": "O zíper incomoda no treino?", "a": "O zíper é frontal e fica sobre o forro, sem contato direto com a pele."},
+                {"q": "Sustenta treino de impacto?", "a": "Sustentação média: ótima para musculação, funcional, pilates e yoga. Para corrida longa ou salto intenso, prefira um top de alta compressão."},
+                FAQ_CONJUNTO, FAQ_TAMANHO, FAQ_TROCA,
+            ], ensure_ascii=False),
+        },
+    },
+    "short aurora": {
+        "title": "Short Aurora",
+        "handle": "short-aurora",
+        "sku_tipo": "SA",
+        "categoria": "shorts",
+        "cores": ["telha", "grafitti"],
+        "tamanhos": ["P", "M", "G"],
+        "estoque": {"P": 10, "M": 15, "G": 10},
+        "preco": 169.00,
+        "peso_g": 200,
+        "description": (
+            "Short canelado de cintura alta, comprimento no meio da coxa, com lettering ÉCLAT no cós "
+            "e o logo na perna. Forrado e opaco."
+        ),
+        "metadata": {
+            "composicao": COMPOSICAO_CANELADO,
+            "dsb_dor": "short que sobe, cós que enrola — de novo no agachamento?",
+            "dsb_solucao": (
+                "O Short Aurora abraça a cintura e fica no lugar: cós alto canelado, comprimento que não "
+                "sobe e forro que não transparece."
+            ),
+            "dsb_beneficios": "Cintura alta que não enrola\nCanelado que modela sem apertar\nForrado: opaco em qualquer movimento",
+            "quem_sim": "Quer um short que fique no lugar no agachamento\nGosta de cintura alta\nMonta look com o Top Aurora",
+            "quem_nao": "Prefere short solto ou de corrida\nProcura comprimento acima do meio da coxa",
+            "faq": json.dumps([
+                {"q": "Sobe ou enrola no agachamento?", "a": "Não. O cós alto e o canelado encorpado foram escolhidos para ficar no lugar durante o treino."},
+                {"q": "Marca ou transparece?", "a": "É forrado: o tecido não abre a trama quando estica."},
+                FAQ_CONJUNTO, FAQ_TAMANHO, FAQ_TROCA,
+            ], ensure_ascii=False),
+        },
+    },
+    "top orvalho": {
+        "title": "Top Orvalho",
+        "handle": "top-orvalho",
+        "sku_tipo": "TO",
+        "categoria": "tops",
+        "cores": ["grafitti", "telha"],
+        "tamanhos": ["P", "M", "G"],
+        "estoque": {"P": 10, "M": 15, "G": 10},
+        "preco": 169.00,
+        "peso_g": 200,
+        "description": (
+            "Top cropped canelado de alças finas que se cruzam na frente do pescoço e costas com tiras "
+            "horizontais vazadas. Forrado, com o lettering ÉCLAT no peito."
+        ),
+        "metadata": {
+            "composicao": COMPOSICAO_CANELADO,
+            "dsb_dor": "top bonito que não aguenta o treino, ou top de treino sem graça nenhuma?",
+            "dsb_solucao": (
+                "O Top Orvalho junta os dois: alças cruzadas na frente que desenham o colo e tiras nas "
+                "costas que dão respiro, com base firme e forro."
+            ),
+            "dsb_beneficios": "Alças cruzadas que valorizam o colo\nCostas em tiras: respiro sem perder a firmeza\nForrado e opaco",
+            "quem_sim": "Quer um top que também funcione como look\nGosta de costas com detalhe\nMonta look com o Short Orvalho",
+            "quem_nao": "Precisa de sustentação máxima para impacto alto\nPrefere alças largas",
+            "faq": json.dumps([
+                {"q": "As alças ajustam?", "a": "Sim, as alças têm regulagem nas costas."},
+                {"q": "Sustenta treino de impacto?", "a": "Sustentação média: ótima para musculação, funcional, pilates e yoga. Para corrida longa ou salto intenso, prefira um top de alta compressão."},
+                FAQ_CONJUNTO, FAQ_TAMANHO, FAQ_TROCA,
+            ], ensure_ascii=False),
+        },
+    },
+    "short orvalho": {
+        "title": "Short Orvalho",
+        "handle": "short-orvalho",
+        "sku_tipo": "SO",
+        "categoria": "shorts",
+        "cores": ["grafitti", "telha"],
+        "tamanhos": ["P", "M", "G"],
+        "estoque": {"P": 10, "M": 15, "G": 10},
+        "preco": 169.00,
+        "peso_g": 200,
+        "description": (
+            "Short canelado de cintura alta com cós largo, comprimento no meio da coxa e o logo ÉCLAT "
+            "na perna. Forrado e opaco."
+        ),
+        "metadata": {
+            "composicao": COMPOSICAO_CANELADO,
+            "dsb_dor": "short que desce, cós que marca — e você puxando no meio da série?",
+            "dsb_solucao": (
+                "O Short Orvalho tem cós largo que firma a cintura sem apertar e canelado encorpado que "
+                "acompanha o movimento sem subir."
+            ),
+            "dsb_beneficios": "Cós largo que firma sem marcar\nCintura alta que fica no lugar\nForrado: opaco em qualquer movimento",
+            "quem_sim": "Gosta de cós largo e cintura bem marcada\nQuer short que não desce no treino\nMonta look com o Top Orvalho",
+            "quem_nao": "Prefere cós baixo\nProcura short solto ou de corrida",
+            "faq": json.dumps([
+                {"q": "O cós enrola?", "a": "Não. O cós é largo justamente para ficar firme na cintura durante o treino."},
+                {"q": "Marca ou transparece?", "a": "É forrado: o tecido não abre a trama quando estica."},
+                FAQ_CONJUNTO, FAQ_TAMANHO, FAQ_TROCA,
             ], ensure_ascii=False),
         },
     },
 }
 
-# Seleção + ordem de vitrine por (handle, cor normalizada do arquivo): números "(n)" do arquivo.
-# Só as fotos listadas entram no produto; sem entrada, entram todas em ordem numérica.
-ORDEM = {
-    ("macaquinho-solaris", "telha"): [33, 29, 31, 24, 23, 25, 26, 27, 28, 37, 38, 39, 21, 22, 30, 32, 34, 35, 36, 40, 41],
-    ("macaquinho-solaris", "grafitti"): [6, 5, 1, 11, 10, 2],   # 6 escolhidas (dono, 13/09): frente, 3/4, detalhe, lateral, costas, corpo inteiro
+# Galeria por (handle, cor): SELEÇÃO exata e ordem de vitrine. Cada item é
+#   ("<modelo do arquivo renomeado>", n)  -> "Coleção Lumiere - [Modelo] <modelo> ... Cor <cor> (n)"
+#   ("arquivo", "043")                     -> foto ainda não renomeada, pelo prefixo "043_"
+# Fotos de conjunto servem ao top e ao short. Sem entrada: todas as fotos do próprio modelo e cor.
+# Cor sem nenhuma foto é PULADA (não cria variante) até existir foto.
+GALERIA = {
+    ("macaquinho-solaris", "telha"): [("macaquinho solaris", n) for n in [33, 29, 31, 24, 23, 25, 26, 27, 28, 37, 38, 39, 21, 22, 30, 32, 34, 35, 36, 40, 41]],
+    ("macaquinho-solaris", "grafitti"): [("macaquinho solaris", n) for n in [6, 5, 1, 11, 10, 2]],
+    ("top-aurora", "telha"): [("top aurora", 6), ("top aurora", 7), ("top aurora", 1), ("conjunto aurora", 8), ("top aurora", 3), ("top aurora", 5), ("top aurora", 9)],
+    ("top-aurora", "grafitti"): [("conjunto aurora", 9), ("conjunto aurora", 4), ("conjunto aurora", 3), ("conjunto aurora", 5), ("conjunto aurora", 6), ("conjunto aurora", 1)],
+    ("short-aurora", "telha"): [("short aurora", 3), ("conjunto aurora", 5), ("short aurora", 1), ("short aurora", 4), ("conjunto aurora", 7), ("short aurora", 2)],
+    ("short-aurora", "grafitti"): [("conjunto aurora", 4), ("conjunto aurora", 7), ("conjunto aurora", 5), ("conjunto aurora", 3), ("conjunto aurora", 1), ("conjunto aurora", 8)],
+    ("top-orvalho", "grafitti"): [("conjunto orvalho", 5), ("top orvalho", 4), ("top orvalho", 3), ("conjunto orvalho", 8), ("top orvalho", 5), ("conjunto orvalho", 13), ("top orvalho", 2)],
+    ("top-orvalho", "telha"): [("arquivo", p) for p in ["046", "043", "049", "048", "060", "052"]],   # top Telha fotografado com short Grafitti
+    ("short-orvalho", "grafitti"): [("conjunto orvalho", 4), ("short orvalho", 3), ("short orvalho", 1), ("conjunto orvalho", 9), ("conjunto orvalho", 12), ("short orvalho", 5)],
+    ("short-orvalho", "telha"): [],   # sem foto no ensaio -> cor pulada até haver foto
 }
+
+# Conjuntos montados pelo admin (Benefício Conjunto, curados). Vale por PRODUTO, qualquer cor (dono, 13/09).
+# `nome` SEM a palavra "Conjunto": a vitrine já prefixa ("Conjunto Aurora" no título, no aviso e no GA4).
+CONJUNTOS = [
+    {"nome": "Aurora", "handle": "conjunto-aurora", "produtos": ["top-aurora", "short-aurora"],
+     "capa": ("conjunto aurora", "telha", 2), "tipo_desconto": "total_percentual", "valor": 10, "ordem": 0},
+    {"nome": "Orvalho", "handle": "conjunto-orvalho", "produtos": ["top-orvalho", "short-orvalho"],
+     "capa": ("conjunto orvalho", "grafitti", 5), "tipo_desconto": "total_percentual", "valor": 10, "ordem": 1},
+]
 
 # Cores: chave = como o dono escreve no arquivo (normalizado); nome = como aparece no site;
 # código de SKU e hex amostrado do tecido nas fotos do ensaio.
@@ -101,29 +259,33 @@ def env_cockpit():
                 k, v = line.split("=", 1); env[k.strip()] = v.strip()
     return env
 
-def ler_fotos(filtro_modelo=None):
-    """Agrupa as fotos renomeadas: {modelo_norm: {cor_norm: [(n, caminho)]}}; retorna também a coleção."""
-    grupos = defaultdict(lambda: defaultdict(list)); colecao = None
+def indexar_fotos():
+    """Índice das fotos renomeadas: {(modelo_norm, cor_norm, n): caminho}; e a coleção do padrão."""
+    idx = {}; colecao = None
     for arq in sorted(os.listdir(FOTOS)):
         m = PADRAO.match(arq)
         if not m: continue
-        mod = norm(m["modelo"])
-        if filtro_modelo and mod != norm(filtro_modelo): continue
         colecao = colecao or norm(m["col"])
-        n = int(m["n1"] or m["n2"] or 0)
-        grupos[mod][norm(m["cor"])].append((n, os.path.join(FOTOS, arq)))
-    return colecao, grupos
+        idx[(norm(m["modelo"]), norm(m["cor"]), int(m["n1"] or m["n2"] or 0))] = os.path.join(FOTOS, arq)
+    return colecao, idx
 
-def ordenar(handle, cor, fotos):
-    """Com entrada em ORDEM, ela é a SELEÇÃO exata (curadoria + ordem de vitrine);
-    sem entrada, usa todas as fotos em ordem numérica."""
-    pref = ORDEM.get((handle, cor))
-    por_n = dict(fotos)
-    if pref:
-        faltando = [n for n in pref if n not in por_n]
-        assert not faltando, "ORDEM[%s/%s] cita fotos inexistentes: %s" % (handle, cor, faltando)
-        return [(n, por_n[n]) for n in pref]
-    return sorted(por_n.items())
+def galeria(f, cor, idx):
+    """Lista ordenada de caminhos das fotos de um produto numa cor (ver GALERIA)."""
+    itens = GALERIA.get((f["handle"], cor))
+    if itens is None:
+        mod = norm(f["title"])
+        return [idx[k] for k in sorted(k for k in idx if k[0] == mod and k[1] == cor)]
+    caminhos = []
+    for grupo, ref in itens:
+        if grupo == "arquivo":
+            achados = [x for x in os.listdir(FOTOS) if x.startswith("%s_" % ref)]
+            assert len(achados) == 1, "GALERIA[%s/%s]: arquivo %s_ não encontrado" % (f["handle"], cor, ref)
+            caminhos.append(os.path.join(FOTOS, achados[0]))
+        else:
+            k = (norm(grupo), cor, ref)
+            assert k in idx, "GALERIA[%s/%s]: foto inexistente %s" % (f["handle"], cor, k)
+            caminhos.append(idx[k])
+    return caminhos
 
 def otimizar(caminho):
     im = ImageOps.exif_transpose(Image.open(caminho)).convert("RGB")
@@ -142,6 +304,10 @@ class Medusa:
     def post(self, path, body):
         r = requests.post(BASE + path, headers=self.H, json=body, timeout=120)
         if not r.ok: raise RuntimeError("POST %s → %s %s" % (path, r.status_code, r.text[:500]))
+        return r.json()
+    def put(self, path, body):
+        r = requests.put(BASE + path, headers=self.H, json=body, timeout=120)
+        if not r.ok: raise RuntimeError("PUT %s → %s %s" % (path, r.status_code, r.text[:500]))
         return r.json()
     def delete(self, path):
         r = requests.delete(BASE + path, headers=self.H, timeout=120)
@@ -181,18 +347,48 @@ def wipe(api, dry):
     print("  excluídos" if not dry else "  [dry-run] nada excluído")
 
 
+def sincronizar_conjuntos(api, st, idx, dry):
+    """Cria/atualiza os curados de CONJUNTOS: capa no Supabase (site/conjuntos/<handle>.jpg), produtos
+    publicados pelo handle, desconto e ordem. Idempotente por handle (handle de curado é imutável)."""
+    existentes = {c["handle"]: c for c in api.get("/admin/conjuntos/curados")["curados"]}
+    for cj in CONJUNTOS:
+        ids = []
+        for h in cj["produtos"]:
+            ps = api.get("/admin/products?handle=%s&fields=id,status" % h)["products"]
+            if dry and not ps:
+                ids.append("<%s: criado nesta rodada>" % h); continue
+            assert ps and ps[0]["status"] == "published", "conjunto %s: produto %s não publicado" % (cj["handle"], h)
+            ids.append(ps[0]["id"])
+        mod, cor, n = cj["capa"]
+        caminho = idx[(norm(mod), cor, n)]
+        dest = "conjuntos/%s.jpg" % cj["handle"]
+        capa = st.url + "/storage/v1/object/public/site/" + dest if dry else st.upload(dest, otimizar(caminho))
+        corpo = {"nome": cj["nome"], "capa_url": capa, "product_ids": ids, "tipo_desconto": cj["tipo_desconto"],
+                 "valor": cj["valor"], "ativo": True, "ordem": cj["ordem"]}
+        atual = existentes.get(cj["handle"])
+        if dry:
+            print("\n[dry-run] conjunto %s (%s): %s" % (cj["nome"], "atualizar" if atual else "criar", corpo)); continue
+        if atual:
+            api.put("/admin/conjuntos/curados/%s" % atual["id"], corpo)
+            print("\nconjunto atualizado: %s (%s)" % (cj["nome"], atual["id"]))
+        else:
+            novo = api.post("/admin/conjuntos/curados", dict(corpo, handle=cj["handle"]))
+            print("\nconjunto criado: %s -> %s" % (cj["nome"], json.dumps(novo, ensure_ascii=False)[:160]))
+
+
 def main():
     if hasattr(sys.stdout, "reconfigure"): sys.stdout.reconfigure(encoding="utf-8")
     ap = argparse.ArgumentParser()
     ap.add_argument("--dry-run", action="store_true"); ap.add_argument("--wipe", action="store_true"); ap.add_argument("--modelo")
+    ap.add_argument("--estoque", action="store_true", help="sobrescreve estoque JÁ existente com a grade de MODELOS (padrão: só cria o nível das variantes novas)")
     a = ap.parse_args(); dry = a.dry_run
     env = env_cockpit(); api = Medusa(env); st = Storage(env)
 
-    colecao, grupos = ler_fotos(a.modelo)
-    assert grupos, "nenhuma foto renomeada encontrada em %s" % FOTOS
-    print("Fotos renomeadas: coleção=%s | modelos=%s" % (colecao, {m: {c: len(f) for c, f in cs.items()} for m, cs in grupos.items()}))
-    faltam = [m for m in grupos if m not in MODELOS]
-    assert not faltam, "modelo(s) sem ficha em MODELOS: %s" % faltam
+    colecao, idx = indexar_fotos()
+    assert idx, "nenhuma foto renomeada encontrada em %s" % FOTOS
+    alvo = [m for m in MODELOS if not a.modelo or m == norm(a.modelo)]
+    assert alvo, "modelo %s sem ficha em MODELOS" % a.modelo
+    print("Fotos renomeadas: %d | coleção=%s | modelos: %s" % (len(idx), colecao, [MODELOS[m]["title"] for m in alvo]))
 
     if a.wipe: wipe(api, dry)
 
@@ -209,17 +405,21 @@ def main():
     sloc = api.get("/admin/stock-locations")["stock_locations"][0]["id"]
 
     cores_novas = {}
-    for mod, cores in grupos.items():
+    for mod in alvo:
         f = MODELOS[mod]; handle = f["handle"]
-        for c in cores: assert c in CORES, "cor sem cadastro em CORES: %s" % c
+        fotos_por_cor = {c: galeria(f, c, idx) for c in f["cores"]}
+        puladas = [CORES[c]["nome"] for c, fs in fotos_por_cor.items() if not fs]
+        cores = [c for c in f["cores"] if fotos_por_cor[c]]
         nomes_cores = [CORES[c]["nome"] for c in cores]
         print("\n== %s | cores=%s | tamanhos=%s | R$ %.2f" % (f["title"], nomes_cores, f["tamanhos"], f["preco"]))
+        if puladas: print("  AVISO: sem foto, cor(es) pulada(s): %s" % puladas)
+        if not cores: print("  AVISO: nenhuma cor com foto — produto não criado"); continue
 
         # 1) fotos → Supabase
         urls_por_cor = {}
-        for c, fotos in cores.items():
+        for c in cores:
             urls = []
-            for i, (n, caminho) in enumerate(ordenar(handle, c, fotos), 1):
+            for i, caminho in enumerate(fotos_por_cor[c], 1):
                 dest = "products/%s/%s-%02d.jpg" % (handle, c, i)
                 if dry: urls.append(st.url + "/storage/v1/object/public/site/" + dest); continue
                 urls.append(st.upload(dest, otimizar(caminho)))
@@ -249,8 +449,14 @@ def main():
         existente = api.get("/admin/products?handle=%s&fields=id" % handle)["products"]
         if existente:
             pid = existente[0]["id"]
-            prod = api.get("/admin/products/%s?fields=id,images.id,images.url,options.id,options.title,options.values.value,variants.id,variants.sku" % pid)["product"]
+            prod = api.get("/admin/products/%s?fields=id,metadata,images.id,images.url,options.id,options.title,options.values.value,variants.id,variants.sku" % pid)["product"]
             print("  produto já existe (%s): completando cores/variantes/fotos" % pid)
+            # metadata: só preenche chaves AUSENTES (textos editados no Cockpit são preservados)
+            meta = dict(prod.get("metadata") or {})
+            faltando = {k: v for k, v in f["metadata"].items() if not meta.get(k)}
+            if faltando:
+                api.post("/admin/products/%s" % pid, {"metadata": dict(meta, **faltando)})
+                print("  metadata preenchida: %s" % sorted(faltando))
             # a) valores novos na opção Cor (Medusa: envia a lista completa)
             opt_cor = next(o for o in prod["options"] if norm(o["title"]) == "cor")
             atuais = [v["value"] for v in opt_cor["values"]]
@@ -297,16 +503,21 @@ def main():
                 iid = ii["inventory_item_id"]
                 niveis = api.get("/admin/inventory-items/%s/location-levels" % iid).get("inventory_levels") or []
                 if any(n["location_id"] == sloc for n in niveis):
-                    api.post("/admin/inventory-items/%s/location-levels/%s" % (iid, sloc), {"stocked_quantity": qtd})
+                    # nível existente = estoque vivo (pode ter venda/ajuste no Cockpit): só sobrescreve com --estoque
+                    if a.estoque:
+                        api.post("/admin/inventory-items/%s/location-levels/%s" % (iid, sloc), {"stocked_quantity": qtd})
                 else:
                     api.post("/admin/inventory-items/%s/location-levels" % iid, {"location_id": sloc, "stocked_quantity": qtd})
-        print("  estoque: %s" % f["estoque"])
+        print("  estoque: %s%s" % (f["estoque"], "" if a.estoque else " (só variantes novas; use --estoque para sobrescrever)"))
 
     # 5) mapa de cores da vitrine
     if not dry:
         mapa = st.merge_cores(cores_novas); print("\nsite_content.cores: %s" % {k: v.get("hex") for k, v in mapa.items()})
     else:
         print("\n[dry-run] cores a registrar: %s" % cores_novas)
+    # 6) conjuntos montados pelo admin (curados do Benefício Conjunto)
+    if not a.modelo:
+        sincronizar_conjuntos(api, st, idx, dry)
     print("\nConcluído. Rode: python scripts/check-catalog-options.py")
 
 if __name__ == "__main__":
