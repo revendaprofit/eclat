@@ -9,6 +9,16 @@ type Hero = {
   banner_mobile_url?: string
   banner_desktop_url?: string
   banner_href?: string
+  // banner em vídeo (vence a imagem na tela em que existir) + textos desenhados pelo site
+  video_mobile_url?: string
+  video_poster_mobile_url?: string
+  video_desktop_url?: string
+  video_poster_desktop_url?: string
+  video_eyebrow?: string
+  video_titulo_1?: string
+  video_titulo_2?: string
+  video_texto?: string
+  video_cta?: string
   eyebrow_mode?: "collection" | "custom"
   eyebrow_text?: string
   collection_handle?: string
@@ -219,6 +229,56 @@ export default function VitrinePage() {
           <div>
             <label className={label}>Link do banner (ao clicar)</label>
             <input value={hero.banner_href || ""} onChange={(e) => setHero({ ...hero, banner_href: e.target.value })} placeholder="/store ou /collections/resplendor" className={input} />
+          </div>
+        </div>
+
+        {/* BANNER EM VÍDEO — vence a imagem na tela em que tiver vídeo */}
+        <div className="rounded-md bg-eclat-areia/30 border border-eclat-pedra/30 p-4 flex flex-col gap-4">
+          <p className="text-xs text-eclat-grafite/70">
+            <strong>Banner em vídeo:</strong> vídeo gerado da arte <em>sem texto</em> (MP4, sem som, em loop) e a capa
+            (primeiro quadro do vídeo, JPG). O logo e os textos abaixo são desenhados pelo site por cima. Cada tela é
+            independente: sem vídeo do mobile, o celular continua mostrando a imagem acima. Deixe o endereço do vídeo
+            vazio para voltar à imagem.
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className={label}>Vídeo desktop (URL do MP4 · 21:9)</label>
+              <input value={hero.video_desktop_url || ""} onChange={(e) => setHero({ ...hero, video_desktop_url: e.target.value })} placeholder="https://…/hero/desktop.mp4" className={input} />
+            </div>
+            <div>
+              <label className={label}>Capa do vídeo desktop</label>
+              <UploadImagem url={hero.video_poster_desktop_url} onChange={(u) => setHero({ ...hero, video_poster_desktop_url: u })} />
+            </div>
+            <div>
+              <label className={label}>Vídeo mobile (URL do MP4 · 4:5)</label>
+              <input value={hero.video_mobile_url || ""} onChange={(e) => setHero({ ...hero, video_mobile_url: e.target.value })} placeholder="https://…/hero/mobile.mp4" className={input} />
+            </div>
+            <div>
+              <label className={label}>Capa do vídeo mobile</label>
+              <UploadImagem url={hero.video_poster_mobile_url} onChange={(u) => setHero({ ...hero, video_poster_mobile_url: u })} />
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className={label}>Destaque (ex.: Coleção Lumière)</label>
+              <input value={hero.video_eyebrow || ""} onChange={(e) => setHero({ ...hero, video_eyebrow: e.target.value })} placeholder="Coleção Lumière" className={input} />
+            </div>
+            <div>
+              <label className={label}>Texto do botão</label>
+              <input value={hero.video_cta || ""} onChange={(e) => setHero({ ...hero, video_cta: e.target.value })} placeholder="Comprar a coleção" className={input} />
+            </div>
+            <div>
+              <label className={label}>Título — linha 1 (maiúsculas)</label>
+              <input value={hero.video_titulo_1 || ""} onChange={(e) => setHero({ ...hero, video_titulo_1: e.target.value })} placeholder="Feita para" className={input} />
+            </div>
+            <div>
+              <label className={label}>Título — linha 2 (itálico)</label>
+              <input value={hero.video_titulo_2 || ""} onChange={(e) => setHero({ ...hero, video_titulo_2: e.target.value })} placeholder="brilhar." className={input} />
+            </div>
+          </div>
+          <div>
+            <label className={label}>Parágrafo</label>
+            <textarea value={hero.video_texto || ""} onChange={(e) => setHero({ ...hero, video_texto: e.target.value })} rows={2} placeholder="O despertar de toda mulher, que não precisa de motivação externa para brilhar. No canelado premium grafitti e telha." className={input + " resize-y"} />
           </div>
         </div>
 

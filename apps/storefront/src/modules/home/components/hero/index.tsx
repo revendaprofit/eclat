@@ -1,5 +1,7 @@
 import Image from "next/image"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
+import { heroTelas, heroTextos, type HeroTela, type HeroTextos } from "@lib/util/hero-media"
+import HeroVideo from "./hero-video"
 
 // Conteúdo editável (cockpit → Supabase site_content key "hero"). Tudo com fallback.
 export type HeroContent = {
@@ -7,6 +9,17 @@ export type HeroContent = {
   banner_mobile_url?: string
   banner_desktop_url?: string
   banner_href?: string
+  // Banner em VÍDEO (vence a imagem na tela em que existir): vídeo gerado da arte SEM texto +
+  // capa = primeiro quadro; o texto abaixo é desenhado pelo site por cima (2026-09-14)
+  video_mobile_url?: string
+  video_poster_mobile_url?: string
+  video_desktop_url?: string
+  video_poster_desktop_url?: string
+  video_eyebrow?: string
+  video_titulo_1?: string
+  video_titulo_2?: string
+  video_texto?: string
+  video_cta?: string
   // Fallback editorial (usado só quando NÃO há banner)
   eyebrow_mode?: "collection" | "custom"
   eyebrow_text?: string
@@ -27,6 +40,76 @@ const DEFAULTS = {
   cta_href: "/store",
 }
 
+// Medidas tiradas da arte da coleção (scripts compor-banner-*.py): desktop 1920 px de largura,
+// mobile 1080 px — convertidas em vw para escalar junto com o vídeo, com mínimos legíveis.
+const SOMBRA = { textShadow: "0 2px 16px rgba(10, 8, 12, 0.55)" }
+
+function HeroTelaView({ tela, variante, textos }: { tela: HeroTela; variante: "mobile" | "desktop"; textos: HeroTextos }) {
+  if (tela.tipo === "nenhum") return null
+  if (tela.tipo === "imagem") {
+    // eslint-disable-next-line @next/next/no-img-element
+    return <img src={tela.src} alt="use.ÉCLAT" className="block w-full h-auto" />
+  }
+  const desktop = variante === "desktop"
+  const Titulo = desktop ? "h1" : "p"
+  return (
+    <div
+      className={"relative w-full " + (desktop ? "aspect-[7/3]" : "aspect-[4/5]")}
+      data-testid={`hero-video-${variante}`}
+    >
+      <HeroVideo video={tela.video} poster={tela.poster} media={desktop ? "(min-width: 1024px)" : "(max-width: 1023.98px)"} />
+      <div
+        className="absolute z-10 flex flex-col items-start text-white"
+        style={desktop ? { left: "6.77%", top: "16%", maxWidth: "36%" } : { left: "6.67%", right: "6.67%", top: "3.7%" }}
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/brand/mark.png"
+          alt=""
+          aria-hidden
+          className="w-auto brightness-0 invert"
+          style={{ height: desktop ? "clamp(44px, 4.8vw, 92px)" : "7.8vw", marginBottom: desktop ? "clamp(10px, 1vw, 20px)" : "4.2vw" }}
+        />
+        <span
+          className="uppercase font-sans font-medium"
+          style={{ ...SOMBRA, color: "rgb(236, 214, 200)", fontSize: desktop ? "clamp(12px, 1.04vw, 20px)" : "clamp(11px, 2.87vw, 16px)", letterSpacing: desktop ? "0.26vw" : "0.55vw" }}
+        >
+          {textos.eyebrow}
+        </span>
+        <Titulo
+          className="font-serif leading-[1.05]"
+          style={{ ...SOMBRA, marginTop: desktop ? "clamp(14px, 1.8vw, 34px)" : "4vw" }}
+        >
+          <span className="block uppercase font-bold" style={{ fontSize: desktop ? "clamp(40px, 5.1vw, 98px)" : "6.85vw" }}>
+            {textos.titulo1}
+          </span>
+          <span className="block italic" style={{ color: "rgb(255, 236, 222)", fontSize: desktop ? "clamp(42px, 5.42vw, 104px)" : "7.4vw" }}>
+            {textos.titulo2}
+          </span>
+        </Titulo>
+        <p
+          className="font-sans text-balance"
+          style={{ ...SOMBRA, color: "rgb(240, 237, 240)", fontSize: desktop ? "clamp(14px, 1.2vw, 23px)" : "clamp(13px, 3.06vw, 18px)", lineHeight: 1.45, marginTop: desktop ? "clamp(14px, 1.6vw, 30px)" : "3.4vw", maxWidth: desktop ? "31em" : undefined }}
+        >
+          {textos.texto}
+        </p>
+        <span
+          className="inline-flex items-center rounded-full bg-white font-sans font-medium uppercase"
+          style={{
+            color: "rgb(38, 41, 50)",
+            fontSize: desktop ? "clamp(11px, 0.94vw, 18px)" : "clamp(11px, 1.85vw, 14px)",
+            letterSpacing: "0.14em",
+            padding: desktop ? "clamp(10px, 0.9vw, 17px) clamp(20px, 1.8vw, 34px)" : "3vw 5.5vw",
+            marginTop: desktop ? "clamp(16px, 1.6vw, 30px)" : "4vw",
+          }}
+        >
+          {textos.cta}
+        </span>
+      </div>
+    </div>
+  )
+}
+
 const Hero = ({
   content,
   fallbackCollection,
@@ -36,32 +119,21 @@ const Hero = ({
 }) => {
   const c = content ?? {}
 
-  // ---- Modo BANNER (imagem) ----
-  const mobileUrl = c.banner_mobile_url || c.image_url || null
-  const desktopUrl = c.banner_desktop_url || c.banner_mobile_url || c.image_url || null
-  const hasBanner = Boolean(mobileUrl || desktopUrl)
+  // ---- Modo BANNER: por tela, VÍDEO (texto do site por cima) ou IMAGEM (texto já na arte) ----
+  const telas = heroTelas(c)
   const bannerHref = c.banner_href || c.cta_href || "/store"
 
-  if (hasBanner) {
-    const mUrl = mobileUrl || desktopUrl!
-    const dUrl = desktopUrl || mobileUrl!
+  if (telas.mobile.tipo !== "nenhum" || telas.desktop.tipo !== "nenhum") {
+    const textos = heroTextos(c)
     return (
       <section className="w-full border-b border-eclat-pedra/40">
-        <LocalizedClientLink href={bannerHref} aria-label="Ver coleção" className="block">
-          {/* mobile (vertical) */}
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={mUrl}
-            alt="use.ÉCLAT"
-            className="block w-full h-auto small:hidden"
-          />
-          {/* desktop (horizontal) */}
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={dUrl}
-            alt="use.ÉCLAT"
-            className="hidden small:block w-full h-auto"
-          />
+        <LocalizedClientLink href={bannerHref} aria-label={`${textos.eyebrow}: ${textos.cta}`} className="block">
+          <div className="small:hidden">
+            <HeroTelaView tela={telas.mobile} variante="mobile" textos={textos} />
+          </div>
+          <div className="hidden small:block">
+            <HeroTelaView tela={telas.desktop} variante="desktop" textos={textos} />
+          </div>
         </LocalizedClientLink>
       </section>
     )
