@@ -229,3 +229,35 @@
     transform: none !important;
   }
 }
+
+/* === Banner interativo do celular (home): céu que deriva + dica "arraste para girar" === */
+@keyframes eclat-ceu-deriva {
+  from {
+    transform: scale(1) translateY(0);
+  }
+  to {
+    transform: scale(1.09) translateY(-14px);
+  }
+}
+@keyframes eclat-dica-empurra {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  50% {
+    transform: translateX(5px);
+  }
+}
+.ceu-deriva {
+  transform-origin: 50% 0%;
+  animation: eclat-ceu-deriva 40s ease-in-out infinite alternate;
+}
+.dica-empurra {
+  animation: eclat-dica-empurra 1.8s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ceu-deriva,
+  .dica-empurra {
+    animation: none !important;
+  }
+}

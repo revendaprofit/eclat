@@ -1,5 +1,40 @@
 import { describe, expect, it } from "vitest"
-import { HERO_TEXTOS_PADRAO, heroTelas, heroTextos } from "./hero-media"
+import { HERO_TEXTOS_PADRAO, heroInterativo, heroTelas, heroTextos } from "./hero-media"
+
+describe("heroInterativo", () => {
+  const peca = { nome: "Orvalho", cor: "Grafitti", cor_hex: "#3A363A", video_url: "o.mp4", poster_url: "o.jpg" }
+  it("desligado (ou sem a chave): null — o celular segue com vídeo/imagem", () => {
+    expect(heroInterativo({ interativo_pecas: [peca] })).toBeNull()
+    expect(heroInterativo({ interativo_mobile: false, interativo_pecas: [peca] })).toBeNull()
+  })
+  it("ligado sem nenhuma peça válida: null (não mostra palco vazio)", () => {
+    expect(heroInterativo({ interativo_mobile: true })).toBeNull()
+    expect(heroInterativo({ interativo_mobile: true, interativo_pecas: [{ ...peca, video_url: " " }] })).toBeNull()
+  })
+  it("ligado: descarta peça sem vídeo/capa/nome, limpa espaços e mantém a ordem do Cockpit", () => {
+    const r = heroInterativo({
+      interativo_mobile: true,
+      interativo_ceu_url: " ceu.jpg ",
+      interativo_pecas: [
+        { ...peca, nome: " Solaris ", cor: "Telha", cor_hex: "", video_url: "s.mp4", poster_url: "s.jpg" },
+        { ...peca, poster_url: "" },
+        { ...peca, nome: "" },
+        peca,
+      ],
+    })
+    expect(r).toEqual({
+      ceu: "ceu.jpg",
+      pecas: [
+        { id: "solaris-telha", nome: "Solaris", cor: "Telha", corHex: null, video: "s.mp4", poster: "s.jpg" },
+        { id: "orvalho-grafitti", nome: "Orvalho", cor: "Grafitti", corHex: "#3A363A", video: "o.mp4", poster: "o.jpg" },
+      ],
+    })
+  })
+  it("lista que não é array e céu ausente não quebram", () => {
+    expect(heroInterativo({ interativo_mobile: true, interativo_pecas: "x" as unknown as [] })).toBeNull()
+    expect(heroInterativo({ interativo_mobile: true, interativo_pecas: [peca] })?.ceu).toBeNull()
+  })
+})
 
 describe("heroTelas", () => {
   it("sem vídeo: imagens do modo antigo (mobile cai no desktop e vice-versa)", () => {

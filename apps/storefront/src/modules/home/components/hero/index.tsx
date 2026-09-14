@@ -1,6 +1,7 @@
 import Image from "next/image"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
-import { heroTelas, heroTextos, type HeroTela, type HeroTextos } from "@lib/util/hero-media"
+import { heroInterativo, heroTelas, heroTextos, type HeroPecaInput, type HeroTela, type HeroTextos } from "@lib/util/hero-media"
+import HeroInterativo from "./hero-interativo"
 import HeroVideo from "./hero-video"
 
 // Conteúdo editável (cockpit → Supabase site_content key "hero"). Tudo com fallback.
@@ -20,6 +21,11 @@ export type HeroContent = {
   video_titulo_2?: string
   video_texto?: string
   video_cta?: string
+  // Banner INTERATIVO só no celular (modelo girando 360°): vence vídeo/imagem do mobile quando ligado
+  // e com pelo menos uma peça completa; usa os mesmos textos do banner em vídeo (2026-09-14)
+  interativo_mobile?: boolean
+  interativo_ceu_url?: string
+  interativo_pecas?: HeroPecaInput[]
   // Fallback editorial (usado só quando NÃO há banner)
   eyebrow_mode?: "collection" | "custom"
   eyebrow_text?: string
@@ -123,17 +129,25 @@ const Hero = ({
   const telas = heroTelas(c)
   const bannerHref = c.banner_href || c.cta_href || "/store"
 
-  if (telas.mobile.tipo !== "nenhum" || telas.desktop.tipo !== "nenhum") {
+  const interativo = heroInterativo(c)
+
+  if (interativo || telas.mobile.tipo !== "nenhum" || telas.desktop.tipo !== "nenhum") {
     const textos = heroTextos(c)
+    const rotulo = `${textos.eyebrow}: ${textos.cta}`
     return (
       <section className="w-full border-b border-eclat-pedra/40">
-        <LocalizedClientLink href={bannerHref} aria-label={`${textos.eyebrow}: ${textos.cta}`} className="block">
+        {interativo ? (
+          // fora do link: o banner interativo tem botões e arrasto próprios (e o seu próprio botão de compra)
           <div className="small:hidden">
+            <HeroInterativo ceu={interativo.ceu} pecas={interativo.pecas} textos={textos} href={bannerHref} />
+          </div>
+        ) : (
+          <LocalizedClientLink href={bannerHref} aria-label={rotulo} className="block small:hidden">
             <HeroTelaView tela={telas.mobile} variante="mobile" textos={textos} />
-          </div>
-          <div className="hidden small:block">
-            <HeroTelaView tela={telas.desktop} variante="desktop" textos={textos} />
-          </div>
+          </LocalizedClientLink>
+        )}
+        <LocalizedClientLink href={bannerHref} aria-label={rotulo} className="hidden small:block">
+          <HeroTelaView tela={telas.desktop} variante="desktop" textos={textos} />
         </LocalizedClientLink>
       </section>
     )

@@ -19,6 +19,10 @@ type Hero = {
   video_titulo_2?: string
   video_texto?: string
   video_cta?: string
+  // banner interativo só no celular (modelo girando 360°; arrastar gira, botões trocam a peça)
+  interativo_mobile?: boolean
+  interativo_ceu_url?: string
+  interativo_pecas?: PecaGiro[]
   eyebrow_mode?: "collection" | "custom"
   eyebrow_text?: string
   collection_handle?: string
@@ -29,6 +33,7 @@ type Hero = {
   cta_href?: string
   image_url?: string
 }
+type PecaGiro = { nome: string; cor?: string; cor_hex?: string; video_url?: string; poster_url?: string }
 type Seo = { title?: string; description?: string; og_image_url?: string }
 type Colecao = { id: string; title: string; handle: string }
 
@@ -280,6 +285,89 @@ export default function VitrinePage() {
             <label className={label}>Parágrafo</label>
             <textarea value={hero.video_texto || ""} onChange={(e) => setHero({ ...hero, video_texto: e.target.value })} rows={2} placeholder="O despertar de toda mulher, que não precisa de motivação externa para brilhar. No canelado premium grafitti e telha." className={input + " resize-y"} />
           </div>
+        </div>
+
+        {/* BANNER INTERATIVO — só no celular; vence o vídeo/imagem do mobile quando ligado */}
+        <div className="rounded-md bg-eclat-areia/30 border border-eclat-pedra/30 p-4 flex flex-col gap-4">
+          <label className="flex items-center gap-2 text-sm text-eclat-grafite">
+            <input
+              type="checkbox"
+              checked={hero.interativo_mobile === true}
+              onChange={(e) => setHero({ ...hero, interativo_mobile: e.target.checked })}
+            />
+            <strong>Banner interativo no celular</strong>
+          </label>
+          <p className="text-xs text-eclat-grafite/70">
+            Céu do amanhecer com os mesmos textos do banner em vídeo e, abaixo, a modelo girando: a cliente arrasta
+            para girar e toca na peça para trocar. Só aparece no celular (o computador continua com o banner acima) e
+            só se houver pelo menos uma peça com vídeo e capa. Desmarque para voltar ao vídeo na hora.
+          </p>
+          <div>
+            <label className={label}>Imagem do céu (topo do banner)</label>
+            <UploadImagem url={hero.interativo_ceu_url} onChange={(u) => setHero({ ...hero, interativo_ceu_url: u })} />
+          </div>
+          <p className="text-xs uppercase tracking-wider text-eclat-grafite/50">
+            Peças do giro (a primeira abre o banner) — vídeo MP4 vertical, sem som, em loop; capa = primeiro quadro
+          </p>
+          {(hero.interativo_pecas || []).map((p, i, lista) => {
+            const mudar = (campo: Partial<PecaGiro>) =>
+              setHero({ ...hero, interativo_pecas: lista.map((x, j) => (j === i ? { ...x, ...campo } : x)) })
+            const mover = (para: number) => {
+              const nova = [...lista]
+              const [item] = nova.splice(i, 1)
+              nova.splice(para, 0, item)
+              setHero({ ...hero, interativo_pecas: nova })
+            }
+            return (
+              <div key={i} className="rounded-md border border-eclat-pedra/40 bg-white p-3 flex flex-col gap-3">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div>
+                    <label className={label}>Peça</label>
+                    <input value={p.nome || ""} onChange={(e) => mudar({ nome: e.target.value })} placeholder="Orvalho" className={input} />
+                  </div>
+                  <div>
+                    <label className={label}>Cor</label>
+                    <input value={p.cor || ""} onChange={(e) => mudar({ cor: e.target.value })} placeholder="Grafitti" className={input} />
+                  </div>
+                  <div>
+                    <label className={label}>Bolinha da cor (hex)</label>
+                    <div className="flex items-center gap-2">
+                      <input value={p.cor_hex || ""} onChange={(e) => mudar({ cor_hex: e.target.value })} placeholder="#3A363A" className={input} />
+                      <span className="h-6 w-6 shrink-0 rounded-full border border-eclat-pedra/50" style={{ background: p.cor_hex || "transparent" }} />
+                    </div>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <label className={label}>Vídeo do giro (URL do MP4)</label>
+                    <input value={p.video_url || ""} onChange={(e) => mudar({ video_url: e.target.value })} placeholder="https://…/hero/giro/orvalho-grafitti.mp4" className={input} />
+                  </div>
+                  <div>
+                    <label className={label}>Capa do vídeo</label>
+                    <UploadImagem url={p.poster_url} onChange={(u) => mudar({ poster_url: u })} />
+                  </div>
+                </div>
+                <div className="flex gap-3 text-xs">
+                  <button type="button" disabled={i === 0} onClick={() => mover(i - 1)} className="text-eclat-grafite/70 disabled:opacity-30">↑ Subir</button>
+                  <button type="button" disabled={i === lista.length - 1} onClick={() => mover(i + 1)} className="text-eclat-grafite/70 disabled:opacity-30">↓ Descer</button>
+                  <button
+                    type="button"
+                    onClick={() => setHero({ ...hero, interativo_pecas: lista.filter((_, j) => j !== i) })}
+                    className="ml-auto text-eclat-terracota"
+                  >
+                    Remover
+                  </button>
+                </div>
+              </div>
+            )
+          })}
+          <button
+            type="button"
+            onClick={() => setHero({ ...hero, interativo_pecas: [...(hero.interativo_pecas || []), { nome: "" }] })}
+            className="self-start text-sm text-eclat-terracota"
+          >
+            + Adicionar peça
+          </button>
         </div>
 
         <p className="text-xs uppercase tracking-wider text-eclat-grafite/50 border-t border-eclat-pedra/30 pt-3">

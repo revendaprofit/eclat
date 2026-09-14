@@ -30,6 +30,49 @@ export function heroTelas(c: HeroMediaInput): { mobile: HeroTela; desktop: HeroT
   }
 }
 
+// Banner INTERATIVO do celular (2026-09-14): céu do amanhecer com os textos + palco com a modelo
+// girando 360° (arrastar gira, botões trocam a peça). Liga por chave no Cockpit; vence vídeo/imagem
+// só no mobile e só se houver pelo menos uma peça completa — senão o celular segue como estava.
+export type HeroPecaInput = {
+  nome?: string | null
+  cor?: string | null
+  cor_hex?: string | null
+  video_url?: string | null
+  poster_url?: string | null
+}
+
+export type HeroPeca = { id: string; nome: string; cor: string | null; corHex: string | null; video: string; poster: string }
+
+const slug = (s: string) =>
+  s
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "")
+
+export function heroInterativo(c: {
+  interativo_mobile?: boolean | null
+  interativo_ceu_url?: string | null
+  interativo_pecas?: HeroPecaInput[] | null
+}): { ceu: string | null; pecas: HeroPeca[] } | null {
+  if (c.interativo_mobile !== true || !Array.isArray(c.interativo_pecas)) return null
+  const vistos = new Set<string>()
+  const pecas: HeroPeca[] = []
+  for (const p of c.interativo_pecas) {
+    const nome = str(p?.nome)
+    const video = str(p?.video_url)
+    const poster = str(p?.poster_url)
+    if (!nome || !video || !poster) continue
+    const cor = str(p.cor)
+    let id = slug(cor ? `${nome} ${cor}` : nome) || "peca"
+    for (let n = 2; vistos.has(id); n++) id = `${slug(cor ? `${nome} ${cor}` : nome)}-${n}`
+    vistos.add(id)
+    pecas.push({ id, nome, cor, corHex: str(p.cor_hex), video, poster })
+  }
+  return pecas.length ? { ceu: str(c.interativo_ceu_url), pecas } : null
+}
+
 // Textos sobre o vídeo (os mesmos da arte da coleção Lumière, editáveis no Cockpit).
 export type HeroTextos = { eyebrow: string; titulo1: string; titulo2: string; texto: string; cta: string }
 
