@@ -1,4 +1,5 @@
 import { HOME_DEFAULTS, Testimonials as TestimonialsType } from "@modules/home/content"
+import { depoimentosVisiveis } from "@lib/util/depoimentos"
 
 // Provas sociais (depoimentos) — editável no Cockpit (site_content home.testimonials).
 export default function Testimonials({
@@ -6,6 +7,8 @@ export default function Testimonials({
 }: {
   content?: TestimonialsType | null
 }) {
+  // Mesma regra da PDP: ocultos ate 13/10/2026 (sem vendas ainda), voltam sozinhos.
+  if (!depoimentosVisiveis()) return null
   const heading = content?.heading ?? HOME_DEFAULTS.testimonials.heading
   const items =
     content?.items && content.items.length > 0
