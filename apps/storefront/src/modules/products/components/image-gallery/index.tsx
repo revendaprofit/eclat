@@ -5,25 +5,25 @@ import { Container, clx } from "@modules/common/components/ui"
 import Image from "next/image"
 import { useEffect, useRef, useState } from "react"
 import ProductVideo from "@modules/products/components/product-video"
-import { buildGalleryItems } from "@lib/util/product-video"
+import { buildGalleryItems, type VideoSource } from "@lib/util/product-video"
 
 type ImageGalleryProps = {
   images: HttpTypes.StoreProductImage[]
   productTitle?: string
   productHandle?: string
-  // product.metadata.youtube_id já validado por parseYoutubeId (no template)
-  youtubeId?: string | null
+  // vídeo já resolvido para a cor em exibição (resolveVideoSource): MP4 próprio ou YouTube
+  video?: VideoSource | null
 }
 
 // Carrossel horizontal com scroll-snap em todas as telas (pedido do dono, 2026-09-13): uma foto
 // por vez, setas ‹ › no desktop (no mobile arrasta) e bolinhas embaixo — sem biblioteca.
-// Item de vídeo (quando youtubeId existe) entra como slide no meio das fotos —
+// Item de vídeo (quando `video` existe) entra como slide no meio das fotos —
 // buildGalleryItems decide a posição (2º item, LCP intacto no hero).
-const ImageGallery = ({ images, productTitle, productHandle, youtubeId }: ImageGalleryProps) => {
+const ImageGallery = ({ images, productTitle, productHandle, video }: ImageGalleryProps) => {
   const trackRef = useRef<HTMLDivElement>(null)
   const animRef = useRef(0)
   const [active, setActive] = useState(0)
-  const items = buildGalleryItems(images, youtubeId)
+  const items = buildGalleryItems(images, video)
 
   // Vai para o slide `i` animando o scroll da faixa (o IntersectionObserver abaixo atualiza
   // `active`). Animação própria (rAF, ~260 ms) em vez de `scrollTo({ behavior: "smooth" })`:
@@ -102,7 +102,7 @@ const ImageGallery = ({ images, productTitle, productHandle, youtubeId }: ImageG
                 id={item.id}
                 data-testid="product-video"
               >
-                <ProductVideo youtubeId={item.youtubeId} productTitle={productTitle} productHandle={productHandle} />
+                <ProductVideo source={item.source} productTitle={productTitle} productHandle={productHandle} />
               </Container>
             )
           }

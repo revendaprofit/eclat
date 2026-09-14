@@ -1,5 +1,7 @@
 # PDP — Vídeo na galeria + Recomendação de tamanho — Plano de implementação
 
+> **STATUS (2026-09-14): EXECUTADO E EM PRODUÇÃO.** Tasks 1–6 entregues nos commits `27c9a6b` … `710018e` (07–08/09) com rodadas de correção; depois a PDP foi redesenhada (carrossel em todas as telas, tabela de medidas virou aba "Medidas e Tamanhos Recomendados", seletor de tamanho próprio) e as duas features foram mantidas e re-integradas. Não reaplicar. Estado atual em `progress.md` (entradas de 07/09 e 13/09). Pendência única: nenhum produto tem `youtube_id` cadastrado — o slide de vídeo só aparece quando o Cockpit preencher esse campo.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Na página de produto (PDP) da vitrine, (1) exibir um vídeo do YouTube como item da galeria a partir de `product.metadata.youtube_id`, e (2) oferecer um modal "Qual é o meu tamanho?" que recomenda o tamanho a partir de altura/peso (pré-preenchimento) e medidas de busto/cintura/quadril, comparando com a tabela de medidas da categoria já editável no Cockpit.
