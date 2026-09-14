@@ -6,7 +6,7 @@ import ProductActions from "@modules/products/components/product-actions"
 import ProductOnboardingCta from "@modules/products/components/product-onboarding-cta"
 import ProductTabs from "@modules/products/components/product-tabs"
 import RelatedProducts from "@modules/products/components/related-products"
-import ProductInfo from "@modules/products/templates/product-info"
+import { ProductDescription, ProductHeader } from "@modules/products/templates/product-info"
 import SkeletonRelatedProducts from "@modules/skeletons/templates/skeleton-related-products"
 import { notFound } from "next/navigation"
 import { HttpTypes } from "@medusajs/types"
@@ -97,15 +97,17 @@ const ProductTemplate = async ({
       <ProductSelectionProvider key={product.id} product={product} initialVariantId={selectedVariantId} initialColor={initialColor}>
         <div className="content-container relative">
           <Breadcrumb items={breadcrumbItems} countryCode={countryCode} />
+          {/* Mobile (coluna única, pela `order`): cabeçalho → fotos → compra → descrição + abas.
+              Desktop (grid 300 | fotos | 300): cabeçalho e descrição na coluna da esquerda
+              (linhas 1 e 2), fotos no centro, compra à direita (fixa) — pedido do dono, 2026-09-13. */}
           <div
-            className="flex flex-col small:flex-row small:items-start py-6"
+            className="flex flex-col small:grid small:grid-cols-[300px_minmax(0,1fr)_300px] small:gap-x-8 small:items-start py-6"
             data-testid="product-container"
           >
-            <div className="flex flex-col small:py-0 small:max-w-[300px] w-full py-8 gap-y-6">
-              <ProductInfo product={product} />
-              <ProductTabs product={product} />
+            <div className="order-1 w-full pt-6 pb-4 small:p-0 small:col-start-1 small:row-start-1">
+              <ProductHeader product={product} />
             </div>
-            <div className="block w-full relative">
+            <div className="order-2 block w-full relative small:col-start-2 small:row-start-1 small:row-span-2">
               <PersonaGallery
                 images={images}
                 personaMedia={personaMedia}
@@ -114,7 +116,11 @@ const ProductTemplate = async ({
                 youtubeId={youtubeId}
               />
             </div>
-            <div className="flex flex-col small:sticky small:top-48 small:py-0 small:max-w-[300px] w-full py-8 gap-y-12">
+            <div className="order-4 flex flex-col w-full py-8 gap-y-6 small:py-6 small:col-start-1 small:row-start-2">
+              <ProductDescription product={product} />
+              <ProductTabs product={product} />
+            </div>
+            <div className="order-3 flex flex-col w-full py-8 gap-y-12 small:py-0 small:col-start-3 small:row-start-1 small:row-span-2 small:self-start small:sticky small:top-48">
               <ProductOnboardingCta />
               <Suspense
                 fallback={
