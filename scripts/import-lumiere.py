@@ -83,7 +83,7 @@ ORDEM = {
 # código de SKU e hex amostrado do tecido nas fotos do ensaio.
 CORES = {
     "telha": {"nome": "Telha", "sku": "TEL", "hex": "#C27050"},
-    "grafitti": {"nome": "Grafite", "sku": "GRA", "hex": "#312D2F"},
+    "grafitti": {"nome": "Grafitti", "sku": "GRA", "hex": "#312D2F"},   # nome escolhido pelo dono (13/09), não "Grafite"
 }
 
 
