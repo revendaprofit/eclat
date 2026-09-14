@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 import type { HttpTypes } from "@medusajs/types"
 import {
-  colorValues, findOption, firstAvailableVariantId, imagesForColor, initialSelection,
+  colorValues, corDaGaleria, findOption, firstAvailableVariantId, galeriaDaCor, imagesForColor, initialSelection,
   isCompleteSelection, selectedColor, sizeAvailability, sizeValues, variantFor, variantLabel,
 } from "./pdp-variants"
 
@@ -68,6 +68,24 @@ describe("imagesForColor / firstAvailableVariantId", () => {
     expect(firstAvailableVariantId(P, "Verde Exercito")).toBe("v2")
     expect(firstAvailableVariantId(P, "Licor")).toBe("v4")
     expect(firstAvailableVariantId({ ...P, variants: [v("x", "P", "Licor", 0)] } as any, "Licor")).toBeNull()
+  })
+})
+
+describe("galeria: cor padrão e teto de fotos", () => {
+  it("sem cor escolhida usa a 1ª cor com fotos, não todas as fotos do produto", () => {
+    expect(corDaGaleria(P, null)).toBe("Verde Exercito")
+    expect(galeriaDaCor(P, null).map((i) => i.url)).toEqual(["v1a.jpg"])
+    expect(galeriaDaCor(P, "Licor").map((i) => i.url)).toEqual(["a.jpg", "b.jpg"])
+  })
+  it("produto de cor única ou sem fotos por cor segue com as fotos do produto", () => {
+    const unica = { ...P, options: [OPTS[0], { id: "o_c", title: "Cor", values: [{ value: "Licor" }] }] } as unknown as HttpTypes.StoreProduct
+    expect(corDaGaleria(unica, null)).toBeNull()
+    expect(galeriaDaCor(unica, null).map((i) => i.url)).toEqual(["a.jpg", "b.jpg"])
+  })
+  it("no máximo 6 fotos", () => {
+    const muitas = { ...P, images: Array.from({ length: 9 }, (_, i) => ({ id: `m${i}`, url: `m${i}.jpg` })) } as unknown as HttpTypes.StoreProduct
+    expect(galeriaDaCor(muitas, "Licor")).toHaveLength(6)
+    expect(galeriaDaCor(muitas, "Licor", 3).map((i) => i.url)).toEqual(["m0.jpg", "m1.jpg", "m2.jpg"])
   })
 })
 

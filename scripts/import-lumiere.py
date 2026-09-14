@@ -122,16 +122,20 @@ for _m in MODELOS.values():
 # Fotos de conjunto servem ao top e ao short. Sem entrada: todas as fotos do próprio modelo e cor.
 # Cor sem nenhuma foto é PULADA (não cria variante) até existir foto.
 GALERIA = {
-    ("macaquinho-solaris", "telha"): [("macaquinho solaris", n) for n in [33, 29, 31, 24, 23, 25, 26, 27, 28, 37, 38, 39, 21, 22, 30, 32, 34, 35, 36, 40, 41]],
-    ("macaquinho-solaris", "grafitti"): [("macaquinho solaris", n) for n in [105, 101, 104, 103, 102]],   # fotos refeitas na cor real (dono, 14/09); 101–105 = "Coleção lumiére- macaquinho solaris grafitti*.jpg" do Drive
-    ("top-aurora", "telha"): [("top aurora", 6), ("top aurora", 7), ("top aurora", 1), ("conjunto aurora", 8), ("top aurora", 3), ("top aurora", 5), ("top aurora", 9)],
-    ("top-aurora", "grafitti"): [("conjunto aurora", 9), ("conjunto aurora", 4), ("conjunto aurora", 3), ("conjunto aurora", 5), ("conjunto aurora", 6), ("conjunto aurora", 1)],
-    ("short-aurora", "telha"): [("short aurora", 3), ("conjunto aurora", 5), ("short aurora", 1), ("short aurora", 4), ("conjunto aurora", 7), ("short aurora", 2)],
-    ("short-aurora", "grafitti"): [("conjunto aurora", 4), ("conjunto aurora", 7), ("conjunto aurora", 5), ("conjunto aurora", 3), ("conjunto aurora", 1), ("conjunto aurora", 8)],
-    ("top-orvalho", "grafitti"): [("conjunto orvalho", 5), ("top orvalho", 4), ("top orvalho", 3), ("conjunto orvalho", 8), ("top orvalho", 5), ("conjunto orvalho", 13), ("top orvalho", 2)],
-    ("top-orvalho", "telha"): [("conjunto orvalho", 1), ("conjunto orvalho", 2), ("conjunto orvalho", 3), ("arquivo", "046"), ("arquivo", "049"), ("arquivo", "060")],   # 1–3: conjunto Telha (Drive, 13/09); 046/049/060: top Telha com short Grafitti
-    ("short-orvalho", "grafitti"): [("conjunto orvalho", 4), ("short orvalho", 3), ("short orvalho", 1), ("conjunto orvalho", 9), ("conjunto orvalho", 12), ("short orvalho", 5)],
-    ("short-orvalho", "telha"): [("conjunto orvalho", 1), ("conjunto orvalho", 2), ("conjunto orvalho", 3)],   # fotos do conjunto Telha enviadas pelo dono (13/09)
+    # Revisão foto a foto (dono, 14/09/2026): nenhuma foto com a cabeça cortada pela metade (ou a cabeça
+    # inteira no quadro, ou recorte limpo abaixo do busto), a peça vendida inteira (barra do short
+    # visível), 1ª foto focada NA PEÇA do produto, no máximo 6 fotos por cor. 3º elemento = recorte 2:3
+    # (x0, y0, x1, y1) em frações da foto original.
+    ("macaquinho-solaris", "telha"): [("macaquinho solaris", n) for n in [33, 26, 23, 29, 27, 24]],
+    ("macaquinho-solaris", "grafitti"): [("macaquinho solaris", n) for n in [105, 101, 104, 103, 102]],   # fotos refeitas na cor real (14/09)
+    ("top-aurora", "telha"): [("conjunto aurora", 1), ("top aurora", 2), ("top aurora", 1), ("top aurora", 8), ("top aurora", 5), ("top aurora", 6)],
+    ("top-aurora", "grafitti"): [("conjunto aurora", 9, (0.20, 0.08, 0.92, 0.80)), ("conjunto aurora", 5), ("conjunto aurora", 4), ("conjunto aurora", 10), ("conjunto aurora", 8), ("conjunto aurora", 1)],
+    ("short-aurora", "telha"): [("conjunto aurora", 7), ("short aurora", 1), ("short aurora", 2), ("short aurora", 4), ("conjunto aurora", 2), ("conjunto aurora", 6)],
+    ("short-aurora", "grafitti"): [("conjunto aurora", 3, (0.285, 0.45, 0.835, 1.0)), ("conjunto aurora", 7), ("conjunto aurora", 8), ("conjunto aurora", 5), ("conjunto aurora", 2), ("conjunto aurora", 1)],
+    ("top-orvalho", "grafitti"): [("conjunto orvalho", 5, (0.195, 0.03, 0.865, 0.70)), ("conjunto orvalho", 8), ("top orvalho", 2), ("conjunto orvalho", 13), ("conjunto orvalho", 9), ("top orvalho", 1)],
+    ("top-orvalho", "telha"): [("arquivo", "050"), ("arquivo", "060"), ("arquivo", "052"), ("arquivo", "056"), ("conjunto orvalho", 1), ("conjunto orvalho", 2)],   # 050/060/052/056: top Telha com short Grafitti
+    ("short-orvalho", "grafitti"): [("short orvalho", 3), ("short orvalho", 1), ("conjunto orvalho", 9), ("conjunto orvalho", 6), ("conjunto orvalho", 12), ("conjunto orvalho", 4)],
+    ("short-orvalho", "telha"): [("conjunto orvalho", 1, (0.285, 0.45, 0.755, 0.92)), ("conjunto orvalho", 1), ("conjunto orvalho", 2)],   # CO3 saiu: corta o short
 }
 
 # Conjuntos montados pelo admin (Benefício Conjunto, curados). Vale por PRODUTO, qualquer cor (dono, 13/09).
@@ -175,26 +179,40 @@ def indexar_fotos():
         idx[(norm(m["modelo"]), norm(m["cor"]), int(m["n1"] or m["n2"] or 0))] = os.path.join(FOTOS, arq)
     return colecao, idx
 
+MAX_FOTOS = 6   # teto combinado com o dono (14/09): no máximo 6 fotos por produto e cor (+ vídeo)
+
 def galeria(f, cor, idx):
-    """Lista ordenada de caminhos das fotos de um produto numa cor (ver GALERIA)."""
+    """Lista ordenada de (caminho, recorte) das fotos de um produto numa cor (ver GALERIA).
+    `recorte` = (x0, y0, x1, y1) em frações da foto original, ou None (foto inteira)."""
     itens = GALERIA.get((f["handle"], cor))
     if itens is None:
         mod = norm(f["title"])
-        return [idx[k] for k in sorted(k for k in idx if k[0] == mod and k[1] == cor)]
-    caminhos = []
-    for grupo, ref in itens:
+        return [(idx[k], None) for k in sorted(k for k in idx if k[0] == mod and k[1] == cor)][:MAX_FOTOS]
+    assert len(itens) <= MAX_FOTOS, "GALERIA[%s/%s]: %d fotos, máximo %d" % (f["handle"], cor, len(itens), MAX_FOTOS)
+    fotos = []
+    for item in itens:
+        grupo, ref = item[0], item[1]
+        recorte = item[2] if len(item) > 2 else None
         if grupo == "arquivo":
             achados = [x for x in os.listdir(FOTOS) if x.startswith("%s_" % ref)]
             assert len(achados) == 1, "GALERIA[%s/%s]: arquivo %s_ não encontrado" % (f["handle"], cor, ref)
-            caminhos.append(os.path.join(FOTOS, achados[0]))
+            fotos.append((os.path.join(FOTOS, achados[0]), recorte))
         else:
             k = (norm(grupo), cor, ref)
             assert k in idx, "GALERIA[%s/%s]: foto inexistente %s" % (f["handle"], cor, k)
-            caminhos.append(idx[k])
-    return caminhos
+            fotos.append((idx[k], recorte))
+    return fotos
 
-def otimizar(caminho):
+def otimizar(caminho, recorte=None):
     im = ImageOps.exif_transpose(Image.open(caminho)).convert("RGB")
+    if recorte:
+        W, H = im.size
+        x0, y0, x1, y1 = recorte
+        caixa = (round(x0 * W), round(y0 * H), round(x1 * W), round(y1 * H))
+        prop = (caixa[2] - caixa[0]) / (caixa[3] - caixa[1])
+        assert 0 <= x0 < x1 <= 1 and 0 <= y0 < y1 <= 1, "recorte fora da foto: %s" % (recorte,)
+        assert abs(prop - 2 / 3) < 0.02, "recorte %s não é 2:3 (%.3f) em %s" % (recorte, prop, os.path.basename(caminho))
+        im = im.crop(caixa)
     im.thumbnail((LADO_MAX, LADO_MAX))
     buf = io.BytesIO(); im.save(buf, "JPEG", quality=JPEG_Q, optimize=True, progressive=True)
     return buf.getvalue()
@@ -325,11 +343,12 @@ def main():
         urls_por_cor = {}
         for c in cores:
             urls = []
-            for i, caminho in enumerate(fotos_por_cor[c], 1):
-                # sufixo = hash do arquivo de origem: trocar a foto de uma posição gera URL nova (sem cache velho)
-                dest = "products/%s/%s-%02d-%s.jpg" % (handle, c, i, hashlib.md5(os.path.basename(caminho).encode("utf-8")).hexdigest()[:8])
+            for i, (caminho, recorte) in enumerate(fotos_por_cor[c], 1):
+                # sufixo = hash do arquivo de origem + recorte: trocar a foto (ou o recorte) gera URL nova (sem cache velho)
+                chave = os.path.basename(caminho) + ("|%s" % (recorte,) if recorte else "")
+                dest = "products/%s/%s-%02d-%s.jpg" % (handle, c, i, hashlib.md5(chave.encode("utf-8")).hexdigest()[:8])
                 if dry: urls.append(st.url + "/storage/v1/object/public/site/" + dest); continue
-                urls.append(st.upload(dest, otimizar(caminho)))
+                urls.append(st.upload(dest, otimizar(caminho, recorte)))
             urls_por_cor[c] = urls
             print("  fotos %s: %d hospedadas em products/%s/" % (CORES[c]["nome"], len(urls), handle))
             cores_novas[CORES[c]["nome"]] = CORES[c]

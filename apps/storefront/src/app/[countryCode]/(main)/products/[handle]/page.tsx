@@ -4,7 +4,7 @@ import { listProducts } from "@lib/data/products"
 import { getPersonaMediaForProduct, personasAtivas } from "@lib/data/personas"
 import { getRegion, listRegions } from "@lib/data/regions"
 import ProductTemplate from "@modules/products/templates"
-import { imagesForColor, initialSelection, selectedColor } from "@lib/util/pdp-variants"
+import { galeriaDaCor, initialSelection, selectedColor } from "@lib/util/pdp-variants"
 
 type Props = {
   params: Promise<{ countryCode: string; handle: string }>
@@ -123,7 +123,8 @@ export default async function ProductPage(props: Props) {
   // fotos — v_id sozinho não basta (produto de cor única/variante única também pré-seleciona sem v_id).
   const sel = initialSelection(pricedProduct, { variantId: selectedVariantId ?? null, color: initialColor })
   const cor = selectedColor(pricedProduct, sel)
-  const images = cor ? imagesForColor(pricedProduct, cor) : pricedProduct.images ?? []
+  // Sem cor escolhida: fotos da 1ª cor com fotos (nunca todas as cores juntas); no máximo 6 fotos.
+  const images = galeriaDaCor(pricedProduct, cor)
 
   // fotos por persona ("Minha ÉCLAT") — busca por id E handle do produto; função desligada no
   // Cockpit → lista vazia (galeria padrão, mesmo com persona salva no navegador da visitante)

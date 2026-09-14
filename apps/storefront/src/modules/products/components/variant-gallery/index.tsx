@@ -2,7 +2,7 @@
 
 import type { HttpTypes } from "@medusajs/types"
 import ImageGallery from "@modules/products/components/image-gallery"
-import { imagesForColor } from "@lib/util/pdp-variants"
+import { corDaGaleria, galeriaDaCor, MAX_FOTOS_GALERIA } from "@lib/util/pdp-variants"
 import { resolveVideoSource, type ProductVideos } from "@lib/util/product-video"
 import { useMemo } from "react"
 import { useProductSelection } from "../product-selection"
@@ -28,11 +28,13 @@ export default function VariantGallery({
   // useMemo (não só uma expressão inline): sem isso `images` é um array novo a cada
   // render, e o ImageGallery abaixo não consegue distinguir "mesma lista, novo render"
   // de "lista realmente trocou" — o que quebrava o reset do carrossel na troca de cor.
+  // Sem cor escolhida, a galeria (e o vídeo) seguem a 1ª cor com fotos; no máximo 6 fotos.
+  const corGaleria = useMemo(() => corDaGaleria(product, color), [product, color])
   const images = useMemo(() => {
-    const forColor = color ? imagesForColor(product, color) : ssrImages
-    return forColor.length ? forColor : ssrImages
+    const daCor = galeriaDaCor(product, color)
+    return daCor.length ? daCor : ssrImages.slice(0, MAX_FOTOS_GALERIA)
   }, [product, color, ssrImages])
-  const video = useMemo(() => resolveVideoSource(videos ?? {}, youtubeId, color), [videos, youtubeId, color])
+  const video = useMemo(() => resolveVideoSource(videos ?? {}, youtubeId, corGaleria), [videos, youtubeId, corGaleria])
   return (
     <ImageGallery
       images={images}

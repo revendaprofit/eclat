@@ -74,6 +74,23 @@ export function imagesForColor(product: Product, color: string | null): HttpType
   return product.images ?? []
 }
 
+// Teto de fotos da galeria (dono, 14/09/2026): no máximo 6 fotos por produto e cor, mais o vídeo.
+export const MAX_FOTOS_GALERIA = 6
+
+// Cor cujas fotos a galeria mostra: a escolhida; sem escolha (entrada sem ?cor=, menu, busca, link
+// compartilhado), a 1ª cor do produto com fotos próprias — nunca todas as fotos de todas as cores.
+export function corDaGaleria(product: Product, color: string | null): string | null {
+  if (color) return color
+  const cores = colorValues(product)
+  if (cores.length <= 1) return null
+  return cores.find((c) => variantsOf(product, c).some((v) => (v.images ?? []).length > 0)) ?? null
+}
+
+// Fotos da galeria (PDP, página do conjunto): as da cor (ou da cor padrão), até o teto.
+export function galeriaDaCor(product: Product, color: string | null, max = MAX_FOTOS_GALERIA): HttpTypes.StoreProductImage[] {
+  return imagesForColor(product, corDaGaleria(product, color)).slice(0, max)
+}
+
 export function firstAvailableVariantId(product: Product, color: string): string | null {
   const bySize = sizeValues(product)
   const vs = variantsOf(product, color)

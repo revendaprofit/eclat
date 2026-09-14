@@ -4,7 +4,7 @@ import { useEffect, useMemo } from "react"
 import type { HttpTypes } from "@medusajs/types"
 import type { ColorMap } from "@lib/util/colors"
 import type { PecaCard } from "@lib/util/conjuntos"
-import { imagesForColor } from "@lib/util/pdp-variants"
+import { galeriaDaCor } from "@lib/util/pdp-variants"
 import { isVariantAvailable, type StockVariant } from "@lib/util/availability"
 import VariantGallery from "@modules/products/components/variant-gallery"
 import ColorSelect from "@modules/products/components/product-actions/color-select"
@@ -42,7 +42,7 @@ export default function PecaDoConjunto({
   disabled?: boolean
 }) {
   const { product, color, selectedVariant, isComplete } = useProductSelection()
-  const ssrImages = useMemo(() => imagesForColor(product, color), [product, color])
+  const ssrImages = useMemo(() => galeriaDaCor(product, color), [product, color])
 
   useEffect(() => {
     const disponivel = !!selectedVariant && isVariantAvailable(selectedVariant as StockVariant)

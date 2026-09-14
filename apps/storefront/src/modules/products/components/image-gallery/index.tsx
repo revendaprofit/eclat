@@ -84,6 +84,9 @@ const ImageGallery = ({ images, productTitle, productHandle, video }: ImageGalle
     // eslint-disable-next-line react-hooks/exhaustive-deps -- reobserva só quando a lista de itens muda (items.length deriva de listKey)
   }, [listKey])
 
+  // Caixa 2:3 = proporção das fotos do catálogo (1333x2000): com object-cover numa caixa mais larga
+  // (a antiga 29:34) o site cortava ~11% em cima e embaixo — cabeça da modelo e barra do short
+  // (achado do dono, 14/09/2026). Mobile e desktop usam a mesma caixa.
   let fotoN = 0
 
   return (
@@ -98,7 +101,7 @@ const ImageGallery = ({ images, productTitle, productHandle, video }: ImageGalle
             return (
               <Container
                 key={item.id}
-                className="relative aspect-[29/34] w-full shrink-0 snap-center overflow-hidden bg-ui-bg-subtle"
+                className="relative aspect-[2/3] w-full shrink-0 snap-center overflow-hidden bg-ui-bg-subtle"
                 id={item.id}
                 data-testid="product-video"
               >
@@ -109,7 +112,7 @@ const ImageGallery = ({ images, productTitle, productHandle, video }: ImageGalle
           fotoN += 1
           const alt = productTitle ? `${productTitle} — use.ÉCLAT — foto ${fotoN}` : `Foto ${fotoN} do produto`
           return (
-            <Container key={item.id} className="relative aspect-[29/34] w-full shrink-0 snap-center overflow-hidden bg-ui-bg-subtle" id={item.id}>
+            <Container key={item.id} className="relative aspect-[2/3] w-full shrink-0 snap-center overflow-hidden bg-ui-bg-subtle" id={item.id}>
               {/* follow-up #2: `priority` conta FOTOS, não itens da galeria — o slide de vídeo não
                   pode consumir uma das duas prioridades. Sem vídeo o HTML sai idêntico ao de antes
                   desta feature (as 2 primeiras imagens com fetchpriority=high). */}
