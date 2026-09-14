@@ -191,17 +191,19 @@ export default function HeroInterativo({
 
   const sombra = { textShadow: "0 2px 12px rgba(0,0,0,.5)" }
 
+  // Compacto (pedido do dono, 2026-09-14 à noite): céu ~300 px, palco 3:4 e os botões das peças em uma
+  // linha rolável dentro do palco — céu + modelo + botões cabem em pouco mais de uma tela de celular.
   return (
     <div className="bg-black text-[#f3eff0]" data-testid="hero-interativo">
       <div className="mx-auto max-w-[520px] overflow-hidden">
         {/* ---- amanhecer: céu + textos ---- */}
-        <div className="relative isolate flex min-h-[560px] flex-col px-7 pt-11">
+        <div className="relative isolate flex flex-col px-6 pb-[76px] pt-7">
           <div
             aria-hidden
             className="ceu-deriva absolute inset-0 -z-20 bg-cover bg-top bg-no-repeat"
             style={ceu ? { backgroundImage: `url("${ceu}")` } : { background: "linear-gradient(180deg,#f08a4b 0%,#6a4a8c 45%,#000 100%)" }}
           >
-            <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0)_46%,rgba(0,0,0,.55)_72%,#000_100%)]" />
+            <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0)_40%,rgba(0,0,0,.55)_70%,#000_100%)]" />
           </div>
           <div aria-hidden className="absolute inset-0 -z-10 bg-[linear-gradient(180deg,rgba(0,0,0,.18)_0%,rgba(0,0,0,0)_40%)]" />
 
@@ -210,38 +212,38 @@ export default function HeroInterativo({
             src="/brand/mark.png"
             alt=""
             aria-hidden
-            className="mb-[26px] block h-auto w-[64px]"
+            className="mb-3.5 block h-auto w-[42px]"
             style={{ filter: "brightness(0) invert(1) drop-shadow(0 2px 10px rgba(0,0,0,.45))" }}
           />
-          <span className="mb-[22px] font-sans text-[13px] font-medium uppercase leading-none tracking-[0.28em] text-[#ecd6c8]" style={sombra}>
+          <span className="mb-2.5 font-sans text-[11px] font-medium uppercase leading-none tracking-[0.28em] text-[#ecd6c8]" style={sombra}>
             {textos.eyebrow}
           </span>
           <p
-            className="mb-[22px] font-serif text-[clamp(50px,14vw,62px)] font-semibold leading-[0.95] text-balance"
+            className="mb-3 font-serif text-[clamp(36px,10vw,44px)] font-semibold leading-[0.95] text-balance"
             style={{ textShadow: "0 3px 18px rgba(0,0,0,.45)" }}
           >
             {textos.titulo1}
-            <em className="mt-0.5 block text-[1.06em] font-medium italic text-[#ffd6be]">{textos.titulo2}</em>
+            <em className="block text-[1.06em] font-medium italic text-[#ffd6be]">{textos.titulo2}</em>
           </p>
-          <p className="mb-[26px] max-w-[34ch] font-sans text-base leading-[1.55]" style={sombra}>
+          <p className="mb-4 max-w-[36ch] font-sans text-[14px] leading-[1.45]" style={sombra}>
             {textos.texto}
           </p>
           <LocalizedClientLink
             href={href}
-            className="self-start rounded-full bg-[#f3eff0] px-7 py-[18px] font-sans text-[13px] font-medium uppercase leading-none tracking-[0.18em] text-[#262932] shadow-[0_10px_30px_rgba(0,0,0,.35)] transition-colors hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[3px] focus-visible:outline-[#ffd6be]"
+            className="self-start rounded-full bg-[#f3eff0] px-6 py-3.5 font-sans text-[12px] font-medium uppercase leading-none tracking-[0.18em] text-[#262932] shadow-[0_10px_30px_rgba(0,0,0,.35)] transition-colors hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[3px] focus-visible:outline-[#ffd6be]"
           >
             {textos.cta}
           </LocalizedClientLink>
         </div>
 
-        {/* ---- noite: o palco que gira ---- */}
-        <div className="relative -mt-[60px] pb-2">
+        {/* ---- noite: o palco que gira, com os botões das peças por cima da base ---- */}
+        <div className="relative -mt-[60px]">
           <div
             ref={palco}
             tabIndex={0}
             role="img"
             aria-label={`Modelo girando com ${rotulo(pecas[selecionada])}. Arraste para girar.`}
-            className="relative aspect-[9/13] w-full cursor-grab touch-pan-y select-none overflow-hidden outline-none active:cursor-grabbing focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[3px] focus-visible:outline-[#ffd6be]"
+            className="relative aspect-[3/4] w-full cursor-grab touch-pan-y select-none overflow-hidden outline-none active:cursor-grabbing focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[3px] focus-visible:outline-[#ffd6be]"
             onPointerDown={onPointerDown}
             onPointerMove={onPointerMove}
             onPointerUp={fimArrasto}
@@ -265,17 +267,18 @@ export default function HeroInterativo({
                   onLoadedData={() => onLoadedData(i)}
                   onError={() => onError(i)}
                   className={
-                    "pointer-events-none absolute inset-0 h-full w-full bg-black object-cover object-top transition-opacity duration-500 motion-reduce:transition-none " +
+                    "pointer-events-none absolute inset-0 h-full w-full bg-black object-cover object-[50%_22%] transition-opacity duration-500 motion-reduce:transition-none " +
                     (i === frente ? "opacity-100" : "opacity-0")
                   }
                 />
               )
             })}
-            <div aria-hidden className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,#000_0%,rgba(0,0,0,0)_14%,rgba(0,0,0,0)_78%,#000_100%)]" />
+            <div aria-hidden className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,#000_0%,rgba(0,0,0,0)_14%,rgba(0,0,0,0)_68%,rgba(0,0,0,.85)_100%)]" />
             <div
               aria-hidden
               className={
-                "pointer-events-none absolute bottom-[26px] left-1/2 z-[2] inline-flex -translate-x-1/2 items-center gap-2.5 whitespace-nowrap rounded-full border border-[rgba(243,239,240,.22)] bg-black/55 px-4 py-2.5 font-sans text-[11px] font-medium uppercase leading-none tracking-[0.2em] text-[#d8cfd0] backdrop-blur-md transition-opacity duration-500 " +
+                "pointer-events-none absolute left-1/2 z-[2] inline-flex -translate-x-1/2 items-center gap-2.5 whitespace-nowrap rounded-full border border-[rgba(243,239,240,.22)] bg-black/55 px-4 py-2 font-sans text-[10px] font-medium uppercase leading-none tracking-[0.2em] text-[#d8cfd0] backdrop-blur-md transition-opacity duration-500 " +
+                (pecas.length > 1 ? "bottom-[64px] " : "bottom-[22px] ") +
                 (dica ? "opacity-100" : "opacity-0")
               }
             >
@@ -284,14 +287,17 @@ export default function HeroInterativo({
               </svg>
               Arraste para girar
             </div>
-          </div>
 
-          {pecas.length > 1 && (
-            <>
-              <p className="mb-2.5 mt-[22px] text-center font-sans text-[11px] font-medium uppercase leading-none tracking-[0.28em] text-[#ecd6c8]">
-                Escolha a peça
-              </p>
-              <div role="group" aria-label="Peças da coleção" className="flex flex-wrap justify-center gap-2 px-5 pt-1.5">
+            {pecas.length > 1 && (
+              // Linha rolável de peças: o toque aqui não pode virar arrasto do giro (stopPropagation) e o
+              // dedo rola na horizontal (touch-pan-x), diferente do palco, que só deixa rolar a página.
+              <div
+                role="group"
+                aria-label="Peças da coleção"
+                className="absolute inset-x-0 bottom-0 z-[3] flex touch-pan-x snap-x gap-2 overflow-x-auto px-4 pb-3.5 pt-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                onPointerDown={(e) => e.stopPropagation()}
+                onKeyDown={(e) => e.stopPropagation()}
+              >
                 {pecas.map((p, i) => {
                   const ativa = i === selecionada
                   return (
@@ -299,12 +305,15 @@ export default function HeroInterativo({
                       key={p.id}
                       type="button"
                       aria-pressed={ativa}
-                      onClick={() => escolher(i)}
+                      onClick={(e) => {
+                        escolher(i)
+                        e.currentTarget.scrollIntoView({ block: "nearest", inline: "center", behavior: "smooth" })
+                      }}
                       className={
-                        "inline-flex items-center gap-2 rounded-full border px-3.5 py-[11px] font-sans text-[11px] font-medium uppercase leading-none tracking-[0.14em] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[3px] focus-visible:outline-[#ffd6be] " +
+                        "inline-flex shrink-0 snap-center items-center gap-2 rounded-full border px-3.5 py-2.5 font-sans text-[11px] font-medium uppercase leading-none tracking-[0.14em] backdrop-blur-md transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[3px] focus-visible:outline-[#ffd6be] " +
                         (ativa
                           ? "border-[#f3eff0] bg-[#f3eff0] text-[#262932]"
-                          : "border-[rgba(243,239,240,.22)] bg-[rgba(243,239,240,.10)] text-[#d8cfd0]")
+                          : "border-[rgba(243,239,240,.28)] bg-black/45 text-[#e6dfe0]")
                       }
                     >
                       {p.corHex && (
@@ -315,11 +324,8 @@ export default function HeroInterativo({
                   )
                 })}
               </div>
-              <p className="mx-5 mb-3 mt-[26px] text-center font-sans text-xs leading-relaxed text-[#d8cfd0]/75">
-                Toque numa peça para trocar. <b className="font-medium text-[#f3eff0]">Arraste</b> sobre a modelo para girar a 360°.
-              </p>
-            </>
-          )}
+            )}
+          </div>
         </div>
       </div>
     </div>
