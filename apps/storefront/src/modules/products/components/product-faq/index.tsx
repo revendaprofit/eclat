@@ -48,12 +48,12 @@ export default function ProductFaq({
 }) {
   const items = parseMetaFaq(product.metadata) ?? DEFAULT_FAQ
   return (
-    <section className="mt-10">
+    <section>
       <FaqJsonLd items={items} />
-      <h2 className="font-serif text-2xl text-eclat-grafite mb-2">
+      <h2 className="font-serif text-2xl text-eclat-grafite mb-6 after:block after:w-10 after:h-0.5 after:bg-eclat-terracota after:mt-3">
         Dúvidas frequentes
       </h2>
-      <div className="divide-y divide-ui-border-base border-t border-ui-border-base">
+      <div className="divide-y divide-eclat-pedra/60 border-t border-eclat-pedra/60">
         {items.map((it) => (
           <details key={it.q} className="group py-1">
             <summary className="flex justify-between items-center gap-3 cursor-pointer list-none py-3 text-sm font-semibold text-eclat-grafite min-h-[48px]">

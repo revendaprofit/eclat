@@ -896,3 +896,6 @@ PRÓXIMO (usuário, guiado): Railway (Postgres + serviço do repo, root /, vars,
 
 ## 2026-09-13 — Tabela de medidas vira aba "Medidas e Tamanhos Recomendados"
 - A tabela ("Acerte o tamanho de primeira") saiu do corpo da PDP e entrou no acordeão ao lado de "Informações do produto" e "Envio e trocas" (`product-tabs/index.tsx`, `SizeGuide` com `semTitulo`). Acordeão controlado: os links `#medidas` ("Guia de medidas" do seletor, "Ver tabela de medidas" do recomendador, links da página do conjunto) rolam até as abas e abrem a de medidas (hash no carregamento + `hashchange`). Validado localmente: 3 abas, tabela da categoria (4 linhas) dentro da aba, `#medidas` abre a aba. tsc, lint, 221 testes.
+
+## 2026-09-13 — PDP: faixas de cor por seção
+- Pedido do dono (página longa e monocromática): as seções abaixo da compra viraram faixas de borda a borda alternando os tons da marca — "É pra você se…" em `areia/50` (cartão "Feita pra você" com borda e ✓ em terracota, antes verde fora da paleta), "O que elas dizem" em `luz` (estrelas terracota, bordas `pedra`), selos + "Dúvidas frequentes" em `blush-claro/60` (linhas da FAQ em `pedra`). Títulos das seções com filete curto terracota (`after:`). Cada componente cuida da própria faixa e some inteiro sem dados. Validado localmente com captura (Chrome 1280). tsc, lint, 221 testes.

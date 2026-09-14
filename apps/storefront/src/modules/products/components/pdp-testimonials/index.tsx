@@ -13,17 +13,18 @@ export default async function PdpTestimonials() {
   if (items.length === 0) return null
 
   return (
-    <section className="mt-10">
-      <h2 className="font-serif text-2xl text-eclat-grafite mb-4">
+    <section className="py-12 small:py-16" data-testid="pdp-faixa-depoimentos">
+      <div className="content-container max-w-4xl">
+      <h2 className="font-serif text-2xl text-eclat-grafite mb-6 after:block after:w-10 after:h-0.5 after:bg-eclat-terracota after:mt-3">
         O que elas dizem
       </h2>
       <div className="grid grid-cols-1 small:grid-cols-3 gap-4">
         {items.slice(0, 3).map((t) => (
           <figure
             key={t.author}
-            className="border border-ui-border-base rounded-xl p-4 bg-white/60"
+            className="border border-eclat-pedra/60 rounded-xl p-4 bg-white/60"
           >
-            <div className="text-eclat-dourado text-sm tracking-[2px]">★★★★★</div>
+            <div className="text-eclat-terracota text-sm tracking-[2px]">★★★★★</div>
             <blockquote className="font-serif italic text-[15px] text-eclat-grafite mt-2 leading-snug">
               “{t.quote}”
             </blockquote>
@@ -32,6 +33,7 @@ export default async function PdpTestimonials() {
             </figcaption>
           </figure>
         ))}
+      </div>
       </div>
     </section>
   )

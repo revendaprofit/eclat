@@ -150,16 +150,18 @@ const ProductTemplate = async ({
           </Suspense>
         </div>
       </ProductSelectionProvider>
-      <div className="content-container max-w-4xl">
-        <QuemE product={product} />
-        <PdpTestimonials />
-        {/* Selos (7 dias / 30 dias / WhatsApp) saíram da coluna de compra para logo antes da FAQ
-            (pedido do dono, 2026-09-13). */}
-        <div className="mt-10">
+      {/* Faixas de borda a borda alternando os tons da marca (areia, luz, blush claro), pedido do
+          dono (2026-09-13): cada seção cuida do próprio fundo e some inteira quando não tem dados. */}
+      <QuemE product={product} />
+      <PdpTestimonials />
+      <section className="bg-eclat-blush-claro/60 py-12 small:py-16" data-testid="pdp-faixa-faq">
+        <div className="content-container max-w-4xl flex flex-col gap-y-10">
+          {/* Selos (7 dias / 30 dias / WhatsApp) saíram da coluna de compra para logo antes da FAQ
+              (pedido do dono, 2026-09-13). */}
           <GuaranteeSeals />
+          <ProductFaq product={product} />
         </div>
-        <ProductFaq product={product} />
-      </div>
+      </section>
       <div
         className="content-container my-16 small:my-32"
         data-testid="related-products-container"
