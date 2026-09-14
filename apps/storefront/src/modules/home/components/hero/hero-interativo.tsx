@@ -38,12 +38,13 @@ export default function HeroInterativo({
   const [carregar, setCarregar] = useState(false) // já pode pôr o src do vídeo
   const [dica, setDica] = useState(true)
   const mov = useRef({ permitido: false, visivel: false })
-  const arrasto = useRef<{ ativo: boolean; x0: number; t0: number; alvo: number; raf: number; retoma?: number }>({
+  const arrasto = useRef<{ ativo: boolean; x0: number; t0: number; alvo: number; ultimo: number; timer: number; retoma?: number }>({
     ativo: false,
     x0: 0,
     t0: 0,
     alvo: -1,
-    raf: 0,
+    ultimo: 0,
+    timer: 0,
   })
   const frenteRef = useRef(frente)
   frenteRef.current = frente
@@ -85,11 +86,22 @@ export default function HeroInterativo({
   }, [tocar])
 
   // ---- arrastar para girar ----
+  // No máximo um seek a cada 16 ms (um quadro de tela), sem depender de requestAnimationFrame —
+  // que o navegador reduz a 1/s em janela coberta ou aba de fundo e deixaria o giro pela metade.
+  const SEEK_MS = 16
   const aplicarAlvo = () => {
     const a = arrasto.current
-    a.raf = 0
+    a.timer = 0
     const v = atual()
-    if (v && a.alvo >= 0) v.currentTime = a.alvo
+    if (!v || a.alvo < 0) return
+    a.ultimo = performance.now()
+    v.currentTime = a.alvo
+  }
+  const agendarAlvo = () => {
+    const a = arrasto.current
+    const espera = SEEK_MS - (performance.now() - a.ultimo)
+    if (espera <= 0) aplicarAlvo()
+    else if (!a.timer) a.timer = window.setTimeout(aplicarAlvo, espera)
   }
 
   const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
@@ -114,7 +126,7 @@ export default function HeroInterativo({
     const d = v.duration
     const t = a.t0 + (dx / PX_POR_VOLTA) * d
     a.alvo = ((t % d) + d) % d
-    if (!a.raf) a.raf = requestAnimationFrame(aplicarAlvo) // um seek por quadro de tela, não por evento
+    agendarAlvo()
   }
 
   const fimArrasto = () => {
