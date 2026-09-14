@@ -41,11 +41,12 @@ describe("conjunto com um card por cor", () => {
     expect(coresComunsDisponiveis([TOP, SHORT])).toEqual(["Telha", "Grafitti"])
     expect(coresComunsDisponiveis([TOP, SHORT_SEM_TELHA])).toEqual(["Grafitti"])
   })
-  it("um card por cor comum: foto e preço da cor, sem capa, link com ?cor=", () => {
+  it("um card por cor comum: capa = 1ª foto da 1ª peça na cor, foto e preço da cor, link com ?cor=", () => {
     const cards = montarCardsCuradoPorCor(CURADO, MAPA)
     expect(cards.map((c) => c.cor)).toEqual(["Telha", "Grafitti"])
     const [telha, grafitti] = cards
-    expect(telha.capa).toBeNull()
+    expect(telha.capa).toBe("top-telha.jpg")
+    expect(grafitti.capa).toBe("top-grafitti.jpg")
     expect(telha.pecas.map((p) => p.thumbnail)).toEqual(["top-telha.jpg", "short-telha.jpg"])
     expect(telha.precoCheio).toBe(16900 + 17900)
     expect(telha.precoComBeneficio).toBe(16900 + 17900 - 1690 - 1790)

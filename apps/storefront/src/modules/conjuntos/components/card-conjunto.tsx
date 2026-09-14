@@ -23,6 +23,12 @@ function pushSelectItem(card: CardConjuntoData, listName: string) {
   })
 }
 
+// `sizes` das fotos do card (9:16, object-cover): uma foto 2:3 cobre o card escalada pela ALTURA,
+// então precisa de ~1,2x a largura do card — inclusive cada metade do layout de duas fotos, que tem
+// a altura do card inteiro. O valor antigo das metades (12vw no desktop) fazia o navegador baixar a
+// versão de 256 px para uma área de ~160x580 px (achado de 14/09).
+const SIZES_FOTO_CARD = "(max-width: 576px) 60vw, (max-width: 1024px) 40vw, 30vw"
+
 export default function CardConjunto({
   card,
   listName,
@@ -56,7 +62,7 @@ export default function CardConjunto({
                     aria-hidden={i > 0}
                     fill
                     quality={80}
-                    sizes="(max-width: 576px) 25vw, (max-width: 1024px) 16vw, 12vw"
+                    sizes={SIZES_FOTO_CARD}
                     className="object-cover object-center"
                     draggable={false}
                   />
@@ -72,7 +78,7 @@ export default function CardConjunto({
             alt={`${card.nome} — use.ÉCLAT`}
             fill
             quality={80}
-            sizes="(max-width: 576px) 50vw, (max-width: 1024px) 33vw, 25vw"
+            sizes={SIZES_FOTO_CARD}
             className="object-cover object-center"
             draggable={false}
           />

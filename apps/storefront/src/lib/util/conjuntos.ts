@@ -195,9 +195,11 @@ export function coresComunsDisponiveis(produtos: HttpTypes.StoreProduct[]): stri
 }
 
 // Curado com um card por cor (vitrine com um card por cor, decisão do dono 14/09/2026): mesma
-// regra e mesmo handle, mas foto e preço de cada cor e `cor` para abrir a página já nela. Sem a
-// capa cadastrada (ela é de uma cor só): o card usa a foto de cada peça naquela cor. Menos de duas
-// cores em comum → o card único de sempre (`montarCardCurado`).
+// regra e mesmo handle, mas foto e preço de cada cor e `cor` para abrir a página já nela. A capa
+// cadastrada é de uma cor só, então cada card usa como capa a 1ª foto da 1ª peça naquela cor (nas
+// galerias da Lumière é o look completo) — uma foto inteira, nunca duas fatias estreitas lado a lado
+// (achado de 14/09: as fatias ficavam cortadas e borradas). Menos de duas cores em comum → o card
+// único de sempre (`montarCardCurado`).
 export function montarCardsCuradoPorCor(c: CuradoStore, produtos: Map<string, HttpTypes.StoreProduct>): CardConjunto[] {
   const pecas = c.product_ids.map((id) => produtos.get(id))
   if (pecas.some((p) => !p)) return []
@@ -206,8 +208,12 @@ export function montarCardsCuradoPorCor(c: CuradoStore, produtos: Map<string, Ht
     const unico = montarCardCurado(c, produtos)
     return unico ? [unico] : []
   }
+  const primeira = pecas[0] as HttpTypes.StoreProduct
   return cores
-    .map((cor) => montarCard("curado", c.handle, c.nome, null, c.product_ids, c.regra, null, produtos, cor))
+    .map((cor) => {
+      const capaDaCor = imagesForColor(primeira, cor)[0]?.url ?? c.capa_url
+      return montarCard("curado", c.handle, c.nome, capaDaCor, c.product_ids, c.regra, null, produtos, cor)
+    })
     .filter((card): card is CardConjunto => card !== null)
 }
 
