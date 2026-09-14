@@ -1,0 +1,71 @@
+{
+  "_fonte": "Textos oficiais do dono enviados por WhatsApp em 13/09/2026 (informações por tipo de peça, texto por modelo, 'Feita pra você' / 'Talvez não seja pra você'). FAQ reescrito só com fatos desses textos.",
+  "informacoes": {
+    "tops": "Feito em canelado premium de alta compressão, com 79% de poliamida e 385 g/m². O tecido envolve o corpo sem apertar, valorizando suas curvas com estrutura e conforto. O fundo preto garante transparência zero, em qualquer movimento.\n\nCuidamos de você nos pequenos detalhes: o top é totalmente forrado em dry fit, um tecido de toque macio, geladinho e de alta respirabilidade, que mantém a peça estruturada do primeiro ao último exercício. Os bojos são costurados no eixo, então ficam sempre no lugar, sem deslocar. E a entrada dos bojos é confortável, pensada para a praticidade da sua rotina.",
+    "shorts": "Feito em canelado premium de alta compressão, com 79% de poliamida e 385 g/m². O tecido envolve o corpo sem apertar, valorizando suas curvas com estrutura e conforto. O fundo preto garante transparência zero, em qualquer movimento.\n\nA barra recebe silicone premium, com forte aderência ao corpo: o shorts não sobe e não incomoda durante o treino, mantendo sua performance intocada. A costura central é flatlock, um acabamento que não marca e não gera volume, para você se movimentar com liberdade e elegância.",
+    "macaquinhos": "Feito em canelado premium de alta compressão, com 79% de poliamida e 385 g/m². O tecido envolve o corpo sem apertar, valorizando suas curvas com estrutura e conforto. O fundo preto garante transparência zero, em qualquer movimento.\n\nA parte de cima é totalmente forrada em dry fit, um tecido de toque macio, geladinho e de alta respirabilidade, que mantém a peça estruturada do primeiro ao último exercício. Os bojos são costurados no eixo, então ficam sempre no lugar, e a entrada deles é confortável e prática para a correria do dia a dia.\n\nNa barra, silicone premium com forte aderência ao corpo: o macaquinho não sobe e não incomoda durante o treino. A costura central é flatlock, um acabamento que não marca e não gera volume, para você se movimentar com liberdade e elegância."
+  },
+  "faq_comum": [
+    {"q": "Tem desconto se eu levar o conjunto?", "a": "Sim. Levando o top e o short do mesmo modelo, o conjunto sai com 10% de desconto no total, aplicado automaticamente na sacola."},
+    {"q": "Como escolho meu tamanho?", "a": "Use a tabela de medidas acima, medindo busto na parte mais cheia, cintura na parte mais fina e quadril na parte mais cheia, sempre com a fita paralela ao chão. Entre dois tamanhos: o menor sustenta mais, o maior é mais confortável."},
+    {"q": "Posso trocar ou devolver?", "a": "Sim. Você tem 7 dias corridos após o recebimento para desistir da compra com reembolso integral (CDC), peça sem uso e com etiquetas. Para troca de tamanho, chame no WhatsApp com o número do pedido. Defeito de fabricação: 30 dias, sem custo."}
+  ],
+  "produtos": {
+    "macaquinho-solaris": {
+      "tipo": "macaquinhos",
+      "description": "Solaris. Para brilhar com segurança.\n\nO Macaquinho Solaris foi desenhado para acompanhar você do treino ao café sem perder a elegância. As alças medianas garantem grande sustentação e se cruzam nas costas, revelando um decote elegante que abraça com firmeza e deixa você livre para se mover. Logo abaixo, a costura na cintura modela a silhueta e valoriza suas curvas, marcando o ponto exato onde o corpo pede definição. Uma peça só, um visual inteiro.",
+      "quem_sim": "Quer sustentação de verdade sem abrir mão de um decote nas costas\nGosta de cintura marcada e silhueta definida em uma peça só\nSai do treino direto para o compromisso e não quer trocar de roupa",
+      "quem_nao": "Prefere combinar top e shorts separados ao longo do dia\nNão gosta de alças cruzadas nas costas\nProcura peça térmica para frio extremo",
+      "faq": [
+        {"q": "As costas são abertas?", "a": "As alças medianas se cruzam nas costas e revelam um decote elegante, com grande sustentação."},
+        {"q": "Fica transparente?", "a": "Não. O canelado tem fundo preto: transparência zero em qualquer movimento."},
+        {"q": "Sobe durante o treino?", "a": "Não. A barra tem silicone premium com forte aderência ao corpo."}
+      ],
+      "sem_conjunto": true
+    },
+    "top-aurora": {
+      "tipo": "tops",
+      "description": "Aurora. Fechado na frente, surpreendente atrás.\n\nO Top Aurora tem estrutura maior e recorte mais fechado, para quem quer sustentação de verdade sem abrir mão da elegância. A surpresa fica nas costas: um decote lindo, assinatura da Éclat, que revela exatamente o que você escolhe mostrar. Na frente, o zíper tratorado une delicadeza e robustez em uma única peça e coloca você no comando. Mais fechado para o treino intenso, mais aberto para o pós-treino: o look acompanha a energia do seu dia.",
+      "quem_sim": "Quer estrutura firme e mais cobertura na frente para treinos intensos\nGosta de decidir o quanto abrir: zíper fechado no treino, aberto depois\nFaz questão do decote nas costas mesmo em um top mais fechado",
+      "quem_nao": "Prefere alças finas e ombros à mostra\nPrefere um visual sem zíper aparente\nBusca uma peça mínima para dias muito quentes",
+      "faq": [
+        {"q": "Para que tipo de treino ele é indicado?", "a": "O Top Aurora tem estrutura maior e recorte mais fechado, pensado para quem quer sustentação de verdade em treinos intensos."},
+        {"q": "Os bojos saem do lugar?", "a": "Não. Os bojos são costurados no eixo, então ficam sempre no lugar, e a entrada deles é confortável."},
+        {"q": "Fica transparente?", "a": "Não. O canelado tem fundo preto e o top é forrado: transparência zero em qualquer movimento."}
+      ]
+    },
+    "short-aurora": {
+      "tipo": "shorts",
+      "description": "Aurora. Menos costura, mais você.\n\nO Shorts Aurora aposta no essencial. O comprimento intermediário cobre na medida certa, sem esconder e sem exagerar, e o cós alto abraça a cintura com firmeza, em uma faixa mais estreita que segura sem chamar atenção para si. Sem costura no bumbum, a peça ganha um desenho limpo e minimalista, que deixa o canelado e as suas curvas falarem por si. Simples de vestir, difícil de tirar.",
+      "quem_sim": "Prefere um desenho limpo, sem costura no bumbum\nQuer cós alto que segura, mas sem faixa larga marcando a cintura\nGosta de comprimento intermediário que cobre sem esconder",
+      "quem_nao": "Procura costura que enalteça o bumbum\nPrefere cós largo e bem marcado\nQuer shorts curtinho ou legging comprida",
+      "faq": [
+        {"q": "Tem costura no bumbum?", "a": "Não. O Shorts Aurora não tem costura no bumbum: o desenho é limpo e minimalista."},
+        {"q": "Sobe durante o treino?", "a": "Não. A barra tem silicone premium com forte aderência ao corpo."},
+        {"q": "Fica transparente?", "a": "Não. O canelado tem fundo preto: transparência zero em qualquer movimento."}
+      ]
+    },
+    "top-orvalho": {
+      "tipo": "tops",
+      "description": "Orvalho. Ousadia em formato de top.\n\nO Top Orvalho é para a mulher que treina com constância e tem orgulho do que construiu. Ele revela os ombros e os braços fortes, sem timidez. As alças afunilam em direção ao pescoço e abrem um decote lindo na frente. Nas costas, as tiras revelam com sutileza e dão personalidade à peça, no ponto que é assinatura da Éclat. Os reguladores permitem que cada mulher ajuste o top ao próprio trapézio, na altura exata do seu corpo. Ousado no desenho, exato no caimento: na Éclat, o conforto impera.",
+      "quem_sim": "Quer mostrar ombros e braços que você construiu com constância\nGosta de alças finas com regulador para ajustar na altura exata do seu corpo\nProcura um decote nas costas com tiras que tragam personalidade ao look",
+      "quem_nao": "Prefere mais cobertura na frente e nos ombros\nNão gosta de alças finas\nQuer alças fixas, sem regulador",
+      "faq": [
+        {"q": "As alças ajustam?", "a": "Sim. Os reguladores permitem ajustar o top ao seu trapézio, na altura exata do seu corpo."},
+        {"q": "Os bojos saem do lugar?", "a": "Não. Os bojos são costurados no eixo, então ficam sempre no lugar, e a entrada deles é confortável."},
+        {"q": "Fica transparente?", "a": "Não. O canelado tem fundo preto e o top é forrado: transparência zero em qualquer movimento."}
+      ]
+    },
+    "short-orvalho": {
+      "tipo": "shorts",
+      "description": "Orvalho. Para quem não abre mão dos detalhes.\n\nO Shorts Orvalho traz a costura que enaltece o bumbum, desenhada para quem repara em cada detalhe e quer que reparem também. O cós mais alto abraça a cintura e dá segurança em todo movimento, do agachamento à corrida. De comprimento intermediário, ele veste na medida e some durante o treino: você não vai lembrar que está com ele. Quem estiver ao seu lado, sim.",
+      "quem_sim": "Faz questão da costura que enaltece o bumbum\nQuer cós mais alto para segurança em todo movimento\nQuer comprimento intermediário que cobre sem esconder as curvas",
+      "quem_nao": "Prefere um desenho minimalista, sem costura no bumbum\nQuer cós mais estreito e discreto\nQuer shorts curtinho ou legging comprida",
+      "faq": [
+        {"q": "Como é a costura de trás?", "a": "O Shorts Orvalho tem uma costura desenhada para enaltecer o bumbum."},
+        {"q": "Sobe durante o treino?", "a": "Não. A barra tem silicone premium com forte aderência ao corpo, e o cós mais alto dá segurança em todo movimento."},
+        {"q": "Fica transparente?", "a": "Não. O canelado tem fundo preto: transparência zero em qualquer movimento."}
+      ]
+    }
+  }
+}

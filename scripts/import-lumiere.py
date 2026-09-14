@@ -41,9 +41,6 @@ COLECOES = {"lumiere": {"title": "Lumière", "handle": "lumiere"}}
 
 # Ficha comercial por modelo (chave = nome do modelo normalizado). Preço em REAIS decimais (Medusa v2).
 # `cores` = chaves de CORES na ordem da vitrine (a 1ª cor dá a capa do produto).
-FAQ_TAMANHO = {"q": "Como escolho meu tamanho?", "a": "Use a tabela de medidas acima, medindo busto na parte mais cheia, cintura na parte mais fina e quadril na parte mais cheia, sempre com a fita paralela ao chão. Entre dois tamanhos: o menor sustenta mais, o maior é mais confortável."}
-FAQ_TROCA = {"q": "Posso trocar ou devolver?", "a": "Sim. Você tem 7 dias corridos após o recebimento para desistir da compra com reembolso integral (CDC), peça sem uso e com etiquetas. Para troca de tamanho, chame no WhatsApp com o número do pedido. Defeito de fabricação: 30 dias, sem custo."}
-FAQ_CONJUNTO = {"q": "Tem desconto se eu levar o conjunto?", "a": "Sim. Levando o top e o short do mesmo modelo, o conjunto sai com 10% de desconto no total, aplicado automaticamente na sacola."}
 # Ficha de produção "Família Canelado" (Telha e Grafitti), 25/08/2026.
 COMPOSICAO_CANELADO = (
     "Tecido canelado: 79% poliamida, 13% poliéster, 8% elastano (385 g/m²).\n"
@@ -62,27 +59,6 @@ MODELOS = {
         "estoque": {"P": 10, "M": 20, "G": 10},
         "preco": 299.00,          # provisório — precificação pendente (dono, 13/09/2026)
         "peso_g": 300,
-        "description": (
-            "Macaquinho canelado de alças cruzadas nas costas, decote redondo e short curto com "
-            "lettering ÉCLAT na perna. Peça única: veste em segundos, sustenta o treino e segue o dia."
-        ),
-        "metadata": {
-            "composicao": COMPOSICAO_CANELADO,
-            "dsb_dor": "cós descendo, blusa subindo — no meio da série, de novo?",
-            "dsb_solucao": (
-                "O Macaquinho Solaris é a peça única que resolve: nada desalinha, nada precisa de ajuste. "
-                "Canelado que abraça o corpo, alças cruzadas nas costas e o lettering ÉCLAT na perna."
-            ),
-            "dsb_beneficios": "Zero ajuste durante o treino — é uma peça só\nCanelado que modela sem apertar\nVai do treino ao café sem trocar de roupa",
-            "quem_sim": "Cansou de alinhar conjunto no meio do treino\nQuer uma peça única com cara de look completo\nTreina e emenda compromisso depois",
-            "quem_nao": "Prefere trocar só a parte de cima ao longo do dia\nProcura peça térmica para frio extremo",
-            "faq": json.dumps([
-                {"q": "É prático no dia a dia?", "a": "Sim — a peça é pensada para vestir e esquecer: nada desalinha no treino e o caimento segura o resto do dia."},
-                {"q": "As costas são abertas?", "a": "As alças se cruzam nas costas em um recorte vazado — sustentação com respiro. Veja as fotos de costas na galeria."},
-                {"q": "O canelado marca?", "a": "O canelado é encorpado e opaco: modela a silhueta sem transparecer quando estica."},
-                FAQ_TAMANHO, FAQ_TROCA,
-            ], ensure_ascii=False),
-        },
     },
     "top aurora": {
         "title": "Top Aurora",
@@ -94,26 +70,6 @@ MODELOS = {
         "estoque": {"P": 10, "M": 15, "G": 10},   # grade da ficha de produção (dono, 13/09)
         "preco": 169.00,          # provisório (dono, 13/09/2026)
         "peso_g": 200,
-        "description": (
-            "Top cropped canelado com zíper frontal, gola alta e costas abertas em recorte arredondado, "
-            "fechado por uma faixa com o lettering ÉCLAT. Forrado, com o logo no peito."
-        ),
-        "metadata": {
-            "composicao": COMPOSICAO_CANELADO,
-            "dsb_dor": "top que abre, alça que escorrega — e você ajustando no meio da série?",
-            "dsb_solucao": (
-                "O Top Aurora fecha no zíper e fica onde você deixou: gola alta na frente, costas livres "
-                "atrás e a faixa ÉCLAT segurando a base."
-            ),
-            "dsb_beneficios": "Zíper frontal: você escolhe o decote\nCostas abertas que respiram no treino\nForrado e opaco, do agachamento ao café",
-            "quem_sim": "Gosta de top com cara de peça de roupa, não só de academia\nQuer ajustar o decote sem trocar de peça\nMonta look com o Short Aurora",
-            "quem_nao": "Precisa de sustentação máxima para corrida ou salto\nPrefere costas totalmente fechadas",
-            "faq": json.dumps([
-                {"q": "O zíper incomoda no treino?", "a": "O zíper é frontal e fica sobre o forro, sem contato direto com a pele."},
-                {"q": "Sustenta treino de impacto?", "a": "Sustentação média: ótima para musculação, funcional, pilates e yoga. Para corrida longa ou salto intenso, prefira um top de alta compressão."},
-                FAQ_CONJUNTO, FAQ_TAMANHO, FAQ_TROCA,
-            ], ensure_ascii=False),
-        },
     },
     "short aurora": {
         "title": "Short Aurora",
@@ -125,26 +81,6 @@ MODELOS = {
         "estoque": {"P": 10, "M": 15, "G": 10},
         "preco": 169.00,
         "peso_g": 200,
-        "description": (
-            "Short canelado de cintura alta, comprimento no meio da coxa, com lettering ÉCLAT no cós "
-            "e o logo na perna. Forrado e opaco."
-        ),
-        "metadata": {
-            "composicao": COMPOSICAO_CANELADO,
-            "dsb_dor": "short que sobe, cós que enrola — de novo no agachamento?",
-            "dsb_solucao": (
-                "O Short Aurora abraça a cintura e fica no lugar: cós alto canelado, comprimento que não "
-                "sobe e forro que não transparece."
-            ),
-            "dsb_beneficios": "Cintura alta que não enrola\nCanelado que modela sem apertar\nForrado: opaco em qualquer movimento",
-            "quem_sim": "Quer um short que fique no lugar no agachamento\nGosta de cintura alta\nMonta look com o Top Aurora",
-            "quem_nao": "Prefere short solto ou de corrida\nProcura comprimento acima do meio da coxa",
-            "faq": json.dumps([
-                {"q": "Sobe ou enrola no agachamento?", "a": "Não. O cós alto e o canelado encorpado foram escolhidos para ficar no lugar durante o treino."},
-                {"q": "Marca ou transparece?", "a": "É forrado: o tecido não abre a trama quando estica."},
-                FAQ_CONJUNTO, FAQ_TAMANHO, FAQ_TROCA,
-            ], ensure_ascii=False),
-        },
     },
     "top orvalho": {
         "title": "Top Orvalho",
@@ -156,26 +92,6 @@ MODELOS = {
         "estoque": {"P": 10, "M": 15, "G": 10},
         "preco": 169.00,
         "peso_g": 200,
-        "description": (
-            "Top cropped canelado de alças finas que se cruzam na frente do pescoço e costas com tiras "
-            "horizontais vazadas. Forrado, com o lettering ÉCLAT no peito."
-        ),
-        "metadata": {
-            "composicao": COMPOSICAO_CANELADO,
-            "dsb_dor": "top bonito que não aguenta o treino, ou top de treino sem graça nenhuma?",
-            "dsb_solucao": (
-                "O Top Orvalho junta os dois: alças cruzadas na frente que desenham o colo e tiras nas "
-                "costas que dão respiro, com base firme e forro."
-            ),
-            "dsb_beneficios": "Alças cruzadas que valorizam o colo\nCostas em tiras: respiro sem perder a firmeza\nForrado e opaco",
-            "quem_sim": "Quer um top que também funcione como look\nGosta de costas com detalhe\nMonta look com o Short Orvalho",
-            "quem_nao": "Precisa de sustentação máxima para impacto alto\nPrefere alças largas",
-            "faq": json.dumps([
-                {"q": "As alças ajustam?", "a": "Sim, as alças têm regulagem nas costas."},
-                {"q": "Sustenta treino de impacto?", "a": "Sustentação média: ótima para musculação, funcional, pilates e yoga. Para corrida longa ou salto intenso, prefira um top de alta compressão."},
-                FAQ_CONJUNTO, FAQ_TAMANHO, FAQ_TROCA,
-            ], ensure_ascii=False),
-        },
     },
     "short orvalho": {
         "title": "Short Orvalho",
@@ -187,28 +103,18 @@ MODELOS = {
         "estoque": {"P": 10, "M": 15, "G": 10},
         "preco": 169.00,
         "peso_g": 200,
-        "description": (
-            "Short canelado de cintura alta com cós largo, comprimento no meio da coxa e o logo ÉCLAT "
-            "na perna. Forrado e opaco."
-        ),
-        "metadata": {
-            "composicao": COMPOSICAO_CANELADO,
-            "dsb_dor": "short que desce, cós que marca — e você puxando no meio da série?",
-            "dsb_solucao": (
-                "O Short Orvalho tem cós largo que firma a cintura sem apertar e canelado encorpado que "
-                "acompanha o movimento sem subir."
-            ),
-            "dsb_beneficios": "Cós largo que firma sem marcar\nCintura alta que fica no lugar\nForrado: opaco em qualquer movimento",
-            "quem_sim": "Gosta de cós largo e cintura bem marcada\nQuer short que não desce no treino\nMonta look com o Top Orvalho",
-            "quem_nao": "Prefere cós baixo\nProcura short solto ou de corrida",
-            "faq": json.dumps([
-                {"q": "O cós enrola?", "a": "Não. O cós é largo justamente para ficar firme na cintura durante o treino."},
-                {"q": "Marca ou transparece?", "a": "É forrado: o tecido não abre a trama quando estica."},
-                FAQ_CONJUNTO, FAQ_TAMANHO, FAQ_TROCA,
-            ], ensure_ascii=False),
-        },
     },
 }
+
+# Textos da vitrine (descrição, "Informações do produto", "Feita pra você / Talvez não seja pra você", FAQ)
+# vêm SÓ de scripts/lumiere-textos.json — textos oficiais do dono. Não escrever copy aqui.
+TEXTOS = json.load(open(os.path.join(RAIZ, "scripts", "lumiere-textos.json"), encoding="utf-8"))
+for _m in MODELOS.values():
+    _t = TEXTOS["produtos"][_m["handle"]]
+    _faq = _t["faq"] + [f for f in TEXTOS["faq_comum"] if not (_t.get("sem_conjunto") and "conjunto" in f["q"].lower())]
+    _m["description"] = _t["description"]
+    _m["metadata"] = {"composicao": COMPOSICAO_CANELADO, "informacoes": TEXTOS["informacoes"][_t["tipo"]],
+                      "quem_sim": _t["quem_sim"], "quem_nao": _t["quem_nao"], "faq": json.dumps(_faq, ensure_ascii=False)}
 
 # Galeria por (handle, cor): SELEÇÃO exata e ordem de vitrine. Cada item é
 #   ("<modelo do arquivo renomeado>", n)  -> "Coleção Lumiere - [Modelo] <modelo> ... Cor <cor> (n)"
