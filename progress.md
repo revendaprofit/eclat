@@ -927,3 +927,6 @@ PRÓXIMO (usuário, guiado): Railway (Postgres + serviço do repo, root /, vars,
 
 ## 2026-09-13 — Card de produto: nome e preço empilhados no mobile
 - Em 2 colunas estreitas o preço (`shrink-0`) ficava ao lado do nome e transbordava para o card vizinho ("R$ 299,00" por cima de "Top Aurora"). Agora nome em cima e preço embaixo abaixo de 1440 px; lado a lado só em telas `large`. Validado localmente (4 cards: coluna, preço abaixo do título e dentro do card). tsc, lint, 225 testes.
+
+## 2026-09-13 — "Compre por peça" retirada da home
+- Pedido do dono: as categorias não têm capa e o card mostrava só a inicial. A seção saiu da home (`page.tsx`); o componente `shop-by-category` fica no repo para voltar quando houver capas (Cockpit → Produtos → Categorias). A navegação por peça continua no menu e na barra de categorias. tsc, lint, 225 testes; home local sem a seção.
