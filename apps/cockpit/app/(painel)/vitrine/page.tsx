@@ -250,7 +250,7 @@ export default function VitrinePage() {
               <UploadImagem url={hero.video_poster_desktop_url} onChange={(u) => setHero({ ...hero, video_poster_desktop_url: u })} />
             </div>
             <div>
-              <label className={label}>Vídeo mobile (URL do MP4 · 4:5)</label>
+              <label className={label}>Vídeo mobile (URL do MP4 · 3:4)</label>
               <input value={hero.video_mobile_url || ""} onChange={(e) => setHero({ ...hero, video_mobile_url: e.target.value })} placeholder="https://…/hero/mobile.mp4" className={input} />
             </div>
             <div>

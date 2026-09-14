@@ -54,7 +54,7 @@ function HeroTelaView({ tela, variante, textos }: { tela: HeroTela; variante: "m
   const Titulo = desktop ? "h1" : "p"
   return (
     <div
-      className={"relative w-full " + (desktop ? "aspect-[7/3]" : "aspect-[4/5]")}
+      className={"relative w-full " + (desktop ? "aspect-[7/3]" : "aspect-[3/4]")}
       data-testid={`hero-video-${variante}`}
     >
       <HeroVideo video={tela.video} poster={tela.poster} media={desktop ? "(min-width: 1024px)" : "(max-width: 1023.98px)"} />
