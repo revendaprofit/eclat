@@ -907,3 +907,7 @@ PRÓXIMO (usuário, guiado): Railway (Postgres + serviço do repo, root /, vars,
 
 ## 2026-09-13 — Depoimentos ocultos por 30 dias
 - Pedido do dono: sem vendas ainda, os depoimentos soariam falsos. `lib/util/depoimentos.ts`: `DEPOIMENTOS_VOLTAM_EM = 2026-10-13T00:00-03:00` e `depoimentosVisiveis(agora)`; a PDP ("O que elas dizem") e a home retornam `null` antes da data e voltam sozinhos depois (a página regenera pelo ISR; sem deploy). Para mudar a data, editar a constante. 2 testes (225).
+
+## 2026-09-13 — Rodapé e checkout com a logo; coleções não lançadas fora do rodapé
+- O wordmark em texto "use.ÉCLAT" (rodapé e cabeçalho do checkout) foi trocado pela mesma logo do cabeçalho (`/brand/mark.png` + `/brand/wordmark.png`); o texto só continua em copyright, títulos e metadados.
+- "Coleções" do rodapé passou a usar `getNavigation().collections` (mesma fonte da barra e do menu: só coleções com ≥1 produto publicado). Em produção, "Família Blackout" (0 produtos publicados) some; Lumière fica. Validado localmente (logo no rodapé e no header; rodapé sem texto; lista de coleções da navegação). tsc, lint, 225 testes.

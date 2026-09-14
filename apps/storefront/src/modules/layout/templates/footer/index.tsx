@@ -1,33 +1,31 @@
-import { listCollections } from "@lib/data/collections";
 import { listRegions } from "@lib/data/regions";
 import { getNavigation } from "@lib/data/navigation";
 import { Text, clx } from "@modules/common/components/ui";
 import { StoreRegion } from "@medusajs/types";
+import Image from "next/image";
 
 import LocalizedClientLink from "@modules/common/components/localized-client-link";
 
 export default async function Footer() {
-  const { collections } = await listCollections({
-    fields: "*products",
-  });
   // I8: mesma árvore de navegação da barra/menu (getNavigation) — só raízes visíveis
-  // (≥1 produto publicado), na ordem de rank, com as filhas de cada uma.
+  // (≥1 produto publicado), na ordem de rank, com as filhas de cada uma. As coleções vêm da
+  // mesma fonte (só as que têm produto publicado): coleção cadastrada mas não lançada não
+  // aparece no rodapé (pedido do dono, 2026-09-13).
   const regions = await listRegions()
     .then((r: StoreRegion[]) => r)
     .catch(() => [] as StoreRegion[]);
   const countryCode = regions?.[0]?.countries?.[0]?.iso_2 ?? "br";
-  const { roots } = await getNavigation(countryCode);
+  const { roots, collections } = await getNavigation(countryCode);
 
   return (
     <footer className="border-t border-ui-border-base w-full">
       <div className="content-container flex flex-col w-full">
         <div className="flex flex-col gap-y-6 xsmall:flex-row items-start justify-between py-40">
           <div>
-            <LocalizedClientLink
-              href="/"
-              className="font-serif text-2xl tracking-wide text-eclat-grafite hover:text-eclat-terracota transition-colors"
-            >
-              use.ÉCLAT
+            {/* Mesma logo do cabeçalho — o wordmark em texto "use.ÉCLAT" não é usado em lugar nenhum. */}
+            <LocalizedClientLink href="/" className="flex items-center gap-2" aria-label="use.ÉCLAT — início">
+              <Image src="/brand/mark.png" alt="" width={27} height={36} className="h-9 w-auto" />
+              <Image src="/brand/wordmark.png" alt="use.ÉCLAT" width={75} height={24} className="h-[22px] w-auto" />
             </LocalizedClientLink>
           </div>
           <div className="text-small-regular gap-10 md:gap-x-16 grid grid-cols-2 sm:grid-cols-3">

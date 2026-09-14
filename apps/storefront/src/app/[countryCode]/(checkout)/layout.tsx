@@ -1,4 +1,5 @@
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
+import Image from "next/image"
 import ChevronDown from "@modules/common/icons/chevron-down"
 import MedusaCTA from "@modules/layout/components/medusa-cta"
 
@@ -24,12 +25,10 @@ export default function CheckoutLayout({
               Voltar
             </span>
           </LocalizedClientLink>
-          <LocalizedClientLink
-            href="/"
-            className="txt-compact-xlarge-plus text-ui-fg-subtle hover:text-ui-fg-base uppercase"
-            data-testid="store-link"
-          >
-            use.ÉCLAT
+          {/* Mesma logo do cabeçalho da loja — o wordmark em texto não é usado em lugar nenhum. */}
+          <LocalizedClientLink href="/" className="flex items-center gap-2" data-testid="store-link" aria-label="use.ÉCLAT — início">
+            <Image src="/brand/mark.png" alt="" width={27} height={36} className="h-9 w-auto" />
+            <Image src="/brand/wordmark.png" alt="use.ÉCLAT" width={75} height={24} className="h-[22px] w-auto" />
           </LocalizedClientLink>
           <div className="flex-1 basis-0" />
         </nav>
