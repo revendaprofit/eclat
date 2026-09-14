@@ -25,7 +25,7 @@ import { getBaseURL } from "@lib/util/env"
 import { getColorMap } from "@lib/data/colors"
 import { ProductSelectionProvider } from "@modules/products/components/product-selection"
 import CompleteSet from "@modules/products/components/complete-set"
-import Breadcrumb from "@modules/common/components/breadcrumb"
+import { BreadcrumbJsonLd } from "@modules/seo/jsonld"
 import { getDeepestCategoryChain } from "@lib/data/category-path"
 import { getMeasureMap } from "@lib/data/measurements"
 import { pickMeasurements } from "@lib/util/measurements"
@@ -96,7 +96,8 @@ const ProductTemplate = async ({
       <ProductJsonLd product={product} url={productUrl} />
       <ProductSelectionProvider key={product.id} product={product} initialVariantId={selectedVariantId} initialColor={initialColor}>
         <div className="content-container relative">
-          <Breadcrumb items={breadcrumbItems} countryCode={countryCode} />
+          {/* Só o JSON-LD do caminho (SEO); o breadcrumb visível saiu da PDP a pedido do dono (2026-09-13). */}
+          <BreadcrumbJsonLd items={breadcrumbItems.map((c) => ({ name: c.name, url: `${getBaseURL()}/${countryCode}${c.href}` }))} />
           {/* Mobile (coluna única, pela `order`): cabeçalho → fotos → compra → descrição + abas.
               Desktop (grid 300 | fotos | 300): cabeçalho e descrição na coluna da esquerda
               (linhas 1 e 2), fotos no centro, compra à direita (fixa) — pedido do dono, 2026-09-13. */}
@@ -104,7 +105,7 @@ const ProductTemplate = async ({
             className="flex flex-col small:grid small:grid-cols-[300px_minmax(0,1fr)_300px] small:gap-x-8 small:items-start py-6"
             data-testid="product-container"
           >
-            <div className="order-1 w-full pt-6 pb-4 small:p-0 small:col-start-1 small:row-start-1">
+            <div className="order-1 w-full pt-2 pb-4 small:p-0 small:col-start-1 small:row-start-1">
               <ProductHeader product={product} />
             </div>
             <div className="order-2 block w-full relative small:col-start-2 small:row-start-1 small:row-span-2">
@@ -140,7 +141,6 @@ const ProductTemplate = async ({
                   measureTable={measureTable}
                 />
               </Suspense>
-              <GuaranteeSeals />
               {allOut && <NotifyMe productId={product.handle ?? product.id} />}
             </div>
           </div>
@@ -156,6 +156,11 @@ const ProductTemplate = async ({
         <PdpTestimonials />
         <div className="mt-10">
           <SizeGuide table={measureTable} />
+        </div>
+        {/* Selos (7 dias / 30 dias / WhatsApp) saíram da coluna de compra para logo antes da FAQ
+            (pedido do dono, 2026-09-13). */}
+        <div className="mt-10">
+          <GuaranteeSeals />
         </div>
         <ProductFaq product={product} />
       </div>
