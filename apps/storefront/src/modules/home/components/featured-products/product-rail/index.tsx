@@ -1,4 +1,7 @@
 import { listProducts } from "@lib/data/products"
+import { getListagemConfig } from "@lib/data/listagem"
+import { DEFAULT_FILTERS } from "@lib/util/catalog-filters"
+import { entradasPorCor, entryKey } from "@lib/util/listagem-cores"
 import { HttpTypes } from "@medusajs/types"
 import { Text } from "@modules/common/components/ui"
 
@@ -24,6 +27,9 @@ export default async function ProductRail({
   if (!pricedProducts) {
     return null
   }
+  // Destaque da home com o mesmo "um card por cor" da listagem (interruptor em site_content.listagem).
+  const { cardsPorCor } = await getListagemConfig()
+  const entradas = entradasPorCor(pricedProducts, DEFAULT_FILTERS, cardsPorCor)
 
   return (
     <div className="content-container py-12 small:py-24">
@@ -34,12 +40,11 @@ export default async function ProductRail({
         </InteractiveLink>
       </div>
       <ul className="grid grid-cols-2 small:grid-cols-3 gap-x-6 gap-y-24 small:gap-y-36">
-        {pricedProducts &&
-          pricedProducts.map((product) => (
-            <li key={product.id}>
-              <ProductPreview product={product} region={region} isFeatured />
-            </li>
-          ))}
+        {entradas.map((e) => (
+          <li key={entryKey(e)}>
+            <ProductPreview product={e.product} cor={e.cor} region={region} isFeatured />
+          </li>
+        ))}
       </ul>
     </div>
   )

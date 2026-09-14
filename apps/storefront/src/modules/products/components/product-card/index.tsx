@@ -5,17 +5,29 @@ import { useState } from "react"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import { Text, clx } from "@modules/common/components/ui"
 import { badgeFor, type ProductCardData } from "@lib/util/product-card-data"
+import { normalizeColorName } from "@lib/util/colors"
 import Badge from "./badge"
 import QuickAdd from "./quick-add"
 import Swatches from "./swatches"
 import { pushEcommerceEvent } from "@modules/analytics/push"
 
-function pushSelectItem(data: ProductCardData, listName?: string) {
-  pushEcommerceEvent("select_item", { item_list_name: listName, items: [{ item_id: data.id, item_name: data.title, price: data.price?.calculated_price_number }] })
+function pushSelectItem(data: ProductCardData, listName?: string, cor?: string) {
+  pushEcommerceEvent("select_item", { item_list_name: listName, items: [{ item_id: data.id, item_name: data.title, price: data.price?.calculated_price_number, ...(cor ? { item_variant: cor } : {}) }] })
 }
 
-export default function ProductCard({ data, countryCode, listName, aspect = "portrait" }: { data: ProductCardData; countryCode: string; listName?: string; aspect?: "portrait" | "featured" }) {
-  const [active, setActive] = useState(() => Math.max(0, data.colors.findIndex((c) => c.available)))
+// Índice da cor inicial: a cor do card (vitrine com um card por cor) quando existir no produto;
+// senão a primeira cor disponível, como sempre.
+function indiceInicial(data: ProductCardData, initialColor: string | null): number {
+  if (initialColor) {
+    const alvo = normalizeColorName(initialColor)
+    const i = data.colors.findIndex((c) => normalizeColorName(c.name) === alvo)
+    if (i !== -1) return i
+  }
+  return Math.max(0, data.colors.findIndex((c) => c.available))
+}
+
+export default function ProductCard({ data, countryCode, listName, aspect = "portrait", initialColor = null }: { data: ProductCardData; countryCode: string; listName?: string; aspect?: "portrait" | "featured"; initialColor?: string | null }) {
+  const [active, setActive] = useState(() => indiceInicial(data, initialColor))
   const [sheet, setSheet] = useState(false)
   const color = data.colors[active] ?? data.colors[0]
   const [img1, img2] = color?.images.length ? color.images : data.images
@@ -31,7 +43,7 @@ export default function ProductCard({ data, countryCode, listName, aspect = "por
   return (
     <div className="group relative" data-testid="product-wrapper">
       <div className={clx("relative w-full overflow-hidden rounded-large bg-ui-bg-subtle", aspectClass)}>
-        <LocalizedClientLink href={href} onClick={() => pushSelectItem(data, listName)} className="absolute inset-0 block" aria-label={data.title}>
+        <LocalizedClientLink href={href} onClick={() => pushSelectItem(data, listName, color?.name || undefined)} className="absolute inset-0 block" aria-label={data.title}>
           <Badge badge={badge} percent={data.price?.percentage_diff} />
           {img1 ? (
             <Image src={img1} alt={`${data.title} — ${color?.name || "use.ÉCLAT"}`} fill quality={80} sizes="(max-width: 576px) 50vw, (max-width: 1024px) 33vw, 25vw" className={clx("object-cover object-center transition-opacity duration-300", img2 && "small:group-hover:opacity-0")} draggable={false} />
@@ -40,11 +52,17 @@ export default function ProductCard({ data, countryCode, listName, aspect = "por
         </LocalizedClientLink>
         {color && color.available && <QuickAdd data={data} color={color} countryCode={countryCode} open={sheet} onClose={() => setSheet(false)} />}
       </div>
-      <LocalizedClientLink href={href} onClick={() => pushSelectItem(data, listName)} className="block">
+      <LocalizedClientLink href={href} onClick={() => pushSelectItem(data, listName, color?.name || undefined)} className="block">
         {/* Mobile: nome em cima, preço embaixo (em 2 colunas estreitas o preço lado a lado
             transbordava para o card vizinho). Desktop (large): lado a lado. */}
         <div className="flex flex-col mt-3 gap-y-1 large:mt-4 large:flex-row large:justify-between large:items-start large:gap-2">
-          <Text className="text-ui-fg-subtle min-w-0 break-words" data-testid="product-title">{data.title}</Text>
+          <div className="min-w-0">
+            <Text className="text-ui-fg-subtle break-words" data-testid="product-title">{data.title}</Text>
+            {/* Nome da cor ativa: com um card por cor, é o que diferencia "Top Aurora" de "Top Aurora" */}
+            {data.colors.length > 1 && color?.name && (
+              <Text className="text-ui-fg-muted text-xs" data-testid="product-color-name">{color.name}</Text>
+            )}
+          </div>
           <div className="flex flex-wrap items-center gap-x-2 large:shrink-0">
             {data.price?.price_type === "sale" && <Text className="line-through text-ui-fg-muted" data-testid="original-price">{data.price.original_price}</Text>}
             {data.price && <Text className={clx("text-ui-fg-muted", data.price.price_type === "sale" && "text-ui-fg-interactive")} data-testid="price">{data.price.calculated_price}</Text>}

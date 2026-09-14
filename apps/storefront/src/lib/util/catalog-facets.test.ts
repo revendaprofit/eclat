@@ -67,6 +67,15 @@ describe("computeFacets", () => {
   it("sem produtos devolve facetas vazias", () => {
     expect(computeFacets([], DEFAULT_FILTERS)).toEqual({ tamanhos: [], cores: [], preco: null })
   })
+  it("porCor: tamanho conta um card por cor disponível naquele tamanho", () => {
+    // legging: P Verde + G Licor (G Verde esgotado); top: P e M Licor
+    const porProduto = computeFacets(ALL, DEFAULT_FILTERS)
+    expect(porProduto.tamanhos).toEqual([{ value: "P", count: 2 }, { value: "M", count: 1 }, { value: "G", count: 1 }])
+    const bicolor = prod("bi", "2026-09-02", [v("b1", "P", "Telha", 1, 169), v("b2", "P", "Grafitti", 1, 169), v("b3", "M", "grafitti", 1, 169)])
+    const f = computeFacets([bicolor], DEFAULT_FILTERS, true)
+    expect(f.tamanhos).toEqual([{ value: "P", count: 2 }, { value: "M", count: 1 }])
+    expect(computeFacets([bicolor], DEFAULT_FILTERS).tamanhos).toEqual([{ value: "P", count: 1 }, { value: "M", count: 1 }])
+  })
 })
 
 describe("sortByKey", () => {

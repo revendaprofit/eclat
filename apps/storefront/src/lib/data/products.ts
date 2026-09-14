@@ -2,7 +2,9 @@
 
 import { sdk } from "@lib/config"
 import { applyFilters, computeFacets, paginate, sortByKey, type Facets } from "@lib/util/catalog-facets"
-import type { FilterState } from "@lib/util/catalog-filters"
+import { DEFAULT_FILTERS, type FilterState } from "@lib/util/catalog-filters"
+import { entradasPorCor, type ListingEntry } from "@lib/util/listagem-cores"
+import { getListagemConfig } from "./listagem"
 import { HttpTypes } from "@medusajs/types"
 import { getAuthHeaders, getCacheOptions } from "./cookies"
 import { getRegion, retrieveRegion } from "./regions"
@@ -127,12 +129,17 @@ export const listProductsByIds = async (
 
 export type ListingScope = { categoryIds?: string[]; collectionId?: string; productIds?: string[]; q?: string }
 export type ListingResult = {
-  products: HttpTypes.StoreProduct[]
+  // Entradas da página atual: um card por cor (ou por produto, se `site_content.listagem` desligar).
+  entries: ListingEntry[]
   count: number
   total: number
   totalPages: number
   pagina: number
   facets: Facets
+  // Ids de TODOS os produtos do escopo (antes dos filtros) — os conjuntos da listagem usam.
+  scopeProductIds: string[]
+  cardsPorCor: boolean
+  conjuntosNaListagem: boolean
 }
 
 // Listagem com filtros (spec §6.1): busca até 100 produtos do escopo, filtra,
@@ -152,18 +159,26 @@ export const listProductsFiltered = async ({
   if (scope.productIds?.length) queryParams.id = scope.productIds
   if (scope.q) queryParams.q = scope.q // busca textual da Store API (título/descrição), spec §9
 
-  const {
-    response: { products: all },
-  } = await listProducts({ pageParam: 1, queryParams, countryCode })
+  const [
+    {
+      response: { products: all },
+    },
+    config,
+  ] = await Promise.all([listProducts({ pageParam: 1, queryParams, countryCode }), getListagemConfig()])
 
-  const filtered = sortByKey(applyFilters(all, filters), filters.ordenar)
-  const page = paginate(filtered, filters.pagina)
+  // Filtra e ordena PRODUTOS (mesmas regras de sempre) e só então expande em cards por cor:
+  // contagem, paginação e facetas passam a falar em cards.
+  const entries = entradasPorCor(sortByKey(applyFilters(all, filters), filters.ordenar), filters, config.cardsPorCor)
+  const page = paginate(entries, filters.pagina)
   return {
-    products: page.items,
-    count: filtered.length,
-    total: all.length,
+    entries: page.items,
+    count: entries.length,
+    total: entradasPorCor(all, DEFAULT_FILTERS, config.cardsPorCor).length,
     totalPages: page.totalPages,
     pagina: page.pagina,
-    facets: computeFacets(all, filters),
+    facets: computeFacets(all, filters, config.cardsPorCor),
+    scopeProductIds: all.map((p) => p.id),
+    cardsPorCor: config.cardsPorCor,
+    conjuntosNaListagem: config.conjuntosNaListagem,
   }
 }

@@ -8,7 +8,7 @@ import { pushEcommerceEvent } from "@modules/analytics/push"
 import { variantToAddToCart } from "@modules/analytics/items"
 import { showToast } from "@modules/common/components/toast"
 import { colorValues, firstAvailableVariantId } from "@lib/util/pdp-variants"
-import { slotMetadata, totalDoConjunto, type CardConjunto } from "@lib/util/conjuntos"
+import { corParceira, slotMetadata, totalDoConjunto, type CardConjunto } from "@lib/util/conjuntos"
 import { adicionarEmSequencia, mensagemFalha, type ProgressoAdicao, type SlotAdicao } from "@lib/util/adicao-conjunto"
 import { ProductSelectionProvider } from "@modules/products/components/product-selection"
 import PecaDoConjunto, { type SelecaoPeca } from "./peca-do-conjunto"
@@ -24,6 +24,12 @@ function primeiraCorDisponivel(p: HttpTypes.StoreProduct): string | null {
   return colorValues(p).find((c) => firstAvailableVariantId(p, c) !== null) ?? null
 }
 
+// Entrando por um card de cor (`?cor=`): a grafia da peça para essa cor, se houver variante
+// disponível nela; senão a primeira disponível (mesma regra de `corParceira`).
+function corDaPeca(p: HttpTypes.StoreProduct, corInicial: string | null): string | null {
+  return corInicial ? corParceira(p, corInicial) : primeiraCorDisponivel(p)
+}
+
 const isMobile = () => typeof window !== "undefined" && window.matchMedia("(max-width: 1023px)").matches
 
 // Orquestra as peças do conjunto (spec §7.2, ruling 4): um `ProductSelectionProvider` por
@@ -35,11 +41,13 @@ export default function ConjuntoBuilder({
   produtos,
   colorMap,
   countryCode,
+  corInicial = null,
 }: {
   card: CardConjunto
   produtos: HttpTypes.StoreProduct[]
   colorMap: ColorMap
   countryCode: string
+  corInicial?: string | null
 }) {
   const [selecoes, setSelecoes] = useState<Record<string, SelecaoPeca>>({})
   const [adicionando, setAdicionando] = useState(false)
@@ -128,7 +136,7 @@ export default function ConjuntoBuilder({
     <div className="flex flex-col small:flex-row gap-8 pb-28 small:pb-0" data-testid="conjunto-builder">
       <div className="grid grid-cols-1 small:grid-cols-2 gap-10 flex-1">
         {produtos.map((produto, i) => (
-          <ProductSelectionProvider key={produto.id} product={produto} initialColor={primeiraCorDisponivel(produto)}>
+          <ProductSelectionProvider key={produto.id} product={produto} initialColor={corDaPeca(produto, corInicial)}>
             <PecaDoConjunto
               peca={card.pecas[i]}
               index={i}

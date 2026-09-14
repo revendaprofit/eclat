@@ -29,10 +29,12 @@ export default async function ConjuntoTemplate({
   card,
   produtos,
   countryCode,
+  corInicial = null,
 }: {
   card: CardConjuntoData
   produtos: HttpTypes.StoreProduct[]
   countryCode: string
+  corInicial?: string | null
 }) {
   const colorMap = await getColorMap()
   const base = getBaseURL()
@@ -63,7 +65,7 @@ export default async function ConjuntoTemplate({
       <h1 className="font-serif text-2xl text-eclat-grafite mb-6" data-testid="conjunto-nome">
         {card.nome}
       </h1>
-      <ConjuntoBuilder card={card} produtos={produtos} colorMap={colorMap} countryCode={countryCode} />
+      <ConjuntoBuilder card={card} produtos={produtos} colorMap={colorMap} countryCode={countryCode} corInicial={corInicial} />
     </div>
   )
 }

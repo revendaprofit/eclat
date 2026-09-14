@@ -76,7 +76,10 @@ export type Facets = {
   preco: { min: number; max: number } | null
 }
 
-export function computeFacets(products: Product[], f: FilterState): Facets {
+// `porCor`: a grade mostra um card por cor (`entradasPorCor`), então a contagem de tamanho soma
+// CORES disponíveis naquele tamanho (um card por cor), não produtos. A contagem de cor já é um
+// card por produto naquela cor nos dois modos.
+export function computeFacets(products: Product[], f: FilterState, porCor = false): Facets {
   const sizeCount = new Map<string, number>()
   const colorCount = new Map<string, { name: string; count: number }>()
   const prices: number[] = []
@@ -84,14 +87,16 @@ export function computeFacets(products: Product[], f: FilterState): Facets {
   for (const p of products) {
     const variants = (p.variants ?? []) as Variant[]
     if (matchesFilters(p, f, "tamanho")) {
-      const sizes = new Set<string>()
+      const coresPorTamanho = new Map<string, Set<string>>()
       for (const v of variants) {
         if (!isVariantAvailable(v as StockVariant)) continue
         if (f.cor.length && !f.cor.some((c) => sameColor(variantColor(p, v), c))) continue
         const s = variantSize(p, v)
-        if (s) sizes.add(s)
+        if (!s) continue
+        const cor = porCor ? normalizeColorName(variantColor(p, v) ?? "") : ""
+        coresPorTamanho.set(s, (coresPorTamanho.get(s) ?? new Set<string>()).add(cor))
       }
-      sizes.forEach((s) => sizeCount.set(s, (sizeCount.get(s) ?? 0) + 1))
+      coresPorTamanho.forEach((cores, s) => sizeCount.set(s, (sizeCount.get(s) ?? 0) + cores.size))
     }
     if (matchesFilters(p, f, "cor")) {
       const colors = new Map<string, string>()

@@ -10,12 +10,15 @@ export default async function ProductPreview({
   region,
   listName,
   formaConjunto,
+  cor,
 }: {
   product: HttpTypes.StoreProduct
   isFeatured?: boolean
   region: HttpTypes.StoreRegion
   listName?: string
   formaConjunto?: boolean
+  // Card por cor: cor (grafia do catálogo) que o card mostra e leva para a PDP via ?cor=.
+  cor?: string | null
 }) {
   const colorMap = await getColorMap()
   const countryCode = region.countries?.[0]?.iso_2 ?? "br"
@@ -25,6 +28,7 @@ export default async function ProductPreview({
       countryCode={countryCode}
       listName={listName}
       aspect={isFeatured ? "featured" : "portrait"}
+      initialColor={cor ?? null}
     />
   )
 }

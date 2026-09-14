@@ -7,6 +7,8 @@ import ConjuntoTemplate from "@modules/conjuntos/templates/conjunto"
 
 type Props = {
   params: Promise<{ countryCode: string; handle: string }>
+  // `?cor=` vem do card por cor (vitrine/listagem): as peças abrem nessa cor quando disponível.
+  searchParams: Promise<{ cor?: string | string[] }>
 }
 
 export async function generateMetadata(props: Props): Promise<Metadata> {
@@ -54,11 +56,15 @@ export default async function ConjuntoPage(props: Props) {
     notFound()
   }
 
+  const sp = await props.searchParams
+  const cor = typeof sp.cor === "string" && sp.cor.trim() ? sp.cor.trim() : null
+
   return (
     <ConjuntoTemplate
       card={resultado.card}
       produtos={resultado.produtos}
       countryCode={params.countryCode}
+      corInicial={cor}
     />
   )
 }

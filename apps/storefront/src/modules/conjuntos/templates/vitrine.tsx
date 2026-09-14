@@ -3,29 +3,15 @@ import { HttpTypes } from "@medusajs/types"
 
 import { getVitrineConjuntos } from "@lib/data/conjuntos"
 import { getBaseURL } from "@lib/util/env"
-import type { CardConjunto as CardConjuntoData } from "@lib/util/conjuntos"
+import { hrefConjunto } from "@lib/util/conjuntos"
 import CategoryHeader from "@modules/categories/components/category-header"
 import Breadcrumb from "@modules/common/components/breadcrumb"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import { ItemListJsonLd } from "@modules/seo/jsonld"
-import Track, { type EcommercePayload } from "@modules/analytics/track"
+import Track from "@modules/analytics/track"
+import { conjuntosToItemList } from "@modules/analytics/items"
 import CardConjunto from "@modules/conjuntos/components/card-conjunto"
 import GradeColecao, { CARDS_INICIAIS } from "@modules/conjuntos/components/grade-colecao"
-
-// Payload GA4 (schema `EcommercePayload`) a partir dos cards de uma seção — mesma forma de
-// `productsToItemList` (item_id/item_name/price/index), mas com o preço COM benefício (é o preço
-// que a cliente vê e paga pelo conjunto).
-function itemListPayload(cards: CardConjuntoData[], listName: string): EcommercePayload {
-  return {
-    item_list_name: listName,
-    items: cards.map((c, i) => ({
-      item_id: c.handle,
-      item_name: c.nome,
-      price: c.precoComBeneficio / 100,
-      index: i,
-    })),
-  }
-}
 
 // Página Conjuntos (`/categories/conjuntos`, spec §7.1, F3): vitrine dedicada do Benefício
 // Conjunto — sem filtros de catálogo (ruling 2). Duas famílias de seção: "Escolhidos pela ÉCLAT"
@@ -74,17 +60,17 @@ export default async function VitrineConjuntos({
               <ItemListJsonLd
                 name="Conjuntos"
                 items={curados.map((c) => ({
-                  name: c.nome,
-                  url: `${base}/${countryCode}/conjuntos/${c.handle}`,
+                  name: c.cor ? `Conjunto ${c.nome} ${c.cor}` : `Conjunto ${c.nome}`,
+                  url: `${base}/${countryCode}${hrefConjunto(c)}`,
                 }))}
               />
-              <Track event="view_item_list" ecommerce={itemListPayload(curados, "Conjuntos")} />
+              <Track event="view_item_list" ecommerce={conjuntosToItemList(curados, "Conjuntos")} />
               <ul
                 className="grid grid-cols-2 w-full small:grid-cols-3 medium:grid-cols-4 gap-x-6 gap-y-8"
                 data-testid="conjuntos-curados-list"
               >
                 {curados.map((c) => (
-                  <li key={c.handle}>
+                  <li key={`${c.handle}|${c.cor ?? ""}`}>
                     <CardConjunto card={c} listName="Conjuntos" />
                   </li>
                 ))}
@@ -113,7 +99,7 @@ export default async function VitrineConjuntos({
                     url: `${base}/${countryCode}/conjuntos/${c.handle}`,
                   }))}
                 />
-                <Track event="view_item_list" ecommerce={itemListPayload(col.cards.slice(0, CARDS_INICIAIS), listName)} />
+                <Track event="view_item_list" ecommerce={conjuntosToItemList(col.cards.slice(0, CARDS_INICIAIS), listName)} />
                 <GradeColecao cards={col.cards} listName={listName} />
               </section>
             )

@@ -17,6 +17,7 @@ import {
   elegibilidade,
   montarCardCurado,
   montarCardPar,
+  montarCardsCuradoPorCor,
   precoMinDisponivel,
 } from "@lib/util/conjuntos"
 import { buildChain } from "@lib/util/category-chain"
@@ -26,6 +27,7 @@ import { getCacheOptions } from "./cookies"
 import { listCategories } from "./categories"
 import { listCollections } from "./collections"
 import { listProductsByIds } from "./products"
+import { getListagemConfig } from "./listagem"
 
 type ConjuntoRaw = {
   tipo: "curado" | "colecao"
@@ -78,7 +80,7 @@ export async function getVitrineConjuntos(countryCode: string): Promise<{
   curados: CardConjunto[]
   colecoes: { collection_id: string; titulo: string; handle: string; cards: CardConjunto[] }[]
 }> {
-  const vitrine = await fetchVitrineRaw()
+  const [vitrine, config] = await Promise.all([fetchVitrineRaw(), getListagemConfig()])
 
   const idsCurados = vitrine.curados.flatMap((c) => c.product_ids)
   const idsColecoes = vitrine.colecoes.flatMap((col) => col.pares.flatMap((p) => p.product_ids))
@@ -86,9 +88,10 @@ export async function getVitrineConjuntos(countryCode: string): Promise<{
   const produtos = todosIds.length ? await listProductsByIds(todosIds, countryCode) : []
   const produtosMap = new Map(produtos.map((p) => [p.id, p]))
 
-  const curados = vitrine.curados
-    .map((c) => montarCardCurado(c, produtosMap))
-    .filter((c): c is CardConjunto => c !== null)
+  // Um card por cor (mesmo interruptor da listagem de produtos) ou o card único de sempre.
+  const curados = config.cardsPorCor
+    ? vitrine.curados.flatMap((c) => montarCardsCuradoPorCor(c, produtosMap))
+    : vitrine.curados.map((c) => montarCardCurado(c, produtosMap)).filter((c): c is CardConjunto => c !== null)
 
   let colecoesInfo: HttpTypes.StoreCollection[] = []
   if (vitrine.colecoes.length) {
@@ -118,6 +121,28 @@ export async function getVitrineConjuntos(countryCode: string): Promise<{
     .filter((c): c is NonNullable<typeof c> => c !== null)
 
   return { curados, colecoes }
+}
+
+// Conjuntos montados (curados) que entram na GRADE de uma listagem de produtos (loja, categoria,
+// coleção): os que têm ao menos uma peça no escopo da listagem. Um card por cor quando o
+// interruptor da vitrine está ligado. Falha → lista vazia (a listagem nunca quebra por isso).
+export async function getConjuntosDaListagem(scopeProductIds: string[], countryCode: string, porCor: boolean): Promise<CardConjunto[]> {
+  if (!scopeProductIds.length) return []
+  try {
+    const vitrine = await fetchVitrineRaw()
+    const noEscopo = new Set(scopeProductIds)
+    const curados = vitrine.curados.filter((c) => c.product_ids.some((id) => noEscopo.has(id)))
+    if (!curados.length) return []
+    const ids = Array.from(new Set(curados.flatMap((c) => c.product_ids)))
+    const produtos = await listProductsByIds(ids, countryCode)
+    const mapa = new Map(produtos.map((p) => [p.id, p]))
+    return porCor
+      ? curados.flatMap((c) => montarCardsCuradoPorCor(c, mapa))
+      : curados.map((c) => montarCardCurado(c, mapa)).filter((c): c is CardConjunto => c !== null)
+  } catch (err) {
+    console.error("[conjuntos] falha ao montar conjuntos da listagem", err)
+    return []
+  }
 }
 
 // Página de um conjunto (curado ou par) pelo handle canônico. 404/erro no backend -> `null`

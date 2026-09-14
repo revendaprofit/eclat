@@ -10,6 +10,7 @@ export type GA4Item = {
   price?: number
   quantity?: number
   item_category?: string
+  item_variant?: string
   index?: number
 }
 

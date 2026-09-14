@@ -46,6 +46,35 @@ export function productsToItemList(
   }
 }
 
+// Lista da vitrine com um card por cor: `item_variant` = cor do card (GA4), índice = posição do card.
+export function entriesToItemList(
+  entries: { product: HttpTypes.StoreProduct; cor: string | null }[],
+  listName: string
+): EcommercePayload {
+  const base = productsToItemList(entries.map((e) => e.product), listName)
+  return {
+    ...base,
+    items: (base.items ?? []).map((it, i) => (entries[i].cor ? { ...it, item_variant: entries[i].cor as string } : it)),
+  }
+}
+
+// Cards do Benefício Conjunto (item_id = handle; não existe SKU de conjunto), com a cor do card.
+export function conjuntosToItemList(
+  cards: { handle: string; nome: string; precoComBeneficio: number; cor?: string | null }[],
+  listName: string
+): EcommercePayload {
+  return {
+    item_list_name: listName,
+    items: cards.map((c, i): GA4Item => ({
+      item_id: c.handle,
+      item_name: c.nome,
+      price: c.precoComBeneficio / 100,
+      index: i,
+      ...(c.cor ? { item_variant: c.cor } : {}),
+    })),
+  }
+}
+
 export function variantToAddToCart(
   product: HttpTypes.StoreProduct,
   variant: any,

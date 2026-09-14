@@ -5,7 +5,7 @@
 import type { HttpTypes } from "@medusajs/types"
 import { isVariantAvailable, optionValue, type StockVariant } from "./availability"
 import { normalizeColorName } from "./colors"
-import { colorValues } from "./pdp-variants"
+import { colorValues, imagesForColor } from "./pdp-variants"
 
 // ---------- Respostas Store (F1) ----------
 export type RegraStore = {
@@ -42,6 +42,9 @@ export type CardConjunto = {
   economia: number
   regra: RegraStore
   collection_id: string | null
+  // Card por cor (vitrine com um card por cor): cor que as peças abrem pré-selecionada na página
+  // do conjunto (`?cor=`). `null` = card do conjunto sem cor definida (primeira disponível).
+  cor: string | null
 }
 
 type VariantWithPrice = HttpTypes.StoreProductVariant & {
@@ -77,10 +80,16 @@ export function descontoConjunto(regra: RegraStore, precos: number[]): number[] 
 
 // Menor `calculated_amount` (decimal BRL) entre as variantes disponíveis, em centavos. `null` se
 // não há variante disponível ou nenhuma delas tem preço calculado.
-export function precoMinDisponivel(p: HttpTypes.StoreProduct): number | null {
+export function precoMinDisponivel(p: HttpTypes.StoreProduct, cor: string | null = null): number | null {
   const variantes = (p.variants ?? []) as VariantWithPrice[]
+  const alvo = cor === null ? null : normalizeColorName(cor)
   const precos = variantes
     .filter((v) => isVariantAvailable(v as StockVariant))
+    .filter((v) => {
+      if (alvo === null) return true
+      const valor = optionValue(p.options, v as StockVariant, "Cor")
+      return valor !== null && normalizeColorName(valor) === alvo
+    })
     .map((v) => v.calculated_price?.calculated_amount)
     .filter((x): x is number => typeof x === "number")
     .map((x) => Math.round(x * 100))
@@ -114,13 +123,16 @@ export function conjuntoDisponivel(pecas: PecaCard[]): boolean {
   return pecas.every((p) => p.precoMin !== null)
 }
 
-function pecaCard(p: HttpTypes.StoreProduct): PecaCard {
+function pecaCard(p: HttpTypes.StoreProduct, cor: string | null = null): PecaCard {
+  // Com cor: foto e preço daquela cor (grafia canônica da peça); sem cor: como sempre.
+  const corPeca = cor === null ? null : colorValues(p).find((c) => normalizeColorName(c) === normalizeColorName(cor)) ?? null
+  const fotoDaCor = corPeca ? imagesForColor(p, corPeca)[0]?.url ?? null : null
   return {
     id: p.id,
     handle: p.handle ?? "",
     title: p.title ?? "",
-    thumbnail: p.thumbnail ?? p.images?.[0]?.url ?? null,
-    precoMin: precoMinDisponivel(p),
+    thumbnail: fotoDaCor ?? p.thumbnail ?? p.images?.[0]?.url ?? null,
+    precoMin: precoMinDisponivel(p, corPeca),
   }
 }
 
@@ -132,11 +144,12 @@ function montarCard(
   productIds: string[],
   regra: RegraStore,
   collectionId: string | null,
-  produtos: Map<string, HttpTypes.StoreProduct>
+  produtos: Map<string, HttpTypes.StoreProduct>,
+  cor: string | null = null
 ): CardConjunto | null {
   const encontrados = productIds.map((id) => produtos.get(id))
   if (encontrados.some((p) => !p)) return null
-  const pecas = (encontrados as HttpTypes.StoreProduct[]).map(pecaCard)
+  const pecas = (encontrados as HttpTypes.StoreProduct[]).map((p) => pecaCard(p, cor))
   if (!conjuntoDisponivel(pecas)) return null
   const precos = pecas.map((p) => p.precoMin as number)
   const { cheio, comBeneficio, economia } = precosConjunto(regra, precos)
@@ -151,6 +164,7 @@ function montarCard(
     economia,
     regra,
     collection_id: collectionId,
+    cor,
   }
 }
 
@@ -171,6 +185,35 @@ export function montarCardPar(
 // capa `null` (a vitrine usa as fotos das peças, já disponíveis em `pecas[].thumbnail`).
 export function montarCardCurado(c: CuradoStore, produtos: Map<string, HttpTypes.StoreProduct>): CardConjunto | null {
   return montarCard("curado", c.handle, c.nome, c.capa_url, c.product_ids, c.regra, null, produtos)
+}
+
+// Cores em que TODAS as peças do conjunto têm variante disponível, na ordem das cores da primeira
+// peça (grafia dela). Uma cor esgotada em qualquer peça não vira card.
+export function coresComunsDisponiveis(produtos: HttpTypes.StoreProduct[]): string[] {
+  if (!produtos.length) return []
+  return colorValues(produtos[0]).filter((cor) => produtos.every((p) => corComVarianteDisponivel(p, cor)))
+}
+
+// Curado com um card por cor (vitrine com um card por cor, decisão do dono 14/09/2026): mesma
+// regra e mesmo handle, mas foto e preço de cada cor e `cor` para abrir a página já nela. Sem a
+// capa cadastrada (ela é de uma cor só): o card usa a foto de cada peça naquela cor. Menos de duas
+// cores em comum → o card único de sempre (`montarCardCurado`).
+export function montarCardsCuradoPorCor(c: CuradoStore, produtos: Map<string, HttpTypes.StoreProduct>): CardConjunto[] {
+  const pecas = c.product_ids.map((id) => produtos.get(id))
+  if (pecas.some((p) => !p)) return []
+  const cores = coresComunsDisponiveis(pecas as HttpTypes.StoreProduct[])
+  if (cores.length < 2) {
+    const unico = montarCardCurado(c, produtos)
+    return unico ? [unico] : []
+  }
+  return cores
+    .map((cor) => montarCard("curado", c.handle, c.nome, null, c.product_ids, c.regra, null, produtos, cor))
+    .filter((card): card is CardConjunto => card !== null)
+}
+
+// Link do card: página do conjunto, com a cor quando o card é de uma cor.
+export function hrefConjunto(card: Pick<CardConjunto, "handle" | "cor">): string {
+  return `/conjuntos/${card.handle}${card.cor ? `?cor=${encodeURIComponent(card.cor)}` : ""}`
 }
 
 // Texto pt-BR do benefício, para o card e a página do conjunto.

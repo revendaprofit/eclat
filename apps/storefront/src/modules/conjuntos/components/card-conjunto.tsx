@@ -2,7 +2,7 @@
 
 import Image from "next/image"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
-import { formatarReais, type CardConjunto as CardConjuntoData } from "@lib/util/conjuntos"
+import { formatarReais, hrefConjunto, type CardConjunto as CardConjuntoData } from "@lib/util/conjuntos"
 import { pushEcommerceEvent } from "@modules/analytics/push"
 
 // Card do Benefício Conjunto (spec §7.1, ruling 3): duas fotos lado a lado (ou capa, quando o
@@ -17,6 +17,7 @@ function pushSelectItem(card: CardConjuntoData, listName: string) {
         item_id: card.handle,
         item_name: card.nome,
         price: card.precoComBeneficio / 100,
+        ...(card.cor ? { item_variant: card.cor } : {}),
       },
     ],
   })
@@ -35,7 +36,7 @@ export default function CardConjunto({
 
   return (
     <LocalizedClientLink
-      href={`/conjuntos/${card.handle}`}
+      href={hrefConjunto(card)}
       onClick={() => pushSelectItem(card, listName)}
       className="group block"
       data-testid="card-conjunto"
@@ -51,7 +52,7 @@ export default function CardConjunto({
                 <div key={i} className="relative h-full">
                   <Image
                     src={src}
-                    alt={i === 0 ? `${card.nome} — use.ÉCLAT` : ""}
+                    alt={i === 0 ? `Conjunto ${card.nome}${card.cor ? ` ${card.cor}` : ""} — use.ÉCLAT` : ""}
                     aria-hidden={i > 0}
                     fill
                     quality={80}
@@ -78,9 +79,15 @@ export default function CardConjunto({
         ) : null}
       </div>
       <div className="mt-4">
+        {/* "Conjunto" antes do nome: o card também aparece misturado aos produtos na listagem */}
         <p className="text-eclat-grafite" data-testid="card-conjunto-nome">
-          {card.nome}
+          Conjunto {card.nome}
         </p>
+        {card.cor && (
+          <p className="text-eclat-grafite/60 text-xs" data-testid="card-conjunto-cor">
+            {card.cor}
+          </p>
+        )}
         <div className="mt-1">
           <div className="flex items-baseline gap-x-1">
             <span className="text-eclat-grafite/50 text-[10px] uppercase tracking-[0.15em]">a partir de</span>
