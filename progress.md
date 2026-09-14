@@ -899,3 +899,8 @@ PRÓXIMO (usuário, guiado): Railway (Postgres + serviço do repo, root /, vars,
 
 ## 2026-09-13 — PDP: faixas de cor por seção
 - Pedido do dono (página longa e monocromática): as seções abaixo da compra viraram faixas de borda a borda alternando os tons da marca — "É pra você se…" em `areia/50` (cartão "Feita pra você" com borda e ✓ em terracota, antes verde fora da paleta), "O que elas dizem" em `luz` (estrelas terracota, bordas `pedra`), selos + "Dúvidas frequentes" em `blush-claro/60` (linhas da FAQ em `pedra`). Títulos das seções com filete curto terracota (`after:`). Cada componente cuida da própria faixa e some inteiro sem dados. Validado localmente com captura (Chrome 1280). tsc, lint, 221 testes.
+
+## 2026-09-13 — Galeria com 1 foto no Solaris (dado) + regra para produto de uma cor
+- Em produção o Macaquinho Solaris voltou a ter 1 imagem no produto (registro criado 20:53, fora desta sessão — provável salvamento no Cockpit ou importador) e as 3 variantes Telha tinham só `telha-01.jpg` vinculada; como a PDP usa as fotos da variante da cor escolhida, a galeria virava 1 slide (sem setas no desktop, sem carrossel no mobile). Corrigido via Admin API: 6 fotos no produto (01, 07, 11, 06, 12, 04) e todas ligadas às 3 variantes (`/admin/products/:id/images/:img/variants/batch`).
+- Código: `imagesForColor` passa a usar todas as fotos do produto quando ele tem UMA cor só (o vínculo foto↔variante pode ficar parcial); com mais de uma cor, continua a foto da variante da cor. 2 testes novos (223).
+- Atenção: `scripts/import-lumiere.py` re-hospeda `telha-NN.jpg` na mesma pasta do Storage a cada execução (sobrescreve arquivos) e religa fotos às variantes — rodar de novo para o Solaris desfaz a curadoria das 6.

@@ -64,8 +64,10 @@ export function sizeAvailability(product: Product, color: string | null): Record
   return out
 }
 
+// Produto de UMA cor só usa sempre todas as fotos do produto: o vinculo foto-variante (feito pelo
+// importador ou pelo Cockpit) pode ficar parcial e a galeria virar uma foto so (Solaris, 2026-09-13).
 export function imagesForColor(product: Product, color: string | null): HttpTypes.StoreProductImage[] {
-  if (color !== null) {
+  if (color !== null && colorValues(product).length > 1) {
     const withImages = variantsOf(product, color).find((v) => (v.images ?? []).length > 0)
     if (withImages) return withImages.images as HttpTypes.StoreProductImage[]
   }

@@ -127,3 +127,22 @@ describe("variantLabel / selectedColor", () => {
     expect(selectedColor(P, {})).toBeNull()
   })
 })
+
+describe("imagesForColor: produto de uma cor so", () => {
+  const OPTS1 = [
+    { id: "o_t", title: "Tamanho", values: [{ value: "P" }, { value: "M" }] },
+    { id: "o_c", title: "Cor", values: [{ value: "Telha" }] },
+  ]
+  const P1 = {
+    id: "p2", options: OPTS1,
+    images: [{ id: "i1", url: "telha-01.jpg" }, { id: "i2", url: "telha-07.jpg" }, { id: "i3", url: "telha-11.jpg" }],
+    variants: [v("t1", "P", "Telha", 2, ["telha-01.jpg"]), v("t2", "M", "Telha", 2, ["telha-01.jpg"])],
+  } as any
+  it("ignora o vinculo parcial foto-variante e usa todas as fotos do produto", () => {
+    expect(imagesForColor(P1, "Telha").map((i) => i.url)).toEqual(["telha-01.jpg", "telha-07.jpg", "telha-11.jpg"])
+    expect(imagesForColor(P1, null).map((i) => i.url)).toEqual(["telha-01.jpg", "telha-07.jpg", "telha-11.jpg"])
+  })
+  it("com mais de uma cor, a foto da variante da cor continua valendo", () => {
+    expect(imagesForColor(P, "Verde Exercito").map((i) => i.url)).toEqual(["v1a.jpg"])
+  })
+})
