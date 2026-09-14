@@ -16,7 +16,7 @@ Configuração: MODELOS (ficha), GALERIA (curadoria de fotos por produto/cor), C
 Requisitos: pip install requests pillow · Credenciais: apps/cockpit/.env.local
 Exige backup prévio em brand-assets/backup-catalogo-*.json quando --wipe é usado.
 """
-import os, re, sys, glob, json, argparse, unicodedata, io
+import os, re, sys, glob, json, argparse, unicodedata, io, hashlib
 from collections import defaultdict
 
 try:
@@ -223,9 +223,9 @@ GALERIA = {
     ("short-aurora", "telha"): [("short aurora", 3), ("conjunto aurora", 5), ("short aurora", 1), ("short aurora", 4), ("conjunto aurora", 7), ("short aurora", 2)],
     ("short-aurora", "grafitti"): [("conjunto aurora", 4), ("conjunto aurora", 7), ("conjunto aurora", 5), ("conjunto aurora", 3), ("conjunto aurora", 1), ("conjunto aurora", 8)],
     ("top-orvalho", "grafitti"): [("conjunto orvalho", 5), ("top orvalho", 4), ("top orvalho", 3), ("conjunto orvalho", 8), ("top orvalho", 5), ("conjunto orvalho", 13), ("top orvalho", 2)],
-    ("top-orvalho", "telha"): [("arquivo", p) for p in ["046", "043", "049", "048", "060", "052"]],   # top Telha fotografado com short Grafitti
+    ("top-orvalho", "telha"): [("conjunto orvalho", 1), ("conjunto orvalho", 2), ("conjunto orvalho", 3), ("arquivo", "046"), ("arquivo", "049"), ("arquivo", "060")],   # 1–3: conjunto Telha (Drive, 13/09); 046/049/060: top Telha com short Grafitti
     ("short-orvalho", "grafitti"): [("conjunto orvalho", 4), ("short orvalho", 3), ("short orvalho", 1), ("conjunto orvalho", 9), ("conjunto orvalho", 12), ("short orvalho", 5)],
-    ("short-orvalho", "telha"): [],   # sem foto no ensaio -> cor pulada até haver foto
+    ("short-orvalho", "telha"): [("conjunto orvalho", 1), ("conjunto orvalho", 2), ("conjunto orvalho", 3)],   # fotos do conjunto Telha enviadas pelo dono (13/09)
 }
 
 # Conjuntos montados pelo admin (Benefício Conjunto, curados). Vale por PRODUTO, qualquer cor (dono, 13/09).
@@ -420,7 +420,8 @@ def main():
         for c in cores:
             urls = []
             for i, caminho in enumerate(fotos_por_cor[c], 1):
-                dest = "products/%s/%s-%02d.jpg" % (handle, c, i)
+                # sufixo = hash do arquivo de origem: trocar a foto de uma posição gera URL nova (sem cache velho)
+                dest = "products/%s/%s-%02d-%s.jpg" % (handle, c, i, hashlib.md5(os.path.basename(caminho).encode("utf-8")).hexdigest()[:8])
                 if dry: urls.append(st.url + "/storage/v1/object/public/site/" + dest); continue
                 urls.append(st.upload(dest, otimizar(caminho)))
             urls_por_cor[c] = urls
@@ -480,7 +481,11 @@ def main():
             imgs = api.get("/admin/products/%s?fields=id,images.id,images.url" % pid)["product"]["images"]
             por_url = {i["url"]: i["id"] for i in imgs}
             ordem = [{"id": por_url[u], "url": u} for u in todas_urls if u in por_url]
-            ordem += [{"id": i["id"], "url": i["url"]} for i in imgs if i["url"] not in todas_urls]
+            # fotos fora da curadoria: as do próprio script (site/products/<handle>/) saem; as de outra origem (Cockpit) ficam
+            gerenciada = "/storage/v1/object/public/site/products/%s/" % handle
+            removidas = [i for i in imgs if i["url"] not in todas_urls and gerenciada in i["url"]]
+            ordem += [{"id": i["id"], "url": i["url"]} for i in imgs if i["url"] not in todas_urls and gerenciada not in i["url"]]
+            if removidas: print("  fotos antigas removidas da galeria: %d" % len(removidas))
             api.post("/admin/products/%s" % pid, {"images": ordem})
         else:
             prod = api.post("/admin/products", payload)["product"]
