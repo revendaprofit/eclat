@@ -27,7 +27,11 @@ RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))          # ..
 PROJ = os.path.dirname(RAIZ)                                                 # .../ECLAT
 FOTOS = os.path.join(PROJ, "brand-assets", "ensaio-camila-2026-09-10")
 BASE = os.environ.get("MEDUSA_URL", "https://endearing-enthusiasm-production-775b.up.railway.app")
-PADRAO = re.compile(r"^Cole[çc][ãa]o (?P<col>.+?) - Modelo (?P<modelo>.+?) \((?P<n>\d+)\)-Cor (?P<cor>.+?)\s*\.jpe?g$", re.I)
+# Aceita as variações que o dono já usou: "Modelo X (n)-Cor Y .jpg", "Modelo X - Cor Y (n).jpg",
+# "X - Cor Y (n).jpg" (sem "Modelo"). O "(n)" pode vir antes ou depois da cor.
+PADRAO = re.compile(
+    r"^Cole[çc][ãa]o (?P<col>.+?) - (?:Modelo )?(?P<modelo>.+?)"
+    r"(?: \((?P<n1>\d+)\))?\s*-\s*Cor (?P<cor>.+?)(?: \((?P<n2>\d+)\))?\s*\.jpe?g$", re.I)
 LADO_MAX = 2000
 JPEG_Q = 85
 
@@ -68,11 +72,19 @@ MODELOS = {
     },
 }
 
-# Ordem de vitrine por (handle, cor): números "(n)" do arquivo. Fora da lista → ordem numérica depois.
-ORDEM = {("macaquinho-solaris", "telha"): [33, 29, 31, 24, 23, 25, 26, 27, 28, 37, 38, 39, 21, 22, 30, 32, 34, 35, 36, 40, 41]}
+# Seleção + ordem de vitrine por (handle, cor normalizada do arquivo): números "(n)" do arquivo.
+# Só as fotos listadas entram no produto; sem entrada, entram todas em ordem numérica.
+ORDEM = {
+    ("macaquinho-solaris", "telha"): [33, 29, 31, 24, 23, 25, 26, 27, 28, 37, 38, 39, 21, 22, 30, 32, 34, 35, 36, 40, 41],
+    ("macaquinho-solaris", "grafitti"): [6, 5, 1, 11, 10, 2],   # 6 escolhidas (dono, 13/09): frente, 3/4, detalhe, lateral, costas, corpo inteiro
+}
 
-# Cores: código de SKU e hex (amostrado do tecido nas fotos do ensaio).
-CORES = {"telha": {"nome": "Telha", "sku": "TEL", "hex": "#C27050"}}
+# Cores: chave = como o dono escreve no arquivo (normalizado); nome = como aparece no site;
+# código de SKU e hex amostrado do tecido nas fotos do ensaio.
+CORES = {
+    "telha": {"nome": "Telha", "sku": "TEL", "hex": "#C27050"},
+    "grafitti": {"nome": "Grafite", "sku": "GRA", "hex": "#312D2F"},
+}
 
 
 def norm(s):
@@ -98,14 +110,20 @@ def ler_fotos(filtro_modelo=None):
         mod = norm(m["modelo"])
         if filtro_modelo and mod != norm(filtro_modelo): continue
         colecao = colecao or norm(m["col"])
-        grupos[mod][norm(m["cor"])].append((int(m["n"]), os.path.join(FOTOS, arq)))
+        n = int(m["n1"] or m["n2"] or 0)
+        grupos[mod][norm(m["cor"])].append((n, os.path.join(FOTOS, arq)))
     return colecao, grupos
 
 def ordenar(handle, cor, fotos):
-    pref = ORDEM.get((handle, cor), [])
+    """Com entrada em ORDEM, ela é a SELEÇÃO exata (curadoria + ordem de vitrine);
+    sem entrada, usa todas as fotos em ordem numérica."""
+    pref = ORDEM.get((handle, cor))
     por_n = dict(fotos)
-    seq = [n for n in pref if n in por_n] + sorted(n for n in por_n if n not in pref)
-    return [(n, por_n[n]) for n in seq]
+    if pref:
+        faltando = [n for n in pref if n not in por_n]
+        assert not faltando, "ORDEM[%s/%s] cita fotos inexistentes: %s" % (handle, cor, faltando)
+        return [(n, por_n[n]) for n in pref]
+    return sorted(por_n.items())
 
 def otimizar(caminho):
     im = ImageOps.exif_transpose(Image.open(caminho)).convert("RGB")
@@ -230,7 +248,34 @@ def main():
             print("  [dry-run] payload: %d variantes, %d imagens, SKUs %s" % (len(variants), len(todas_urls), [v["sku"] for v in variants])); continue
         existente = api.get("/admin/products?handle=%s&fields=id" % handle)["products"]
         if existente:
-            prod = existente[0]; print("  produto já existe (%s): refazendo vínculo de fotos e estoque" % prod["id"])
+            pid = existente[0]["id"]
+            prod = api.get("/admin/products/%s?fields=id,images.id,images.url,options.id,options.title,options.values.value,variants.id,variants.sku" % pid)["product"]
+            print("  produto já existe (%s): completando cores/variantes/fotos" % pid)
+            # a) valores novos na opção Cor (Medusa: envia a lista completa)
+            opt_cor = next(o for o in prod["options"] if norm(o["title"]) == "cor")
+            atuais = [v["value"] for v in opt_cor["values"]]
+            novos = [n for n in nomes_cores if n not in atuais]
+            if novos:
+                api.post("/admin/products/%s/options/%s" % (pid, opt_cor["id"]), {"values": atuais + novos})
+                print("  opção Cor: + %s" % novos)
+            # b) variantes que ainda não existem (por SKU)
+            skus = {v["sku"] for v in prod["variants"]}
+            criadas = [v for v in variants if v["sku"] not in skus]
+            for v in criadas:
+                api.post("/admin/products/%s/variants" % pid, v)
+            if criadas: print("  variantes criadas: %s" % [v["sku"] for v in criadas])
+            # c) fotos novas (Medusa substitui a lista inteira → reenvia as existentes com id+url; url é obrigatória)
+            urls_exist = {i["url"] for i in prod["images"]}
+            novas_urls = [u for u in todas_urls if u not in urls_exist]
+            if novas_urls:
+                api.post("/admin/products/%s" % pid, {"images": [{"id": i["id"], "url": i["url"]} for i in prod["images"]] + [{"url": u} for u in novas_urls]})
+                print("  fotos adicionadas: %d" % len(novas_urls))
+            # d) ordem final da galeria = ordem de todas_urls (cores na ordem do arquivo, fotos na ordem de ORDEM)
+            imgs = api.get("/admin/products/%s?fields=id,images.id,images.url" % pid)["product"]["images"]
+            por_url = {i["url"]: i["id"] for i in imgs}
+            ordem = [{"id": por_url[u], "url": u} for u in todas_urls if u in por_url]
+            ordem += [{"id": i["id"], "url": i["url"]} for i in imgs if i["url"] not in todas_urls]
+            api.post("/admin/products/%s" % pid, {"images": ordem})
         else:
             prod = api.post("/admin/products", payload)["product"]
             print("  produto criado: %s" % prod["id"])
