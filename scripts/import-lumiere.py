@@ -123,7 +123,7 @@ for _m in MODELOS.values():
 # Cor sem nenhuma foto é PULADA (não cria variante) até existir foto.
 GALERIA = {
     ("macaquinho-solaris", "telha"): [("macaquinho solaris", n) for n in [33, 29, 31, 24, 23, 25, 26, 27, 28, 37, 38, 39, 21, 22, 30, 32, 34, 35, 36, 40, 41]],
-    ("macaquinho-solaris", "grafitti"): [("macaquinho solaris", n) for n in [6, 5, 1, 11, 10, 2]],
+    ("macaquinho-solaris", "grafitti"): [("macaquinho solaris", n) for n in [105, 101, 104, 103, 102]],   # fotos refeitas na cor real (dono, 14/09); 101–105 = "Coleção lumiére- macaquinho solaris grafitti*.jpg" do Drive
     ("top-aurora", "telha"): [("top aurora", 6), ("top aurora", 7), ("top aurora", 1), ("conjunto aurora", 8), ("top aurora", 3), ("top aurora", 5), ("top aurora", 9)],
     ("top-aurora", "grafitti"): [("conjunto aurora", 9), ("conjunto aurora", 4), ("conjunto aurora", 3), ("conjunto aurora", 5), ("conjunto aurora", 6), ("conjunto aurora", 1)],
     ("short-aurora", "telha"): [("short aurora", 3), ("conjunto aurora", 5), ("short aurora", 1), ("short aurora", 4), ("conjunto aurora", 7), ("short aurora", 2)],
@@ -147,7 +147,7 @@ CONJUNTOS = [
 # código de SKU e hex amostrado do tecido nas fotos do ensaio.
 CORES = {
     "telha": {"nome": "Telha", "sku": "TEL", "hex": "#C27050"},
-    "grafitti": {"nome": "Grafitti", "sku": "GRA", "hex": "#312D2F"},   # nome escolhido pelo dono (13/09), não "Grafite"
+    "grafitti": {"nome": "Grafitti", "sku": "GRA", "hex": "#3A363A"},   # reamostrado das fotos refeitas (14/09)   # nome escolhido pelo dono (13/09), não "Grafite"
 }
 
 
@@ -392,7 +392,8 @@ def main():
             removidas = [i for i in imgs if i["url"] not in todas_urls and gerenciada in i["url"]]
             ordem += [{"id": i["id"], "url": i["url"]} for i in imgs if i["url"] not in todas_urls and gerenciada not in i["url"]]
             if removidas: print("  fotos antigas removidas da galeria: %d" % len(removidas))
-            api.post("/admin/products/%s" % pid, {"images": ordem})
+            # capa = 1ª foto da curadoria (a capa antiga pode apontar para uma foto que saiu da galeria)
+            api.post("/admin/products/%s" % pid, {"images": ordem, "thumbnail": todas_urls[0]})
         else:
             prod = api.post("/admin/products", payload)["product"]
             print("  produto criado: %s" % prod["id"])
