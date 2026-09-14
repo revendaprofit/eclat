@@ -15,7 +15,6 @@ import ProductActionsWrapper from "./product-actions-wrapper"
 import GuaranteeSeals from "@modules/products/components/guarantee-seals"
 import QuemE from "@modules/products/components/quem-e"
 import PdpTestimonials from "@modules/products/components/pdp-testimonials"
-import SizeGuide from "@modules/products/components/size-guide"
 import ProductFaq from "@modules/products/components/product-faq"
 import NotifyMe from "@modules/products/components/notify-me"
 import Track from "@modules/analytics/track"
@@ -119,7 +118,7 @@ const ProductTemplate = async ({
             </div>
             <div className="order-4 flex flex-col w-full py-8 gap-y-6 small:py-6 small:col-start-1 small:row-start-2">
               <ProductDescription product={product} />
-              <ProductTabs product={product} />
+              <ProductTabs product={product} measureTable={measureTable} />
             </div>
             <div className="order-3 flex flex-col w-full py-8 gap-y-12 small:py-0 small:col-start-3 small:row-start-1 small:row-span-2 small:self-start small:sticky small:top-48">
               <ProductOnboardingCta />
@@ -154,9 +153,6 @@ const ProductTemplate = async ({
       <div className="content-container max-w-4xl">
         <QuemE product={product} />
         <PdpTestimonials />
-        <div className="mt-10">
-          <SizeGuide table={measureTable} />
-        </div>
         {/* Selos (7 dias / 30 dias / WhatsApp) saíram da coluna de compra para logo antes da FAQ
             (pedido do dono, 2026-09-13). */}
         <div className="mt-10">

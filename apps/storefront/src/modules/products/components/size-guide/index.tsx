@@ -11,14 +11,16 @@ const ROWS = [
 ]
 const FIXED_COLUMNS = ["Tamanho", "Busto", "Cintura", "Quadril"]
 
-export default function SizeGuide({ table }: { table: MeasureTable | null }) {
+// `semTitulo`: dentro do acordeão "Medidas e Tamanhos Recomendados" da PDP (sem o h2 e sem a âncora,
+// que passa a ficar no bloco das abas).
+export default function SizeGuide({ table, semTitulo = false }: { table: MeasureTable | null; semTitulo?: boolean }) {
   const columns = table ? ["Tamanho", ...table.columns] : FIXED_COLUMNS
   const rows = table ? table.rows : ROWS
   return (
-    <section id="medidas" className="scroll-mt-24">
-      <h2 className="font-serif text-2xl text-eclat-grafite mb-4">
-        Acerte o tamanho de primeira
-      </h2>
+    <section id={semTitulo ? undefined : "medidas"} className={semTitulo ? "py-6" : "scroll-mt-24"}>
+      {!semTitulo && (
+        <h2 className="font-serif text-2xl text-eclat-grafite mb-4">Acerte o tamanho de primeira</h2>
+      )}
       <div className="overflow-x-auto">
         <table className="w-full text-sm border border-ui-border-base rounded-lg overflow-hidden">
           <thead>

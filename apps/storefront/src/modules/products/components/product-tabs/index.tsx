@@ -6,34 +6,49 @@ import Refresh from "@modules/common/icons/refresh"
 
 import Accordion from "./accordion"
 import { HttpTypes } from "@medusajs/types"
+import { useEffect, useState } from "react"
+import type { MeasureTable } from "@lib/util/measurements"
+import SizeGuide from "@modules/products/components/size-guide"
 
 type ProductTabsProps = {
   product: HttpTypes.StoreProduct
+  // tabela de medidas da categoria (null = tabela padrão do SizeGuide)
+  measureTable?: MeasureTable | null
 }
 
-const ProductTabs = ({ product }: ProductTabsProps) => {
+const ABA_MEDIDAS = "medidas"
+
+const ProductTabs = ({ product, measureTable = null }: ProductTabsProps) => {
   // "Informações do produto" só existe quando a ficha técnica tem o texto livre (chave `informacoes`,
   // Cockpit → Produto → "Ficha técnica (metadata)"). Sem texto, a aba não aparece (pedido do dono, 13/09).
+  // "Medidas e Tamanhos Recomendados" (13/09): a tabela de medidas saiu do corpo da página e virou aba;
+  // os links `#medidas` ("Guia de medidas", "Ver tabela de medidas" do recomendador) rolam até aqui
+  // e abrem a aba (acordeão controlado + hash).
   const tabs = [
     ...(paragrafosDe(product).length > 0
-      ? [{ label: "Informações do produto", component: <ProductInfoTab product={product} /> }]
+      ? [{ value: "informacoes", label: "Informações do produto", component: <ProductInfoTab product={product} /> }]
       : []),
-    {
-      label: "Envio e trocas",
-      component: <ShippingInfoTab />,
-    },
+    { value: ABA_MEDIDAS, label: "Medidas e Tamanhos Recomendados", component: <SizeGuide table={measureTable} semTitulo /> },
+    { value: "envio", label: "Envio e trocas", component: <ShippingInfoTab /> },
   ]
 
+  const [abertas, setAbertas] = useState<string[]>([])
+  useEffect(() => {
+    const abrirPeloHash = () => {
+      if (window.location.hash === `#${ABA_MEDIDAS}`) {
+        setAbertas((atual) => (atual.indexOf(ABA_MEDIDAS) === -1 ? atual.concat(ABA_MEDIDAS) : atual))
+      }
+    }
+    abrirPeloHash()
+    window.addEventListener("hashchange", abrirPeloHash)
+    return () => window.removeEventListener("hashchange", abrirPeloHash)
+  }, [])
+
   return (
-    <div className="w-full">
-      <Accordion type="multiple">
-        {tabs.map((tab, i) => (
-          <Accordion.Item
-            key={i}
-            title={tab.label}
-            headingSize="medium"
-            value={tab.label}
-          >
+    <div className="w-full scroll-mt-24" id={ABA_MEDIDAS}>
+      <Accordion type="multiple" value={abertas} onValueChange={setAbertas}>
+        {tabs.map((tab) => (
+          <Accordion.Item key={tab.value} title={tab.label} headingSize="medium" value={tab.value}>
             {tab.component}
           </Accordion.Item>
         ))}

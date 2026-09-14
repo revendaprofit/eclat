@@ -893,3 +893,6 @@ PRÓXIMO (usuário, guiado): Railway (Postgres + serviço do repo, root /, vars,
 ## 2026-09-13 — PDP: sem breadcrumb visível; selos antes da FAQ
 - O caminho "Início › Categoria › Produto" saiu da PDP (pedido do dono); o JSON-LD `BreadcrumbList` continua (SEO), gerado direto no template. Cabeçalho sobe (`pt-2` no mobile). Listagens mantêm o breadcrumb.
 - Selos "7 dias / 30 dias / WhatsApp" (`GuaranteeSeals`) saíram da coluna de compra e ficam logo antes de "Dúvidas frequentes", em todas as telas. Validado localmente (mobile 375: sem breadcrumb, JSON-LD presente, botão 633 → descrição 737, selos 1868 → FAQ 1961). tsc, lint, 221 testes.
+
+## 2026-09-13 — Tabela de medidas vira aba "Medidas e Tamanhos Recomendados"
+- A tabela ("Acerte o tamanho de primeira") saiu do corpo da PDP e entrou no acordeão ao lado de "Informações do produto" e "Envio e trocas" (`product-tabs/index.tsx`, `SizeGuide` com `semTitulo`). Acordeão controlado: os links `#medidas` ("Guia de medidas" do seletor, "Ver tabela de medidas" do recomendador, links da página do conjunto) rolam até as abas e abrem a de medidas (hash no carregamento + `hashchange`). Validado localmente: 3 abas, tabela da categoria (4 linhas) dentro da aba, `#medidas` abre a aba. tsc, lint, 221 testes.
