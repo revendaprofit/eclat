@@ -41,9 +41,11 @@ export default function ProductCard({ data, countryCode, listName, aspect = "por
         {color && color.available && <QuickAdd data={data} color={color} countryCode={countryCode} open={sheet} onClose={() => setSheet(false)} />}
       </div>
       <LocalizedClientLink href={href} onClick={() => pushSelectItem(data, listName)} className="block">
-        <div className="flex mt-4 justify-between items-start gap-2">
-          <Text className="text-ui-fg-subtle" data-testid="product-title">{data.title}</Text>
-          <div className="flex items-center gap-x-2 shrink-0">
+        {/* Mobile: nome em cima, preço embaixo (em 2 colunas estreitas o preço lado a lado
+            transbordava para o card vizinho). Desktop (large): lado a lado. */}
+        <div className="flex flex-col mt-3 gap-y-1 large:mt-4 large:flex-row large:justify-between large:items-start large:gap-2">
+          <Text className="text-ui-fg-subtle min-w-0 break-words" data-testid="product-title">{data.title}</Text>
+          <div className="flex flex-wrap items-center gap-x-2 large:shrink-0">
             {data.price?.price_type === "sale" && <Text className="line-through text-ui-fg-muted" data-testid="original-price">{data.price.original_price}</Text>}
             {data.price && <Text className={clx("text-ui-fg-muted", data.price.price_type === "sale" && "text-ui-fg-interactive")} data-testid="price">{data.price.calculated_price}</Text>}
           </div>
