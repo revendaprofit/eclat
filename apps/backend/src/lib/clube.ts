@@ -15,17 +15,39 @@ const GATILHO = /clube|primeira m[ãa]o|quero entrar|lan[çc]amento|vip|em breve
 
 // Texto da pré-venda (15/09/2026): loja aberta em pré-venda, envios a partir de 10/10,
 // pagamento por Pix combinado no WhatsApp. Ajustar quando a pré-venda acabar.
-export const CLUBE_BOAS_VINDAS = [
+//
+// Proteção do número (API não oficial): duas mensagens com "digitando…" entre elas,
+// a saudação sem link primeiro e o convite depois, e um teto de respostas por hora.
+// Nunca usar este caminho para disparo a quem não escreveu primeiro.
+export const CLUBE_SAUDACAO = [
   "Oi! Que bom ter você no Clube Éclat ✨",
-  "",
-  `Aqui está a sua entrada: ${CLUBE_GRUPO_URL}`,
   "",
   "A pré-venda da Coleção Lumière já está aberta em useeclat.com.br: você reserva a sua peça agora e os envios começam em 10/10. O pagamento é por Pix, combinado aqui no WhatsApp logo depois do pedido.",
   "",
   "São poucas peças nesse primeiro lote: quem reservar primeiro leva. No Clube você fica sabendo primeiro da reposição e das próximas cores.",
+].join("\n")
+
+export const CLUBE_CONVITE = [
+  `Aqui está a sua entrada no grupo: ${CLUBE_GRUPO_URL}`,
   "",
   "Te espero lá 💛",
 ].join("\n")
+
+// Compatibilidade: texto completo (usado só para registro na conversa).
+export const CLUBE_BOAS_VINDAS = `${CLUBE_SAUDACAO}\n\n${CLUBE_CONVITE}`
+
+const DELAY_SAUDACAO_MS = 4000
+const DELAY_CONVITE_MS = 6000
+const TETO_POR_HORA = Number(process.env.CLUBE_MAX_RESPOSTAS_HORA || 40)
+const janela: number[] = [] // timestamps das respostas na última hora (processo único no Railway)
+
+function dentroDoTeto(): boolean {
+  const agora = Date.now()
+  while (janela.length && agora - janela[0] > 3_600_000) janela.shift()
+  if (janela.length >= TETO_POR_HORA) return false
+  janela.push(agora)
+  return true
+}
 
 // Detecta se a mensagem veio de anúncio click-to-WhatsApp (a Meta anexa
 // externalAdReply / entryPointConversionSource no contextInfo).
@@ -52,8 +74,13 @@ export async function responderClube(opts: {
   if (!evolutionConfigured()) return false
   const lead = await getLeadByWhatsapp(opts.number)
   if (lead?.interesse && lead.interesse.includes(CLUBE_INTERESSE)) return false
+  if (!dentroDoTeto()) {
+    opts.log(`[clube] teto de ${TETO_POR_HORA}/h atingido — ${opts.number} fica para atendimento humano`)
+    return false
+  }
 
-  const sent = (await sendWhatsappText(opts.number, CLUBE_BOAS_VINDAS)) as
+  await sendWhatsappText(opts.number, CLUBE_SAUDACAO, DELAY_SAUDACAO_MS)
+  const sent = (await sendWhatsappText(opts.number, CLUBE_CONVITE, DELAY_CONVITE_MS)) as
     | { key?: { id?: string } }
     | undefined
   const msgId = sent?.key?.id || `clube_${opts.number}_${Date.now()}`

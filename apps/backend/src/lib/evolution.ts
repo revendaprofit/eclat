@@ -10,14 +10,16 @@ export function evolutionConfigured(): boolean {
 
 // Envia uma mensagem de texto via WhatsApp.
 // `number` deve ser o telefone com DDI (ex.: 5531999999999), sem +, sem @s.whatsapp.net.
-export async function sendWhatsappText(number: string, text: string) {
+// `delayMs`: a Evolution mostra "digitando…" e espera esse tempo antes de enviar —
+// ritmo humano, que é o que protege o número em automações de resposta.
+export async function sendWhatsappText(number: string, text: string, delayMs = 0) {
   const res = await fetch(`${EVO_URL}/message/sendText/${INSTANCE}`, {
     method: "POST",
     headers: {
       apikey: EVO_KEY as string,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ number, text }),
+    body: JSON.stringify({ number, text, ...(delayMs > 0 ? { delay: delayMs } : {}) }),
   })
   if (!res.ok) {
     throw new Error(`Evolution sendText falhou: ${res.status} ${await res.text()}`)
