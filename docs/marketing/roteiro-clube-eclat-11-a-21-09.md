@@ -1,3 +1,6 @@
+> **SUBSTITUÍDO em 15/09/2026** pelo roteiro da pré-venda (`roteiro-clube-eclat-prevenda.txt`): a loja abriu
+> em pré-venda, D0 deixou de existir e os envios começam em 10/10. Mantido só como histórico.
+
 # Roteiro do Clube Éclat — 11 a 21/09/2026 (D0 = domingo 20/09, 10h)
 
 > Grupo do WhatsApp "Clube Éclat". Quem fala é a Camila, em primeira pessoa, de mulher para mulher.
