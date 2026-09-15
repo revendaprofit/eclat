@@ -320,3 +320,13 @@ Clube WhatsApp R$20 (conjunto 120250160265150107, fim 05/10) · Aquecimento Reel
 alimentar o público de remarketing do pixel. Recarga sugerida: R$1.000 (cobre até 03/10).
 Virada ~03/10 (7 dias antes do envio): catálogo → R$50–70, aquecimento → R$10, mensagem "chega em 7 dias" no Clube.
 Obs.: o conector pausa a campanha ao mudar orçamento — reativar depois de cada ajuste.
+
+### 15/09/2026 — WhatsApp da marca reconectado + regras de proteção do número
+- Sessão da Evolution estava "close" desde junho (nenhuma mensagem no Cockpit desde 15/06). Reconectada por QR
+  em 15/09 11:36; perfil "Éclat - Moda Fitness". Webhook segue no Railway (token válido, 401 com token errado).
+- Risco reconhecido: API não oficial (Baileys). Regras: (1) robô só responde a quem escreveu primeiro; (2) NUNCA
+  disparo em massa pela API (Cockpit não tem rota de broadcast: só chat, follow-up individual e aviso de envio);
+  (3) saudação e convite em 2 mensagens com "digitando" (4s/6s), link só na 2ª, teto `CLUBE_MAX_RESPOSTAS_HORA`
+  (padrão 40); (4) manter o número em uso normal no celular; (5) conferir `connectionState` na leitura diária.
+- Caminho sem risco para depois do lançamento: WhatsApp Cloud API oficial (BM verificada), ~2 dias de trabalho.
+- Teste real pendente: mensagem "Quero entrar no Clube Éclat" de outro número → 2 respostas + lead no Cockpit.
