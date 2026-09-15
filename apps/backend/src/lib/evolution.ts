@@ -27,6 +27,38 @@ export async function sendWhatsappText(number: string, text: string, delayMs = 0
   return res.json()
 }
 
+// Envia imagem por URL com legenda (grupo ou contato). `number` aceita JID de grupo (…@g.us).
+export async function sendWhatsappMedia(number: string, mediaUrl: string, caption: string, delayMs = 0) {
+  const res = await fetch(`${EVO_URL}/message/sendMedia/${INSTANCE}`, {
+    method: "POST",
+    headers: { apikey: EVO_KEY as string, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      number,
+      mediatype: "image",
+      mimetype: "image/jpeg",
+      media: mediaUrl,
+      caption,
+      fileName: "eclat.jpg",
+      ...(delayMs > 0 ? { delay: delayMs } : {}),
+    }),
+  })
+  if (!res.ok) {
+    throw new Error(`Evolution sendMedia falhou: ${res.status} ${await res.text()}`)
+  }
+  return res.json()
+}
+
+// Estado da sessão ("open" = conectada). Nunca lança.
+export async function connectionState(): Promise<string> {
+  try {
+    const res = await fetch(`${EVO_URL}/instance/connectionState/${INSTANCE}`, { headers: { apikey: EVO_KEY as string } })
+    const d = (await res.json()) as { instance?: { state?: string } }
+    return d?.instance?.state ?? "unknown"
+  } catch {
+    return "unknown"
+  }
+}
+
 // Baixa (decripta) a mídia de uma mensagem recebida. Recebe o objeto completo da
 // mensagem (como veio no webhook). Retorna base64 + mimetype.
 export async function getMediaBase64(
