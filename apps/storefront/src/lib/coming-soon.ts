@@ -1,9 +1,17 @@
 // Loja "em construção": única fonte da flag, usada pelo middleware (gate de
-// rota) e pelo sitemap. Para reabrir a loja, mude COMING_SOON para false e
-// faça o deploy. Em desenvolvimento, `COMING_SOON_BYPASS=1` no processo do
-// dev server desliga o gate SÓ naquele processo (a Vercel não tem a variável).
+// rota) e pelo sitemap.
+//
+// Controlada pela env `COMING_SOON` (lida em tempo de execução pela função
+// serverless/edge — não precisa de código novo nem push para trocar):
+//   - Não definida, ou "true"  → gate LIGADO (comportamento padrão, mais seguro).
+//   - "false"                 → gate DESLIGADO, loja pública para todo mundo.
+// Trocar na Vercel: Project → Settings → Environment Variables → COMING_SOON
+// (Production) → depois "Redeploy" o último deployment (o valor só é lido no
+// build/boot da função — mudar a env sem redeploy não tem efeito).
+// Em desenvolvimento local, `COMING_SOON_BYPASS=1` no processo do dev server
+// desliga o gate SÓ naquele processo, sem mexer na env de produção.
 const BYPASS = process.env.NODE_ENV !== "production" && process.env.COMING_SOON_BYPASS === "1"
-export const COMING_SOON = !BYPASS
+export const COMING_SOON = process.env.COMING_SOON === "false" ? false : !BYPASS
 export const COMING_SOON_PATH = "/em-breve"
 
 // Porta VIP (Clube Éclat): quem abre /clube?k=<chave> — ou digita a chave no campo
