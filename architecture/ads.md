@@ -271,3 +271,11 @@ criar criativo com esse token falha ("app em modo de desenvolvimento") → criat
 - 21/09 10h: loja aberta para todos (`COMING_SOON=false` + deploy da vitrine).
 - 20–27/09: remarketing de vendas R$50–70/dia (engajou + clube + site), otimizado por AddToCart. Sem frio até repor.
 - Mudança de data: o dono avisa no chat; ajustar `end_time` dos conjuntos e o roteiro.
+
+### 14/09/2026 — por que as campanhas F0 não rodaram
+As 3 campanhas ficaram ACTIVE desde 11/09 mas com R$0 gastos: `delivery.status = off`,
+substatus **account_spend_limit_reached** (limite de gastos da conta atingido — provavelmente um teto
+antigo do Team WOD). Correção é do dono: Gerenciador de Anúncios → Cobrança e pagamentos → Configurações
+de pagamento → "Limite de gastos da conta" → remover ou aumentar. Depois a entrega volta sozinha.
+Cascas extras renomeadas `[VAZIA - apagar]`: 120250160281150107 e 120250160277440107.
+Catálogo Meta já sincroniza a Lumière (30 itens, 13/09). Google: ver docs/marketing/google-lancamento.md.
