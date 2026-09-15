@@ -114,3 +114,13 @@ jitter 0–9 min; 1 mensagem por rodada; falha (ex.: "Connection Closed") → st
 ## Decisões
 - 15/09/2026: dono pediu painel completo com automação por regra ("tudo controlado, mas uma vez autorizado,
   automatizado"). Esgotado fica opcional (aprovar). Agenda começa 16/09 19h30.
+
+## Estado (15/09/2026)
+- **F1 CONCLUÍDA e validada em produção** (commit 5e06bcf; migration 0010 aplicada; seed rodado; deploy Railway 15/09 12:34):
+  `GET /admin/clube` lê 30 variações com qty real e foto por cor; prévia resolve marcadores e apaga frases vazias;
+  fila com 15 mensagens da agenda em `rascunho`; `clube_config.ativo=false`; `aviso_jid` = número do dono (lead do teste).
+- **F2 CONCLUÍDA em código** (commit c1f64ec): Cockpit → "Clube Éclat" (Painel · Automações · Agenda · Aprovações · Histórico),
+  rotas `/api/clube/*`. Pendente: push/deploy do Cockpit pelo dono.
+- **F3 (ativação) PENDENTE do dono**: aprovar a agenda, ligar o interruptor, primeiro envio acompanhado.
+- Primeira rodada do job só grava o snapshot (sem eventos); gatilhos passam a valer a partir da 2ª rodada (5 min depois).
+- Validar depois do 1º envio real: `texto_final`, `midia_url_final`, `evolution_msg_id` na linha; e se a foto chegou no grupo.
