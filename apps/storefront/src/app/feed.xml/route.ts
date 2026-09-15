@@ -21,6 +21,17 @@ const esc = (s: unknown) =>
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
 
+// Categoria da taxonomia do Google (obrigatória para vestuário no Merchant Center,
+// junto com gender/age_group). Caminho completo em inglês, como o Google aceita.
+const GPC_ACTIVEWEAR = "Apparel & Accessories > Clothing > Activewear"
+function googleCategory(p: { title?: string | null }, type?: string): string {
+  const t = `${type ?? ""} ${p?.title ?? ""}`.toLowerCase()
+  if (/\btop\b|sutiã|bra/.test(t)) return `${GPC_ACTIVEWEAR} > Sports Bras`
+  if (/short|bermuda/.test(t)) return `${GPC_ACTIVEWEAR} > Active Shorts`
+  if (/legging|calça/.test(t)) return `${GPC_ACTIVEWEAR} > Active Pants`
+  return GPC_ACTIVEWEAR // macaquinho, macacão, conjuntos e demais peças
+}
+
 /* eslint-disable @typescript-eslint/no-explicit-any */
 export async function GET() {
   const base = getBaseURL()
@@ -58,6 +69,9 @@ ${extraImages.map((u: string) => `    <g:additional_image_link>${esc(u)}</g:addi
     <g:brand>use.ÉCLAT</g:brand>
     <g:condition>new</g:condition>
     <g:identifier_exists>no</g:identifier_exists>
+    <g:google_product_category>${esc(googleCategory(p, type))}</g:google_product_category>
+    <g:gender>female</g:gender>
+    <g:age_group>adult</g:age_group>
 ${size ? `    <g:size>${esc(size)}</g:size>\n` : ""}${color ? `    <g:color>${esc(color)}</g:color>\n` : ""}${type ? `    <g:product_type>${esc(type)}</g:product_type>\n` : ""}  </item>`)
     }
   }
