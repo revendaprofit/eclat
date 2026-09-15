@@ -12,7 +12,7 @@ import { HttpTypes } from "@medusajs/types"
 import Track from "@modules/analytics/track"
 import { orderToPurchase } from "@modules/analytics/items"
 import { fireCapiPurchase } from "@modules/analytics/capi"
-import { fraseEnvios, getPrevenda } from "@lib/data/prevenda"
+import { fraseEnvios, getPrevenda, linkClubeWhatsapp } from "@lib/data/prevenda"
 
 type OrderCompletedTemplateProps = {
   order: HttpTypes.StoreOrder
@@ -70,6 +70,19 @@ export default async function OrderCompletedTemplate({
                     WhatsApp da ÉCLAT
                   </a>
                 )}
+              </p>
+              <p className="mt-2">
+                Quer acompanhar a chegada das peças e saber da reposição antes de todo mundo?{" "}
+                <a
+                  className="underline font-medium"
+                  href={linkClubeWhatsapp(prevenda)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  data-testid="pedido-clube"
+                >
+                  Entre no Clube Éclat
+                </a>
+                .
               </p>
             </div>
           )}
