@@ -279,3 +279,23 @@ antigo do Team WOD). Correção é do dono: Gerenciador de Anúncios → Cobran�
 de pagamento → "Limite de gastos da conta" → remover ou aumentar. Depois a entrega volta sozinha.
 Cascas extras renomeadas `[VAZIA - apagar]`: 120250160281150107 e 120250160277440107.
 Catálogo Meta já sincroniza a Lumière (30 itens, 13/09). Google: ver docs/marketing/google-lancamento.md.
+
+## 8. F1 — Vendas do lançamento (montado em 15/09/2026, PAUSADO)
+
+Estado do dia: loja ABERTA ao público desde 15/09 (env `COMING_SOON=false` na Vercel; commit f62be32 tornou
+o gate controlável por env, c05220d deixou o sitemap dinâmico). Merchant Center ECLAT 5852466654 com feed
+lido (30/30, sem erros), em revisão de item. Pagamento em produção: só `pp_system_default` (manual) — nenhum
+gateway real. Campanhas F0 continuam com R$0 (limite de gastos da conta ainda não removido pelo dono).
+
+| Objeto | ID | Config |
+|---|---|---|
+| Conjunto de produtos (catálogo 1378297474017580) | 1076107274890077 | "Lumière - todos os produtos", filtro availability=in stock (5 grupos / 30 variações) |
+| Campanha | 120250224901140107 | ECLAT_F1_Lancamento_Vendas_Quente_2026-09 · OUTCOME_SALES · CBO R$50/dia · PAUSADA |
+| Conjunto de anúncios | 120250224905280107 | Conversões no site, evento AddToCart (trocar para PURCHASE após ~30 compras), pixel 1612810719469817 + product set; IG 90d + site 30d + seguidoras; BR F 25-45 |
+| Criativo | 4565170390387848 | Advantage+ catálogo (carrossel dinâmico), título {{product.name}}, CTA Comprar agora, link /br/store com UTM f1_lancamento_quente |
+
+Gate para ATIVAR (nesta ordem): (1) limite de gastos removido; (2) decisão do dono sobre pagamento no
+lançamento — gateway real (Mercado Pago, Parte 4) OU cobrança manual por Pix no WhatsApp após o pedido;
+(3) loja pública no dia (COMING_SOON=false). Sem (2) resolvido, anúncio de venda manda gente para um checkout
+que não cobra.
+Depois: campanha FRIA (Advantage+ shopping, público amplo BR) só com reposição de estoque.
