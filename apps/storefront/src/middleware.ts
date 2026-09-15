@@ -117,6 +117,11 @@ export async function middleware(request: NextRequest) {
     if (path === COMING_SOON_PATH || path === VIP_PATH) {
       return NextResponse.next()
     }
+    // Páginas institucionais ficam públicas mesmo com o gate: o Merchant Center e o
+    // Google Ads exigem ler a política de trocas/privacidade antes da abertura.
+    if (/^\/[a-z]{2}\/(trocas-e-devolucoes|privacidade|sobre|guia-de-medidas)\/?$/.test(path)) {
+      return NextResponse.next()
+    }
     // Porta VIP: cookie válido atravessa o gate (acesso antecipado do Clube Éclat).
     const vip = request.cookies.get(VIP_COOKIE)?.value
     if (vip !== VIP_KEY) {
