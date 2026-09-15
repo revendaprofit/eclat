@@ -8,6 +8,7 @@ import { StoreCartShippingOption } from "@medusajs/types"
 import CartMismatchBanner from "@modules/layout/components/cart-mismatch-banner"
 import Footer from "@modules/layout/templates/footer"
 import Nav from "@modules/layout/templates/nav"
+import PrevendaBar from "@modules/layout/components/prevenda-bar"
 import Wizard from "@modules/personalization/wizard"
 import FreeShippingPriceNudge from "@modules/shipping/components/free-shipping-price-nudge"
 import ToastHost from "@modules/common/components/toast"
@@ -31,6 +32,7 @@ export default async function PageLayout(props: { children: React.ReactNode }) {
 
   return (
     <>
+      <PrevendaBar />
       <Nav />
       {customer && cart && (
         <CartMismatchBanner customer={customer} cart={cart} />

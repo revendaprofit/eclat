@@ -1,6 +1,6 @@
 "use client"
 import { RadioGroup } from "@headlessui/react"
-import { isStripeLike, paymentInfoMap } from "@lib/constants"
+import { isManual, isStripeLike, paymentInfoMap } from "@lib/constants"
 import { initiatePaymentSession } from "@lib/data/cart"
 import { CheckCircleSolid, CreditCard } from "@medusajs/icons"
 import ErrorMessage from "@modules/checkout/components/error-message"
@@ -238,7 +238,9 @@ const Payment = ({
                   <Text>
                     {isStripeLike(selectedPaymentMethod) && cardBrand
                       ? cardBrand
-                      : "Mais uma etapa vai aparecer"}
+                      : isManual(selectedPaymentMethod)
+                        ? "A chave Pix chega no seu WhatsApp logo depois do pedido"
+                        : "Mais uma etapa vai aparecer"}
                   </Text>
                 </div>
               </div>

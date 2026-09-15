@@ -12,6 +12,7 @@ import { HttpTypes } from "@medusajs/types"
 import Track from "@modules/analytics/track"
 import { orderToPurchase } from "@modules/analytics/items"
 import { fireCapiPurchase } from "@modules/analytics/capi"
+import { fraseEnvios, getPrevenda } from "@lib/data/prevenda"
 
 type OrderCompletedTemplateProps = {
   order: HttpTypes.StoreOrder
@@ -27,6 +28,7 @@ export default async function OrderCompletedTemplate({
   // CAPI Purchase server-side (dedup via event_id purchase_<orderId>).
   // No-op se META_CAPI_TOKEN / Pixel não estiverem configurados.
   await fireCapiPurchase(order)
+  const prevenda = await getPrevenda()
 
   return (
     <div className="py-6 min-h-[calc(100vh-64px)]">
@@ -46,8 +48,31 @@ export default async function OrderCompletedTemplate({
             className="flex flex-col gap-y-3 text-ui-fg-base text-3xl mb-4"
           >
             <span>Obrigada!</span>
-            <span>Seu pedido foi realizado com sucesso.</span>
+            <span>{prevenda.ativa ? "Sua peça está reservada." : "Seu pedido foi realizado com sucesso."}</span>
           </Heading>
+          {prevenda.ativa && (
+            <div
+              className="rounded-md border border-eclat-pedra/60 bg-eclat-areia/50 px-5 py-4 text-sm text-eclat-grafite leading-relaxed"
+              data-testid="prevenda-pedido"
+            >
+              <p className="font-semibold">{fraseEnvios(prevenda)}.</p>
+              <p>
+                {prevenda.pagamento === "pix_whatsapp"
+                  ? "Em instantes chamamos você no WhatsApp com a chave Pix para confirmar a reserva. Se preferir, chame a gente primeiro: "
+                  : "Assim que as peças chegarem, seu pedido é o primeiro a sair. "}
+                {prevenda.pagamento === "pix_whatsapp" && (
+                  <a
+                    className="underline font-medium"
+                    href={`https://wa.me/${prevenda.whatsapp}?text=${encodeURIComponent(`Oi! Fiz o pedido #${order.display_id ?? order.id} e quero o Pix para confirmar.`)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    WhatsApp da ÉCLAT
+                  </a>
+                )}
+              </p>
+            </div>
+          )}
           <OrderDetails order={order} />
           <Heading level="h2" className="flex flex-row text-3xl-regular">
             Resumo

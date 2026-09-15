@@ -32,6 +32,83 @@ function Step({ children }: { children: React.ReactNode }) {
   )
 }
 
+// Pré-venda (site_content key "prevenda"): liga/desliga a barra do topo, o aviso na
+// PDP e no pedido, e muda o feed (Google/Meta) para availability=preorder + data.
+type Prevenda = {
+  ativa?: boolean
+  envios_a_partir?: string
+  pagamento?: "pix_whatsapp" | "gateway"
+  whatsapp?: string
+}
+
+function PrevendaSection() {
+  const [p, setP] = useState<Prevenda>({})
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    fetch("/api/site-content/prevenda", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((d) => setP(d && !d.error ? d : { ativa: true, envios_a_partir: "2026-10-10", pagamento: "pix_whatsapp", whatsapp: "5531991184431" }))
+      .finally(() => setLoading(false))
+  }, [])
+
+  async function salvarPrevenda() {
+    setSaving(true)
+    try {
+      const r = await fetch("/api/site-content/prevenda", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(p),
+      })
+      const d = await r.json()
+      if (!r.ok) throw new Error(d.error || "Falha ao salvar")
+      alert("Salvo! A loja, o feed do Google e o catálogo da Meta atualizam em até ~30s.")
+    } catch (e) {
+      alert((e as Error).message)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  if (loading) return null
+
+  return (
+    <section className="flex flex-col gap-4 border border-eclat-pedra/40 rounded-lg p-6 bg-eclat-luz">
+      <h2 className="font-serif text-xl text-eclat-grafite">Pré-venda</h2>
+      <p className={hint}>
+        Ligada: barra no topo da loja, aviso abaixo de &quot;Adicionar à sacola&quot;, texto no pedido concluído e
+        produtos marcados como <code className={code}>preorder</code> no feed (Google Merchant e catálogo da Meta),
+        com a data dos envios. Desligue no dia em que as peças começarem a sair.
+      </p>
+      <label className="flex items-center gap-3 text-sm text-eclat-grafite">
+        <input type="checkbox" checked={!!p.ativa} onChange={(e) => setP({ ...p, ativa: e.target.checked })} />
+        Pré-venda ativa
+      </label>
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className={label}>Envios a partir de</label>
+          <input type="date" value={p.envios_a_partir || ""} onChange={(e) => setP({ ...p, envios_a_partir: e.target.value })} className={input} />
+        </div>
+        <div>
+          <label className={label}>Pagamento</label>
+          <select value={p.pagamento || "pix_whatsapp"} onChange={(e) => setP({ ...p, pagamento: e.target.value as Prevenda["pagamento"] })} className={input}>
+            <option value="pix_whatsapp">Pix combinado no WhatsApp</option>
+            <option value="gateway">Pagamento online no checkout</option>
+          </select>
+        </div>
+      </div>
+      <div>
+        <label className={label}>WhatsApp da marca (só dígitos, com 55)</label>
+        <input value={p.whatsapp || ""} onChange={(e) => setP({ ...p, whatsapp: e.target.value.replace(/\D/g, "") })} placeholder="5531991184431" className={input} />
+      </div>
+      <button onClick={salvarPrevenda} disabled={saving} className={btn}>
+        {saving ? "Salvando…" : "Salvar pré-venda"}
+      </button>
+    </section>
+  )
+}
+
 export default function MarketingPage() {
   const [m, setM] = useState<Marketing>({})
   const [loading, setLoading] = useState(true)
@@ -159,6 +236,9 @@ export default function MarketingPage() {
           {saving ? "Salvando…" : "Salvar IDs"}
         </button>
       </section>
+
+      {/* PRÉ-VENDA */}
+      <PrevendaSection />
 
       {/* CAPI TOKEN */}
       <section className="border border-eclat-pedra/40 rounded-lg bg-white/60 p-5 text-sm text-eclat-grafite/75 flex flex-col gap-2">

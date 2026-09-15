@@ -20,6 +20,8 @@ import NotifyMe from "@modules/products/components/notify-me"
 import Track from "@modules/analytics/track"
 import { productToViewItem } from "@modules/analytics/items"
 import { ProductJsonLd } from "@modules/seo/jsonld"
+import PrevendaNota from "@modules/products/components/prevenda-nota"
+import { getPrevenda } from "@lib/data/prevenda"
 import { getBaseURL } from "@lib/util/env"
 import { getColorMap } from "@lib/data/colors"
 import { ProductSelectionProvider } from "@modules/products/components/product-selection"
@@ -68,6 +70,7 @@ const ProductTemplate = async ({
   const measureMap = await getMeasureMap()
   const categoryPath = chain.length ? chain.map((c) => c.handle).join("/") : null
   const measureTable = categoryPath ? pickMeasurements(measureMap, categoryPath) : null
+  const prevenda = await getPrevenda()
 
   const productUrl = `${getBaseURL()}/${countryCode}/products/${product.handle}`
 
@@ -94,7 +97,7 @@ const ProductTemplate = async ({
   return (
     <>
       <Track event="view_item" ecommerce={productToViewItem(product)} />
-      <ProductJsonLd product={product} url={productUrl} />
+      <ProductJsonLd product={product} url={productUrl} preorder={prevenda.ativa} />
       <ProductSelectionProvider key={product.id} product={product} initialVariantId={selectedVariantId} initialColor={initialColor}>
         <div className="content-container relative">
           {/* Só o JSON-LD do caminho (SEO); o breadcrumb visível saiu da PDP a pedido do dono (2026-09-13). */}
@@ -143,6 +146,7 @@ const ProductTemplate = async ({
                   measureTable={measureTable}
                 />
               </Suspense>
+              <PrevendaNota />
               {allOut && <NotifyMe productId={product.handle ?? product.id} />}
             </div>
           </div>

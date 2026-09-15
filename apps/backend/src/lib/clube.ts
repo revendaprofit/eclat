@@ -13,14 +13,16 @@ export const CLUBE_GRUPO_URL =
 
 const GATILHO = /clube|primeira m[ãa]o|quero entrar|lan[çc]amento|vip|em breve|lista/i
 
+// Texto da pré-venda (15/09/2026): loja aberta em pré-venda, envios a partir de 10/10,
+// pagamento por Pix combinado no WhatsApp. Ajustar quando a pré-venda acabar.
 export const CLUBE_BOAS_VINDAS = [
   "Oi! Que bom ter você no Clube Éclat ✨",
   "",
   `Aqui está a sua entrada: ${CLUBE_GRUPO_URL}`,
   "",
-  "Lá dentro você vê as peças antes de todo mundo e recebe o link do lote de estreia 24 horas antes da loja abrir.",
+  "A pré-venda da Coleção Lumière já está aberta em useeclat.com.br: você reserva a sua peça agora e os envios começam em 10/10. O pagamento é por Pix, combinado aqui no WhatsApp logo depois do pedido.",
   "",
-  "São poucas peças nesse primeiro lote: quem chegar primeiro leva. Quem ficar sem entra na frente na reposição.",
+  "São poucas peças nesse primeiro lote: quem reservar primeiro leva. No Clube você fica sabendo primeiro da reposição e das próximas cores.",
   "",
   "Te espero lá 💛",
 ].join("\n")

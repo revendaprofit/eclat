@@ -1,4 +1,5 @@
 import { getBaseURL } from "@lib/util/env"
+import { getPrevenda } from "@lib/data/prevenda"
 import {
   FEED_CC as CC,
   listAllProductsForFeed,
@@ -35,7 +36,9 @@ function googleCategory(p: { title?: string | null }, type?: string): string {
 /* eslint-disable @typescript-eslint/no-explicit-any */
 export async function GET() {
   const base = getBaseURL()
-  const products = await listAllProductsForFeed()
+  // Pré-venda: Google/Meta aceitam availability=preorder + availability_date
+  // (obrigatório declarar; "in stock" com envio em 25 dias viola a política).
+  const [products, prevenda] = await Promise.all([listAllProductsForFeed(), getPrevenda()])
 
   const items: string[] = []
 
@@ -64,7 +67,8 @@ ${hasGroup ? `    <g:item_group_id>${esc(p.handle)}</g:item_group_id>\n` : ""}  
     <g:description>${esc(p.description || p.subtitle || p.title)}</g:description>
     <g:link>${link}${v.id ? `?v_id=${esc(v.id)}` : ""}</g:link>
     <g:image_link>${esc(img)}</g:image_link>
-${extraImages.map((u: string) => `    <g:additional_image_link>${esc(u)}</g:additional_image_link>`).join("\n")}${extraImages.length ? "\n" : ""}    <g:availability>${variantInStock(v) ? "in stock" : "out of stock"}</g:availability>
+${extraImages.map((u: string) => `    <g:additional_image_link>${esc(u)}</g:additional_image_link>`).join("\n")}${extraImages.length ? "\n" : ""}    <g:availability>${variantInStock(v) ? (prevenda.ativa ? "preorder" : "in stock") : "out of stock"}</g:availability>
+${prevenda.ativa && variantInStock(v) ? `    <g:availability_date>${prevenda.envios_a_partir}T00:00:00-03:00</g:availability_date>\n` : ""}
     <g:price>${Number(price).toFixed(2)} BRL</g:price>
     <g:brand>use.ÉCLAT</g:brand>
     <g:condition>new</g:condition>

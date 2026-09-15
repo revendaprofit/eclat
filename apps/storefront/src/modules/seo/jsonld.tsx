@@ -77,9 +77,12 @@ function getAvailability(product: HttpTypes.StoreProduct) {
 export function ProductJsonLd({
   product,
   url,
+  preorder = false,
 }: {
   product: HttpTypes.StoreProduct
   url: string
+  // Pré-venda: peça em estoque vira PreOrder (mesma regra do feed.xml)
+  preorder?: boolean
 }) {
   const v: any = product.variants?.[0]
   const price = v?.calculated_price?.calculated_amount
@@ -100,7 +103,10 @@ export function ProductJsonLd({
                 "@type": "Offer",
                 price: Number(price).toFixed(2),
                 priceCurrency: "BRL",
-                availability: getAvailability(product),
+                availability:
+                  preorder && getAvailability(product) === "https://schema.org/InStock"
+                    ? "https://schema.org/PreOrder"
+                    : getAvailability(product),
                 url,
                 itemCondition: "https://schema.org/NewCondition",
               },

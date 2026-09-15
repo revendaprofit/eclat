@@ -29,8 +29,10 @@ export const paymentInfoMap: Record<
     title: "PayPal",
     icon: <PayPal />,
   },
+  // Provedor manual do Medusa: na ÉCLAT ele é o "Pix pelo WhatsApp" — o pedido é
+  // reservado e a chave Pix vai pelo WhatsApp da marca (pré-venda / Parte 4 adiada).
   pp_system_default: {
-    title: "Manual Payment",
+    title: "Pix pelo WhatsApp",
     icon: <CreditCard />,
   },
   // Add more payment providers here
