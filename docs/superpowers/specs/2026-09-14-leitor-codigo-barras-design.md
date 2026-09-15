@@ -1,6 +1,6 @@
 # Leitor de código de barras no Cockpit — design (2026-09-14)
 
-> Status: **proposta para aprovação do dono** (CLAUDE.md: Data-First e Halt entre partes). Nenhum código escrito.
+> Status: **F0 (base) e F1 (conferência do pedido) aprovadas e implementadas em código em 14/09/2026**; validação das telas pendente do dono (Cockpit exige login). F2 (entrada), F3 (inventário) e a tabela `estoque_movimento` aguardam aprovação. F4 adiada (Mercado Pago).
 > Base já pronta em produção: SKU da etiqueta `ECL-<REF>-<TAM>` gravado em `variant.sku`, `variant.barcode` e
 > `inventory_item.sku` das 30 variantes da Lumière (architecture/catalog.md "SKU da etiqueta e código de barras").
 

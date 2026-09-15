@@ -1,10 +1,15 @@
 import { NextResponse } from "next/server"
-import { medusaGetOrder, medusaFulfillOrder, medusaShipFulfillment } from "@/lib/medusa"
+import { medusaGetOrder, medusaFulfillOrder, medusaMergeOrderMetadata, medusaShipFulfillment } from "@/lib/medusa"
+import { validarConferencia, type ConferenciaEnviada } from "@/lib/leitor"
+import { createSupabaseServer } from "@/lib/supabase/server"
 import { carrierCreateLabel } from "@/lib/shipping"
 import { sendWhatsappText } from "@/lib/evolution"
 
-// Despacha um pedido: cria fulfillment + marca envio (com rastreio) + avisa o cliente por WhatsApp.
-// Rastreio: manual (tracking_number) OU gerado pela transportadora (use_carrier).
+// Despacha um pedido: confere as peças (leitor) + cria fulfillment + marca envio (com rastreio) + avisa o
+// cliente por WhatsApp. Rastreio: manual (tracking_number) OU gerado pela transportadora (use_carrier).
+// Conferência (spec leitor-codigo-barras F1): a tela manda as leituras; o servidor recalcula contra os
+// itens reais do pedido e só despacha conferência divergente com motivo. O registro vai para
+// metadata.conferencia ANTES do fulfillment.
 
 function normalizaWhatsapp(phone: string): string {
   const d = phone.replace(/\D/g, "")
@@ -24,6 +29,7 @@ export async function POST(
     label_url?: string
     use_carrier?: boolean
     notify?: boolean
+    conferencia?: ConferenciaEnviada
   }
 
   try {
@@ -32,6 +38,24 @@ export async function POST(
       return NextResponse.json({ error: "Este pedido já foi despachado." }, { status: 400 })
     }
     const items = order.items.map((i) => ({ id: i.id, quantity: i.quantity }))
+
+    // 0) conferência das peças (leitor de código de barras)
+    let operador: string | null = null
+    try {
+      const { data } = await (await createSupabaseServer()).auth.getUser()
+      operador = data.user?.email ?? null
+    } catch {
+      operador = null
+    }
+    const conferencia = validarConferencia(
+      order.items.map((i) => ({ item_id: i.id, sku: i.variant_sku ?? null, titulo: i.title, variante: i.variant_title, quantidade: i.quantity })),
+      body.conferencia,
+      operador
+    )
+    if (!conferencia.ok) {
+      return NextResponse.json({ error: conferencia.erro }, { status: 400 })
+    }
+    await medusaMergeOrderMetadata(id, { conferencia: conferencia.registro })
 
     // 1) rastreio: transportadora ou manual
     let label: { tracking_number: string; tracking_url: string; label_url: string } | undefined
@@ -73,6 +97,7 @@ export async function POST(
 
     return NextResponse.json({
       ok: true,
+      conferencia: conferencia.registro.status,
       tracking_number: label?.tracking_number ?? null,
       label_url: label?.label_url ?? null,
       whatsapp,

@@ -613,7 +613,7 @@ export async function medusaOrdersForDre(de: string, ate: string): Promise<DreOr
   params.set("created_at[$lte]", `${ate}T23:59:59`)
   params.set(
     "fields",
-    "display_id,status,payment_status,item_subtotal,shipping_total,created_at,items.variant_id,items.quantity"
+    "display_id,status,payment_status,item_subtotal,shipping_total,created_at,items.variant_id,items.quantity,items.detail.quantity"
   )
   const r = await medusaAdmin(`/admin/orders?${params.toString()}`)
   if (!r.ok) throw new Error(`pedidos do período falhou (HTTP ${r.status})`)
@@ -639,6 +639,8 @@ export type CustomerAddress = {
 export type OrderItem = {
   id: string
   title: string
+  variant_id?: string | null
+  variant_sku?: string | null
   variant_title: string | null
   quantity: number
   unit_price: number
@@ -675,18 +677,79 @@ export type CockpitOrderDetail = CockpitOrder & {
   shipping_address: OrderAddress | null
   shipping_methods: { name: string; total: number }[]
   fulfillments: OrderFulfillment[]
+  metadata?: Record<string, unknown> | null
 }
 
+// Medusa 2.15.5: `items.quantity` só é calculado quando `items.detail.quantity` também é pedido no
+// `fields` — sem ele a quantidade volta null (quebrava a gaveta, o despacho e a conferência; achado 14/09).
 export async function medusaGetOrder(id: string): Promise<CockpitOrderDetail> {
   const fields =
-    "id,display_id,status,payment_status,fulfillment_status,email,customer_id,currency_code,created_at,subtotal,item_subtotal,discount_total,shipping_total,shipping_subtotal,tax_total,total," +
-    "items.id,items.title,items.variant_title,items.quantity,items.unit_price,items.total,items.metadata,items.adjustments.code,items.adjustments.amount," +
+    "id,display_id,status,payment_status,fulfillment_status,email,customer_id,currency_code,created_at,subtotal,item_subtotal,discount_total,shipping_total,shipping_subtotal,tax_total,total,metadata," +
+    "items.id,items.title,items.variant_id,items.variant_sku,items.variant_title,items.quantity,items.detail.quantity,items.unit_price,items.total,items.metadata,items.adjustments.code,items.adjustments.amount," +
     "shipping_address.first_name,shipping_address.last_name,shipping_address.address_1,shipping_address.city,shipping_address.province,shipping_address.postal_code,shipping_address.country_code,shipping_address.phone," +
     "shipping_methods.name,shipping_methods.total," +
     "fulfillments.id,fulfillments.shipped_at,fulfillments.delivered_at,fulfillments.canceled_at,fulfillments.labels.tracking_number,fulfillments.labels.tracking_url,fulfillments.labels.label_url"
   const r = await medusaAdmin(`/admin/orders/${id}?fields=${fields}`)
   if (!r.ok) throw new Error(`buscar pedido falhou (HTTP ${r.status})`)
   return (await r.json()).order
+}
+
+// Grava chaves no metadata do pedido preservando as existentes (Admin API substitui o objeto inteiro).
+export async function medusaMergeOrderMetadata(orderId: string, patch: Record<string, unknown>): Promise<void> {
+  const g = await medusaAdmin(`/admin/orders/${orderId}?fields=id,metadata`)
+  if (!g.ok) throw new Error(`ler metadata do pedido falhou (HTTP ${g.status})`)
+  const atual = ((await g.json()).order?.metadata ?? {}) as Record<string, unknown>
+  const r = await medusaAdmin(`/admin/orders/${orderId}`, {
+    method: "POST",
+    body: JSON.stringify({ metadata: { ...atual, ...patch } }),
+  })
+  if (!r.ok) throw new Error(`gravar metadata do pedido falhou (HTTP ${r.status}): ${await r.text()}`)
+}
+
+// ---- Leitor de código de barras: variante pelo código bipado (SKU ou barcode) ----
+export type VarianteLida = {
+  id: string
+  sku: string | null
+  barcode: string | null
+  produto: string
+  handle: string | null
+  thumbnail: string | null
+  cor: string | null
+  tamanho: string | null
+  inventory_item_id: string | null
+}
+
+export async function medusaVariantePorCodigo(codigo: string): Promise<VarianteLida | null> {
+  const fields =
+    "id,sku,barcode,title,product.title,product.handle,product.thumbnail,options.value,options.option.title,inventory_items.inventory_item_id"
+  type Raw = {
+    id: string
+    sku: string | null
+    barcode: string | null
+    title: string | null
+    product?: { title?: string | null; handle?: string | null; thumbnail?: string | null } | null
+    options?: { value: string; option?: { title?: string | null } | null }[] | null
+    inventory_items?: { inventory_item_id: string }[] | null
+  }
+  for (const filtro of ["sku", "barcode"]) {
+    const r = await medusaAdmin(`/admin/product-variants?${filtro}=${encodeURIComponent(codigo)}&limit=1&fields=${fields}`)
+    if (!r.ok) throw new Error(`buscar variante falhou (HTTP ${r.status})`)
+    const v = ((await r.json()).variants ?? [])[0] as Raw | undefined
+    if (!v) continue
+    const opcao = (t: string) => v.options?.find((o) => (o.option?.title ?? "").toLowerCase() === t)?.value ?? null
+    return {
+      id: v.id,
+      sku: v.sku,
+      barcode: v.barcode,
+      produto: v.product?.title ?? v.title ?? "",
+      handle: v.product?.handle ?? null,
+      thumbnail: v.product?.thumbnail ?? null,
+      cor: opcao("cor"),
+      tamanho: opcao("tamanho"),
+      inventory_item_id: v.inventory_items?.[0]?.inventory_item_id ?? null,
+    }
+  }
+  return null
 }
 
 // ---- Despacho (fulfillment + shipment) ----

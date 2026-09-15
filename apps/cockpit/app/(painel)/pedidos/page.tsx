@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { agruparDescontosPedido, etiquetaConjunto, residualDesconto } from "@/lib/pedido-conjunto"
+import { resumoConferencia, type ItemPedido, type RegistroConferencia } from "@/lib/leitor"
+import ConferenciaPedido from "@/components/conferencia-pedido"
 
 type Order = {
   id: string
@@ -14,6 +16,9 @@ type Order = {
   customer_id: string | null
 }
 type OrderItem = {
+  id: string
+  variant_id?: string | null
+  variant_sku?: string | null
   title: string
   variant_title: string | null
   quantity: number
@@ -48,6 +53,7 @@ type OrderDetail = Order & {
     canceled_at: string | null
     labels: { tracking_number: string | null; tracking_url: string | null; label_url: string | null }[]
   }[]
+  metadata?: { conferencia?: RegistroConferencia } & Record<string, unknown> | null
 }
 
 const brl = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
@@ -90,6 +96,9 @@ export default function PedidosPage() {
   const [trackUrl, setTrackUrl] = useState("")
   const [notify, setNotify] = useState(true)
   const [despachando, setDespachando] = useState(false)
+  // Conferência com o leitor de código de barras (spec leitor-codigo-barras F1)
+  const [leituras, setLeituras] = useState<string[]>([])
+  const [motivo, setMotivo] = useState("")
 
   const carregar = useCallback(async () => {
     setLoading(true)
@@ -118,6 +127,8 @@ export default function PedidosPage() {
     setTrackNum("")
     setTrackUrl("")
     setNotify(true)
+    setLeituras([])
+    setMotivo("")
     setDetLoading(true)
     fetch(`/api/orders/${detId}`, { cache: "no-store" })
       .then((r) => r.json())
@@ -137,11 +148,12 @@ export default function PedidosPage() {
           tracking_url: trackUrl,
           use_carrier: useCarrier,
           notify,
+          conferencia: { leituras, motivo },
         }),
       })
       const d = await r.json()
       if (!r.ok) throw new Error(d.error || "Falha ao despachar")
-      let msg = `✓ Pedido #${det.display_id} despachado.`
+      let msg = `✓ Pedido #${det.display_id} despachado${d.conferencia === "divergente" ? " (conferência com divergência registrada)" : " com as peças conferidas"}.`
       if (d.tracking_number) msg += `\nRastreio: ${d.tracking_number}`
       if (d.whatsapp)
         msg += d.whatsapp.ok
@@ -157,6 +169,20 @@ export default function PedidosPage() {
       setDespachando(false)
     }
   }
+
+  const itensConferencia: ItemPedido[] = useMemo(
+    () =>
+      (det?.items ?? []).map((i) => ({
+        item_id: i.id,
+        sku: i.variant_sku ?? null,
+        titulo: i.title,
+        variante: i.variant_title,
+        quantidade: i.quantity,
+      })),
+    [det]
+  )
+  const conferenciaCompleta = useMemo(() => resumoConferencia(itensConferencia, leituras).completa, [itensConferencia, leituras])
+  const podeDespachar = conferenciaCompleta || motivo.trim().length > 0
 
   const filtrados = useMemo(() => {
     const q = busca.trim().toLowerCase()
@@ -370,6 +396,14 @@ export default function PedidosPage() {
                 {det.fulfillment_status === "not_fulfilled" ? (
                   <section className="border border-eclat-dourado/40 rounded-lg p-4 bg-white/60 flex flex-col gap-3">
                     <h4 className="text-sm font-medium text-eclat-grafite">Despachar pedido</h4>
+                    <ConferenciaPedido
+                      itens={itensConferencia}
+                      leituras={leituras}
+                      onLeituras={setLeituras}
+                      motivo={motivo}
+                      onMotivo={setMotivo}
+                      disabled={despachando}
+                    />
                     <input
                       value={trackNum}
                       onChange={(e) => setTrackNum(e.target.value)}
@@ -398,14 +432,15 @@ export default function PedidosPage() {
                     <div className="flex flex-wrap gap-2">
                       <button
                         onClick={() => despachar(false)}
-                        disabled={despachando}
+                        disabled={despachando || !podeDespachar}
+                        title={podeDespachar ? undefined : "Confira as peças com o leitor ou informe o motivo"}
                         className="bg-eclat-grafite text-eclat-luz uppercase tracking-widest text-xs px-5 py-2.5 rounded-md hover:bg-eclat-dourado hover:text-eclat-grafite disabled:opacity-50"
                       >
-                        {despachando ? "Despachando…" : "Despachar"}
+                        {despachando ? "Despachando…" : conferenciaCompleta ? "Despachar" : "Despachar mesmo assim"}
                       </button>
                       <button
                         onClick={() => despachar(true)}
-                        disabled={despachando}
+                        disabled={despachando || !podeDespachar}
                         title="Gera a etiqueta na transportadora (requer credenciais configuradas)"
                         className="border border-eclat-grafite/40 text-xs uppercase tracking-widest px-4 py-2.5 rounded-md hover:bg-eclat-areia/40 disabled:opacity-50"
                       >
@@ -436,6 +471,13 @@ export default function PedidosPage() {
                         ))}
                       {det.fulfillments.filter((f) => !f.canceled_at).every((f) => f.labels.length === 0) && (
                         <span className="text-green-900">Pedido despachado (sem código de rastreio).</span>
+                      )}
+                      {det.metadata?.conferencia && (
+                        <span className={det.metadata.conferencia.status === "ok" ? "text-green-900" : "text-amber-800"} data-testid="registro-conferencia">
+                          {det.metadata.conferencia.status === "ok" ? "Peças conferidas com o leitor" : `Despachado com divergência: ${det.metadata.conferencia.motivo ?? ""}`}
+                          {det.metadata.conferencia.operador_email ? ` · ${det.metadata.conferencia.operador_email}` : ""}
+                          {` · ${dataHora(det.metadata.conferencia.em)}`}
+                        </span>
                       )}
                     </section>
                   )
