@@ -985,3 +985,9 @@ PRÓXIMO (usuário, guiado): Railway (Postgres + serviço do repo, root /, vars,
 - Validado contra produção (script tsx com as funções reais): leitura `ECL-1003-M` → Short Aurora M/Telha; `ecl'1006'g` → Macaquinho Solaris G/Grafitti; código inexistente → não encontrado; validação com a quantidade corrigida fecha. Gravação de metadata testada só até a regra da Medusa (pedido de teste está cancelado e a Medusa recusa editar pedido cancelado; nada gravado). tsc ok, 55 testes do Cockpit ok, lint sem erros novos.
 - Pendente do dono: push (deploy do Cockpit) e roteiro de validação com um pedido real e o leitor.
 
+
+## 2026-09-15 — Gateway de pagamento: Getnet Global API
+- Decisão do dono: a Parte 4 (pagamento) usa a **Getnet**, não o Mercado Pago, e a **Global API** (Single Entry Point, portal docs.globalgetnet.com), não a Plataforma Digital antiga (developers.getnet.com.br, rotas `/v1/payments/credit`, `/v1/payments/qrcode/pix`), cujo portal aparece como em descontinuação. Integração REST + webhooks, cartão tokenizado na Getnet, Pix, 3DS e antifraude.
+- Versão exata da API: a documentação pública não expõe número na visão geral — fixar ao receber o sandbox e registrar aqui e em architecture/.
+- Aguardando da Getnet: Client ID/Secret (sandbox e depois produção), identificador da loja, URLs dos ambientes, cadastro e chave de verificação do webhook, produtos habilitados (crédito, débito, Pix), 3DS, antifraude, tokenização, cartões de teste e roteiro de homologação; comercial: taxas por meio/parcelas, regras de parcelamento, prazo de recebimento/antecipação, conta de liquidação, chargeback. Segredos entram direto no `.env` pelo dono (nunca por chat).
+- CLAUDE.md atualizado (stack, invariante 4, Parte 4).

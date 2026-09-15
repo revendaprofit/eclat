@@ -11,7 +11,7 @@ Nunca vincular a Éclat a nenhuma outra marca.
 - Core de loja: Medusa v2 (Node/TypeScript + Postgres)
 - Relacionamento: Supabase (CRM, leads, conversas). WhatsApp via Evolution API (self-hosted).
 - Cockpit: app Next.js SEPARADO (apps/cockpit) operando via APIs donas. Plano: architecture/cockpit.md.
-- Pagamento: Mercado Pago (cartão + Pix), em fase futura
+- Pagamento: Getnet — Global API (portal docs.globalgetnet.com; cartão + Pix), em fase futura. Decisão do dono em 2026-09-15 (substitui o Mercado Pago).
 
 ## Invariantes de arquitetura (inegociáveis)
 1. A Éclat é UM sistema, internamente modular. Sem segundo sistema independente.
@@ -21,7 +21,7 @@ Nunca vincular a Éclat a nenhuma outra marca.
    Supabase = relacionamento/financeiro; Evolution = WhatsApp). Não duplica dado de comércio;
    Medusa é a fonte da verdade do comércio. Ver architecture/cockpit.md (plano canônico do Cockpit).
 3. Dinheiro sempre em centavos inteiros (BRL). Nunca float.
-4. Pagamento sempre via SDK do gateway (Mercado Pago). Nunca processar cartão na mão.
+4. Pagamento sempre via API/SDK oficial do gateway (Getnet Global API), com o cartão tokenizado do lado da Getnet. Nunca processar cartão na mão.
 5. RLS (Row Level Security) no Supabase desde o início.
 6. Nunca adivinhar business logic. Se houver ambiguidade, PERGUNTAR.
 
@@ -45,7 +45,7 @@ Nunca vincular a Éclat a nenhuma outra marca.
   (seed: apps/backend/src/scripts/seed-eclat.ts). PENDENTE: produtos REAIS + imagens.
 - Parte 2 — Vitrine: shell de marca pt-BR (nav, hero, home, footer). PENDENTE: telas de conta. (Busca com sugestões e SEO por listagem: entregues nas Fases 2–5 da spec de navegação por tipo de peça; PDP com vídeo do YouTube na galeria e recomendação de tamanho "Qual é o meu tamanho?" — plano `2026-09-07-pdp-video-e-recomendacao-tamanho`.)
 - Parte 3 — Carrinho & Checkout: fluxo validado (pedido criado) + pt-BR. Pagamento = provider manual.
-- Parte 4 — Pagamento (Mercado Pago): ADIADA (retomar com Access Token do MP).
+- Parte 4 — Pagamento (Getnet Global API): ADIADA até a Getnet liberar as credenciais de sandbox (Client ID/Secret, identificador da loja, URLs, webhook) e confirmar a versão da API na conta. Módulo de pagamento do Medusa; taxas no DRE. Não usar a Plataforma Digital antiga (developers.getnet.com.br, rotas /v1) — portal em descontinuação.
 - Parte 5 — CRM/Supabase: architecture/crm.md + supabase/migrations/0001_crm_init.sql aplicados.
   Tabelas lead/cliente_rel/conversa com RLS (anon negado, backend via service_role). SUPABASE_DB_URL no .env.
 - Parte 6 — WhatsApp via Evolution API (instância eclat): integração montada (lib/evolution, lib/supabase,
@@ -78,6 +78,6 @@ Nunca vincular a Éclat a nenhuma outra marca.
   - Fase 6 (Dashboard inteligente): COMPLETA. Home /api/dashboard: vendas de hoje + filas de ação clicáveis
     (a enviar, conversas pendentes, leads novos, estoque baixo c/ lista, reativação). 
   - **COCKPIT COMPLETO (Fases 0–6).** Pendências: validações finais no navegador; integrações externas futuras
-    (transportadora real via Melhor Envio — credenciais; Mercado Pago Parte 4 — inclui taxas no DRE).
+    (transportadora real via Melhor Envio — credenciais; Getnet Parte 4 — inclui taxas no DRE).
 - Benefício Conjunto (Spec 2) — F0 (prova de conceito) e F1 (backend: módulo, gancho, promoções, cupons, rotas admin/store) CONCLUÍDAS em código e em produção (deploy + seed feitos em 2026-09-09, regra padrão inativa). SOP em architecture/conjunto.md. F2 (Cockpit: telas Regras/Curados/painel na ficha do produto, architecture/cockpit.md §7) CONCLUÍDA em código; validação visual e redeploy do backend (capa_url nullable) PENDENTES do dono — roteiro em progress.md ("Benefício Conjunto F2"). F3 (Vitrine: página Conjuntos, página do conjunto, "Complete o conjunto" na PDP, selo "Forma conjunto"; architecture/catalog.md "Conjuntos na vitrine — Fase F3") CONCLUÍDA em código com aceite local completo (§11 itens 5–8); PENDENTES do dono: push/merge, redeploy do backend (ruling V2) antes do deploy da vitrine, e o roteiro de validação — progress.md ("Benefício Conjunto F3"). F4 (Carrinho/checkout/pedido + detalhe do pedido no Cockpit: etiqueta "Conjunto", resumo "Benefício Conjunto" separado de "Cupom", aviso de cupom, gatilhos "Feche mais um conjunto"; architecture/catalog.md "Carrinho e pedido — Fase F4") CONCLUÍDA em código, **sem mudança de backend**, com aceite local dos itens 1–4 e 10 do §11 (item 9 parcial: o checkout local não fecha por falta de frete/pagamento na região Brasil do seed). PENDENTES do dono: push/merge e deploy da vitrine (não há redeploy do backend por causa da F4), ativar a regra padrão no Cockpit e rodar o roteiro de validação — progress.md ("Benefício Conjunto F4"). Spec 2 encerrada em código (F0–F4).
-- Próxima ação: validações no navegador OU retomar Parte 4 (Mercado Pago) / Parte 1 (produtos reais) / Partes 8-10 / deploy do Benefício Conjunto F1 (autorização do dono).
+- Próxima ação: validações no navegador OU retomar Parte 4 (Getnet Global API) / Parte 1 (produtos reais) / Partes 8-10 / deploy do Benefício Conjunto F1 (autorização do dono).
