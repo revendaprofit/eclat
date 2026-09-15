@@ -299,3 +299,16 @@ lançamento — gateway real (Mercado Pago, Parte 4) OU cobrança manual por Pix
 (3) loja pública no dia (COMING_SOON=false). Sem (2) resolvido, anúncio de venda manda gente para um checkout
 que não cobra.
 Depois: campanha FRIA (Advantage+ shopping, público amplo BR) só com reposição de estoque.
+
+### 15/09/2026 — PRÉ-VENDA (decisão do dono: loja aberta, envios a partir de 10/10, Pix pelo WhatsApp)
+- Site (commit ad3ab2a): `site_content.prevenda` {ativa, envios_a_partir, pagamento, whatsapp} controla barra do
+  topo, aviso na PDP, texto do pedido, feed (availability=preorder + availability_date) e JSON-LD (PreOrder).
+  Padrão no código: ativa, 2026-10-10, pix_whatsapp. Cockpit → Marketing → seção "Pré-venda" para desligar em 10/10.
+- Checkout continua no provedor manual (`pp_system_default`), rotulado "Pix pelo WhatsApp". O pedido nasce
+  reservado; a cobrança é manual (Cockpit → Pedidos → chamar no WhatsApp com a chave Pix). Purchase do pixel/CAPI
+  dispara na página de pedido concluído (antes do Pix) — contar "compras" no Meta como RESERVAS.
+- Criativos v pré-venda: Clube 1076372888330160 (ad novo no conjunto 120250160265150107; ad v2 120250160320210107
+  pausado) · F1 catálogo 1086341327232388 (ad novo no conjunto 120250224905280107; ad v1 renomeado, pausado).
+- Boas-vindas do Clube (backend, railway up 15/09): texto de pré-venda, sem a promessa "24h antes".
+- Para ativar quando o dono recarregar a conta (limite de gastos): F0 já está ACTIVE (volta sozinha);
+  F1: ativar campanha 120250224901140107 → conjunto 120250224905280107 → ad novo.
