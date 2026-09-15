@@ -8,6 +8,12 @@ import { INSTITUTIONAL_PAGES } from "@modules/content/institutional"
 import { COMING_SOON, COMING_SOON_PATH } from "@lib/coming-soon"
 
 // sitemap.xml dinâmico: home, loja, produtos, coleções e categorias (região br).
+// force-dynamic: sem isso, o Next gera este arquivo como estático no build e
+// ele fica preso ao valor de COMING_SOON daquele build — trocar a env e dar
+// Redeploy (sem novo commit) não seria o bastante para o mapa do site refletir
+// a loja aberta/fechada; com force-dynamic ele é recalculado a cada acesso.
+export const dynamic = "force-dynamic"
+
 const CC = "br"
 
 // Codifica o handle por segmento para garantir XML válido e URL segura
