@@ -312,3 +312,11 @@ Depois: campanha FRIA (Advantage+ shopping, público amplo BR) só com reposiç�
 - Boas-vindas do Clube (backend, railway up 15/09): texto de pré-venda, sem a promessa "24h antes".
 - Para ativar quando o dono recarregar a conta (limite de gastos): F0 já está ACTIVE (volta sozinha);
   F1: ativar campanha 120250224901140107 → conjunto 120250224905280107 → ad novo.
+
+### 15/09/2026 — Reequilíbrio para "conhecer antes de vender" (decisão do dono)
+Envios só em 10/10 → foco em audiência, não em reservas. Diária total R$50 até ~03/10:
+Clube WhatsApp R$20 (conjunto 120250160265150107, fim 05/10) · Aquecimento Reels R$20 (conjunto
+120250160320680107, fim 05/10) · Catálogo F1 R$10 (campanha 120250224901140107, CBO) — mantida só para
+alimentar o público de remarketing do pixel. Recarga sugerida: R$1.000 (cobre até 03/10).
+Virada ~03/10 (7 dias antes do envio): catálogo → R$50–70, aquecimento → R$10, mensagem "chega em 7 dias" no Clube.
+Obs.: o conector pausa a campanha ao mudar orçamento — reativar depois de cada ajuste.
