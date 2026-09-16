@@ -13,6 +13,13 @@ const S3_PATHNAME = process.env.MEDUSA_CLOUD_S3_PATHNAME
  */
 const nextConfig = {
   reactStrictMode: true,
+  async rewrites() {
+    return [
+      // Catálogo digital da coleção: página estática em public/catalogo/index.html.
+      // O middleware libera /catalogo antes do redirecionamento de região.
+      { source: "/catalogo", destination: "/catalogo/index.html" },
+    ]
+  },
   logging: {
     fetches: {
       fullUrl: true,

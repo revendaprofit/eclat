@@ -112,6 +112,13 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
+  // Catálogo digital da coleção (arquivo estático em public/catalogo/index.html,
+  // servido em /catalogo pelo rewrite do next.config.js). Público sempre: fora do
+  // gate "Em breve" e fora do redirecionamento de região (/br).
+  if (request.nextUrl.pathname === "/catalogo") {
+    return NextResponse.next()
+  }
+
   if (COMING_SOON) {
     const path = request.nextUrl.pathname
     if (path === COMING_SOON_PATH || path === VIP_PATH) {
