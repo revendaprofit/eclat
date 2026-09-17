@@ -18,7 +18,7 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
 
   const assinatura = req.headers["x-webhook-signature"]
   const valida = assinaturaValida(
-    (req as unknown as { rawBody?: Buffer }).rawBody,
+    req.rawBody,
     Array.isArray(assinatura) ? assinatura[0] : assinatura,
     process.env.BRASILNFE_WEBHOOK_SECRET
   )
