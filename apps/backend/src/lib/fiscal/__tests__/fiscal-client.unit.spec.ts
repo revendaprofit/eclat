@@ -18,7 +18,7 @@ describe("fiscal-client", () => {
   it("envia os dois headers de autenticação", async () => {
     const spy = jest.fn().mockResolvedValue(new Response("{}", { status: 200 }))
     global.fetch = spy as unknown as typeof fetch
-    const { transmitir } = await import("../fiscal-client")
+    const { transmitir } = await import("../fiscal-client.js")
     await transmitir({ modelo: 55 })
     const headers = spy.mock.calls[0][1].headers as Record<string, string>
     expect(headers.UserToken).toBe("user-token")
@@ -29,7 +29,7 @@ describe("fiscal-client", () => {
     global.fetch = jest.fn()
       .mockResolvedValueOnce(new Response("erro interno", { status: 500 }))
       .mockResolvedValueOnce(new Response("erro interno", { status: 500 }))
-    const { transmitir } = await import("../fiscal-client")
+    const { transmitir } = await import("../fiscal-client.js")
     await expect(transmitir({ modelo: 55 })).rejects.toThrow()
     await expect(transmitir({ modelo: 55 })).rejects.not.toThrow(/user-token|company-token/)
   })
@@ -39,7 +39,7 @@ describe("fiscal-client", () => {
     global.fetch = jest.fn()
       .mockResolvedValueOnce(new Response("erro: token user-token rejeitado", { status: 500 }))
       .mockResolvedValueOnce(new Response("erro: token user-token rejeitado", { status: 500 }))
-    const { transmitir } = await import("../fiscal-client")
+    const { transmitir } = await import("../fiscal-client.js")
     await expect(transmitir({ modelo: 55 })).rejects.toThrow(/\*\*\*/)
     // Prova que o token literal não vaza: segunda chamada não reutiliza corpo.
     await expect(transmitir({ modelo: 55 })).rejects.not.toThrow(/user-token/)
@@ -59,7 +59,7 @@ describe("fiscal-client", () => {
         { status: 200 }
       )
     ) as unknown as typeof fetch
-    const { transmitir } = await import("../fiscal-client")
+    const { transmitir } = await import("../fiscal-client.js")
     const r = await transmitir({ modelo: 55 })
     expect(r.autorizado).toBe(true)
     expect(r.chave_acesso).toHaveLength(44)
@@ -72,7 +72,7 @@ describe("fiscal-client", () => {
         { status: 200 }
       )
     ) as unknown as typeof fetch
-    const { transmitir } = await import("../fiscal-client")
+    const { transmitir } = await import("../fiscal-client.js")
     const r = await transmitir({ modelo: 55 })
     expect(r.autorizado).toBe(false)
     expect(r.status_sefaz).toBe("539")
@@ -83,7 +83,7 @@ describe("fiscal-client", () => {
     process.env = { ...OLD }
     delete process.env.BRASILNFE_USER_TOKEN
     delete process.env.BRASILNFE_COMPANY_TOKEN
-    const { brasilNfeConfigured } = await import("../fiscal-client")
+    const { brasilNfeConfigured } = await import("../fiscal-client.js")
     expect(brasilNfeConfigured()).toBe(false)
   })
 
@@ -99,7 +99,7 @@ describe("fiscal-client", () => {
         { status: 200 }
       )
     ) as unknown as typeof fetch
-    const { transmitir } = await import("../fiscal-client")
+    const { transmitir } = await import("../fiscal-client.js")
     const r = await transmitir({ modelo: 55 })
     expect(r.autorizado).toBe(true)
   })
@@ -116,7 +116,7 @@ describe("fiscal-client", () => {
         { status: 200 }
       )
     ) as unknown as typeof fetch
-    const { transmitir } = await import("../fiscal-client")
+    const { transmitir } = await import("../fiscal-client.js")
     const r = await transmitir({ modelo: 55 })
     expect(r.autorizado).toBe(true)
   })
@@ -132,7 +132,7 @@ describe("fiscal-client", () => {
     global.fetch = jest.fn().mockResolvedValue(
       new Response("erro: token token.a+b*c inválido", { status: 500 })
     ) as unknown as typeof fetch
-    const { transmitir } = await import("../fiscal-client")
+    const { transmitir } = await import("../fiscal-client.js")
     // Não deve lançar SyntaxError de regex inválida durante redação — redaciona corretamente.
     await expect(transmitir({ modelo: 55 })).rejects.toThrow(/\*\*\*/)
   })
@@ -148,7 +148,7 @@ describe("fiscal-client", () => {
     global.fetch = jest.fn().mockResolvedValue(
       new Response("erro: token token.a+b*c inválido", { status: 500 })
     ) as unknown as typeof fetch
-    const { transmitir } = await import("../fiscal-client")
+    const { transmitir } = await import("../fiscal-client.js")
     // O token literal não deve aparecer: foi redacionado.
     await expect(transmitir({ modelo: 55 })).rejects.not.toThrow(/token\.a\+b\*c/)
   })
@@ -165,7 +165,7 @@ describe("fiscal-client", () => {
     global.fetch = jest.fn().mockResolvedValue(
       new Response("erro: token +abc inválido", { status: 500 })
     ) as unknown as typeof fetch
-    const { transmitir } = await import("../fiscal-client")
+    const { transmitir } = await import("../fiscal-client.js")
     // Não deve lançar SyntaxError durante redação — helper escapa corretamente.
     await expect(transmitir({ modelo: 55 })).rejects.toThrow(/\*\*\*/)
   })
@@ -181,7 +181,7 @@ describe("fiscal-client", () => {
     global.fetch = jest.fn().mockResolvedValue(
       new Response("erro: token +abc inválido", { status: 500 })
     ) as unknown as typeof fetch
-    const { transmitir } = await import("../fiscal-client")
+    const { transmitir } = await import("../fiscal-client.js")
     // O quantificador líder não vaza: foi redacionado.
     await expect(transmitir({ modelo: 55 })).rejects.not.toThrow(/\+abc/)
   })

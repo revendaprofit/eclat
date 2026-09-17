@@ -55,7 +55,7 @@ describe("emitirVenda", () => {
     const transmitir = jest.fn()
     jest.doMock("../fiscal-client", () => ({ transmitir, previsualizar: jest.fn(), brasilNfeConfigured: () => true }))
 
-    const { emitirVenda } = await import("../fiscal-emissao")
+    const { emitirVenda } = await import("../fiscal-emissao.js")
     const doc = await emitirVenda({ orderId: "order_1", itens, destinatario, frete_centavos: 0 })
 
     expect(doc.id).toBe("doc_1")
@@ -78,7 +78,7 @@ describe("emitirVenda", () => {
     }))
     jest.doMock("../fiscal-client", () => ({ transmitir: jest.fn(), previsualizar: jest.fn(), brasilNfeConfigured: () => true }))
 
-    const { emitirVenda } = await import("../fiscal-emissao")
+    const { emitirVenda } = await import("../fiscal-emissao.js")
     await expect(emitirVenda({ orderId: "order_1", itens, destinatario, frete_centavos: 0 }))
       .rejects.toThrow(/emissão está desligada/i)
   })
@@ -111,7 +111,7 @@ describe("emitirVenda", () => {
       }),
     }))
 
-    const { emitirVenda } = await import("../fiscal-emissao")
+    const { emitirVenda } = await import("../fiscal-emissao.js")
     await emitirVenda({ orderId: "order_1", itens, destinatario, frete_centavos: 0 })
 
     expect(ordem.indexOf("criarDocumento")).toBeLessThan(ordem.indexOf("transmitir"))

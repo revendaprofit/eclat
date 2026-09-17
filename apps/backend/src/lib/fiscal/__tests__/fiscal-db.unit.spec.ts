@@ -12,7 +12,7 @@ describe("fiscal-db", () => {
   })
 
   it("reporta configurado quando as env vars existem", async () => {
-    const { fiscalDbConfigured } = await import("../fiscal-db")
+    const { fiscalDbConfigured } = await import("../fiscal-db.js")
     expect(fiscalDbConfigured()).toBe(true)
   })
 
@@ -20,7 +20,7 @@ describe("fiscal-db", () => {
     global.fetch = jest.fn().mockResolvedValue(
       new Response("[]", { status: 200 })
     ) as unknown as typeof fetch
-    const { acharPorIdempotencia } = await import("../fiscal-db")
+    const { acharPorIdempotencia } = await import("../fiscal-db.js")
     expect(await acharPorIdempotencia("order_1:venda:homologacao")).toBeNull()
   })
 
@@ -28,7 +28,7 @@ describe("fiscal-db", () => {
     global.fetch = jest.fn().mockResolvedValue(
       new Response(JSON.stringify([{ id: "doc_1", status: "verificado" }]), { status: 200 })
     ) as unknown as typeof fetch
-    const { acharPorIdempotencia } = await import("../fiscal-db")
+    const { acharPorIdempotencia } = await import("../fiscal-db.js")
     const doc = await acharPorIdempotencia("order_1:venda:homologacao")
     expect(doc?.id).toBe("doc_1")
   })
@@ -37,7 +37,7 @@ describe("fiscal-db", () => {
     global.fetch = jest.fn().mockResolvedValue(
       new Response("boom", { status: 500 })
     ) as unknown as typeof fetch
-    const { getConfig } = await import("../fiscal-db")
+    const { getConfig } = await import("../fiscal-db.js")
     await expect(getConfig()).rejects.toThrow(/Supabase/)
   })
 
@@ -45,7 +45,7 @@ describe("fiscal-db", () => {
     global.fetch = jest.fn().mockResolvedValue(
       new Response("boom", { status: 500 })
     ) as unknown as typeof fetch
-    const { getConfig } = await import("../fiscal-db")
+    const { getConfig } = await import("../fiscal-db.js")
     // Valida que a chave real definida no teste não vaza na mensagem de erro.
     await expect(getConfig()).rejects.not.toThrow(new RegExp(process.env.SUPABASE_SERVICE_ROLE_KEY!))
   })
@@ -55,7 +55,7 @@ describe("fiscal-db", () => {
     global.fetch = jest.fn()
       .mockResolvedValueOnce(new Response("erro: chave k inválida", { status: 500 }))
       .mockResolvedValueOnce(new Response("erro: chave k inválida", { status: 500 }))
-    const { getConfig } = await import("../fiscal-db")
+    const { getConfig } = await import("../fiscal-db.js")
     await expect(getConfig()).rejects.toThrow(/\*\*\*/)
     // Prova que a chave literal não vaza: segunda chamada não reutiliza corpo.
     await expect(getConfig()).rejects.not.toThrow(/\bk\b/)
@@ -72,7 +72,7 @@ describe("fiscal-db", () => {
     global.fetch = jest.fn().mockResolvedValue(
       new Response("erro: chave ab+cd usada", { status: 500 })
     ) as unknown as typeof fetch
-    const { getConfig } = await import("../fiscal-db")
+    const { getConfig } = await import("../fiscal-db.js")
     // Não deve lançar SyntaxError de regex inválida durante redação — redaciona corretamente.
     await expect(getConfig()).rejects.toThrow(/\*\*\*/)
   })
@@ -88,7 +88,7 @@ describe("fiscal-db", () => {
     global.fetch = jest.fn().mockResolvedValue(
       new Response("erro: chave ab+cd usada", { status: 500 })
     ) as unknown as typeof fetch
-    const { getConfig } = await import("../fiscal-db")
+    const { getConfig } = await import("../fiscal-db.js")
     // A chave literal não deve aparecer: foi redacionada.
     await expect(getConfig()).rejects.not.toThrow(/ab\+cd/)
   })
@@ -105,7 +105,7 @@ describe("fiscal-db", () => {
     global.fetch = jest.fn().mockResolvedValue(
       new Response("erro: chave +abc inválida", { status: 500 })
     ) as unknown as typeof fetch
-    const { getConfig } = await import("../fiscal-db")
+    const { getConfig } = await import("../fiscal-db.js")
     // Não deve lançar SyntaxError durante redação — helper escapa corretamente.
     await expect(getConfig()).rejects.toThrow(/\*\*\*/)
   })
@@ -121,7 +121,7 @@ describe("fiscal-db", () => {
     global.fetch = jest.fn().mockResolvedValue(
       new Response("erro: chave +abc inválida", { status: 500 })
     ) as unknown as typeof fetch
-    const { getConfig } = await import("../fiscal-db")
+    const { getConfig } = await import("../fiscal-db.js")
     // O quantificador líder não vaza: foi redacionado.
     await expect(getConfig()).rejects.not.toThrow(/\+abc/)
   })

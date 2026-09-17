@@ -41,7 +41,7 @@ describe("reconciliarDocumento", () => {
     const { atualizarNItem, atualizarDocumento } = mockDb()
     jest.doMock("../fiscal-client", () => ({ baixarXml: jest.fn().mockResolvedValue(XML_OK) }))
 
-    const { reconciliarDocumento } = await import("../fiscal-reconciliar")
+    const { reconciliarDocumento } = await import("../fiscal-reconciliar.js")
     const r = await reconciliarDocumento("doc_1")
 
     expect(r.verificado).toBe(true)
@@ -56,7 +56,7 @@ describe("reconciliarDocumento", () => {
     const { atualizarNItem, atualizarDocumento } = mockDb()
     jest.doMock("../fiscal-client", () => ({ baixarXml: jest.fn().mockResolvedValue(XML_DIVERGENTE) }))
 
-    const { reconciliarDocumento } = await import("../fiscal-reconciliar")
+    const { reconciliarDocumento } = await import("../fiscal-reconciliar.js")
     const r = await reconciliarDocumento("doc_1")
 
     expect(r.verificado).toBe(true)
@@ -74,14 +74,14 @@ describe("reconciliarDocumento", () => {
         `<nfeProc><protNFe><infProt><chNFe>${"3".repeat(44)}</chNFe></infProt></protNFe><det nItem="1"><prod><cProd>TOP-P</cProd><NCM>61091000</NCM></prod></det></nfeProc>`
       ),
     }))
-    const { reconciliarDocumento } = await import("../fiscal-reconciliar")
+    const { reconciliarDocumento } = await import("../fiscal-reconciliar.js")
     await expect(reconciliarDocumento("doc_1")).rejects.toThrow(/quantidade de itens/i)
   })
 
   it("não reconcilia documento sem chave de acesso", async () => {
     mockDb({ lerDocumento: jest.fn().mockResolvedValue({ id: "doc_1", chave_acesso: null, status: "montado" }) })
     jest.doMock("../fiscal-client", () => ({ baixarXml: jest.fn() }))
-    const { reconciliarDocumento } = await import("../fiscal-reconciliar")
+    const { reconciliarDocumento } = await import("../fiscal-reconciliar.js")
     await expect(reconciliarDocumento("doc_1")).rejects.toThrow(/chave de acesso/i)
   })
 
@@ -95,7 +95,7 @@ describe("reconciliarDocumento", () => {
     </nfeProc>`
     jest.doMock("../fiscal-client", () => ({ baixarXml: jest.fn().mockResolvedValue(XML_CHAVE_ERRADA) }))
 
-    const { reconciliarDocumento } = await import("../fiscal-reconciliar")
+    const { reconciliarDocumento } = await import("../fiscal-reconciliar.js")
     await expect(reconciliarDocumento("doc_1")).rejects.toThrow(/chave/i)
 
     expect(atualizarNItem).not.toHaveBeenCalled()
@@ -120,7 +120,7 @@ describe("reconciliarDocumento", () => {
     </nfeProc>`
     jest.doMock("../fiscal-client", () => ({ baixarXml: jest.fn().mockResolvedValue(XML_NCM_DUPLICADO_TROCADO) }))
 
-    const { reconciliarDocumento } = await import("../fiscal-reconciliar")
+    const { reconciliarDocumento } = await import("../fiscal-reconciliar.js")
     const r = await reconciliarDocumento("doc_1")
 
     expect(r.verificado).toBe(true)
@@ -139,7 +139,7 @@ describe("reconciliarDocumento", () => {
     </nfeProc>`
     jest.doMock("../fiscal-client", () => ({ baixarXml: jest.fn().mockResolvedValue(XML_SEM_PAR) }))
 
-    const { reconciliarDocumento } = await import("../fiscal-reconciliar")
+    const { reconciliarDocumento } = await import("../fiscal-reconciliar.js")
     await expect(reconciliarDocumento("doc_1")).rejects.toThrow(/não foi encontrado/i)
 
     expect(atualizarNItem).not.toHaveBeenCalled()
@@ -155,7 +155,7 @@ describe("reconciliarDocumento", () => {
     })
     jest.doMock("../fiscal-client", () => ({ baixarXml: jest.fn().mockResolvedValue(XML_OK) }))
 
-    const { reconciliarDocumento } = await import("../fiscal-reconciliar")
+    const { reconciliarDocumento } = await import("../fiscal-reconciliar.js")
     await expect(reconciliarDocumento("doc_1")).rejects.toThrow(/mais de um item/i)
 
     expect(atualizarNItem).not.toHaveBeenCalled()
@@ -171,7 +171,7 @@ describe("reconciliarDocumento", () => {
     </nfeProc>`
     jest.doMock("../fiscal-client", () => ({ baixarXml: jest.fn().mockResolvedValue(XML_NCM_MUDOU) }))
 
-    const { reconciliarDocumento } = await import("../fiscal-reconciliar")
+    const { reconciliarDocumento } = await import("../fiscal-reconciliar.js")
     const r = await reconciliarDocumento("doc_1")
 
     expect(r.verificado).toBe(true)
