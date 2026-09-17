@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nfeProc xmlns="http://www.portalfiscal.inf.br/nfe" versao="4.00">
+  <NFe>
+    <infNFe Id="NFe31260968673407000113550010000000011000000017" versao="4.00">
+      <ide><cUF>31</cUF><natOp>VENDA DE MERCADORIA</natOp><mod>55</mod><serie>1</serie><nNF>1</nNF></ide>
+      <det nItem="1">
+        <prod><cProd>TOP-AURA-P</cProd><xProd>Top Aura P</xProd><NCM>61091000</NCM><CFOP>5102</CFOP><qCom>1.0000</qCom><vUn>189.90</vUn></prod>
+      </det>
+      <det nItem="2">
+        <prod><cProd>LEG-VERTICE-M</cProd><xProd>Legging Vertice M</xProd><NCM>61046200</NCM><CFOP>5102</CFOP><qCom>2.0000</qCom><vUn>249.90</vUn></prod>
+      </det>
+      <det nItem="3">
+        <prod><cProd>SHORT-NIMBLE-G</cProd><xProd>Short Nimble G</xProd><NCM>61046300</NCM><CFOP>5102</CFOP><qCom>1.0000</qCom><vUn>159.90</vUn></prod>
+      </det>
+    </infNFe>
+  </NFe>
+  <protNFe versao="4.00">
+    <infProt>
+      <chNFe>31260968673407000113550010000000011000000017</chNFe>
+      <nProt>131260000000001</nProt>
+      <cStat>100</cStat>
+      <xMotivo>Autorizado o uso da NF-e</xMotivo>
+    </infProt>
+  </protNFe>
+</nfeProc>
