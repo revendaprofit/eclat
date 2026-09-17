@@ -47,6 +47,10 @@ type OrderDetail = Order & {
     province: string | null
     postal_code: string | null
     phone: string | null
+    // Lido por DadosFiscaisDoPedido (lib/dados-fiscais.ts) para numero/bairro/
+    // municipio_ibge/cpf — precisa estar aqui para o tsc pegar se o `fields` do
+    // medusaGetOrder voltar a esquecer esse caminho (achado da revisão final).
+    metadata?: Record<string, unknown> | null
   } | null
   shipping_methods: { name: string; total: number }[]
   fulfillments: {

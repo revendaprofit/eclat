@@ -664,6 +664,7 @@ export type OrderAddress = {
   postal_code: string | null
   country_code: string | null
   phone: string | null
+  metadata?: Record<string, unknown> | null
 }
 export type CockpitOrderDetail = CockpitOrder & {
   status: string
@@ -675,6 +676,9 @@ export type CockpitOrderDetail = CockpitOrder & {
   tax_total: number
   items: OrderItem[]
   shipping_address: OrderAddress | null
+  // Só o metadata é pedido no `fields` (dados fiscais de fallback) — os demais
+  // campos do endereço de cobrança não são usados no Cockpit.
+  billing_address: { metadata?: Record<string, unknown> | null } | null
   shipping_methods: { name: string; total: number }[]
   fulfillments: OrderFulfillment[]
   metadata?: Record<string, unknown> | null
@@ -682,14 +686,21 @@ export type CockpitOrderDetail = CockpitOrder & {
 
 // Medusa 2.15.5: `items.quantity` só é calculado quando `items.detail.quantity` também é pedido no
 // `fields` — sem ele a quantidade volta null (quebrava a gaveta, o despacho e a conferência; achado 14/09).
+//
+// shipping_address.metadata e billing_address.metadata precisam estar aqui porque
+// lib/dados-fiscais.ts (lerDadosFiscais) lê numero/bairro/municipio_ibge/cpf de dentro
+// desses dois metadata — sem eles a tela de dados fiscais fica cega e mente que falta
+// tudo, mesmo em pedido completo (achado da revisão final; ver medusa-order-fields.test.ts).
+export const ORDER_DETAIL_FIELDS =
+  "id,display_id,status,payment_status,fulfillment_status,email,customer_id,currency_code,created_at,subtotal,item_subtotal,discount_total,shipping_total,shipping_subtotal,tax_total,total,metadata," +
+  "items.id,items.title,items.variant_id,items.variant_sku,items.variant_title,items.quantity,items.detail.quantity,items.unit_price,items.total,items.metadata,items.adjustments.code,items.adjustments.amount," +
+  "shipping_address.first_name,shipping_address.last_name,shipping_address.address_1,shipping_address.city,shipping_address.province,shipping_address.postal_code,shipping_address.country_code,shipping_address.phone,shipping_address.metadata," +
+  "billing_address.metadata," +
+  "shipping_methods.name,shipping_methods.total," +
+  "fulfillments.id,fulfillments.shipped_at,fulfillments.delivered_at,fulfillments.canceled_at,fulfillments.labels.tracking_number,fulfillments.labels.tracking_url,fulfillments.labels.label_url"
+
 export async function medusaGetOrder(id: string): Promise<CockpitOrderDetail> {
-  const fields =
-    "id,display_id,status,payment_status,fulfillment_status,email,customer_id,currency_code,created_at,subtotal,item_subtotal,discount_total,shipping_total,shipping_subtotal,tax_total,total,metadata," +
-    "items.id,items.title,items.variant_id,items.variant_sku,items.variant_title,items.quantity,items.detail.quantity,items.unit_price,items.total,items.metadata,items.adjustments.code,items.adjustments.amount," +
-    "shipping_address.first_name,shipping_address.last_name,shipping_address.address_1,shipping_address.city,shipping_address.province,shipping_address.postal_code,shipping_address.country_code,shipping_address.phone," +
-    "shipping_methods.name,shipping_methods.total," +
-    "fulfillments.id,fulfillments.shipped_at,fulfillments.delivered_at,fulfillments.canceled_at,fulfillments.labels.tracking_number,fulfillments.labels.tracking_url,fulfillments.labels.label_url"
-  const r = await medusaAdmin(`/admin/orders/${id}?fields=${fields}`)
+  const r = await medusaAdmin(`/admin/orders/${id}?fields=${ORDER_DETAIL_FIELDS}`)
   if (!r.ok) throw new Error(`buscar pedido falhou (HTTP ${r.status})`)
   return (await r.json()).order
 }
