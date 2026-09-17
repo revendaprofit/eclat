@@ -116,6 +116,12 @@ export async function documentoDeVendaDoPedido(
   return rows?.[0] ?? null
 }
 
+export async function lerDocumento(id: string): Promise<FiscalDocumento> {
+  const rows = await sb<FiscalDocumento[]>(`fiscal_documento?id=eq.${id}&select=*&limit=1`)
+  if (!rows?.[0]) throw new Error(`Documento fiscal ${id} não encontrado.`)
+  return rows[0]
+}
+
 export async function listarPorStatus(
   status: StatusDocumento[],
   limite = 50
