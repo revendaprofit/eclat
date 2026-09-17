@@ -52,11 +52,44 @@ describe("fiscal-db", () => {
 
   it("redaciona o service key do corpo de erro se vazasse", async () => {
     // Se o servidor retorna um erro contendo a chave literal, ela deve ser redacionada.
-    global.fetch = jest.fn().mockResolvedValue(
-      new Response("erro: chave k inválida", { status: 500 })
-    ) as unknown as typeof fetch
+    global.fetch = jest.fn()
+      .mockResolvedValueOnce(new Response("erro: chave k inválida", { status: 500 }))
+      .mockResolvedValueOnce(new Response("erro: chave k inválida", { status: 500 }))
     const { getConfig } = await import("../fiscal-db")
     await expect(getConfig()).rejects.toThrow(/\*\*\*/)
+    // Prova que a chave literal não vaza: segunda chamada não reutiliza corpo.
     await expect(getConfig()).rejects.not.toThrow(/\bk\b/)
+  })
+
+  it("redaciona chave com metacaracteres sem lançar SyntaxError", async () => {
+    // Testa que escaparRegex() permite redacionar chaves com metacaracteres (ex: a+b, a.b*c).
+    process.env = {
+      ...process.env,
+      SUPABASE_URL: "https://x.supabase.co",
+      SUPABASE_SERVICE_ROLE_KEY: "ab+cd",
+    }
+    jest.resetModules()
+    global.fetch = jest.fn().mockResolvedValue(
+      new Response("erro: chave ab+cd usada", { status: 500 })
+    ) as unknown as typeof fetch
+    const { getConfig } = await import("../fiscal-db")
+    // Não deve lançar SyntaxError de regex inválida durante redação — redaciona corretamente.
+    await expect(getConfig()).rejects.toThrow(/\*\*\*/)
+  })
+
+  it("redaciona chave com metacaracteres sem vazar o valor literal", async () => {
+    // Prova que escaparRegex() funciona: valor com metacaracteres não vaza.
+    process.env = {
+      ...process.env,
+      SUPABASE_URL: "https://x.supabase.co",
+      SUPABASE_SERVICE_ROLE_KEY: "ab+cd",
+    }
+    jest.resetModules()
+    global.fetch = jest.fn().mockResolvedValue(
+      new Response("erro: chave ab+cd usada", { status: 500 })
+    ) as unknown as typeof fetch
+    const { getConfig } = await import("../fiscal-db")
+    // A chave literal não deve aparecer: foi redacionada.
+    await expect(getConfig()).rejects.not.toThrow(/ab\+cd/)
   })
 })

@@ -13,6 +13,11 @@ export function brasilNfeConfigured(): boolean {
   return Boolean(USER_TOKEN && COMPANY_TOKEN)
 }
 
+// Escapa metacaracteres de regex para uso seguro em new RegExp().
+function escaparRegex(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+}
+
 export type RespostaTransmissao = {
   autorizado: boolean
   chave_acesso: string | null
@@ -47,8 +52,8 @@ async function chamar<T = unknown>(
   if (!res.ok) {
     // Redaciona tokens caso vazem no corpo da resposta do servidor.
     let textoRedacionado = texto
-    if (USER_TOKEN) textoRedacionado = textoRedacionado.replace(new RegExp(USER_TOKEN, "g"), "***")
-    if (COMPANY_TOKEN) textoRedacionado = textoRedacionado.replace(new RegExp(COMPANY_TOKEN, "g"), "***")
+    if (USER_TOKEN) textoRedacionado = textoRedacionado.replace(new RegExp(escaparRegex(USER_TOKEN), "g"), "***")
+    if (COMPANY_TOKEN) textoRedacionado = textoRedacionado.replace(new RegExp(escaparRegex(COMPANY_TOKEN), "g"), "***")
     throw new ErroFiscal(`Brasil NFe ${init.method || "GET"} ${caminho}: ${res.status} ${textoRedacionado}`)
   }
   return (texto ? JSON.parse(texto) : {}) as T
@@ -89,7 +94,7 @@ export async function transmitir(payload: Record<string, unknown>): Promise<Resp
 }
 
 export async function consultarPorChave(chave: string): Promise<RespostaTransmissao> {
-  const bruto = await chamar<Record<string, any>>(`/v1/nfe/${chave}`)
+  const bruto = await chamar<Record<string, any>>(`/v1/nfe/${encodeURIComponent(chave)}`)
   return normalizar(bruto)
 }
 
@@ -98,7 +103,7 @@ export async function baixarXml(chave: string): Promise<string> {
   if (!brasilNfeConfigured()) {
     throw new ErroFiscal("Credenciais da Brasil NFe ausentes.")
   }
-  const res = await fetch(`${BASE}/v1/nfe/${chave}/xml`, {
+  const res = await fetch(`${BASE}/v1/nfe/${encodeURIComponent(chave)}/xml`, {
     headers: { UserToken: USER_TOKEN as string, Token: COMPANY_TOKEN as string },
   })
   if (!res.ok) {

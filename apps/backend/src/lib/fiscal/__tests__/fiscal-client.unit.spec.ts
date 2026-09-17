@@ -36,11 +36,12 @@ describe("fiscal-client", () => {
 
   it("redaciona tokens do corpo de erro se vazassem", async () => {
     // Se o servidor retorna um erro contendo os tokens literais, eles devem ser redacionados.
-    global.fetch = jest.fn().mockResolvedValue(
-      new Response("erro: token user-token rejeitado", { status: 500 })
-    ) as unknown as typeof fetch
+    global.fetch = jest.fn()
+      .mockResolvedValueOnce(new Response("erro: token user-token rejeitado", { status: 500 }))
+      .mockResolvedValueOnce(new Response("erro: token user-token rejeitado", { status: 500 }))
     const { transmitir } = await import("../fiscal-client")
     await expect(transmitir({ modelo: 55 })).rejects.toThrow(/\*\*\*/)
+    // Prova que o token literal não vaza: segunda chamada não reutiliza corpo.
     await expect(transmitir({ modelo: 55 })).rejects.not.toThrow(/user-token/)
   })
 
@@ -118,5 +119,37 @@ describe("fiscal-client", () => {
     const { transmitir } = await import("../fiscal-client")
     const r = await transmitir({ modelo: 55 })
     expect(r.autorizado).toBe(true)
+  })
+
+  it("redaciona token com metacaracteres sem lançar SyntaxError", async () => {
+    // Testa que escaparRegex() permite redacionar tokens com metacaracteres (ex: a+b, a.b*c).
+    process.env = {
+      ...process.env,
+      BRASILNFE_USER_TOKEN: "token.a+b*c",
+      BRASILNFE_COMPANY_TOKEN: "company-token",
+    }
+    jest.resetModules()
+    global.fetch = jest.fn().mockResolvedValue(
+      new Response("erro: token token.a+b*c inválido", { status: 500 })
+    ) as unknown as typeof fetch
+    const { transmitir } = await import("../fiscal-client")
+    // Não deve lançar SyntaxError de regex inválida durante redação — redaciona corretamente.
+    await expect(transmitir({ modelo: 55 })).rejects.toThrow(/\*\*\*/)
+  })
+
+  it("redaciona token com metacaracteres sem vazar o valor literal", async () => {
+    // Prova que escaparRegex() funciona: valor com metacaracteres não vaza.
+    process.env = {
+      ...process.env,
+      BRASILNFE_USER_TOKEN: "token.a+b*c",
+      BRASILNFE_COMPANY_TOKEN: "company-token",
+    }
+    jest.resetModules()
+    global.fetch = jest.fn().mockResolvedValue(
+      new Response("erro: token token.a+b*c inválido", { status: 500 })
+    ) as unknown as typeof fetch
+    const { transmitir } = await import("../fiscal-client")
+    // O token literal não deve aparecer: foi redacionado.
+    await expect(transmitir({ modelo: 55 })).rejects.not.toThrow(/token\.a\+b\*c/)
   })
 })
