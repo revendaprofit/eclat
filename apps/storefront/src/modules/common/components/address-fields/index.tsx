@@ -4,7 +4,7 @@ import { HttpTypes } from "@medusajs/types"
 import Input from "@modules/common/components/input"
 import CountrySelect from "@modules/checkout/components/country-select"
 import { cepValido, normalizarCep, type EnderecoCep } from "@lib/util/cep"
-import { useRef, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 
 // Campos de endereço usados pelo checkout E pelo cadastro da conta.
 //
@@ -39,6 +39,9 @@ export default function AddressFields({
 
   const n = (campo: string) => (prefixo ? `${prefixo}.${campo}` : campo)
   const v = (campo: string) => valores[n(campo)] || ""
+  // Com "cobrança diferente" aberto, entrega e cobrança renderizam ao mesmo tempo —
+  // sem o sufixo do prefixo os data-testid ficam duplicados no DOM (achado da revisão).
+  const testid = (base: string) => (prefixo ? `${base}-${prefixo.replace(/_/g, "-")}` : base)
 
   async function buscarCep(bruto: string) {
     const cep = normalizarCep(bruto)
@@ -79,6 +82,27 @@ export default function AddressFields({
     }
   }
 
+  // Endereço salvo (da conta, criado antes desta branch, ou escolhido de novo na
+  // tela) chega com CEP preenchido mas sem metadata.municipio_ibge. A cliente não tem
+  // motivo para mexer no CEP — ele já está certo — então sem isto o IBGE fica ""
+  // para sempre e o pedido fecha sem emitir nota, sem ela perceber nada (o campo é
+  // hidden). Dispara a busca sozinha quando o CEP é válido e falta o IBGE.
+  //
+  // A guarda (cepAutoBuscado) evita laço: a busca preenche o campo, o componente
+  // re-renderiza, e sem ela isso disparia a busca de novo indefinidamente. No máximo
+  // uma tentativa automática por CEP — se falhar, fica silenciosa (falha de terceiro
+  // nunca bloqueia nada) e a cliente ainda pode digitar o CEP de novo à mão.
+  const cepParaAutoBusca = v("postal_code")
+  const ibgeAtual = v("metadata.municipio_ibge")
+  const cepAutoBuscado = useRef<string | null>(null)
+  useEffect(() => {
+    const cep = normalizarCep(cepParaAutoBusca)
+    if (!cepValido(cep) || ibgeAtual || cepAutoBuscado.current === cep) return
+    cepAutoBuscado.current = cep
+    void buscarCep(cepParaAutoBusca)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cepParaAutoBusca, ibgeAtual])
+
   // Cidade/estado editados à mão: o IBGE ali era do endereço anterior e não vale
   // mais para o texto novo. Como a cliente nunca vê o campo IBGE, ela não tem como
   // notar nem corrigir — então em vez de arriscar mandar a nota para o município
@@ -109,7 +133,7 @@ export default function AddressFields({
           void buscarCep(e.target.value)
         }}
         required
-        data-testid="input-cep"
+        data-testid={testid("input-cep")}
       />
       <div className="flex items-end text-sm text-ui-fg-subtle">
         {avisoJuntoDoCep}
@@ -122,7 +146,7 @@ export default function AddressFields({
         value={v("address_1")}
         onChange={(e) => onChange(n("address_1"), e.target.value)}
         required
-        data-testid="input-endereco"
+        data-testid={testid("input-endereco")}
       />
       <Input
         label="Número"
@@ -131,7 +155,7 @@ export default function AddressFields({
         value={v("metadata.numero")}
         onChange={(e) => onChange(n("metadata.numero"), e.target.value)}
         required
-        data-testid="input-numero"
+        data-testid={testid("input-numero")}
       />
 
       <Input
@@ -139,7 +163,7 @@ export default function AddressFields({
         name={n("address_2")}
         value={v("address_2")}
         onChange={(e) => onChange(n("address_2"), e.target.value)}
-        data-testid="input-complemento"
+        data-testid={testid("input-complemento")}
       />
       <Input
         label="Bairro"
@@ -147,7 +171,7 @@ export default function AddressFields({
         value={v("metadata.bairro")}
         onChange={(e) => onChange(n("metadata.bairro"), e.target.value)}
         required
-        data-testid="input-bairro"
+        data-testid={testid("input-bairro")}
       />
 
       <Input
@@ -157,7 +181,7 @@ export default function AddressFields({
         value={v("city")}
         onChange={(e) => mudarManualmente("city", e.target.value)}
         required
-        data-testid="input-cidade"
+        data-testid={testid("input-cidade")}
       />
       <Input
         label="Estado"
@@ -166,7 +190,7 @@ export default function AddressFields({
         value={v("province")}
         onChange={(e) => mudarManualmente("province", e.target.value)}
         required
-        data-testid="input-estado"
+        data-testid={testid("input-estado")}
       />
 
       <CountrySelect
@@ -176,7 +200,7 @@ export default function AddressFields({
         value={v("country_code")}
         onChange={(e) => onChange(n("country_code"), e.target.value)}
         required
-        data-testid="select-pais"
+        data-testid={testid("select-pais")}
       />
 
       {/* A cliente não digita código IBGE — ele vem da busca de CEP. */}
