@@ -20,8 +20,10 @@ export function chaveIdempotencia(
   return `${orderId}:${tipo}:${ambiente}`
 }
 
-// Um documento já resolvido não deve ser reemitido nunca.
-const JA_RESOLVIDO = new Set(["autorizado_nao_verificado", "verificado", "denegado"])
+// Um documento já resolvido não deve ser reemitido nunca. Exportado porque a mesma regra vale
+// para a devolução (emitir-devolucao/route.ts) — duplicar o Set em dois lugares arriscaria os
+// dois se desalinharem no futuro.
+export const JA_RESOLVIDO = new Set(["autorizado_nao_verificado", "verificado", "denegado"])
 
 export async function emitirVenda(args: {
   orderId: string
