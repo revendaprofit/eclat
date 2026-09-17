@@ -17,6 +17,7 @@ import {
 } from "./cookies"
 import { getRegion } from "./regions"
 import { getLocale } from "./locale-actions"
+import { retrieveCustomer, updateCustomer } from "./customer"
 
 /**
  * Retrieves a cart by its ID. If no ID is provided, it will use the cart ID from the cookies.
@@ -404,6 +405,18 @@ export async function setAddresses(currentState: unknown, formData: FormData) {
       }
     }
     await updateCart(data)
+
+    // Conveniência de pré-preenchimento na próxima compra. A fonte da nota é o
+    // metadata do PEDIDO — nunca este valor, que a cliente pode mudar depois.
+    // Falha aqui NÃO pode derrubar o checkout: o pedido já tem o CPF de que precisa.
+    try {
+      const customer = await retrieveCustomer()
+      if (customer && normalizarCpf(String(customer.metadata?.cpf ?? "")) !== cpf) {
+        await updateCustomer({ metadata: { ...(customer.metadata ?? {}), cpf } })
+      }
+    } catch {
+      // silencioso de propósito — ver comentário acima
+    }
   } catch (e) {
     return e instanceof Error ? e.message : String(e)
   }
