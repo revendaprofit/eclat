@@ -98,6 +98,23 @@ describe("montarPayloadDevolucao", () => {
     expect((payload as any).itens[0].valor_total).toBe("249.00")
   })
 
+  it("retorna itens_ordenados na ordem do payload, com 2 itens", () => {
+    const { payload, itens_ordenados } = chamar({
+      devolvidos: [
+        { line_item_id: "li_a", quantidade: 1 },
+        { line_item_id: "li_b", quantidade: 1 },
+      ],
+    })
+    const p = payload as any
+    expect(itens_ordenados).toHaveLength(2)
+    // Primeira posição: li_a deve corresponder ao primeiro item do payload
+    expect(itens_ordenados[0].line_item_id).toBe("li_a")
+    expect(p.itens[0].codigo).toBe("TOP-AURA-P")
+    // Segunda posição: li_b deve corresponder ao segundo item do payload
+    expect(itens_ordenados[1].line_item_id).toBe("li_b")
+    expect(p.itens[1].codigo).toBe("LEG-VERTICE-M")
+  })
+
   it("recusa quantidade devolvida maior que a vendida", () => {
     expect(() => chamar({ devolvidos: [{ line_item_id: "li_b", quantidade: 5 }] })).toThrow(
       /maior que a quantidade vendida/i
@@ -110,6 +127,16 @@ describe("montarPayloadDevolucao", () => {
 
   it("usa CFOP de devolução interestadual quando a venda foi para fora de MG", () => {
     const { payload } = chamar({ ufDestinatarioOriginal: "SP" })
+    expect((payload as any).itens[0].cfop).toBe("2202")
+  })
+
+  it("normaliza UF com espaço em branco na escolha do CFOP", () => {
+    const { payload } = chamar({ ufDestinatarioOriginal: " MG " })
+    expect((payload as any).itens[0].cfop).toBe("1202")
+  })
+
+  it("normaliza UF minúscula na escolha do CFOP", () => {
+    const { payload } = chamar({ ufDestinatarioOriginal: "sp" })
     expect((payload as any).itens[0].cfop).toBe("2202")
   })
 

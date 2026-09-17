@@ -55,8 +55,11 @@ export function montarPayloadDevolucao(args: {
   }
   // -------------------------------------------------------------------------
 
-  const interestadual = ufDestinatarioOriginal.toUpperCase() !== config.uf.toUpperCase()
+  const ufDestino = ufDestinatarioOriginal.trim().toUpperCase()
+  const ufEmitente = config.uf.trim().toUpperCase()
+  const interestadual = ufDestino !== ufEmitente
   const ordenados: ItemPedido[] = []
+  let totalNotaCentavos = 0
 
   const linhas = devolvidos.map((dev, idx) => {
     const origem = itensOrigem.find((i) => i.medusa_line_item_id === dev.line_item_id)
@@ -84,7 +87,8 @@ export function montarPayloadDevolucao(args: {
     ordenados.push(doPedido)
 
     const perfil = resolverPerfil(perfis, doPedido.product_id, doPedido.categoria_handle)
-    const totalCentavos = origem.valor_unitario_centavos * dev.quantidade
+    const totalItemCentavos = origem.valor_unitario_centavos * dev.quantidade
+    totalNotaCentavos += totalItemCentavos
 
     return {
       numero_item: idx + 1,
@@ -97,18 +101,13 @@ export function montarPayloadDevolucao(args: {
       unidade: "UN",
       quantidade: dev.quantidade,
       valor_unitario: reais(origem.valor_unitario_centavos),
-      valor_total: reais(totalCentavos),
+      valor_total: reais(totalItemCentavos),
       // VC02-14 / VC03-20: referência item a item, chave + nItem da nota de origem.
       documentos_referenciados: [
         { chave_acesso: documentoOrigem.chave_acesso as string, numero_item: origem.n_item_verificado },
       ],
     }
   })
-
-  const totalCentavos = linhas.reduce(
-    (acc, l) => acc + Math.round(Number(l.valor_total) * 100),
-    0
-  )
 
   const enderecoEclat = {
     logradouro: config.logradouro,
@@ -147,9 +146,9 @@ export function montarPayloadDevolucao(args: {
     },
     itens: linhas,
     total: {
-      valor_produtos: reais(totalCentavos),
+      valor_produtos: reais(totalNotaCentavos),
       valor_frete: "0.00",
-      valor_nota: reais(totalCentavos),
+      valor_nota: reais(totalNotaCentavos),
     },
   }
 
