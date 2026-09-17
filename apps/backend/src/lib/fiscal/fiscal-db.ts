@@ -153,3 +153,19 @@ export async function listarPorStatus(
     `fiscal_documento?status=in.(${lista})&select=*&order=created_at.asc&limit=${limite}`
   )
 }
+
+export async function documentoPorChave(chave: string): Promise<FiscalDocumento | null> {
+  const rows = await sb<FiscalDocumento[]>(
+    `fiscal_documento?chave_acesso=eq.${encodeURIComponent(chave)}&select=*&limit=1`
+  )
+  return rows?.[0] ?? null
+}
+
+export async function upsertPerfil(perfil: Record<string, unknown>): Promise<FiscalPerfil> {
+  const rows = await sb<FiscalPerfil[]>("fiscal_perfil", {
+    method: "POST",
+    headers: { Prefer: "return=representation,resolution=merge-duplicates" },
+    body: JSON.stringify({ ...perfil, updated_at: new Date().toISOString() }),
+  })
+  return rows[0]
+}
