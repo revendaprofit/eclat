@@ -370,11 +370,15 @@ function FilaBlock({
                 {d.rejeicao_codigo ? `[${d.rejeicao_codigo}] ` : ""}{d.rejeicao_motivo}
               </p>
             )}
-            <div className="flex gap-2 items-center">
-              <button disabled={busy} className={btn2} onClick={async () => { const res = await reconciliar(d.id); setResultado((r) => ({ ...r, [d.id]: res || {} })) }}>
-                Reconciliar
-              </button>
-            </div>
+            {/* C1: denegado/rejeitado não têm nota autorizada — reconciliarDocumento recusa
+                (ErroFiscal), então o botão fica de fora para não convidar um clique inútil. */}
+            {corDoStatus(d.status) !== "vermelho" && (
+              <div className="flex gap-2 items-center">
+                <button disabled={busy} className={btn2} onClick={async () => { const res = await reconciliar(d.id); setResultado((r) => ({ ...r, [d.id]: res || {} })) }}>
+                  Reconciliar
+                </button>
+              </div>
+            )}
             {resultado[d.id] && (
               <div className="text-sm bg-white border border-eclat-pedra/40 rounded-md p-2">
                 <p>{resultado[d.id].verificado ? "Verificado com sucesso." : "Não verificado — veja divergências abaixo."}</p>

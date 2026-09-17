@@ -124,14 +124,19 @@ export function FiscalDoPedido({
       {statusBloqueiaDevolucao(documento.status) && (
         <div className="border border-amber-300 bg-amber-50 rounded-md p-2 text-sm text-amber-900">
           <p>Devolução bloqueada até a reconciliação (o nItem da SEFAZ ainda não foi lido).</p>
-          <button
-            type="button"
-            onClick={reconciliar}
-            disabled={ocupado}
-            className="mt-1 underline disabled:opacity-50"
-          >
-            {ocupado ? "Reconciliando…" : "Reconciliar agora"}
-          </button>
+          {/* C1 (achado crítico da revisão final): documento denegado/rejeitado não tem nota
+              autorizada nenhuma para reconciliar — reconciliarDocumento agora recusa (ErroFiscal),
+              então o botão nem aparece para não convidar um clique que só devolveria erro. */}
+          {corDoStatus(documento.status) !== "vermelho" && (
+            <button
+              type="button"
+              onClick={reconciliar}
+              disabled={ocupado}
+              className="mt-1 underline disabled:opacity-50"
+            >
+              {ocupado ? "Reconciliando…" : "Reconciliar agora"}
+            </button>
+          )}
           {erroReconciliar && <p className="mt-1 text-red-800">{erroReconciliar}</p>}
         </div>
       )}

@@ -1,12 +1,8 @@
 import type { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import { ContainerRegistrationKeys } from "@medusajs/framework/utils"
-import { reconciliarDocumento } from "../../../lib/fiscal/fiscal-reconciliar"
+import { reconciliarDocumento, STATUS_TERMINAIS } from "../../../lib/fiscal/fiscal-reconciliar"
 import { documentoPorChave } from "../../../lib/fiscal/fiscal-db"
 import { assinaturaValida, chavesDoLote } from "../../../lib/fiscal/fiscal-webhook"
-import type { StatusDocumento } from "../../../lib/fiscal/tipos"
-
-// Status que já não mudam mais: reconciliar de novo só baixaria XML à toa.
-const STATUS_TERMINAIS = new Set<StatusDocumento>(["verificado", "rejeitado", "denegado"])
 
 // Webhook da Brasil NFe (spec §7.4). Envelope: { event, deliveryId, timestamp, data }.
 //

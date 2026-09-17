@@ -208,6 +208,72 @@ describe("reconciliarDocumento", () => {
   })
 })
 
+// C1 (achado crítico da revisão final de 2026-09-17): reconciliarDocumento gravava
+// status:"verificado" incondicionalmente no fim, mesmo quando o documento já estava em um status
+// terminal RECUSADO (denegado/rejeitado) — o único caminho que produz esse estado é a varredura
+// (localizarNoFornecedor grava "denegado" JUNTO com a chave_acesso quando o fornecedor devolve
+// Status 3). Um clique em "Reconciliar" nesse documento baixava o XML, casava os itens e promovia
+// a nota denegada a "verificado", liberando NFD contra uma nota que a SEFAZ recusou.
+describe("reconciliarDocumento — recusa status terminal não autorizado (C1)", () => {
+  beforeEach(() => jest.resetModules())
+  afterEach(() => jest.restoreAllMocks())
+
+  it.each(["denegado", "rejeitado"] as const)(
+    "documento %s com chave: lança ErroFiscal e não toca em nItem/documento/download",
+    async (status) => {
+      const { atualizarNItem, atualizarDocumento } = mockDb({
+        lerDocumento: jest.fn().mockResolvedValue({
+          id: "doc_1", chave_acesso: CHAVE, status,
+          idempotency_key: "order_1:venda:homologacao", ambiente: "homologacao",
+          created_at: "2026-09-17T10:00:00Z", xml_autorizado: null,
+        }),
+      })
+      const baixarArquivo = jest.fn()
+      jest.doMock("../fiscal-client", () => ({ baixarArquivo, localizarPorIdentificador: jest.fn() }))
+
+      const { reconciliarDocumento } = await import("../fiscal-reconciliar.js")
+      const { ErroFiscal } = await import("../tipos.js")
+
+      await expect(reconciliarDocumento("doc_1")).rejects.toThrow(ErroFiscal)
+      await expect(reconciliarDocumento("doc_1")).rejects.toThrow(new RegExp(`doc_1 está ${status}`, "i"))
+
+      expect(baixarArquivo).not.toHaveBeenCalled()
+      expect(atualizarNItem).not.toHaveBeenCalled()
+      expect(atualizarDocumento).not.toHaveBeenCalled()
+    }
+  )
+
+  it("documento verificado: NÃO é bloqueado (re-reconciliar é idempotente)", async () => {
+    const { atualizarDocumento } = mockDb({
+      lerDocumento: jest.fn().mockResolvedValue({
+        id: "doc_1", chave_acesso: CHAVE, status: "verificado",
+        idempotency_key: "order_1:venda:homologacao", ambiente: "homologacao",
+        created_at: "2026-09-17T10:00:00Z", xml_autorizado: null,
+      }),
+    })
+    jest.doMock("../fiscal-client", () => ({
+      baixarArquivo: jest.fn().mockResolvedValue(Buffer.from(XML_OK, "utf8")),
+      localizarPorIdentificador: jest.fn(),
+    }))
+
+    const { reconciliarDocumento } = await import("../fiscal-reconciliar.js")
+    const r = await reconciliarDocumento("doc_1")
+
+    expect(r.verificado).toBe(true)
+    expect(atualizarDocumento).toHaveBeenCalled()
+  })
+})
+
+describe("STATUS_TERMINAIS exportado da lib", () => {
+  it("contém verificado, rejeitado e denegado — a mesma lista que o webhook usava redefinida", async () => {
+    const { STATUS_TERMINAIS } = await import("../fiscal-reconciliar.js")
+    expect(STATUS_TERMINAIS.has("verificado")).toBe(true)
+    expect(STATUS_TERMINAIS.has("rejeitado")).toBe(true)
+    expect(STATUS_TERMINAIS.has("denegado")).toBe(true)
+    expect(STATUS_TERMINAIS.has("montado")).toBe(false)
+  })
+})
+
 describe("reconciliarDocumento — origem do XML", () => {
   beforeEach(() => jest.resetModules())
   afterEach(() => jest.restoreAllMocks())

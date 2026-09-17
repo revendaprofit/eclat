@@ -30,13 +30,32 @@ import { atualizarDocumento, atualizarNItem, lerDocumento, listarItens, listarPo
 import { baixarArquivo, localizarPorIdentificador } from "./fiscal-client"
 import { tipoAmbiente } from "./fiscal-payload"
 import { extrairChaveDoXml, extrairItensDoXml, type ItemXml } from "./fiscal-xml"
-import { ErroFiscal, type FiscalDocumento, type FiscalDocumentoItem } from "./tipos"
+import { ErroFiscal, type FiscalDocumento, type FiscalDocumentoItem, type StatusDocumento } from "./tipos"
+
+// Status que já não mudam mais: reconciliar de novo só baixaria XML à toa. Fonte única — o
+// webhook (src/api/webhooks/brasilnfe/route.ts) importa daqui em vez de redefinir (achado C1 da
+// revisão final de 2026-09-17).
+export const STATUS_TERMINAIS = new Set<StatusDocumento>(["verificado", "rejeitado", "denegado"])
 
 export async function reconciliarDocumento(
   documentoId: string,
   xmlEmMaos?: string
 ): Promise<{ verificado: boolean; divergencias: string[] }> {
   const doc = await lerDocumento(documentoId)
+
+  // C1 (crítico, revisão final de 2026-09-17): o único caminho que grava um documento terminal
+  // COM chave_acesso é a varredura, quando o fornecedor devolve Status 3 (denegado) —
+  // localizarNoFornecedor grava status:"denegado" junto com a chave. Sem esta recusa, um clique
+  // em "Reconciliar" nesse documento baixava o XML, casava os itens pelo código e promovia a nota
+  // denegada a "verificado" — liberando NFD e um novo despacho contra uma nota que a SEFAZ
+  // recusou. "verificado" NÃO entra aqui: re-reconciliar um documento já verificado é idempotente
+  // (mesmo XML, mesmo casamento) e o webhook depende disso continuar permitido pela lib.
+  if (doc.status === "denegado" || doc.status === "rejeitado") {
+    throw new ErroFiscal(
+      `Documento ${documentoId} está ${doc.status} — não há nota autorizada para reconciliar.`
+    )
+  }
+
   if (!doc.chave_acesso) {
     throw new ErroFiscal(
       `Documento ${documentoId} não tem chave de acesso — não há XML para reconciliar.`
