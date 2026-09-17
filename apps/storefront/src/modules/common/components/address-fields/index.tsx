@@ -43,7 +43,15 @@ export default function AddressFields({
   // sem o sufixo do prefixo os data-testid ficam duplicados no DOM (achado da revisão).
   const testid = (base: string) => (prefixo ? `${base}-${prefixo.replace(/_/g, "-")}` : base)
 
-  async function buscarCep(bruto: string) {
+  // `auto`: true quando quem chamou foi o disparo automático (endereço salvo, a
+  // cliente não tocou no CEP), false quando ela digitou o CEP de propósito. No
+  // caminho manual, sobrescrever tudo é o esperado — ela quer o autopreenchimento.
+  // No automático, preserva o que já tinha em vez de reescrever com "": o ViaCEP
+  // devolve logradouro/bairro vazios para CEP geral de município (comum no
+  // interior — src/lib/util/cep.ts aceita `logradouro: ""`), e sobrescrever aqui
+  // apagaria a rua que a cliente já tinha digitado num campo `required`, sem ela
+  // ter mexido em nada (achado da re-revisão — Quebra 2).
+  async function buscarCep(bruto: string, auto = false) {
     const cep = normalizarCep(bruto)
     if (!cepValido(cep)) return
 
@@ -67,11 +75,12 @@ export default function AddressFields({
       if (minhaBusca !== sequenciaBusca.current) return
 
       // Preenchimento vindo da própria busca: aplica direto, sem passar pelo
-      // handler de edição manual que limpa o IBGE abaixo.
-      onChange(n("address_1"), e.logradouro)
-      onChange(n("metadata.bairro"), e.bairro)
-      onChange(n("city"), e.cidade)
-      onChange(n("province"), e.uf)
+      // handler de edição manual que limpa o IBGE abaixo. O IBGE em si sempre
+      // sobrescreve — é o próprio dado que a busca existe para preencher.
+      onChange(n("address_1"), auto ? e.logradouro || v("address_1") : e.logradouro)
+      onChange(n("metadata.bairro"), auto ? e.bairro || v("metadata.bairro") : e.bairro)
+      onChange(n("city"), auto ? e.cidade || v("city") : e.cidade)
+      onChange(n("province"), auto ? e.uf || v("province") : e.uf)
       onChange(n("metadata.municipio_ibge"), e.ibge)
       setAvisoMunicipio(null)
     } catch {
@@ -92,14 +101,26 @@ export default function AddressFields({
   // re-renderiza, e sem ela isso disparia a busca de novo indefinidamente. No máximo
   // uma tentativa automática por CEP — se falhar, fica silenciosa (falha de terceiro
   // nunca bloqueia nada) e a cliente ainda pode digitar o CEP de novo à mão.
+  //
+  // O CEP também precisa ser marcado como resolvido quando chega JÁ com IBGE (ramo
+  // de saída por `ibgeAtual`) — não só depois de uma busca automática de verdade.
+  // Sem isso, o `ref` fica `null`; a cliente edita Cidade, `mudarManualmente` limpa o
+  // IBGE, o efeito reroda (`ibgeAtual` é dependência), acha CEP válido + IBGE vazio +
+  // `ref !== cep`, e dispara a busca de novo — sobrescrevendo o que ela acabou de
+  // digitar e apagando o aviso no meio da digitação (achado da re-revisão — Quebra 1).
   const cepParaAutoBusca = v("postal_code")
   const ibgeAtual = v("metadata.municipio_ibge")
   const cepAutoBuscado = useRef<string | null>(null)
   useEffect(() => {
     const cep = normalizarCep(cepParaAutoBusca)
-    if (!cepValido(cep) || ibgeAtual || cepAutoBuscado.current === cep) return
+    if (!cepValido(cep)) return
+    if (ibgeAtual) {
+      cepAutoBuscado.current = cep
+      return
+    }
+    if (cepAutoBuscado.current === cep) return
     cepAutoBuscado.current = cep
-    void buscarCep(cepParaAutoBusca)
+    void buscarCep(cepParaAutoBusca, true)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cepParaAutoBusca, ibgeAtual])
 
