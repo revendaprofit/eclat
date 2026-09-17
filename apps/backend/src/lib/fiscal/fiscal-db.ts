@@ -157,6 +157,18 @@ export async function lerDocumento(id: string): Promise<FiscalDocumento> {
   return rows[0]
 }
 
+// fiscal_documento.id é uuid no Postgres. Um id malformado (achado da revisão de 2026-09-17) faz
+// o PostgREST recusar com "invalid input syntax for type uuid" — sb() transforma isso num Error
+// genérico, que sem esta checagem vazava como 500 em qualquer rota que aceite um documento_id do
+// cliente. Requisição malformada é 400, não 500 e não 422 (422 é reservado para "uuid válido que
+// não existe" — erro de negócio de verdade). Rotas que recebem documento_id do corpo/query devem
+// chamar isto ANTES de repassar o valor a lerDocumento/reconciliarDocumento.
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+export function ehUuidValido(valor: string): boolean {
+  return UUID_RE.test(valor)
+}
+
 export async function listarPorStatus(
   status: StatusDocumento[],
   limite = 50

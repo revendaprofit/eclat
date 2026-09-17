@@ -39,11 +39,31 @@ medusaIntegrationTestRunner({
       ).rejects.toMatchObject({ response: { status: 400 } })
     })
 
-    it("com documento inexistente responde 422 com mensagem legível", async () => {
+    // fiscal_documento.id é uuid no Postgres. "doc_nao_existe" não tem formato de uuid — a rota
+    // recusa isso ANTES de tentar ler o documento (achado da revisão de 2026-09-17: sem essa
+    // checagem, o PostgREST rejeitava a query com "invalid input syntax for type uuid" e isso
+    // vazava como 500). Requisição malformada é 400, não 422.
+    it("com documento_id malformado (não é uuid) responde 400", async () => {
       await expect(
         api.post(
           "/admin/fiscal/resolver",
           { documento_id: "doc_nao_existe", acao: "marcar_rejeitado" },
+          { headers: admin }
+        )
+      ).rejects.toMatchObject({ response: { status: 400 } })
+    })
+
+    // Uuid bem formado mas que não existe na tabela: passa pela checagem de formato e chega no
+    // caminho de negócio de verdade — "documento não encontrado" (422). É este teste que prova
+    // que o caminho de negócio continua funcionando depois da correção do formato.
+    it("com documento_id uuid válido mas inexistente responde 422 com mensagem legível", async () => {
+      await expect(
+        api.post(
+          "/admin/fiscal/resolver",
+          {
+            documento_id: "00000000-0000-0000-0000-000000000000",
+            acao: "marcar_rejeitado",
+          },
           { headers: admin }
         )
       ).rejects.toMatchObject({
@@ -56,7 +76,7 @@ medusaIntegrationTestRunner({
         api.post(
           "/admin/fiscal/resolver",
           {
-            documento_id: "doc_nao_existe",
+            documento_id: "00000000-0000-0000-0000-000000000000",
             acao: "anexar_chave",
             chave_acesso: "1".repeat(43),
           },
@@ -69,7 +89,7 @@ medusaIntegrationTestRunner({
       await expect(
         api.post(
           "/admin/fiscal/resolver",
-          { documento_id: "doc_nao_existe", acao: "limpar_chave" },
+          { documento_id: "00000000-0000-0000-0000-000000000000", acao: "limpar_chave" },
           { headers: admin }
         )
       ).rejects.toMatchObject({ response: { status: 422 } })

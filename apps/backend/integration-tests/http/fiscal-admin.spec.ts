@@ -35,7 +35,28 @@ medusaIntegrationTestRunner({
       })
     })
 
-    it("POST /admin/fiscal/emitir com pedido inexistente responde 422 com mensagem legível", async () => {
+    // O fiscal_config recém-semeado (migration 0011_fiscal.sql) nasce com emissao_ativa=false —
+    // o interruptor mestre desligado, de propósito, para a loja continuar despachando enquanto o
+    // checkout não coleta CPF (achado N1 da revisão de 2026-09-17). Com o interruptor lido ANTES
+    // de montarItensDoPedido, a rota responde 200 com emissao_desligada:true e nem chega a
+    // procurar o pedido — mesmo um order_id inexistente não vira erro.
+    it("POST /admin/fiscal/emitir com emissao_ativa=false (estado semeado) responde 200 com emissao_desligada", async () => {
+      const r = await api.post(
+        "/admin/fiscal/emitir",
+        { order_id: "order_nao_existe" },
+        { headers: admin }
+      )
+      expect(r.status).toBe(200)
+      expect(r.data.emissao_desligada).toBe(true)
+    })
+
+    // O caso "pedido inexistente → 422 não encontrado" só é alcançável com emissao_ativa=true —
+    // só aí a rota chega a montarItensDoPedido e tenta de fato achar o pedido. Ligar o
+    // interruptor exigiria escrever em fiscal_config no Supabase REAL (não há Postgres de teste
+    // para essa tabela — as rotas fiscais leem direto o Supabase de produção), o que este arquivo
+    // está proibido de fazer. Fica escrito e pulado: destrava ligando emissao_ativa manualmente
+    // (ou com um setup dedicado que grave e depois desfaça) antes de rodar.
+    it.skip("POST /admin/fiscal/emitir com pedido inexistente e emissao_ativa=true responde 422 com mensagem legível", async () => {
       await expect(
         api.post("/admin/fiscal/emitir", { order_id: "order_nao_existe" }, { headers: admin })
       ).rejects.toMatchObject({

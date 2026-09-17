@@ -1,6 +1,6 @@
 import type { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import { ContainerRegistrationKeys } from "@medusajs/framework/utils"
-import { atualizarDocumento, lerDocumento } from "../../../../lib/fiscal/fiscal-db"
+import { atualizarDocumento, ehUuidValido, lerDocumento } from "../../../../lib/fiscal/fiscal-db"
 import { reconciliarDocumento } from "../../../../lib/fiscal/fiscal-reconciliar"
 import { ErroFiscal } from "../../../../lib/fiscal/tipos"
 
@@ -36,6 +36,13 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
 
   if (!documento_id) {
     return res.status(400).json({ error: "documento_id é obrigatório." })
+  }
+  // fiscal_documento.id é uuid no Postgres. Um documento_id malformado (ex.: "doc_nao_existe")
+  // faz o PostgREST recusar a query com "invalid input syntax for type uuid" — sem esta checagem,
+  // lerDocumento vazava esse erro cru como 500 (achado da revisão de 2026-09-17). Requisição
+  // malformada é 400; o 422 "não encontrado" abaixo fica reservado para uuid válido inexistente.
+  if (!ehUuidValido(documento_id)) {
+    return res.status(400).json({ error: "documento_id precisa ser um uuid válido." })
   }
   if (acao !== "anexar_chave" && acao !== "marcar_rejeitado" && acao !== "limpar_chave") {
     return res.status(400).json({
