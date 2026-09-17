@@ -152,4 +152,37 @@ describe("fiscal-client", () => {
     // O token literal não deve aparecer: foi redacionado.
     await expect(transmitir({ modelo: 55 })).rejects.not.toThrow(/token\.a\+b\*c/)
   })
+
+  it("redaciona token com quantificador líder sem lançar SyntaxError", async () => {
+    // Testa que escaparRegex() trata quantificadores líderes (+abc, *abc, ?abc).
+    // Sem escape, new RegExp("+abc", "g") lança SyntaxError: Nothing to repeat.
+    process.env = {
+      ...process.env,
+      BRASILNFE_USER_TOKEN: "+abc",
+      BRASILNFE_COMPANY_TOKEN: "company-token",
+    }
+    jest.resetModules()
+    global.fetch = jest.fn().mockResolvedValue(
+      new Response("erro: token +abc inválido", { status: 500 })
+    ) as unknown as typeof fetch
+    const { transmitir } = await import("../fiscal-client")
+    // Não deve lançar SyntaxError durante redação — helper escapa corretamente.
+    await expect(transmitir({ modelo: 55 })).rejects.toThrow(/\*\*\*/)
+  })
+
+  it("redaciona token com quantificador líder sem vazar", async () => {
+    // Prova que escaparRegex() funciona: quantificador líder não causa crash e valor vaza redacionado.
+    process.env = {
+      ...process.env,
+      BRASILNFE_USER_TOKEN: "+abc",
+      BRASILNFE_COMPANY_TOKEN: "company-token",
+    }
+    jest.resetModules()
+    global.fetch = jest.fn().mockResolvedValue(
+      new Response("erro: token +abc inválido", { status: 500 })
+    ) as unknown as typeof fetch
+    const { transmitir } = await import("../fiscal-client")
+    // O quantificador líder não vaza: foi redacionado.
+    await expect(transmitir({ modelo: 55 })).rejects.not.toThrow(/\+abc/)
+  })
 })

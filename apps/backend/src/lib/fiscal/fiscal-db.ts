@@ -16,11 +16,6 @@ export function fiscalDbConfigured(): boolean {
   return Boolean(SUPABASE_URL && SERVICE_KEY)
 }
 
-// Escapa metacaracteres de regex para uso seguro em new RegExp().
-function escaparRegex(s: string): string {
-  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
-}
-
 async function sb<T = unknown>(path: string, init: RequestInit = {}): Promise<T> {
   const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
     ...init,
@@ -33,8 +28,9 @@ async function sb<T = unknown>(path: string, init: RequestInit = {}): Promise<T>
   })
   if (!res.ok) {
     // Redaciona o corpo para remover a chave de serviço caso ela vaze do servidor.
+    // Usa split/join para substituição literal, evitando regex e metacaracteres.
     const corpo = await res.text()
-    const corpoCensurado = SERVICE_KEY ? corpo.replace(new RegExp(escaparRegex(SERVICE_KEY), "g"), "***") : corpo
+    const corpoCensurado = SERVICE_KEY ? corpo.split(SERVICE_KEY).join("***") : corpo
     throw new Error(`Supabase ${init.method || "GET"} ${path}: ${res.status} ${corpoCensurado}`)
   }
   if (res.status === 204) return undefined as T

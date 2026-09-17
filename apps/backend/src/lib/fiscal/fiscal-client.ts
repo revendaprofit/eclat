@@ -13,11 +13,6 @@ export function brasilNfeConfigured(): boolean {
   return Boolean(USER_TOKEN && COMPANY_TOKEN)
 }
 
-// Escapa metacaracteres de regex para uso seguro em new RegExp().
-function escaparRegex(s: string): string {
-  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
-}
-
 export type RespostaTransmissao = {
   autorizado: boolean
   chave_acesso: string | null
@@ -51,9 +46,10 @@ async function chamar<T = unknown>(
   const texto = await res.text()
   if (!res.ok) {
     // Redaciona tokens caso vazem no corpo da resposta do servidor.
+    // Usa split/join para substituição literal, evitando regex e metacaracteres.
     let textoRedacionado = texto
-    if (USER_TOKEN) textoRedacionado = textoRedacionado.replace(new RegExp(escaparRegex(USER_TOKEN), "g"), "***")
-    if (COMPANY_TOKEN) textoRedacionado = textoRedacionado.replace(new RegExp(escaparRegex(COMPANY_TOKEN), "g"), "***")
+    if (USER_TOKEN) textoRedacionado = textoRedacionado.split(USER_TOKEN).join("***")
+    if (COMPANY_TOKEN) textoRedacionado = textoRedacionado.split(COMPANY_TOKEN).join("***")
     throw new ErroFiscal(`Brasil NFe ${init.method || "GET"} ${caminho}: ${res.status} ${textoRedacionado}`)
   }
   return (texto ? JSON.parse(texto) : {}) as T
