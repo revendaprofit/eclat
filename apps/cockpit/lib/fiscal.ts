@@ -33,3 +33,49 @@ export function corDoStatus(status: StatusDocumento): "verde" | "amarelo" | "ver
   if (status === "rejeitado" || status === "denegado") return "vermelho"
   return "amarelo"
 }
+
+// ---- Validação do path do proxy (app/api/fiscal/[...path]/route.ts) — achado crítico da revisão ----
+//
+// O catch-all do proxy recebia `path` sem validação e montava a URL da Admin API por
+// concatenação de string. O roteador do Next decodifica cada segmento antes de popular
+// `params.path`, então uma requisição para "/api/fiscal/%2e%2e/%2e%2e/customers" chegava como
+// path = ["..", "..", "customers"]. Isso virava "/admin/fiscal/../../customers", e o WHATWG URL
+// usado por `fetch` normaliza dot-segments: `new URL("http://host/admin/fiscal/../../customers")`
+// colapsa para "/customers". `medusaAdmin()` anexa o bearer token de admin a QUALQUER caminho que
+// receba — ele não sabe que o destino final deixou de ser fiscal. Resultado: qualquer sessão do
+// Cockpit alcançava qualquer rota da Admin API, autenticada, através do proxy fiscal.
+//
+// A correção tem duas camadas: (1) nenhum segmento pode ser "." ou ".." nem conter "/" ou "\" —
+// isso fecha a via de escape por dot-segment; (2) só o primeiro segmento da allowlist abaixo passa
+// — isso limita o proxy às sub-rotas fiscais de fato, mesmo que uma via de escape nova apareça.
+//
+// "emitir" fica de FORA da allowlist de propósito: essa rota transmite nota fiscal de verdade à
+// SEFAZ e não é usada por esta tela. Uma tarefa futura vai chamá-la do servidor, direto por
+// medusaAdmin, sem passar por um proxy que o navegador alcança — não a inclua aqui "para
+// completar". "resolver" e "emitir-devolucao" ainda não existem no backend (serão criadas em
+// tarefa futura), mas já entram na allowlist porque a tela vai precisar delas.
+const ROTAS_FISCAL_PERMITIDAS = new Set([
+  "config",
+  "perfis",
+  "documentos",
+  "reconciliar",
+  "resolver",
+  "emitir-devolucao",
+])
+
+export type ValidacaoCaminhoFiscal =
+  | { ok: true }
+  | { ok: false; status: 400 | 404 }
+
+// 400 = segmento malformado (tentativa de path traversal); 404 = rota bem formada mas fora da
+// allowlist (não confirma pro chamador que a rota "existiria" se estivesse na lista).
+export function validarCaminhoFiscal(path: string[]): ValidacaoCaminhoFiscal {
+  if (path.length === 0) return { ok: false, status: 404 }
+  for (const segmento of path) {
+    if (segmento === "." || segmento === ".." || segmento.includes("/") || segmento.includes("\\")) {
+      return { ok: false, status: 400 }
+    }
+  }
+  if (!ROTAS_FISCAL_PERMITIDAS.has(path[0])) return { ok: false, status: 404 }
+  return { ok: true }
+}

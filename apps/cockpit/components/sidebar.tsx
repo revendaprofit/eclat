@@ -17,6 +17,7 @@ const ITEMS = [
   { href: "/personas", label: "Personas (Minha ÉCLAT)" },
   { href: "/marketing", label: "Marketing & Rastreamento" },
   { href: "/clube", label: "Clube Éclat" },
+  { href: "/fiscal", label: "Fiscal" },
   { href: "/geo", label: "GEO (busca por IA)" },
   { href: "/custos", label: "Custos de Coleção" },
   { href: "/financeiro", label: "Financeiro" },

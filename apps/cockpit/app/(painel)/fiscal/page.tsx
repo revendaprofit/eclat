@@ -278,16 +278,20 @@ function PerfisBlock({
         <div className="grid grid-cols-2 small:grid-cols-4 gap-3">
           <div>
             <label className={label}>Escopo</label>
-            <select className={input} value={form.escopo} onChange={(e) => setForm({ ...form, escopo: e.target.value as Perfil["escopo"], alvo_id: e.target.value === "padrao" ? null : form.alvo_id })}>
+            <select disabled={!!editandoId} className={input} value={form.escopo} onChange={(e) => setForm({ ...form, escopo: e.target.value as Perfil["escopo"], alvo_id: e.target.value === "padrao" ? null : form.alvo_id })}>
               <option value="padrao">Padrão</option>
               <option value="categoria">Categoria</option>
               <option value="produto">Produto</option>
             </select>
+            {/* Escopo e Alvo travados na edição: o backend faz upsert por escopo+alvo_id (merge-duplicates)
+                e descarta o "id" do corpo (não está na allowlist do PATCH) — mudar a chave aqui criaria
+                um perfil novo em silêncio e deixaria o antigo órfão, ainda ativo. */}
+            {editandoId && <p className={hint}>Travado na edição — para mudar o escopo, cadastre um perfil novo.</p>}
           </div>
           {form.escopo !== "padrao" && (
             <div className="col-span-2">
               <label className={label}>ID {form.escopo === "categoria" ? "da categoria" : "do produto"}</label>
-              <input className={input} value={form.alvo_id || ""} onChange={(e) => setForm({ ...form, alvo_id: e.target.value })} />
+              <input disabled={!!editandoId} className={input} value={form.alvo_id || ""} onChange={(e) => setForm({ ...form, alvo_id: e.target.value })} />
             </div>
           )}
           <div><label className={label}>CSOSN</label><input className={input} value={form.csosn} onChange={(e) => setForm({ ...form, csosn: e.target.value })} /></div>
