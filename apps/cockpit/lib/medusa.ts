@@ -597,7 +597,20 @@ export async function medusaListOrders(): Promise<CockpitOrder[]> {
   return (await r.json()).orders
 }
 
-// Pedidos do período com os campos necessários ao DRE (receita, frete, itens p/ COGS).
+// Pagamento do pedido como a Admin API devolve (Parte 4). `data` é o que o provider gravou ao
+// autorizar — pro Mercado Pago inclui a tarifa REAL em centavos (ver lib/pagamento.ts).
+export type PagamentoDoPedido = {
+  provider_id: string
+  amount: number
+  captured_at?: string | null
+  canceled_at?: string | null
+  data?: Record<string, unknown> | null
+}
+// Caminhos de pagamento pedidos no `fields` do detalhe e do DRE (Parte 4).
+export const CAMPOS_DE_PAGAMENTO =
+  "payment_collections.payments.provider_id,payment_collections.payments.amount,payment_collections.payments.captured_at,payment_collections.payments.canceled_at,payment_collections.payments.data"
+
+// Pedidos do período com os campos necessários ao DRE (receita, frete, itens p/ COGS, tarifa).
 export type DreOrder = {
   display_id: number
   status: string
@@ -606,6 +619,7 @@ export type DreOrder = {
   shipping_total: number
   created_at: string
   items: { variant_id: string | null; quantity: number }[]
+  payment_collections?: { payments?: PagamentoDoPedido[] | null }[] | null
 }
 export async function medusaOrdersForDre(de: string, ate: string): Promise<DreOrder[]> {
   const params = new URLSearchParams({ limit: "1000", order: "-created_at" })
@@ -613,7 +627,8 @@ export async function medusaOrdersForDre(de: string, ate: string): Promise<DreOr
   params.set("created_at[$lte]", `${ate}T23:59:59`)
   params.set(
     "fields",
-    "display_id,status,payment_status,item_subtotal,shipping_total,created_at,items.variant_id,items.quantity,items.detail.quantity"
+    "display_id,status,payment_status,item_subtotal,shipping_total,created_at,items.variant_id,items.quantity,items.detail.quantity," +
+      CAMPOS_DE_PAGAMENTO
   )
   const r = await medusaAdmin(`/admin/orders?${params.toString()}`)
   if (!r.ok) throw new Error(`pedidos do período falhou (HTTP ${r.status})`)
@@ -682,6 +697,8 @@ export type CockpitOrderDetail = CockpitOrder & {
   shipping_methods: { name: string; total: number }[]
   fulfillments: OrderFulfillment[]
   metadata?: Record<string, unknown> | null
+  // Pagamentos (Parte 4): lidos por lib/pagamento.ts (método, tarifa real do Mercado Pago).
+  payment_collections?: { payments?: PagamentoDoPedido[] | null }[] | null
 }
 
 // Medusa 2.15.5: `items.quantity` só é calculado quando `items.detail.quantity` também é pedido no
@@ -697,7 +714,8 @@ export const ORDER_DETAIL_FIELDS =
   "shipping_address.first_name,shipping_address.last_name,shipping_address.address_1,shipping_address.city,shipping_address.province,shipping_address.postal_code,shipping_address.country_code,shipping_address.phone,shipping_address.metadata," +
   "billing_address.metadata," +
   "shipping_methods.name,shipping_methods.total," +
-  "fulfillments.id,fulfillments.shipped_at,fulfillments.delivered_at,fulfillments.canceled_at,fulfillments.labels.tracking_number,fulfillments.labels.tracking_url,fulfillments.labels.label_url"
+  "fulfillments.id,fulfillments.shipped_at,fulfillments.delivered_at,fulfillments.canceled_at,fulfillments.labels.tracking_number,fulfillments.labels.tracking_url,fulfillments.labels.label_url," +
+  CAMPOS_DE_PAGAMENTO
 
 export async function medusaGetOrder(id: string): Promise<CockpitOrderDetail> {
   const r = await medusaAdmin(`/admin/orders/${id}?fields=${ORDER_DETAIL_FIELDS}`)

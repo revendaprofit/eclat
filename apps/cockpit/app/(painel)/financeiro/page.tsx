@@ -9,6 +9,8 @@ type Dre = {
   cogs: number
   lucro_bruto: number
   margem_bruta: number
+  taxas_pagamento: number
+  pagamentos_sem_tarifa: number
   despesas: number
   resultado: number
   itens_sem_custo: number
@@ -178,12 +180,18 @@ export default function FinanceiroPage() {
               <span>{brl(dre.lucro_bruto)} <span className="text-xs text-eclat-grafite/50">({(dre.margem_bruta * 100).toFixed(1)}%)</span></span>
             </div>
             <div className="flex justify-between mt-1"><span className="text-eclat-grafite/70">(+) Frete recebido</span><span>{brl(dre.frete)}</span></div>
+            <div className="flex justify-between" data-testid="dre-taxas-pagamento"><span className="text-eclat-grafite/70">(−) Taxas de pagamento</span><span className="text-red-700">−{brl(dre.taxas_pagamento ?? 0)}</span></div>
             <div className="flex justify-between"><span className="text-eclat-grafite/70">(−) Despesas</span><span className="text-red-700">−{brl(dre.despesas)}</span></div>
             <div className="flex justify-between border-t-2 border-eclat-grafite/40 pt-2 mt-1 font-serif text-lg">
               <span>= Resultado</span>
               <span className={dre.resultado >= 0 ? "text-green-700" : "text-red-700"}>{brl(dre.resultado)}</span>
             </div>
           </div>
+          {dre.pagamentos_sem_tarifa > 0 && (
+            <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md p-2 mt-3" data-testid="aviso-sem-tarifa">
+              ⚠ {dre.pagamentos_sem_tarifa} pagamento(s) do Mercado Pago ainda sem a tarifa gravada — as taxas estão subestimadas. Abra o pedido para atualizar.
+            </p>
+          )}
           {dre.itens_sem_custo > 0 && (
             <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md p-2 mt-3">
               ⚠ {dre.itens_sem_custo} item(ns) vendido(s) sem custo cadastrado — o COGS está subestimado. Defina o custo em Produtos &amp; Estoque.

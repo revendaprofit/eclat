@@ -1059,3 +1059,12 @@ sem push (push é sempre o dono quem faz).
 - **Verificado no navegador (backend local 9100 + vitrine 8100 + sandbox):** Pix gerado e persistente após recarregar; cartão APRO 1x → pedido confirmado; cartão FUND → mensagem "O cartão não tem limite…" e nova tentativa na mesma tela → pedido em 3x; 390 px sem rolagem horizontal. Pix PAGO não dá pra simular no sandbox — o caminho "pago → pedido" foi provado pelo cartão e pelo teste de webhook (mesma rotina `complete`).
 - Pendente do dono: olhar as telas (capturas enviadas) e aprovar a copy; push. Próximo: F3 (Cockpit/DRE) ou F4 (produção: credenciais reais, webhook, reconciliação, trocar o texto da PDP).
 
+## 2026-09-17 (noite) — Parte 4: F3 CONCLUÍDA (Cockpit/DRE)
+- `apps/cockpit/lib/pagamento.ts` (puro, 8 testes): `resumoDoPagamento` (Pix / Cartão de crédito · final 3311 · 3x · master / Pix pelo WhatsApp; tarifa e líquido em centavos, `null` quando ainda não gravado — nunca zero) e `taxasDePagamento` (soma da tarifa real por período + contagem dos sem tarifa).
+- Gaveta do pedido: bloco "Pagamento" com método, detalhe, tarifa do Mercado Pago, líquido a receber e id da order no MP; aviso quando a tarifa ainda não veio.
+- DRE (`/api/finance/dre`): nova linha `taxas_pagamento` (centavos) subtraída do resultado + `pagamentos_sem_tarifa`; tela Financeiro mostra "(−) Taxas de pagamento" e o aviso de subestimação. Despesa financeira, fora do COGS (decisão de 15/06).
+- `lib/medusa.ts`: `CAMPOS_DE_PAGAMENTO` no detalhe e no DRE; trava de regressão em `medusa-order-fields.test.ts`.
+- Backend: Pix pago não grava mais o QR nos dados do pagamento (76 testes).
+- Verificado: Cockpit tsc limpo, 120 testes (vitest); Admin API local devolve os pagamentos com os campos novos (#11 cartão 1x tarifa 533, #12 3x, #13 Pix 212, #14 2x). Pendente do dono: abrir Pedidos e Financeiro no Cockpit apontando pro backend local (ou depois do deploy) e conferir o bloco e a linha.
+- Próximo: **F4 — produção** (credenciais reais no Railway/Vercel, webhook com evento "Order", ativar o provider na região e desligar `pp_system_default`, rotina de reconciliação, trocar o texto "Pix pelo WhatsApp" da PDP, compra real de valor baixo + estorno).
+

@@ -7,6 +7,7 @@ import ConferenciaPedido from "@/components/conferencia-pedido"
 import { FiscalDoPedido, type DocumentoFiscal } from "@/components/fiscal-do-pedido"
 import { NfdDoPedido } from "@/components/nfd-do-pedido"
 import { DadosFiscaisDoPedido } from "@/components/dados-fiscais-do-pedido"
+import { resumoDoPagamento, type PagamentoDoPedido } from "@/lib/pagamento"
 
 type Order = {
   id: string
@@ -59,6 +60,8 @@ type OrderDetail = Order & {
   // CPF de cobrança some sem erro de compilação e sem teste (achado da re-revisão).
   billing_address?: { metadata?: Record<string, unknown> | null } | null
   shipping_methods: { name: string; total: number }[]
+  // Pagamentos (Parte 4): método, parcelas e tarifa real vêm de payment.data (lib/pagamento.ts).
+  payment_collections?: { payments?: PagamentoDoPedido[] | null }[] | null
   fulfillments: {
     id: string
     shipped_at: string | null
@@ -80,6 +83,7 @@ type OrderDetail = Order & {
 }
 
 const brl = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
+const brlCent = (cent: number) => brl(cent / 100)
 const dataHora = (iso: string) =>
   new Date(iso).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })
 
@@ -227,6 +231,10 @@ export default function PedidosPage() {
         variante: i.variant_title,
         quantidade: i.quantity,
       })),
+    [det]
+  )
+  const pagamento = useMemo(
+    () => resumoDoPagamento(det?.payment_collections?.flatMap((c) => c.payments ?? []) ?? []),
     [det]
   )
   const conferenciaCompleta = useMemo(() => resumoConferencia(itensConferencia, leituras).completa, [itensConferencia, leituras])
@@ -427,6 +435,34 @@ export default function PedidosPage() {
                   <div className="flex justify-between py-1"><span className="text-eclat-grafite/60">Frete</span><span>{brl(det.shipping_subtotal ?? det.shipping_total)}</span></div>
                   <div className="flex justify-between py-2 border-t border-eclat-pedra/30 font-medium text-base"><span>Total</span><span>{brl(det.total)}</span></div>
                 </section>
+
+                {/* Pagamento (Parte 4): o que a cliente usou e quanto o gateway cobrou */}
+                {pagamento && (
+                  <section data-testid="bloco-pagamento">
+                    <h4 className="text-xs uppercase tracking-wider text-eclat-grafite/60 mb-2">Pagamento</h4>
+                    <p className="text-sm">
+                      {pagamento.metodo}
+                      {pagamento.detalhe && <span className="text-eclat-grafite/60"> · {pagamento.detalhe}</span>}
+                    </p>
+                    {pagamento.ehMercadoPago && (
+                      <div className="text-sm mt-1">
+                        {pagamento.tarifa_centavos != null ? (
+                          <>
+                            <div className="flex justify-between py-0.5"><span className="text-eclat-grafite/60">Tarifa do Mercado Pago</span><span className="text-red-700">−{brlCent(pagamento.tarifa_centavos)}</span></div>
+                            {pagamento.liquido_centavos != null && (
+                              <div className="flex justify-between py-0.5"><span className="text-eclat-grafite/60">Líquido a receber</span><span className="font-medium">{brlCent(pagamento.liquido_centavos)}</span></div>
+                            )}
+                          </>
+                        ) : (
+                          <p className="text-xs text-amber-700">Tarifa ainda não informada pelo Mercado Pago.</p>
+                        )}
+                        {pagamento.mp_order_id && (
+                          <p className="text-xs text-eclat-grafite/50 mt-1 break-all">Mercado Pago: {pagamento.mp_order_id}</p>
+                        )}
+                      </div>
+                    )}
+                  </section>
+                )}
 
                 {/* Entrega */}
                 {det.shipping_address && (

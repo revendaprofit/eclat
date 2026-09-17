@@ -22,3 +22,15 @@ describe("ORDER_DETAIL_FIELDS cobre o que lerDadosFiscais lê", () => {
     expect(pedidos).toContain(caminho)
   })
 })
+
+// Parte 4: o bloco "Pagamento" da gaveta e a linha de taxas do DRE leem payment.data
+// (lib/pagamento.ts). Sem esses caminhos no `fields`, o Medusa devolve o pedido sem pagamentos
+// e a tela some com o bloco em silêncio.
+describe("campos de pagamento (Parte 4)", () => {
+  it.each(["payment_collections.payments.provider_id", "payment_collections.payments.data", "payment_collections.payments.canceled_at"])(
+    "ORDER_DETAIL_FIELDS inclui %s",
+    (caminho) => {
+      expect(ORDER_DETAIL_FIELDS.split(",")).toContain(caminho)
+    }
+  )
+})

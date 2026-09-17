@@ -239,3 +239,9 @@ respeitar está documentado nos comentários de `service.ts` e no §5/§6 da spe
 - **Ambiente local da Parte 4:** `launch.json` da raiz ECLAT ganhou `backend-pagamento` (9100, banco `eclat_pagamento` no contêiner `eclat-pg-test`) e `storefront-pagamento` (8100). Admin local `admin@eclat.local`. `.env`/`.env.local` só no worktree, fora do git.
 - **Para a F4 (go-live), visto na PDP:** o texto "Pagamento por Pix, combinado no WhatsApp logo depois do pedido" precisa sair quando o Mercado Pago entrar.
 
+## Pagamento — F3 (Cockpit/DRE) (2026-09-17, noite)
+- A Admin API devolve os pagamentos do pedido com `fields=payment_collections.payments.{provider_id,amount,captured_at,canceled_at,data}` — confirmado nos pedidos locais (`data` traz `metodo`, `parcelas`, `final_cartao`, `tarifa_centavos`, `liquido_centavos`). Caminhos travados por teste em `lib/medusa-order-fields.test.ts`.
+- Depois de pago, o provider deixa de gravar `qr_code`/`qr_code_base64` no `data` (senão o DRE, que lista até 1000 pedidos com `payments.data`, carregaria imagens em base64 à toa).
+- Os pedidos locais #13 (Pix, `captured`, tarifa R$ 2,12 = 0,99% de R$ 213,90) e #14 (cartão 2x) não foram criados pelo agente nesta sessão. No sandbox, um Pix com `payer.first_name = "APRO"` pode ser aprovado sozinho depois de um tempo — se foi isso, a tela de espera da F2 concluiu o carrinho como desenhado.
+- Cockpit: as rotas `/api/*` passam pelo mesmo middleware de login Supabase das páginas — sem a sessão do dono não dá pra bater no `/api/finance/dre` localmente. Validação visual do bloco "Pagamento" e da linha de taxas fica com o dono (convenção do projeto).
+

@@ -1,10 +1,13 @@
 import { NextResponse } from "next/server"
 import { medusaOrdersForDre } from "@/lib/medusa"
 import { sb } from "@/lib/sb-admin"
+import { taxasDePagamento } from "@/lib/pagamento"
 
 // DRE do período (tudo em CENTAVOS):
-//   Receita produtos + Frete − COGS − Despesas = Resultado
+//   Receita produtos + Frete − COGS − Taxas de pagamento − Despesas = Resultado
 // Receita = pedidos PAGOS ou AUTORIZADOS (exclui cancelados). Frete = linha separada (neutro).
+// Taxas de pagamento = tarifa REAL cobrada pelo gateway em cada pedido (Parte 4, spec §10) —
+// despesa financeira, não COGS (decisão de 2026-06-15).
 const reais2cent = (v: number) => Math.round((v ?? 0) * 100)
 const PAGOS = new Set(["captured", "authorized", "partially_captured"])
 
@@ -57,8 +60,11 @@ export async function GET(req: Request) {
         porCategoria[k] = (porCategoria[k] ?? 0) + e.valor_centavos
       }
 
+    // 4) taxas de pagamento (tarifa real gravada pelo provider em cada pagamento)
+    const taxas = taxasDePagamento(orders)
+
     const lucro_bruto = receita - cogs
-    const resultado = receita + frete - cogs - despesas
+    const resultado = receita + frete - cogs - taxas.total_centavos - despesas
     const margem_bruta = receita > 0 ? lucro_bruto / receita : 0
 
     return NextResponse.json({
@@ -69,6 +75,8 @@ export async function GET(req: Request) {
       cogs,
       lucro_bruto,
       margem_bruta,
+      taxas_pagamento: taxas.total_centavos,
+      pagamentos_sem_tarifa: taxas.sem_tarifa,
       despesas,
       despesas_por_categoria: porCategoria,
       resultado,

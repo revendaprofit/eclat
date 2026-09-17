@@ -98,6 +98,20 @@ describe("MercadoPagoProviderService", () => {
       expect(corpoEnviado.transactions.payments[0].expiration_time).toBe("PT30M") // spec §6: Pix vale 30 min
     })
 
+    it("Pix pago: o QR não vai para os dados do pagamento (só ids, método e tarifa)", async () => {
+      const pixPago = { ...orderPix, status: "processed", status_detail: "accredited" }
+      mockFetchSequencial({ status: 200, corpo: pixPago }, { status: 200, corpo: { results: [{ id: 1, fee_details: [{ amount: 1.98, fee_payer: "collector", type: "mercadopago_fee" }] }] } })
+      const { servico } = criarServico()
+
+      const resultado = await servico.getPaymentStatus({ data: { mp_order_id: "ORDTST_PIX_1" } })
+
+      expect(resultado.status).toBe("captured")
+      expect(resultado.data?.metodo).toBe("pix")
+      expect(resultado.data?.qr_code_base64).toBeUndefined()
+      expect(resultado.data?.qr_code).toBeUndefined()
+      expect(resultado.data?.tarifa_centavos).toBe(198)
+    })
+
     it("Pix: sem CPF, lança em vez de mandar a order sem identificação", async () => {
       const { servico } = criarServico()
       await expect(

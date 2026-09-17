@@ -319,7 +319,9 @@ export default class MercadoPagoProviderService extends AbstractPaymentProvider<
       dados.bandeira = pagamento.payment_method.id
       dados.parcelas = pagamento.payment_method.installments
     }
-    if (pagamento?.payment_method?.type === "bank_transfer") {
+    if (pagamento?.payment_method?.type === "bank_transfer" && !estaAprovada(order)) {
+      // O QR só interessa enquanto o Pix está em aberto. Depois de pago, esses dados viram o
+      // `data` do Payment (lido pelo Cockpit e pelo DRE em lote) — sem a imagem em base64.
       dados.qr_code = pagamento.payment_method.qr_code
       dados.qr_code_base64 = pagamento.payment_method.qr_code_base64
       dados.ticket_url = pagamento.payment_method.ticket_url
