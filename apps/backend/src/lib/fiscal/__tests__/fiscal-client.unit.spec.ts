@@ -1,0 +1,78 @@
+describe("fiscal-client", () => {
+  const OLD = process.env
+
+  beforeEach(() => {
+    jest.resetModules()
+    process.env = {
+      ...OLD,
+      BRASILNFE_USER_TOKEN: "user-token",
+      BRASILNFE_COMPANY_TOKEN: "company-token",
+    }
+  })
+
+  afterEach(() => {
+    process.env = OLD
+    jest.restoreAllMocks()
+  })
+
+  it("envia os dois headers de autenticação", async () => {
+    const spy = jest.fn().mockResolvedValue(new Response("{}", { status: 200 }))
+    global.fetch = spy as unknown as typeof fetch
+    const { transmitir } = await import("../fiscal-client")
+    await transmitir({ modelo: 55 })
+    const headers = spy.mock.calls[0][1].headers as Record<string, string>
+    expect(headers.UserToken).toBe("user-token")
+    expect(headers.Token).toBe("company-token")
+  })
+
+  it("nunca vaza o token na mensagem de erro", async () => {
+    global.fetch = jest
+      .fn()
+      .mockResolvedValue(new Response("erro interno", { status: 500 })) as unknown as typeof fetch
+    const { transmitir } = await import("../fiscal-client")
+    await expect(transmitir({ modelo: 55 })).rejects.toThrow()
+    await expect(transmitir({ modelo: 55 })).rejects.not.toThrow(/user-token|company-token/)
+  })
+
+  it("normaliza resposta autorizada", async () => {
+    global.fetch = jest.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          status: "autorizado",
+          chave: "31260968673407000113550010000000011000000017",
+          numero: 1,
+          serie: 1,
+          xml_url: "https://x/xml",
+          danfe_url: "https://x/pdf",
+        }),
+        { status: 200 }
+      )
+    ) as unknown as typeof fetch
+    const { transmitir } = await import("../fiscal-client")
+    const r = await transmitir({ modelo: 55 })
+    expect(r.autorizado).toBe(true)
+    expect(r.chave_acesso).toHaveLength(44)
+  })
+
+  it("normaliza resposta rejeitada com código e motivo", async () => {
+    global.fetch = jest.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({ status: "rejeitado", codigo_status: "539", motivo: "Duplicidade de NF-e" }),
+        { status: 200 }
+      )
+    ) as unknown as typeof fetch
+    const { transmitir } = await import("../fiscal-client")
+    const r = await transmitir({ modelo: 55 })
+    expect(r.autorizado).toBe(false)
+    expect(r.status_sefaz).toBe("539")
+    expect(r.motivo).toMatch(/Duplicidade/)
+  })
+
+  it("reporta não configurado sem tokens", async () => {
+    process.env = { ...OLD }
+    delete process.env.BRASILNFE_USER_TOKEN
+    delete process.env.BRASILNFE_COMPANY_TOKEN
+    const { brasilNfeConfigured } = await import("../fiscal-client")
+    expect(brasilNfeConfigured()).toBe(false)
+  })
+})
