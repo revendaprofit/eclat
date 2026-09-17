@@ -78,6 +78,12 @@ export async function PATCH(
     const shippingMeta = atual.shipping_address?.metadata
     const billingMeta = atual.billing_address?.metadata
 
+    // Espelha montarMetadataFiscal (apps/storefront/src/lib/util/endereco-fiscal.ts):
+    // mesmas três chaves no metadata do endereço. O Cockpit é um app separado e não
+    // importa da vitrine, então isto é uma cópia manual — mudar uma chave lá exige
+    // mudar aqui também. O fallback diverge de propósito: a vitrine aplica "S/N"
+    // quando falta número; esta rota recusa com 422 acima (faltamDadosFiscaisPedido),
+    // porque aqui é o operador corrigindo o dado, não a cliente sem como informar.
     const novoShippingMeta: Record<string, unknown> = {
       ...(shippingMeta ?? {}),
       numero: dados.numero,
