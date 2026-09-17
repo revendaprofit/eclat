@@ -1,15 +1,29 @@
 import { NextResponse } from "next/server"
-import { medusaGetOrder, medusaFulfillOrder, medusaMergeOrderMetadata, medusaShipFulfillment } from "@/lib/medusa"
+import { medusaGetOrder, medusaFulfillOrder, medusaMergeOrderMetadata, medusaShipFulfillment, medusaAdmin } from "@/lib/medusa"
 import { validarConferencia, type ConferenciaEnviada } from "@/lib/leitor"
+import type { StatusDocumento } from "@/lib/fiscal"
 import { createSupabaseServer } from "@/lib/supabase/server"
 import { carrierCreateLabel } from "@/lib/shipping"
 import { sendWhatsappText } from "@/lib/evolution"
 
-// Despacha um pedido: confere as peças (leitor) + cria fulfillment + marca envio (com rastreio) + avisa o
-// cliente por WhatsApp. Rastreio: manual (tracking_number) OU gerado pela transportadora (use_carrier).
-// Conferência (spec leitor-codigo-barras F1): a tela manda as leituras; o servidor recalcula contra os
-// itens reais do pedido e só despacha conferência divergente com motivo. O registro vai para
-// metadata.conferencia ANTES do fulfillment.
+// Despacha um pedido: confere as peças (leitor) + emite a NF-e + cria fulfillment + marca envio
+// (com rastreio) + avisa o cliente por WhatsApp. Rastreio: manual (tracking_number) OU gerado pela
+// transportadora (use_carrier). Conferência (spec leitor-codigo-barras F1): a tela manda as
+// leituras; o servidor recalcula contra os itens reais do pedido e só despacha conferência
+// divergente com motivo. O registro vai para metadata.conferencia ANTES do fulfillment.
+
+// Resposta de POST /admin/fiscal/emitir (Admin API, chamada direto por medusaAdmin — nunca pelo
+// proxy /api/fiscal/*: "emitir" fica de fora da allowlist de propósito, porque transmite nota real
+// à SEFAZ e o proxy é alcançável pelo navegador. Ver o comentário de validarCaminhoFiscal em
+// lib/fiscal.ts para a cadeia completa do achado da revisão).
+type DocumentoFiscalEmitido = {
+  id: string
+  status: StatusDocumento
+  chave_acesso: string | null
+  numero: number | null
+  rejeicao_codigo: string | null
+  rejeicao_motivo: string | null
+}
 
 function normalizaWhatsapp(phone: string): string {
   const d = phone.replace(/\D/g, "")
@@ -30,6 +44,7 @@ export async function POST(
     use_carrier?: boolean
     notify?: boolean
     conferencia?: ConferenciaEnviada
+    emitir_nfe?: boolean
   }
 
   try {
@@ -56,6 +71,44 @@ export async function POST(
       return NextResponse.json({ error: conferencia.erro }, { status: 400 })
     }
     await medusaMergeOrderMetadata(id, { conferencia: conferencia.registro })
+
+    // 0.5) NF-e de venda — a DANFE precisa ir dentro da caixa, então emite antes do fulfillment.
+    // Falha de emissão ABORTA o despacho: despachar sem nota é pior que não despachar. Nota
+    // rejeitada ou denegada também aborta, com código e motivo visíveis ao operador.
+    if (body.emitir_nfe !== false) {
+      const r = await medusaAdmin("/admin/fiscal/emitir", {
+        method: "POST",
+        body: JSON.stringify({ order_id: id }),
+      })
+      const dados = (await r.json().catch(() => ({}))) as { documento?: DocumentoFiscalEmitido; error?: string }
+      if (!r.ok || !dados.documento) {
+        return NextResponse.json(
+          { error: `NF-e não emitida: ${dados.error ?? "erro desconhecido"}` },
+          { status: 422 }
+        )
+      }
+      if (dados.documento.status === "rejeitado" || dados.documento.status === "denegado") {
+        return NextResponse.json(
+          {
+            error: `NF-e ${dados.documento.status}: ${dados.documento.rejeicao_motivo ?? "sem motivo informado"} (código ${dados.documento.rejeicao_codigo ?? "?"})`,
+          },
+          { status: 422 }
+        )
+      }
+      await medusaMergeOrderMetadata(id, {
+        fiscal: {
+          documento_id: dados.documento.id,
+          chave_acesso: dados.documento.chave_acesso,
+          numero: dados.documento.numero,
+        },
+      })
+    } else {
+      // Saída de escape para o operador despachar sem nota num caso excepcional — mas isso não
+      // pode passar em silêncio: fica registrado no log do servidor.
+      console.warn(
+        `[fiscal] pedido ${id} despachado SEM emissão de NF-e (emitir_nfe=false)${operador ? ` — operador ${operador}` : ""}`
+      )
+    }
 
     // 1) rastreio: transportadora ou manual
     let label: { tracking_number: string; tracking_url: string; label_url: string } | undefined

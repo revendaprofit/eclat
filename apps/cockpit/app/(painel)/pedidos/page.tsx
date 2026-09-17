@@ -4,6 +4,8 @@ import { useCallback, useEffect, useMemo, useState } from "react"
 import { agruparDescontosPedido, etiquetaConjunto, residualDesconto } from "@/lib/pedido-conjunto"
 import { resumoConferencia, type ItemPedido, type RegistroConferencia } from "@/lib/leitor"
 import ConferenciaPedido from "@/components/conferencia-pedido"
+import { FiscalDoPedido, type DocumentoFiscal } from "@/components/fiscal-do-pedido"
+import { NfdDoPedido } from "@/components/nfd-do-pedido"
 
 type Order = {
   id: string
@@ -53,7 +55,9 @@ type OrderDetail = Order & {
     canceled_at: string | null
     labels: { tracking_number: string | null; tracking_url: string | null; label_url: string | null }[]
   }[]
-  metadata?: { conferencia?: RegistroConferencia } & Record<string, unknown> | null
+  metadata?:
+    | ({ conferencia?: RegistroConferencia; fiscal?: { documento_id: string; chave_acesso: string | null; numero: number | null } } & Record<string, unknown>)
+    | null
 }
 
 const brl = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
@@ -99,6 +103,15 @@ export default function PedidosPage() {
   // Conferência com o leitor de código de barras (spec leitor-codigo-barras F1)
   const [leituras, setLeituras] = useState<string[]>([])
   const [motivo, setMotivo] = useState("")
+  // Fiscal (Task 14): documento de venda do pedido, buscado à parte via o proxy fiscal
+  const [docFiscal, setDocFiscal] = useState<DocumentoFiscal | null>(null)
+
+  const carregarFiscal = useCallback((orderId: string) => {
+    fetch(`/api/fiscal/documentos?order_id=${orderId}`, { cache: "no-store" })
+      .then((r) => r.json())
+      .then((d) => setDocFiscal(d?.documento ?? null))
+      .catch(() => setDocFiscal(null))
+  }, [])
 
   const carregar = useCallback(async () => {
     setLoading(true)
@@ -122,6 +135,7 @@ export default function PedidosPage() {
   useEffect(() => {
     if (!detId) {
       setDet(null)
+      setDocFiscal(null)
       return
     }
     setTrackNum("")
@@ -129,12 +143,14 @@ export default function PedidosPage() {
     setNotify(true)
     setLeituras([])
     setMotivo("")
+    setDocFiscal(null)
     setDetLoading(true)
     fetch(`/api/orders/${detId}`, { cache: "no-store" })
       .then((r) => r.json())
       .then((d) => setDet(d.error ? null : d))
       .finally(() => setDetLoading(false))
-  }, [detId])
+    carregarFiscal(detId)
+  }, [detId, carregarFiscal])
 
   async function despachar(useCarrier: boolean) {
     if (!det) return
@@ -162,6 +178,7 @@ export default function PedidosPage() {
       alert(msg)
       const rr = await fetch(`/api/orders/${det.id}`, { cache: "no-store" })
       if (rr.ok) setDet(await rr.json())
+      carregarFiscal(det.id)
       carregar()
     } catch (e) {
       alert((e as Error).message)
@@ -183,6 +200,17 @@ export default function PedidosPage() {
   )
   const conferenciaCompleta = useMemo(() => resumoConferencia(itensConferencia, leituras).completa, [itensConferencia, leituras])
   const podeDespachar = conferenciaCompleta || motivo.trim().length > 0
+
+  const itensParaDevolucao = useMemo(
+    () =>
+      (det?.items ?? []).map((i) => ({
+        line_item_id: i.id,
+        titulo: i.title,
+        variante: i.variant_title,
+        quantidade_pedido: i.quantity,
+      })),
+    [det]
+  )
 
   const filtrados = useMemo(() => {
     const q = busca.trim().toLowerCase()
@@ -390,6 +418,12 @@ export default function PedidosPage() {
                       </p>
                     )}
                   </section>
+                )}
+
+                {/* Fiscal (Task 14): status da NF-e de venda + devolução manual (NFD) */}
+                <FiscalDoPedido documento={docFiscal} onAtualizado={() => carregarFiscal(det.id)} />
+                {docFiscal && (
+                  <NfdDoPedido orderId={det.id} statusDocumentoVenda={docFiscal.status} itens={itensParaDevolucao} />
                 )}
 
                 {/* Despacho */}
