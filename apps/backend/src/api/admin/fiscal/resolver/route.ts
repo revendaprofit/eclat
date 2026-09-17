@@ -4,7 +4,7 @@ import { atualizarDocumento, lerDocumento } from "../../../../lib/fiscal/fiscal-
 import { reconciliarDocumento } from "../../../../lib/fiscal/fiscal-reconciliar"
 import { ErroFiscal } from "../../../../lib/fiscal/tipos"
 
-type Acao = "anexar_chave" | "marcar_rejeitado"
+type Acao = "anexar_chave" | "marcar_rejeitado" | "limpar_chave"
 
 const MOTIVO_PADRAO =
   "Operador confirmou no painel da Brasil NFe que esta nota não foi transmitida."
@@ -37,8 +37,10 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
   if (!documento_id) {
     return res.status(400).json({ error: "documento_id é obrigatório." })
   }
-  if (acao !== "anexar_chave" && acao !== "marcar_rejeitado") {
-    return res.status(400).json({ error: "acao inválida. Use anexar_chave ou marcar_rejeitado." })
+  if (acao !== "anexar_chave" && acao !== "marcar_rejeitado" && acao !== "limpar_chave") {
+    return res.status(400).json({
+      error: "acao inválida. Use anexar_chave, marcar_rejeitado ou limpar_chave.",
+    })
   }
 
   // Identifica quem fez a chamada, sem vazar segredo nenhum no log.
@@ -63,6 +65,29 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
         throw new ErroFiscal(`Documento fiscal ${documento_id} não encontrado.`)
       }
       throw erroLeitura
+    }
+
+    if (acao === "limpar_chave") {
+      // Só se aplica a quem está com chave gravada mas cuja reconciliação nunca confirmou —
+      // aqui o "resolver" original errou a chave. Documento verificado nunca entra aqui: a
+      // chave ali já foi confirmada contra o XML assinado pela SEFAZ.
+      if (doc.status !== "autorizado_nao_verificado" || doc.verificado_em) {
+        throw new ErroFiscal(
+          `Documento ${documento_id} está em status "${doc.status}"` +
+            (doc.verificado_em ? " e já foi verificado pela reconciliação" : "") +
+            '. limpar_chave só se aplica a documentos em "autorizado_nao_verificado" cuja ' +
+            "reconciliação ainda não confirmou (sem verificado_em) — serve para corrigir uma " +
+            "chave anexada errada. Depois de verificado, a chave não pode mais ser apagada."
+        )
+      }
+      logger.info(
+        `[fiscal] resolver ${documento_id}: operador ${operador} limpou a chave anexada manualmente`
+      )
+      const atualizado = await atualizarDocumento(doc.id, {
+        chave_acesso: null,
+        status: "transmitido_sem_confirmacao",
+      })
+      return res.json({ documento: atualizado })
     }
 
     if (doc.status !== "transmitido_sem_confirmacao" || doc.chave_acesso) {
