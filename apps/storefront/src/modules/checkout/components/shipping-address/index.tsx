@@ -41,10 +41,7 @@ const ShippingAddress = ({
   })
 
   const countriesInRegion = useMemo(
-    () =>
-      cart?.region?.countries
-        ?.map((c) => c.iso_2)
-        .filter((c): c is string => Boolean(c)),
+    () => cart?.region?.countries?.map((c) => c.iso_2),
     [cart?.region]
   )
 
@@ -166,7 +163,6 @@ const ShippingAddress = ({
           onChange={(campo, valor) =>
             setFormData((p) => ({ ...p, [campo]: valor }))
           }
-          countriesInRegion={countriesInRegion}
           region={cart?.region}
         />
       </div>

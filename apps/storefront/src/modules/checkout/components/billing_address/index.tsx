@@ -1,7 +1,7 @@
 import { HttpTypes } from "@medusajs/types"
 import Input from "@modules/common/components/input"
 import AddressFields from "@modules/common/components/address-fields"
-import React, { useMemo, useState } from "react"
+import React, { useState } from "react"
 
 const BillingAddress = ({ cart }: { cart: HttpTypes.StoreCart | null }) => {
   const [formData, setFormData] = useState<Record<string, string>>({
@@ -22,14 +22,6 @@ const BillingAddress = ({ cart }: { cart: HttpTypes.StoreCart | null }) => {
     "billing_address.metadata.municipio_ibge":
       String((cart?.billing_address?.metadata as Record<string, unknown>)?.municipio_ibge ?? ""),
   })
-
-  const countriesInRegion = useMemo(
-    () =>
-      cart?.region?.countries
-        ?.map((c) => c.iso_2)
-        .filter((c): c is string => Boolean(c)),
-    [cart?.region]
-  )
 
   const handleChange = (
     e: React.ChangeEvent<
@@ -87,7 +79,6 @@ const BillingAddress = ({ cart }: { cart: HttpTypes.StoreCart | null }) => {
           onChange={(campo, valor) =>
             setFormData((p) => ({ ...p, [campo]: valor }))
           }
-          countriesInRegion={countriesInRegion}
           region={cart?.region}
         />
       </div>
