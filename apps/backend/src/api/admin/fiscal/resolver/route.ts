@@ -9,6 +9,16 @@ type Acao = "anexar_chave" | "marcar_rejeitado"
 const MOTIVO_PADRAO =
   "Operador confirmou no painel da Brasil NFe que esta nota não foi transmitida."
 
+// lerDocumento (fiscal-db.ts) lança um Error genérico tanto para "documento não encontrado"
+// quanto para falha de infraestrutura (Supabase fora do ar, tabela ausente) — mas com mensagens
+// distintas. Só o primeiro caso é erro de negócio (422); o resto é infra e precisa propagar como
+// está para virar 500 (achado crítico da revisão de 2026-09-17: um catch cego aqui mascarava um
+// blip do Supabase como "documento não encontrado", escondendo o problema real do operador e não
+// disparando alerta nenhum de 5xx).
+function ehErroDeNaoEncontrado(erro: Error): boolean {
+  return /não encontrado/i.test(erro.message)
+}
+
 // POST /admin/fiscal/resolver { documento_id, acao, chave_acesso?, motivo? }
 //
 // Saída manual para o documento que fica preso em transmitido_sem_confirmacao sem chave de
@@ -41,13 +51,18 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
       throw new ErroFiscal("chave_acesso precisa ter exatamente 44 dígitos numéricos.")
     }
 
-    // Normaliza qualquer falha de leitura (inclusive "não encontrado") para ErroFiscal — regra
-    // de negócio da rota, não erro de infraestrutura.
+    // Só converte em ErroFiscal (422) o caso real de "não encontrado". Qualquer outra falha
+    // (rede, Supabase fora do ar, tabela ausente) propaga como está e vira 500 no catch externo —
+    // erro de infraestrutura não é erro do operador.
     let doc
     try {
       doc = await lerDocumento(documento_id)
-    } catch {
-      throw new ErroFiscal(`Documento fiscal ${documento_id} não encontrado.`)
+    } catch (e) {
+      const erroLeitura = e as Error
+      if (ehErroDeNaoEncontrado(erroLeitura)) {
+        throw new ErroFiscal(`Documento fiscal ${documento_id} não encontrado.`)
+      }
+      throw erroLeitura
     }
 
     if (doc.status !== "transmitido_sem_confirmacao" || doc.chave_acesso) {
