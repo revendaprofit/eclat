@@ -5,6 +5,7 @@
 // reemitir. Nota fiscal duplicada é obrigação fiscal em duplicidade — exige cancelamento formal
 // em 24h e, passado o prazo, vira apuração errada.
 
+import { createHash } from "node:crypto"
 import {
   acharPorIdempotencia, atualizarDocumento, criarDocumento, criarItens, getConfig, listPerfis,
 } from "./fiscal-db"
@@ -18,6 +19,22 @@ export function chaveIdempotencia(
   ambiente: Ambiente
 ): string {
   return `${orderId}:${tipo}:${ambiente}`
+}
+
+// Resumo determinístico do CONJUNTO devolvido (achado crítico da revisão de 2026-09-17): uma
+// chave de idempotência só por pedido faz a segunda remessa de devolução colidir com a primeira
+// e devolver, em silêncio, o documento da remessa errada com HTTP 200 — sem transmitir nada da
+// segunda. O digest entra na chave de emitir-devolucao/route.ts junto com chaveIdempotencia, para
+// que a MESMA devolução repetida continue idempotente, e uma devolução DIFERENTE gere chave nova.
+// Puro e determinístico: mesmos pares (line_item_id, quantidade), em qualquer ordem de entrada,
+// produzem o mesmo digest — por isso ordena por line_item_id antes de serializar.
+export function digestDevolvidos(
+  itens: Array<{ line_item_id: string; quantidade: number }>
+): string {
+  const normalizado = itens
+    .map((it) => ({ line_item_id: it.line_item_id, quantidade: it.quantidade }))
+    .sort((a, b) => (a.line_item_id < b.line_item_id ? -1 : a.line_item_id > b.line_item_id ? 1 : 0))
+  return createHash("sha256").update(JSON.stringify(normalizado)).digest("hex").slice(0, 16)
 }
 
 // Um documento já resolvido não deve ser reemitido nunca. Exportado porque a mesma regra vale

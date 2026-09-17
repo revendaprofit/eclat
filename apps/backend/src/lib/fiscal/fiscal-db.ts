@@ -119,6 +119,18 @@ export async function documentoDeVendaDoPedido(
   return rows?.[0] ?? null
 }
 
+// Todas as NFDs já emitidas contra uma nota de venda (medusa_line_item da venda ==
+// documento_origem_id da devolução). Usado para somar quanto de cada item já foi devolvido antes
+// de aceitar uma nova devolução (achado crítico da revisão de 2026-09-17 — ver
+// emitir-devolucao/route.ts).
+export async function listarDevolucoesDoDocumento(
+  documentoOrigemId: string
+): Promise<FiscalDocumento[]> {
+  return sb<FiscalDocumento[]>(
+    `fiscal_documento?documento_origem_id=eq.${encodeURIComponent(documentoOrigemId)}&tipo=eq.devolucao&select=*`
+  )
+}
+
 export async function lerDocumento(id: string): Promise<FiscalDocumento> {
   const rows = await sb<FiscalDocumento[]>(`fiscal_documento?id=eq.${encodeURIComponent(id)}&select=*&limit=1`)
   if (!rows?.[0]) throw new Error(`Documento fiscal ${id} não encontrado.`)

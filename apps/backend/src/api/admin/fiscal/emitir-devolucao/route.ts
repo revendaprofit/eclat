@@ -1,12 +1,12 @@
 import type { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import { ContainerRegistrationKeys } from "@medusajs/framework/utils"
-import { chaveIdempotencia, JA_RESOLVIDO } from "../../../../lib/fiscal/fiscal-emissao"
+import { chaveIdempotencia, digestDevolvidos, JA_RESOLVIDO } from "../../../../lib/fiscal/fiscal-emissao"
 import { montarItensDoPedido } from "../../../../lib/fiscal/fiscal-pedido"
 import { montarPayloadDevolucao } from "../../../../lib/fiscal/fiscal-payload-devolucao"
 import { previsualizar, transmitir } from "../../../../lib/fiscal/fiscal-client"
 import {
   acharPorIdempotencia, atualizarDocumento, criarDocumento, criarItens,
-  documentoDeVendaDoPedido, getConfig, listPerfis, listarItens,
+  documentoDeVendaDoPedido, getConfig, listPerfis, listarDevolucoesDoDocumento, listarItens,
 } from "../../../../lib/fiscal/fiscal-db"
 import { ErroFiscal } from "../../../../lib/fiscal/tipos"
 
@@ -17,9 +17,13 @@ type ItemDevolvido = { line_item_id: string; quantidade: number }
 // Capacidade de NFD manual (spec §3 e §8) — o botão "Emitir NFD" do Cockpit chama esta rota.
 // A emissão automática (Projeto B) não existe ainda; aqui é sempre o operador que decide.
 //
-// Limitação conhecida (decisão de produto, não deste código): a chave de idempotência é
-// {order_id}:devolucao:{ambiente} — UMA devolução por pedido por ambiente. Se a cliente devolver
-// em duas remessas separadas, a segunda tentativa colide com a primeira. Ver relatório da tarefa.
+// A chave de idempotência é {order_id}:devolucao:{ambiente}:{digest do conjunto devolvido}
+// (achado crítico da revisão de 2026-09-17: uma chave só por pedido fazia a segunda remessa de
+// devolução colidir com a primeira e devolver, em silêncio, o documento ERRADO com HTTP 200 —
+// sem transmitir nada da segunda). Com o digest, a MESMA devolução repetida continua idempotente
+// (mesmo conjunto → mesma chave → devolve o documento existente); uma devolução DIFERENTE do
+// mesmo pedido gera chave nova e emite de verdade. A trava complementar de quantidade (abaixo)
+// impede devolver o mesmo item duas vezes só porque o conjunto mudou.
 export async function POST(req: MedusaRequest, res: MedusaResponse) {
   const logger = req.scope.resolve(ContainerRegistrationKeys.LOGGER)
   const { order_id, itens, previa } = (req.body || {}) as {
@@ -50,12 +54,28 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
 
     // A trava de "documento não verificado" já é responsabilidade de montarPayloadDevolucao —
     // não duplicamos a regra aqui, só deixamos a função lançar o ErroFiscal dela.
-    const [itensOrigem, dadosPedido, config, perfis] = await Promise.all([
+    const [itensOrigem, dadosPedido, config, perfis, devolucoesAnteriores] = await Promise.all([
       listarItens(doc.id),
       montarItensDoPedido(req.scope, order_id),
       getConfig(),
       listPerfis(),
+      listarDevolucoesDoDocumento(doc.id),
     ])
+
+    // Soma, por item, o que já foi devolvido em NFDs anteriores RESOLVIDAS deste mesmo pedido —
+    // só essas contam: uma "transmitido_sem_confirmacao" ainda não se sabe se virou nota de
+    // verdade, e uma "rejeitado" não devolveu nada de fato.
+    const quantidadesJaDevolvidas = new Map<string, number>()
+    for (const devolucao of devolucoesAnteriores) {
+      if (!JA_RESOLVIDO.has(devolucao.status)) continue
+      const itensDaDevolucao = await listarItens(devolucao.id)
+      for (const it of itensDaDevolucao) {
+        quantidadesJaDevolvidas.set(
+          it.medusa_line_item_id,
+          (quantidadesJaDevolvidas.get(it.medusa_line_item_id) ?? 0) + it.quantidade
+        )
+      }
+    }
 
     const { payload, itens_documento } = montarPayloadDevolucao({
       config,
@@ -66,6 +86,7 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
       itensPedido: dadosPedido.itens,
       // A UF do destinatário ORIGINAL (a mesma da venda) — não a UF atual do cadastro.
       ufDestinatarioOriginal: dadosPedido.destinatario.uf,
+      quantidadesJaDevolvidas,
     })
 
     if (previa) {
@@ -78,8 +99,9 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
       )
     }
 
-    // Idempotência: uma chave por pedido+tipo+ambiente. Documento já resolvido não é reemitido.
-    const key = chaveIdempotencia(order_id, "devolucao", config.ambiente)
+    // Idempotência: uma chave por pedido+tipo+ambiente+conjunto devolvido. Documento já
+    // resolvido para o MESMO conjunto não é reemitido; um conjunto diferente gera chave nova.
+    const key = `${chaveIdempotencia(order_id, "devolucao", config.ambiente)}:${digestDevolvidos(itens)}`
     const existente = await acharPorIdempotencia(key)
     if (existente && JA_RESOLVIDO.has(existente.status)) {
       return res.json({ documento: existente })

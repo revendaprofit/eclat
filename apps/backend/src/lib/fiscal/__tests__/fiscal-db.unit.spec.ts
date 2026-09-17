@@ -33,6 +33,37 @@ describe("fiscal-db", () => {
     expect(doc?.id).toBe("doc_1")
   })
 
+  it("listarDevolucoesDoDocumento devolve as devoluções do documento de origem", async () => {
+    let urlChamada = ""
+    global.fetch = jest.fn().mockImplementation((url: string) => {
+      urlChamada = url
+      return Promise.resolve(
+        new Response(JSON.stringify([{ id: "dev_1", tipo: "devolucao", documento_origem_id: "doc_1" }]), {
+          status: 200,
+        })
+      )
+    }) as unknown as typeof fetch
+    const { listarDevolucoesDoDocumento } = await import("../fiscal-db.js")
+    const devolucoes = await listarDevolucoesDoDocumento("doc_1")
+    expect(devolucoes).toHaveLength(1)
+    expect(devolucoes[0].id).toBe("dev_1")
+    // encodeURIComponent no id — padrão obrigatório de todo identificador interpolado.
+    expect(urlChamada).toContain("documento_origem_id=eq.doc_1")
+    expect(urlChamada).toContain("tipo=eq.devolucao")
+  })
+
+  it("listarDevolucoesDoDocumento escapa o id via encodeURIComponent", async () => {
+    let urlChamada = ""
+    global.fetch = jest.fn().mockImplementation((url: string) => {
+      urlChamada = url
+      return Promise.resolve(new Response("[]", { status: 200 }))
+    }) as unknown as typeof fetch
+    const { listarDevolucoesDoDocumento } = await import("../fiscal-db.js")
+    await listarDevolucoesDoDocumento("doc com espaço")
+    expect(urlChamada).toContain(encodeURIComponent("doc com espaço"))
+    expect(urlChamada).not.toContain("doc com espaço")
+  })
+
   it("propaga erro legível quando o Supabase responde erro", async () => {
     global.fetch = jest.fn().mockResolvedValue(
       new Response("boom", { status: 500 })

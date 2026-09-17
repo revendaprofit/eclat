@@ -34,6 +34,12 @@ export function montarPayloadDevolucao(args: {
   devolvidos: Array<{ line_item_id: string; quantidade: number }>
   itensPedido: ItemPedido[]
   ufDestinatarioOriginal: string
+  // Soma, por medusa_line_item_id, do que já foi devolvido em NFDs anteriores RESOLVIDAS deste
+  // mesmo documento de venda (achado crítico da revisão de 2026-09-17). Sem isso, a chave de
+  // idempotência por CONJUNTO devolvido (emitir-devolucao/route.ts) permitiria devolver o mesmo
+  // item duas vezes só porque cada remessa tem um conjunto diferente. Default vazio para não
+  // quebrar quem ainda não passa o mapa (ex.: chamadas antigas nos testes).
+  quantidadesJaDevolvidas?: Map<string, number>
 }): {
   payload: Record<string, unknown>
   itens_ordenados: ItemPedido[]
@@ -41,6 +47,7 @@ export function montarPayloadDevolucao(args: {
 } {
   const {
     config, perfis, documentoOrigem, itensOrigem, devolvidos, itensPedido, ufDestinatarioOriginal,
+    quantidadesJaDevolvidas = new Map<string, number>(),
   } = args
 
   // --- Trava de segurança (spec §7.3) ---------------------------------------
@@ -86,6 +93,16 @@ export function montarPayloadDevolucao(args: {
     if (dev.quantidade < 1 || dev.quantidade > origem.quantidade) {
       throw new ErroFiscal(
         `Quantidade a devolver (${dev.quantidade}) é maior que a quantidade vendida (${origem.quantidade}).`
+      )
+    }
+
+    // Soma com o que outras NFDs (resolvidas) já devolveram deste mesmo item — a checagem acima
+    // sozinha não pega uma segunda devolução do mesmo item em duas remessas diferentes.
+    const jaDevolvido = quantidadesJaDevolvidas.get(dev.line_item_id) ?? 0
+    if (jaDevolvido + dev.quantidade > origem.quantidade) {
+      throw new ErroFiscal(
+        `Item ${dev.line_item_id}: já foram devolvidas ${jaDevolvido} de ${origem.quantidade} unidades vendidas em NFDs anteriores. ` +
+          `Esta devolução pede mais ${dev.quantidade} unidade(s), o que passaria do total vendido — restam ${origem.quantidade - jaDevolvido} para devolver.`
       )
     }
 

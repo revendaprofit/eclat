@@ -1,4 +1,4 @@
-import { chaveIdempotencia } from "../fiscal-emissao"
+import { chaveIdempotencia, digestDevolvidos } from "../fiscal-emissao"
 
 describe("chaveIdempotencia", () => {
   it("compõe pedido + tipo + ambiente", () => {
@@ -15,6 +15,35 @@ describe("chaveIdempotencia", () => {
     expect(chaveIdempotencia("order_1", "venda", "producao")).not.toBe(
       chaveIdempotencia("order_1", "devolucao", "producao")
     )
+  })
+})
+
+// Achado crítico da revisão de 2026-09-17: a idempotência da devolução precisa ser por CONJUNTO
+// devolvido, não só por pedido — senão a segunda remessa colide com a primeira e devolve o
+// documento errado em silêncio. Este digest é o que diferencia um conjunto do outro na chave
+// (emitir-devolucao/route.ts).
+describe("digestDevolvidos", () => {
+  it("é determinístico: o mesmo conjunto sempre gera o mesmo digest", () => {
+    const itens = [{ line_item_id: "li_a", quantidade: 1 }, { line_item_id: "li_b", quantidade: 2 }]
+    expect(digestDevolvidos(itens)).toBe(digestDevolvidos(itens))
+  })
+
+  it("é independente da ordem de entrada (mesma requisição, itens em outra ordem)", () => {
+    const a = [{ line_item_id: "li_a", quantidade: 1 }, { line_item_id: "li_b", quantidade: 2 }]
+    const b = [{ line_item_id: "li_b", quantidade: 2 }, { line_item_id: "li_a", quantidade: 1 }]
+    expect(digestDevolvidos(a)).toBe(digestDevolvidos(b))
+  })
+
+  it("muda quando o conjunto de itens devolvidos muda (duas remessas diferentes)", () => {
+    const remessa1 = [{ line_item_id: "li_a", quantidade: 1 }]
+    const remessa2 = [{ line_item_id: "li_b", quantidade: 1 }]
+    expect(digestDevolvidos(remessa1)).not.toBe(digestDevolvidos(remessa2))
+  })
+
+  it("muda quando só a quantidade do mesmo item muda", () => {
+    const um = [{ line_item_id: "li_a", quantidade: 1 }]
+    const dois = [{ line_item_id: "li_a", quantidade: 2 }]
+    expect(digestDevolvidos(um)).not.toBe(digestDevolvidos(dois))
   })
 })
 

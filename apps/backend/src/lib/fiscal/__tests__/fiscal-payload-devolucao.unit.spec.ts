@@ -199,6 +199,42 @@ describe("rateio do desconto na devolução", () => {
     expect(itens_documento[0].desconto_centavos).toBe(33)
   })
 
+  // Achado importante da revisão de 2026-09-17: o teste de "devolução total" (quantidade
+  // devolvida == vendida) e o de "total fecha com a soma das linhas" (que soma os próprios itens
+  // do payload) passariam mesmo com uma fórmula errada (ex.: sempre estornar o desconto cheio, ou
+  // qualquer fórmula internamente consistente). O teste abaixo usa uma fração DIFERENTE (2 de 3,
+  // não 1 de 3) — só a fórmula proporcional (Math.round(desconto * qtd / vendida)) bate 67.
+  it("devolução parcial (2 de 3, desconto de 100) estorna 67 — prova a fórmula, não só o formato", () => {
+    const { payload, itens_documento } = chamar({
+      itensOrigem: itensOrigemComDesconto,
+      itensPedido: itensPedidoComDesconto,
+      devolvidos: [{ line_item_id: "li_d", quantidade: 2 }],
+    })
+    const item = (payload as any).itens[0]
+    // round(100 * 2 / 3) = round(66.67) = 67
+    expect(item.valor_desconto).toBe("0.67")
+    expect(itens_documento[0].desconto_centavos).toBe(67)
+  })
+
+  it("arredondamento por remessa: três devoluções de 1 unidade cada não somam o desconto original (esperado)", () => {
+    // Cada chamada a montarPayloadDevolucao é independente — não há "resto" acumulado entre
+    // remessas. round(100 * 1 / 3) = 33 em cada uma das três vezes, mas 33 + 33 + 33 = 99, não
+    // 100. É uma perda de até poucos centavos aceita como parte da política de rateio proporcional
+    // por remessa (comentada no código de fiscal-payload-devolucao.ts) — não é bug desta função.
+    const devolverUmaUnidade = () =>
+      chamar({
+        itensOrigem: itensOrigemComDesconto,
+        itensPedido: itensPedidoComDesconto,
+        devolvidos: [{ line_item_id: "li_d", quantidade: 1 }],
+      }).itens_documento[0].desconto_centavos
+    const somaTresRemessas = devolverUmaUnidade() + devolverUmaUnidade() + devolverUmaUnidade()
+    expect(somaTresRemessas).toBe(99)
+    const descontoOriginalDaLinha = itensOrigemComDesconto.find(
+      (i) => i.medusa_line_item_id === "li_d"
+    )!.desconto_centavos
+    expect(somaTresRemessas).not.toBe(descontoOriginalDaLinha)
+  })
+
   it("item sem desconto preserva o comportamento atual (nenhum estorno)", () => {
     const { payload, itens_documento } = chamar({
       devolvidos: [{ line_item_id: "li_b", quantidade: 1 }],
@@ -235,5 +271,44 @@ describe("rateio do desconto na devolução", () => {
     expect(Math.round(Number(p.total.valor_desconto) * 100)).toBe(somaDesconto)
     expect(Math.round(Number(p.total.valor_nota) * 100)).toBe(somaTotal)
     expect(Math.round(Number(p.total.valor_nota) * 100)).toBe(somaProdutos - somaDesconto)
+  })
+})
+
+// Trava de quantidade já devolvida em NFDs anteriores (Crítico 1 da revisão de 2026-09-17): a
+// chave de idempotência por CONJUNTO devolvido (emitir-devolucao/route.ts) deixa de recusar uma
+// segunda remessa só porque o conjunto é diferente — sem esta trava, o mesmo item poderia ser
+// devolvido duas vezes (uma NFD por remessa, cada uma "válida" isoladamente).
+describe("trava de quantidade já devolvida em NFDs anteriores", () => {
+  it("recusa quando a soma com devoluções anteriores passaria da quantidade vendida", () => {
+    // li_b: vendidas 2 unidades (fixture base). Já devolvida 2 em NFD anterior; pedir mais 1 estoura.
+    expect(() =>
+      chamar({
+        devolvidos: [{ line_item_id: "li_b", quantidade: 1 }],
+        quantidadesJaDevolvidas: new Map([["li_b", 2]]),
+      })
+    ).toThrow(ErroFiscal)
+  })
+
+  it("a mensagem de erro aponta o item, quanto já foi devolvido e quanto resta", () => {
+    expect(() =>
+      chamar({
+        devolvidos: [{ line_item_id: "li_b", quantidade: 1 }],
+        quantidadesJaDevolvidas: new Map([["li_b", 2]]),
+      })
+    ).toThrow(/li_b.*já foram devolvidas 2 de 2/is)
+  })
+
+  it("permite quando a soma com devoluções anteriores não excede a quantidade vendida", () => {
+    // li_b: vendidas 2. Já devolvida 1 antes; devolver mais 1 agora fecha em 2 — ok.
+    const { payload } = chamar({
+      devolvidos: [{ line_item_id: "li_b", quantidade: 1 }],
+      quantidadesJaDevolvidas: new Map([["li_b", 1]]),
+    })
+    expect((payload as any).itens).toHaveLength(1)
+  })
+
+  it("sem devoluções anteriores (mapa vazio, o padrão), comportamento é igual ao de antes", () => {
+    const { payload } = chamar({ devolvidos: [{ line_item_id: "li_b", quantidade: 1 }] })
+    expect((payload as any).itens).toHaveLength(1)
   })
 })
