@@ -33,12 +33,12 @@ Vitrine (Next.js)                      Backend (Medusa 2.15.5)                 M
 Brick de cartão ──token──▶ initiatePaymentSession ─▶ provider.initiatePayment
 "Finalizar pedido" ──────▶ cart.complete ──────────▶ provider.authorizePayment ─▶ POST /v1/orders (processing_mode: automatic)
 Tela de Pix ◀── QR ─────── payment_session.data ◀─── provider.initiatePayment ──▶ POST /v1/orders (payment_method.type: bank_transfer)
-  (consulta a cada 4 s)                  POST /hooks/payment/mercadopago_mercadopago ◀── webhook (type: "order")
+  (consulta a cada 5 s)                  POST /hooks/payment/mercadopago_mercadopago ◀── webhook (type: "order")
                                          └▶ provider.getWebhookActionAndData ───▶ GET /v1/orders/{id}
                                             └▶ Medusa conclui o carrinho e captura
 ```
 
-- **Módulo:** `apps/backend/src/modules/mercadopago/` — `index.ts` (ModuleProvider), `service.ts` (estende `AbstractPaymentProvider`, `identifier = "mercadopago"`), `cliente.ts` (SDK oficial `mercadopago` v2, recursos `Order`/`OrderRefund`), `assinatura.ts`, `status.ts`, `recusas.ts`, `__tests__/`.
+- **Módulo:** `apps/backend/src/modules/mercadopago/` — `index.ts` (ModuleProvider), `service.ts` (estende `AbstractPaymentProvider`, `identifier = "mercadopago"`), `cliente.ts` (fetch direto em `/v1/orders` — sem o SDK npm, cuja cobertura da Orders API não foi confirmada; motivo no topo do arquivo), `assinatura.ts`, `status.ts`, `recusas.ts`, `__tests__/`.
 - **ID do provider:** `pp_mercadopago_mercadopago`.
 - **Registro condicional** em `medusa-config.ts`: o provider só é registrado se `MERCADOPAGO_ACCESS_TOKEN` existir. Deploy sem a variável não quebra o backend.
 - **Ativação na região Brasil:** via Admin API (`payment_providers` da região). É mudança em produção → só com "pode aplicar".
@@ -58,7 +58,7 @@ O Medusa v2 guarda valores em **unidade maior decimal** (199.90), e a API de Ord
    {
      "type": "online",
      "processing_mode": "automatic",
-     "external_reference": "{cart.id}",
+     "external_reference": "{id da sessão de pagamento do Medusa}",
      "total_amount": "199.90",
      "payer": { "email": "...", "first_name": "...", "identification": { "type": "CPF", "number": "..." } },
      "transactions": { "payments": [{
@@ -81,13 +81,14 @@ O Medusa v2 guarda valores em **unidade maior decimal** (199.90), e a API de Ord
    {
      "type": "online",
      "processing_mode": "automatic",
-     "external_reference": "{cart.id}",
+     "external_reference": "{id da sessão de pagamento do Medusa}",
      "total_amount": "199.90",
      "payer": { "email": "...", "first_name": "...", "identification": { "type": "CPF", "number": "..." } },
      "transactions": { "payments": [{ "amount": "199.90", "payment_method": { "id": "pix", "type": "bank_transfer" } }] }
    }
    ```
-   (a data de expiração do QR é a padrão da conta, configurável em "Taxas e parcelas" do painel do MP — não há campo de expiração no payload da Orders API, diferente da antiga API de Payments; se precisarmos de um valor fixo de 30 min, verificar na F0 se existe parâmetro equivalente).
+   mais `expiration_time: "PT30M"` dentro do pagamento (confirmado no sandbox: a resposta traz `date_of_expiration`; minutos por `MERCADOPAGO_PIX_EXPIRA_MIN`).
+   O `external_reference` é o **id da sessão de pagamento** que o próprio Medusa injeta em `data.session_id` (não o `cart.id`): é por ele que o webhook reencontra a sessão.
 2. A resposta chega com `status: "action_required"`, `status_detail: "waiting_transfer"` e, dentro de `transactions.payments[0].payment_method`: `qr_code` (copia e cola), `qr_code_base64` (pode vir vazio no sandbox — conferir na F0) e `ticket_url` (link da tela de pagamento hospedada pelo MP, útil como retaguarda). `payment_session.data` guarda esses três campos mais o `id` da order (`ORD...`) e o `id` do pagamento (`PAY...`).
 3. A vitrine mostra QR, botão "Copiar código" e consulta o estado a cada 4 s (`GET /v1/orders/{id}` via nosso backend, nunca direto do navegador para o MP).
 4. A cliente paga no banco. O MP chama o webhook (`action: "order.processed"`, `type: "order"`) → status vira `processed`/`accredited` → **o Medusa conclui o carrinho e cria o pedido**, mesmo que ela tenha fechado a aba. A consulta da vitrine encontra o pedido e redireciona para a confirmação. O aviso por WhatsApp do pedido (já existente) cobre quem fechou a aba.
@@ -149,7 +150,7 @@ O Medusa v2 guarda valores em **unidade maior decimal** (199.90), e a API de Ord
 |---|---|---|
 | Pagamento, status, valor | Medusa (`payment`, `payment_session`) | comércio (Invariante 2) |
 | `mp_order_id` (`ORD...`), `mp_payment_id` (`PAY...`), método (`pix`/`cartao`), bandeira, parcelas, 4 últimos dígitos | `payment.data` | atributo do pagamento |
-| **Tarifa real** e líquido, em centavos | `payment.data.tarifa_centavos`, `liquido_centavos` | **confirmado na F0:** a Orders API não expõe `fee_details` em nenhum campo (nem no `GET /v1/orders/{id}`, nem tentando `GET /v1/payments/{PAY_id}` — dá 404, é outro espaço de IDs). O caminho que funciona: `GET /v1/payments/search?external_reference={cart.id}` (API clássica de Payments, ainda ativa para consulta) devolve o registro com um `id` numérico próprio e `fee_details` (`mercadopago_fee`, e `financing_fee` quando parcelado). O provider busca por esse endpoint depois que a order é aprovada. O Cockpit lê pela Admin API — não duplica no Supabase |
+| **Tarifa real** e líquido, em centavos | `payment.data.tarifa_centavos`, `liquido_centavos` | **confirmado na F0:** a Orders API não expõe `fee_details` em nenhum campo (nem no `GET /v1/orders/{id}`, nem tentando `GET /v1/payments/{PAY_id}` — dá 404, é outro espaço de IDs). O caminho que funciona: `GET /v1/payments/search?external_reference={id da sessão}` (API clássica de Payments, ainda ativa para consulta) devolve o registro com um `id` numérico próprio e `fee_details` (`mercadopago_fee`, e `financing_fee` quando parcelado). O provider busca por esse endpoint depois que a order é aprovada. O Cockpit lê pela Admin API — não duplica no Supabase |
 | Access Token, Webhook Secret | env do backend | segredo |
 | Public Key | env da vitrine (`NEXT_PUBLIC_…`) | pública por natureza |
 
