@@ -2,6 +2,7 @@
 
 import { sdk } from "@lib/config"
 import medusaError from "@lib/util/medusa-error"
+import { montarMetadataFiscal } from "@lib/util/endereco-fiscal"
 import { HttpTypes } from "@medusajs/types"
 import { revalidateTag } from "next/cache"
 import { redirect } from "next/navigation"
@@ -178,6 +179,11 @@ export const addCustomerAddress = async (
     phone: formData.get("phone") as string,
     is_default_billing: isDefaultBilling,
     is_default_shipping: isDefaultShipping,
+    metadata: montarMetadataFiscal({
+      numero: String(formData.get("metadata.numero") ?? ""),
+      bairro: String(formData.get("metadata.bairro") ?? ""),
+      ibge: String(formData.get("metadata.municipio_ibge") ?? ""),
+    }),
   }
 
   const headers = {
@@ -236,6 +242,11 @@ export const updateCustomerAddress = async (
     postal_code: formData.get("postal_code") as string,
     province: formData.get("province") as string,
     country_code: formData.get("country_code") as string,
+    metadata: montarMetadataFiscal({
+      numero: String(formData.get("metadata.numero") ?? ""),
+      bairro: String(formData.get("metadata.bairro") ?? ""),
+      ibge: String(formData.get("metadata.municipio_ibge") ?? ""),
+    }),
   } as HttpTypes.StoreUpdateCustomerAddress
 
   const phone = formData.get("phone") as string

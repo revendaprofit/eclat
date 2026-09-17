@@ -7,10 +7,23 @@ import { useActionState, useEffect, useState } from "react"
 import { addCustomerAddress } from "@lib/data/customer"
 import useToggleState from "@lib/hooks/use-toggle-state"
 import { HttpTypes } from "@medusajs/types"
-import CountrySelect from "@modules/checkout/components/country-select"
 import { SubmitButton } from "@modules/checkout/components/submit-button"
+import AddressFields from "@modules/common/components/address-fields"
 import Input from "@modules/common/components/input"
 import Modal from "@modules/common/components/modal"
+
+// Estado inicial dos campos de endereço (sem prefixo: formulário da conta).
+const camposEnderecoVazios: Record<string, string> = {
+  address_1: "",
+  address_2: "",
+  postal_code: "",
+  city: "",
+  province: "",
+  country_code: "",
+  "metadata.numero": "",
+  "metadata.bairro": "",
+  "metadata.municipio_ibge": "",
+}
 
 const AddAddress = ({
   region,
@@ -20,6 +33,9 @@ const AddAddress = ({
   addresses: HttpTypes.StoreCustomerAddress[]
 }) => {
   const [successState, setSuccessState] = useState(false)
+  const [valoresEndereco, setValoresEndereco] = useState<
+    Record<string, string>
+  >(camposEnderecoVazios)
   const { state, open, close: closeModal } = useToggleState(false)
 
   const [formState, formAction] = useActionState(addCustomerAddress, {
@@ -29,6 +45,9 @@ const AddAddress = ({
 
   const close = () => {
     setSuccessState(false)
+    // Modal permanece montado enquanto fechado: sem isto, os campos fiscais
+    // ficariam com o valor digitado na tentativa anterior ao reabrir.
+    setValoresEndereco(camposEnderecoVazios)
     closeModal()
   }
 
@@ -85,47 +104,13 @@ const AddAddress = ({
                 autoComplete="organization"
                 data-testid="company-input"
               />
-              <Input
-                label="Endereço"
-                name="address_1"
-                required
-                autoComplete="address-line1"
-                data-testid="address-1-input"
-              />
-              <Input
-                label="Complemento (apto, bloco…)"
-                name="address_2"
-                autoComplete="address-line2"
-                data-testid="address-2-input"
-              />
-              <div className="grid grid-cols-[144px_1fr] gap-x-2">
-                <Input
-                  label="CEP"
-                  name="postal_code"
-                  required
-                  autoComplete="postal-code"
-                  data-testid="postal-code-input"
-                />
-                <Input
-                  label="Cidade"
-                  name="city"
-                  required
-                  autoComplete="locality"
-                  data-testid="city-input"
-                />
-              </div>
-              <Input
-                label="Estado"
-                name="province"
-                autoComplete="address-level1"
-                data-testid="state-input"
-              />
-              <CountrySelect
+              <AddressFields
+                prefixo=""
+                valores={valoresEndereco}
+                onChange={(campo, valor) =>
+                  setValoresEndereco((p) => ({ ...p, [campo]: valor }))
+                }
                 region={region}
-                name="country_code"
-                required
-                autoComplete="country"
-                data-testid="country-select"
               />
               <Input
                 label="Telefone"

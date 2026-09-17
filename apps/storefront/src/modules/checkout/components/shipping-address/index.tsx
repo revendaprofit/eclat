@@ -2,10 +2,11 @@ import { HttpTypes } from "@medusajs/types"
 import { Container } from "@modules/common/components/ui"
 import Checkbox from "@modules/common/components/checkbox"
 import Input from "@modules/common/components/input"
+import AddressFields from "@modules/common/components/address-fields"
+import { cpfValido, formatarCpf } from "@lib/util/cpf"
 import { mapKeys } from "lodash"
 import React, { useEffect, useMemo, useState } from "react"
 import AddressSelect from "../address-select"
-import CountrySelect from "../country-select"
 
 const ShippingAddress = ({
   customer,
@@ -22,13 +23,21 @@ const ShippingAddress = ({
     "shipping_address.first_name": cart?.shipping_address?.first_name || "",
     "shipping_address.last_name": cart?.shipping_address?.last_name || "",
     "shipping_address.address_1": cart?.shipping_address?.address_1 || "",
+    "shipping_address.address_2": cart?.shipping_address?.address_2 || "",
     "shipping_address.company": cart?.shipping_address?.company || "",
     "shipping_address.postal_code": cart?.shipping_address?.postal_code || "",
     "shipping_address.city": cart?.shipping_address?.city || "",
     "shipping_address.country_code": cart?.shipping_address?.country_code || "",
     "shipping_address.province": cart?.shipping_address?.province || "",
     "shipping_address.phone": cart?.shipping_address?.phone || "",
+    "shipping_address.metadata.numero":
+      String((cart?.shipping_address?.metadata as Record<string, unknown>)?.numero ?? ""),
+    "shipping_address.metadata.bairro":
+      String((cart?.shipping_address?.metadata as Record<string, unknown>)?.bairro ?? ""),
+    "shipping_address.metadata.municipio_ibge":
+      String((cart?.shipping_address?.metadata as Record<string, unknown>)?.municipio_ibge ?? ""),
     email: cart?.email || "",
+    cpf: formatarCpf(String((customer?.metadata as Record<string, unknown>)?.cpf ?? "")),
   })
 
   const countriesInRegion = useMemo(
@@ -55,12 +64,19 @@ const ShippingAddress = ({
         "shipping_address.first_name": address?.first_name || "",
         "shipping_address.last_name": address?.last_name || "",
         "shipping_address.address_1": address?.address_1 || "",
+        "shipping_address.address_2": address?.address_2 || "",
         "shipping_address.company": address?.company || "",
         "shipping_address.postal_code": address?.postal_code || "",
         "shipping_address.city": address?.city || "",
         "shipping_address.country_code": address?.country_code || "",
         "shipping_address.province": address?.province || "",
         "shipping_address.phone": address?.phone || "",
+        "shipping_address.metadata.numero":
+          String((address?.metadata as Record<string, unknown>)?.numero ?? ""),
+        "shipping_address.metadata.bairro":
+          String((address?.metadata as Record<string, unknown>)?.bairro ?? ""),
+        "shipping_address.metadata.municipio_ibge":
+          String((address?.metadata as Record<string, unknown>)?.municipio_ibge ?? ""),
       }))
     }
 
@@ -132,15 +148,6 @@ const ShippingAddress = ({
           data-testid="shipping-last-name-input"
         />
         <Input
-          label="Endereço"
-          name="shipping_address.address_1"
-          autoComplete="address-line1"
-          value={formData["shipping_address.address_1"]}
-          onChange={handleChange}
-          required
-          data-testid="shipping-address-input"
-        />
-        <Input
           label="Empresa"
           name="shipping_address.company"
           value={formData["shipping_address.company"]}
@@ -148,41 +155,32 @@ const ShippingAddress = ({
           autoComplete="organization"
           data-testid="shipping-company-input"
         />
-        <Input
-          label="CEP"
-          name="shipping_address.postal_code"
-          autoComplete="postal-code"
-          value={formData["shipping_address.postal_code"]}
-          onChange={handleChange}
-          required
-          data-testid="shipping-postal-code-input"
-        />
-        <Input
-          label="Cidade"
-          name="shipping_address.city"
-          autoComplete="address-level2"
-          value={formData["shipping_address.city"]}
-          onChange={handleChange}
-          required
-          data-testid="shipping-city-input"
-        />
-        <CountrySelect
-          name="shipping_address.country_code"
-          autoComplete="country"
+      </div>
+      <div className="mt-4">
+        <AddressFields
+          prefixo="shipping_address"
+          valores={formData}
+          onChange={(campo, valor) =>
+            setFormData((p) => ({ ...p, [campo]: valor }))
+          }
           region={cart?.region}
-          value={formData["shipping_address.country_code"]}
-          onChange={handleChange}
-          required
-          data-testid="shipping-country-select"
         />
+      </div>
+      <div className="mt-4">
         <Input
-          label="Estado"
-          name="shipping_address.province"
-          autoComplete="address-level1"
-          value={formData["shipping_address.province"]}
-          onChange={handleChange}
-          data-testid="shipping-province-input"
+          label="CPF"
+          name="cpf"
+          value={formData["cpf"] || ""}
+          onChange={(e) => setFormData((p) => ({ ...p, cpf: e.target.value }))}
+          required
+          data-testid="input-cpf"
         />
+        <p className="mt-1 text-sm text-ui-fg-subtle">
+          Precisamos do CPF para emitir a nota fiscal do seu pedido.
+        </p>
+        {formData["cpf"] && !cpfValido(formData["cpf"]) && (
+          <p className="mt-1 text-sm text-red-600">CPF inválido. Confira os números.</p>
+        )}
       </div>
       <div className="my-8">
         <Checkbox

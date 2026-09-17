@@ -7,8 +7,8 @@ import {
 import useToggleState from "@lib/hooks/use-toggle-state"
 import { PencilSquare as Edit, Trash } from "@medusajs/icons"
 import { HttpTypes } from "@medusajs/types"
-import CountrySelect from "@modules/checkout/components/country-select"
 import { SubmitButton } from "@modules/checkout/components/submit-button"
+import AddressFields from "@modules/common/components/address-fields"
 import Input from "@modules/common/components/input"
 import Modal from "@modules/common/components/modal"
 import { Button, Heading, Text, clx } from "@modules/common/components/ui"
@@ -21,6 +21,24 @@ type EditAddressProps = {
   isActive?: boolean
 }
 
+// Valores dos campos de endereço a partir do endereço salvo (sem prefixo).
+function valoresEnderecoIniciais(
+  address: HttpTypes.StoreCustomerAddress
+): Record<string, string> {
+  const metadata = (address.metadata as Record<string, unknown>) || {}
+  return {
+    address_1: address.address_1 || "",
+    address_2: address.address_2 || "",
+    postal_code: address.postal_code || "",
+    city: address.city || "",
+    province: address.province || "",
+    country_code: address.country_code || "",
+    "metadata.numero": String(metadata.numero ?? ""),
+    "metadata.bairro": String(metadata.bairro ?? ""),
+    "metadata.municipio_ibge": String(metadata.municipio_ibge ?? ""),
+  }
+}
+
 const EditAddress: React.FC<EditAddressProps> = ({
   region,
   address,
@@ -28,6 +46,9 @@ const EditAddress: React.FC<EditAddressProps> = ({
 }) => {
   const [removing, setRemoving] = useState(false)
   const [successState, setSuccessState] = useState(false)
+  const [valoresEndereco, setValoresEndereco] = useState<
+    Record<string, string>
+  >(() => valoresEnderecoIniciais(address))
   const { state, open, close: closeModal } = useToggleState(false)
 
   const [formState, formAction] = useActionState(updateCustomerAddress, {
@@ -37,6 +58,9 @@ const EditAddress: React.FC<EditAddressProps> = ({
 
   const close = () => {
     setSuccessState(false)
+    // Modal permanece montado enquanto fechado: sem isto, cancelar uma edição
+    // deixaria os campos fiscais com o valor digitado, e não o salvo.
+    setValoresEndereco(valoresEnderecoIniciais(address))
     closeModal()
   }
 
@@ -152,53 +176,13 @@ const EditAddress: React.FC<EditAddressProps> = ({
                 defaultValue={address.company || undefined}
                 data-testid="company-input"
               />
-              <Input
-                label="Endereço"
-                name="address_1"
-                required
-                autoComplete="address-line1"
-                defaultValue={address.address_1 || undefined}
-                data-testid="address-1-input"
-              />
-              <Input
-                label="Complemento (apto, bloco…)"
-                name="address_2"
-                autoComplete="address-line2"
-                defaultValue={address.address_2 || undefined}
-                data-testid="address-2-input"
-              />
-              <div className="grid grid-cols-[144px_1fr] gap-x-2">
-                <Input
-                  label="CEP"
-                  name="postal_code"
-                  required
-                  autoComplete="postal-code"
-                  defaultValue={address.postal_code || undefined}
-                  data-testid="postal-code-input"
-                />
-                <Input
-                  label="Cidade"
-                  name="city"
-                  required
-                  autoComplete="locality"
-                  defaultValue={address.city || undefined}
-                  data-testid="city-input"
-                />
-              </div>
-              <Input
-                label="Estado"
-                name="province"
-                autoComplete="address-level1"
-                defaultValue={address.province || undefined}
-                data-testid="state-input"
-              />
-              <CountrySelect
-                name="country_code"
+              <AddressFields
+                prefixo=""
+                valores={valoresEndereco}
+                onChange={(campo, valor) =>
+                  setValoresEndereco((p) => ({ ...p, [campo]: valor }))
+                }
                 region={region}
-                required
-                autoComplete="country"
-                defaultValue={address.country_code || undefined}
-                data-testid="country-select"
               />
               <Input
                 label="Telefone"

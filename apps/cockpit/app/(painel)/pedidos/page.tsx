@@ -6,6 +6,7 @@ import { resumoConferencia, type ItemPedido, type RegistroConferencia } from "@/
 import ConferenciaPedido from "@/components/conferencia-pedido"
 import { FiscalDoPedido, type DocumentoFiscal } from "@/components/fiscal-do-pedido"
 import { NfdDoPedido } from "@/components/nfd-do-pedido"
+import { DadosFiscaisDoPedido } from "@/components/dados-fiscais-do-pedido"
 
 type Order = {
   id: string
@@ -46,7 +47,17 @@ type OrderDetail = Order & {
     province: string | null
     postal_code: string | null
     phone: string | null
+    // Lido por DadosFiscaisDoPedido (lib/dados-fiscais.ts) para numero/bairro/
+    // municipio_ibge/cpf — precisa estar aqui para o tsc pegar se o `fields` do
+    // medusaGetOrder voltar a esquecer esse caminho (achado da revisão final).
+    metadata?: Record<string, unknown> | null
   } | null
+  // Mesma razão do metadata acima: billing_address é a fonte de MAIOR prioridade do
+  // CPF em lerDadosFiscais (fallback de três fontes). Sem declarar aqui, a tipagem
+  // estrutural deixa a ausência invisível — hoje o objeto vem cru de medusaGetOrder e
+  // funciona, mas se alguém montar este objeto a partir de um mapeamento amanhã, o
+  // CPF de cobrança some sem erro de compilação e sem teste (achado da re-revisão).
+  billing_address?: { metadata?: Record<string, unknown> | null } | null
   shipping_methods: { name: string; total: number }[]
   fulfillments: {
     id: string
@@ -439,6 +450,9 @@ export default function PedidosPage() {
                     )}
                   </section>
                 )}
+
+                {/* Dados fiscais (Task 9): completa CPF/número/bairro/IBGE de pedidos que vieram sem eles */}
+                <DadosFiscaisDoPedido order={det} statusFiscal={docFiscal?.status} />
 
                 {/* Fiscal (Task 14): status da NF-e de venda + devolução manual (NFD) */}
                 <FiscalDoPedido

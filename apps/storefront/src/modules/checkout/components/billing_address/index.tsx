@@ -1,19 +1,26 @@
 import { HttpTypes } from "@medusajs/types"
 import Input from "@modules/common/components/input"
+import AddressFields from "@modules/common/components/address-fields"
 import React, { useState } from "react"
-import CountrySelect from "../country-select"
 
 const BillingAddress = ({ cart }: { cart: HttpTypes.StoreCart | null }) => {
   const [formData, setFormData] = useState<Record<string, string>>({
     "billing_address.first_name": cart?.billing_address?.first_name || "",
     "billing_address.last_name": cart?.billing_address?.last_name || "",
     "billing_address.address_1": cart?.billing_address?.address_1 || "",
+    "billing_address.address_2": cart?.billing_address?.address_2 || "",
     "billing_address.company": cart?.billing_address?.company || "",
     "billing_address.postal_code": cart?.billing_address?.postal_code || "",
     "billing_address.city": cart?.billing_address?.city || "",
     "billing_address.country_code": cart?.billing_address?.country_code || "",
     "billing_address.province": cart?.billing_address?.province || "",
     "billing_address.phone": cart?.billing_address?.phone || "",
+    "billing_address.metadata.numero":
+      String((cart?.billing_address?.metadata as Record<string, unknown>)?.numero ?? ""),
+    "billing_address.metadata.bairro":
+      String((cart?.billing_address?.metadata as Record<string, unknown>)?.bairro ?? ""),
+    "billing_address.metadata.municipio_ibge":
+      String((cart?.billing_address?.metadata as Record<string, unknown>)?.municipio_ibge ?? ""),
   })
 
   const handleChange = (
@@ -49,15 +56,6 @@ const BillingAddress = ({ cart }: { cart: HttpTypes.StoreCart | null }) => {
           data-testid="billing-last-name-input"
         />
         <Input
-          label="Endereço"
-          name="billing_address.address_1"
-          autoComplete="address-line1"
-          value={formData["billing_address.address_1"]}
-          onChange={handleChange}
-          required
-          data-testid="billing-address-input"
-        />
-        <Input
           label="Empresa"
           name="billing_address.company"
           value={formData["billing_address.company"]}
@@ -66,45 +64,22 @@ const BillingAddress = ({ cart }: { cart: HttpTypes.StoreCart | null }) => {
           data-testid="billing-company-input"
         />
         <Input
-          label="CEP"
-          name="billing_address.postal_code"
-          autoComplete="postal-code"
-          value={formData["billing_address.postal_code"]}
-          onChange={handleChange}
-          required
-          data-testid="billing-postal-input"
-        />
-        <Input
-          label="Cidade"
-          name="billing_address.city"
-          autoComplete="address-level2"
-          value={formData["billing_address.city"]}
-          onChange={handleChange}
-        />
-        <CountrySelect
-          name="billing_address.country_code"
-          autoComplete="country"
-          region={cart?.region}
-          value={formData["billing_address.country_code"]}
-          onChange={handleChange}
-          required
-          data-testid="billing-country-select"
-        />
-        <Input
-          label="Estado"
-          name="billing_address.province"
-          autoComplete="address-level1"
-          value={formData["billing_address.province"]}
-          onChange={handleChange}
-          data-testid="billing-province-input"
-        />
-        <Input
           label="Telefone"
           name="billing_address.phone"
           autoComplete="tel"
           value={formData["billing_address.phone"]}
           onChange={handleChange}
           data-testid="billing-phone-input"
+        />
+      </div>
+      <div className="mt-4">
+        <AddressFields
+          prefixo="billing_address"
+          valores={formData}
+          onChange={(campo, valor) =>
+            setFormData((p) => ({ ...p, [campo]: valor }))
+          }
+          region={cart?.region}
         />
       </div>
     </>

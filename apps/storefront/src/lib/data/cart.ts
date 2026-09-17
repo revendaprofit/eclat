@@ -2,6 +2,8 @@
 
 import { sdk } from "@lib/config"
 import medusaError from "@lib/util/medusa-error"
+import { cpfValido, normalizarCpf } from "@lib/util/cpf"
+import { montarMetadataFiscal } from "@lib/util/endereco-fiscal"
 import { HttpTypes } from "@medusajs/types"
 import { revalidateTag } from "next/cache"
 import { redirect } from "next/navigation"
@@ -15,6 +17,7 @@ import {
 } from "./cookies"
 import { getRegion } from "./regions"
 import { getLocale } from "./locale-actions"
+import { retrieveCustomer, updateCustomer } from "./customer"
 
 /**
  * Retrieves a cart by its ID. If no ID is provided, it will use the cart ID from the cookies.
@@ -23,8 +26,13 @@ import { getLocale } from "./locale-actions"
  */
 export async function retrieveCart(cartId?: string, fields?: string) {
   const id = cartId || (await getCartId())
+  // Os defaults da Store API listam os subcampos do endereço um a um e NÃO incluem
+  // metadata (query-config.js do carrinho) — sem os dois +campo abaixo,
+  // cart.shipping_address.metadata/billing_address.metadata vêm sempre undefined, e o
+  // useEffect de shipping-address/index.tsx apaga número/bairro/IBGE ao reabrir o passo
+  // de endereço (achado da revisão final).
   fields ??=
-    "*items, *region, *items.product, *items.variant, *items.thumbnail, *items.metadata, *items.adjustments, +items.total, *promotions, +shipping_methods.name"
+    "*items, *region, *items.product, *items.variant, *items.thumbnail, *items.metadata, *items.adjustments, +items.total, *promotions, +shipping_methods.name, +shipping_address.metadata, +billing_address.metadata"
 
   if (!id) {
     return null
@@ -347,40 +355,73 @@ export async function setAddresses(currentState: unknown, formData: FormData) {
       throw new Error("No existing cart found when setting addresses")
     }
 
+    const cpf = normalizarCpf(String(formData.get("cpf") ?? ""))
+    if (!cpfValido(cpf)) {
+      return "CPF inválido. Confira os números."
+    }
+
+    const metaEnvio = montarMetadataFiscal({
+      numero: String(formData.get("shipping_address.metadata.numero") ?? ""),
+      bairro: String(formData.get("shipping_address.metadata.bairro") ?? ""),
+      ibge: String(formData.get("shipping_address.metadata.municipio_ibge") ?? ""),
+    })
+
     const data = {
       shipping_address: {
         first_name: formData.get("shipping_address.first_name"),
         last_name: formData.get("shipping_address.last_name"),
         address_1: formData.get("shipping_address.address_1"),
-        address_2: "",
+        address_2: formData.get("shipping_address.address_2"),
         company: formData.get("shipping_address.company"),
         postal_code: formData.get("shipping_address.postal_code"),
         city: formData.get("shipping_address.city"),
         country_code: formData.get("shipping_address.country_code"),
         province: formData.get("shipping_address.province"),
         phone: formData.get("shipping_address.phone"),
+        metadata: metaEnvio,
       },
       email: formData.get("email"),
+      metadata: { cpf },
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- payload montado de FormData (starter do Medusa)
     } as any
 
     const sameAsBilling = formData.get("same_as_billing")
     if (sameAsBilling === "on") data.billing_address = data.shipping_address
 
-    if (sameAsBilling !== "on")
+    if (sameAsBilling !== "on") {
+      const metaCobranca = montarMetadataFiscal({
+        numero: String(formData.get("billing_address.metadata.numero") ?? ""),
+        bairro: String(formData.get("billing_address.metadata.bairro") ?? ""),
+        ibge: String(formData.get("billing_address.metadata.municipio_ibge") ?? ""),
+      })
+
       data.billing_address = {
         first_name: formData.get("billing_address.first_name"),
         last_name: formData.get("billing_address.last_name"),
         address_1: formData.get("billing_address.address_1"),
-        address_2: "",
+        address_2: formData.get("billing_address.address_2"),
         company: formData.get("billing_address.company"),
         postal_code: formData.get("billing_address.postal_code"),
         city: formData.get("billing_address.city"),
         country_code: formData.get("billing_address.country_code"),
         province: formData.get("billing_address.province"),
         phone: formData.get("billing_address.phone"),
+        metadata: metaCobranca,
       }
+    }
     await updateCart(data)
+
+    // Conveniência de pré-preenchimento na próxima compra. A fonte da nota é o
+    // metadata do PEDIDO — nunca este valor, que a cliente pode mudar depois.
+    // Falha aqui NÃO pode derrubar o checkout: o pedido já tem o CPF de que precisa.
+    try {
+      const customer = await retrieveCustomer()
+      if (customer && normalizarCpf(String(customer.metadata?.cpf ?? "")) !== cpf) {
+        await updateCustomer({ metadata: { ...(customer.metadata ?? {}), cpf } })
+      }
+    } catch {
+      // silencioso de propósito — ver comentário acima
+    }
   } catch (e) {
     return e instanceof Error ? e.message : String(e)
   }
