@@ -77,6 +77,7 @@ export type FiscalDocumentoItem = {
   ncm: string
   quantidade: number
   valor_unitario_centavos: number
+  desconto_centavos: number
 }
 
 // Item do pedido do Medusa, já enriquecido com os dados fiscais da variante.

@@ -34,7 +34,11 @@ export function montarPayloadDevolucao(args: {
   devolvidos: Array<{ line_item_id: string; quantidade: number }>
   itensPedido: ItemPedido[]
   ufDestinatarioOriginal: string
-}): { payload: Record<string, unknown>; itens_ordenados: ItemPedido[] } {
+}): {
+  payload: Record<string, unknown>
+  itens_ordenados: ItemPedido[]
+  itens_documento: Array<Omit<FiscalDocumentoItem, "id" | "fiscal_documento_id" | "n_item_verificado">>
+} {
   const {
     config, perfis, documentoOrigem, itensOrigem, devolvidos, itensPedido, ufDestinatarioOriginal,
   } = args
@@ -59,7 +63,12 @@ export function montarPayloadDevolucao(args: {
   const ufEmitente = config.uf.trim().toUpperCase()
   const interestadual = ufDestino !== ufEmitente
   const ordenados: ItemPedido[] = []
-  let totalNotaCentavos = 0
+  // Dados prontos para persistir em fiscal_documento_item (mesmo formato usado por
+  // fiscal-emissao.ts na venda) — calculados uma única vez aqui, junto com o rateio do
+  // desconto, para a rota de emissão da NFD não precisar reimplementar a fórmula.
+  const itensDocumento: Array<Omit<FiscalDocumentoItem, "id" | "fiscal_documento_id" | "n_item_verificado">> = []
+  let totalProdutosCentavos = 0
+  let totalDescontoCentavos = 0
 
   const linhas = devolvidos.map((dev, idx) => {
     const origem = itensOrigem.find((i) => i.medusa_line_item_id === dev.line_item_id)
@@ -87,12 +96,33 @@ export function montarPayloadDevolucao(args: {
     ordenados.push(doPedido)
 
     const perfil = resolverPerfil(perfis, doPedido.product_id, doPedido.categoria_handle)
-    const totalItemCentavos = origem.valor_unitario_centavos * dev.quantidade
-    totalNotaCentavos += totalItemCentavos
+
+    // Rateio proporcional do desconto (Benefício Conjunto e afins): decisão de negócio ainda
+    // pendente de confirmação do contador. A regra hoje é devolver o desconto na mesma proporção
+    // da quantidade devolvida em relação à quantidade vendida naquela linha. Se o contador
+    // preferir outra política (ex.: estornar sempre o desconto cheio, ou nunca estornar), é
+    // esta fórmula — e só ela — que muda.
+    const descontoAEstornar = Math.round(
+      (origem.desconto_centavos * dev.quantidade) / origem.quantidade
+    )
+    const totalItemCentavos = origem.valor_unitario_centavos * dev.quantidade - descontoAEstornar
+    totalProdutosCentavos += origem.valor_unitario_centavos * dev.quantidade
+    totalDescontoCentavos += descontoAEstornar
+
+    const codigoEnviado = doPedido.sku ?? doPedido.line_item_id
+    itensDocumento.push({
+      medusa_line_item_id: dev.line_item_id,
+      ordem_enviada: idx + 1,
+      codigo_enviado: codigoEnviado,
+      ncm: origem.ncm,
+      quantidade: dev.quantidade,
+      valor_unitario_centavos: origem.valor_unitario_centavos,
+      desconto_centavos: descontoAEstornar,
+    })
 
     return {
       numero_item: idx + 1,
-      codigo: doPedido.sku ?? doPedido.line_item_id,
+      codigo: codigoEnviado,
       descricao: doPedido.titulo,
       ncm: origem.ncm,
       cfop: interestadual ? perfil.cfop_devolucao_fora_uf : perfil.cfop_devolucao_dentro_uf,
@@ -101,6 +131,7 @@ export function montarPayloadDevolucao(args: {
       unidade: "UN",
       quantidade: dev.quantidade,
       valor_unitario: reais(origem.valor_unitario_centavos),
+      valor_desconto: reais(descontoAEstornar),
       valor_total: reais(totalItemCentavos),
       // VC02-14 / VC03-20: referência item a item, chave + nItem da nota de origem.
       documentos_referenciados: [
@@ -146,11 +177,12 @@ export function montarPayloadDevolucao(args: {
     },
     itens: linhas,
     total: {
-      valor_produtos: reais(totalNotaCentavos),
+      valor_produtos: reais(totalProdutosCentavos),
+      valor_desconto: reais(totalDescontoCentavos),
       valor_frete: "0.00",
-      valor_nota: reais(totalNotaCentavos),
+      valor_nota: reais(totalProdutosCentavos - totalDescontoCentavos),
     },
   }
 
-  return { payload, itens_ordenados: ordenados }
+  return { payload, itens_ordenados: ordenados, itens_documento: itensDocumento }
 }

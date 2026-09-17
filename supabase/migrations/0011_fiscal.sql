@@ -86,6 +86,7 @@ create table if not exists public.fiscal_documento_item (
   ncm                    text not null,
   quantidade             int  not null check (quantidade >= 1),
   valor_unitario_centavos int not null check (valor_unitario_centavos >= 0),
+  desconto_centavos      int  not null default 0 check (desconto_centavos >= 0),
   unique (fiscal_documento_id, ordem_enviada)
 );
 

@@ -92,6 +92,7 @@ export async function emitirVenda(args: {
       ncm: it.ncm as string,
       quantidade: it.quantidade,
       valor_unitario_centavos: it.valor_unitario_centavos,
+      desconto_centavos: it.desconto_centavos,
     }))
   )
 

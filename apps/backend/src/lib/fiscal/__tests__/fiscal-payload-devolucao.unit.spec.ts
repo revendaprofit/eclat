@@ -39,8 +39,8 @@ function documento(p: Partial<FiscalDocumento> = {}): FiscalDocumento {
 }
 
 const itensOrigem: FiscalDocumentoItem[] = [
-  { id: "fi_1", fiscal_documento_id: "doc_1", medusa_line_item_id: "li_a", ordem_enviada: 1, n_item_verificado: 1, codigo_enviado: "TOP-AURA-P", ncm: "61091000", quantidade: 1, valor_unitario_centavos: 18900 },
-  { id: "fi_2", fiscal_documento_id: "doc_1", medusa_line_item_id: "li_b", ordem_enviada: 2, n_item_verificado: 2, codigo_enviado: "LEG-VERTICE-M", ncm: "61046200", quantidade: 2, valor_unitario_centavos: 24900 },
+  { id: "fi_1", fiscal_documento_id: "doc_1", medusa_line_item_id: "li_a", ordem_enviada: 1, n_item_verificado: 1, codigo_enviado: "TOP-AURA-P", ncm: "61091000", quantidade: 1, valor_unitario_centavos: 18900, desconto_centavos: 0 },
+  { id: "fi_2", fiscal_documento_id: "doc_1", medusa_line_item_id: "li_b", ordem_enviada: 2, n_item_verificado: 2, codigo_enviado: "LEG-VERTICE-M", ncm: "61046200", quantidade: 2, valor_unitario_centavos: 24900, desconto_centavos: 0 },
 ]
 
 const itensPedido: ItemPedido[] = [
@@ -154,5 +154,86 @@ describe("montarPayloadDevolucao", () => {
 
   it("recusa lista de devolvidos vazia", () => {
     expect(() => chamar({ devolvidos: [] })).toThrow(ErroFiscal)
+  })
+})
+
+// Rateio proporcional do desconto na devolução (Tarefa B1) — mesmo defeito que acabou de ser
+// corrigido do lado da venda (fiscal-pedido.ts), agora do lado da NFD.
+describe("rateio do desconto na devolução", () => {
+  const itensOrigemComDesconto: FiscalDocumentoItem[] = [
+    ...itensOrigem,
+    // Vendidas 2 unidades, desconto de 200 centavos na linha inteira.
+    { id: "fi_3", fiscal_documento_id: "doc_1", medusa_line_item_id: "li_c", ordem_enviada: 3, n_item_verificado: 3, codigo_enviado: "VEST-SOL-G", ncm: "61044200", quantidade: 2, valor_unitario_centavos: 10000, desconto_centavos: 200 },
+    // Vendidas 3 unidades, desconto de 100 centavos na linha inteira.
+    { id: "fi_4", fiscal_documento_id: "doc_1", medusa_line_item_id: "li_d", ordem_enviada: 4, n_item_verificado: 4, codigo_enviado: "SHORT-FLOW-M", ncm: "61046300", quantidade: 3, valor_unitario_centavos: 8000, desconto_centavos: 100 },
+  ]
+
+  const itensPedidoComDesconto: ItemPedido[] = [
+    ...itensPedido,
+    { line_item_id: "li_c", product_id: "prod_c", categoria_handle: "vestidos", titulo: "Vestido Sol", sku: "VEST-SOL-G", ncm: "61044200", origem: 0, quantidade: 2, valor_unitario_centavos: 10000, desconto_centavos: 200 },
+    { line_item_id: "li_d", product_id: "prod_d", categoria_handle: "shorts", titulo: "Short Flow", sku: "SHORT-FLOW-M", ncm: "61046300", origem: 0, quantidade: 3, valor_unitario_centavos: 8000, desconto_centavos: 100 },
+  ]
+
+  it("devolução total de item com desconto estorna o desconto inteiro", () => {
+    const { payload } = chamar({
+      itensOrigem: itensOrigemComDesconto,
+      itensPedido: itensPedidoComDesconto,
+      devolvidos: [{ line_item_id: "li_c", quantidade: 2 }],
+    })
+    const item = (payload as any).itens[0]
+    expect(item.valor_desconto).toBe("2.00")
+    // 10000 * 2 - 200 = 19800 centavos = 198.00
+    expect(item.valor_total).toBe("198.00")
+  })
+
+  it("devolução parcial (1 de 3, desconto de 100) estorna 33", () => {
+    const { payload, itens_documento } = chamar({
+      itensOrigem: itensOrigemComDesconto,
+      itensPedido: itensPedidoComDesconto,
+      devolvidos: [{ line_item_id: "li_d", quantidade: 1 }],
+    })
+    const item = (payload as any).itens[0]
+    // round(100 * 1 / 3) = round(33.33) = 33
+    expect(item.valor_desconto).toBe("0.33")
+    expect(item.valor_total).toBe("79.67") // 8000 - 33 = 7967 centavos
+    expect(itens_documento[0].desconto_centavos).toBe(33)
+  })
+
+  it("item sem desconto preserva o comportamento atual (nenhum estorno)", () => {
+    const { payload, itens_documento } = chamar({
+      devolvidos: [{ line_item_id: "li_b", quantidade: 1 }],
+    })
+    const item = (payload as any).itens[0]
+    expect(item.valor_desconto).toBe("0.00")
+    expect(item.valor_total).toBe("249.00")
+    expect(itens_documento[0].desconto_centavos).toBe(0)
+  })
+
+  it("o total da nota fecha com a soma das linhas", () => {
+    const { payload } = chamar({
+      itensOrigem: itensOrigemComDesconto,
+      itensPedido: itensPedidoComDesconto,
+      devolvidos: [
+        { line_item_id: "li_c", quantidade: 2 },
+        { line_item_id: "li_d", quantidade: 1 },
+      ],
+    })
+    const p = payload as any
+    const somaProdutos = p.itens.reduce(
+      (acc: number, it: any) => acc + Math.round(Number(it.valor_unitario) * 100) * it.quantidade,
+      0
+    )
+    const somaDesconto = p.itens.reduce(
+      (acc: number, it: any) => acc + Math.round(Number(it.valor_desconto) * 100),
+      0
+    )
+    const somaTotal = p.itens.reduce(
+      (acc: number, it: any) => acc + Math.round(Number(it.valor_total) * 100),
+      0
+    )
+    expect(Math.round(Number(p.total.valor_produtos) * 100)).toBe(somaProdutos)
+    expect(Math.round(Number(p.total.valor_desconto) * 100)).toBe(somaDesconto)
+    expect(Math.round(Number(p.total.valor_nota) * 100)).toBe(somaTotal)
+    expect(Math.round(Number(p.total.valor_nota) * 100)).toBe(somaProdutos - somaDesconto)
   })
 })
