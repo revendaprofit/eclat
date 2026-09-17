@@ -29,10 +29,8 @@ export async function emitirVenda(args: {
   destinatario: DestinatarioNF
   frete_centavos: number
 }): Promise<FiscalDocumento> {
-  // Acesso opcional a `ambiente`: o encadeamento evita quebrar o atalho abaixo quando já existe
-  // documento resolvido — nesse caso não é preciso validar a config inteira para devolvê-lo.
   const config = await getConfig()
-  const key = chaveIdempotencia(args.orderId, "venda", config?.ambiente as Ambiente)
+  const key = chaveIdempotencia(args.orderId, "venda", config.ambiente)
 
   const existente = await acharPorIdempotencia(key)
   if (existente && JA_RESOLVIDO.has(existente.status)) {
@@ -79,12 +77,18 @@ export async function emitirVenda(args: {
     documento_origem_id: null,
   })
 
+  // O codigo_enviado grava o MESMO valor que foi para o payload (payload.itens[idx].codigo),
+  // nunca recalculado aqui. A regra "sku ?? line_item_id" mora só em montarPayloadVenda — se
+  // recalculássemos aqui e alguém mudasse a regra em um lugar só, o casamento por código na
+  // reconciliação (spec §7.3) quebraria em silêncio.
+  const payloadItens = payload.itens as Array<{ codigo: string }>
   await criarItens(
     itens_ordenados.map((it, idx) => ({
       fiscal_documento_id: doc.id,
       medusa_line_item_id: it.line_item_id,
       ordem_enviada: idx + 1,
       n_item_verificado: null,
+      codigo_enviado: payloadItens[idx].codigo,
       ncm: it.ncm as string,
       quantidade: it.quantidade,
       valor_unitario_centavos: it.valor_unitario_centavos,

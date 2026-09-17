@@ -73,6 +73,7 @@ export type FiscalDocumentoItem = {
   medusa_line_item_id: string
   ordem_enviada: number
   n_item_verificado: number | null
+  codigo_enviado: string
   ncm: string
   quantidade: number
   valor_unitario_centavos: number

@@ -82,6 +82,7 @@ create table if not exists public.fiscal_documento_item (
   medusa_line_item_id    text not null,
   ordem_enviada          int  not null check (ordem_enviada >= 1),
   n_item_verificado      int  check (n_item_verificado >= 1),
+  codigo_enviado         text not null,
   ncm                    text not null,
   quantidade             int  not null check (quantidade >= 1),
   valor_unitario_centavos int not null check (valor_unitario_centavos >= 0),

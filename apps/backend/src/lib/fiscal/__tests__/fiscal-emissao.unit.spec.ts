@@ -41,7 +41,12 @@ describe("emitirVenda", () => {
     const existente = { id: "doc_1", status: "verificado", idempotency_key: "order_1:venda:homologacao" }
     jest.doMock("../fiscal-db", () => ({
       acharPorIdempotencia: jest.fn().mockResolvedValue(existente),
-      getConfig: jest.fn(),
+      getConfig: jest.fn().mockResolvedValue({
+        id: 1, cnpj: "68673407000113", razao_social: "X", nome_fantasia: null, ie: "1", im: null, crt: 1,
+        logradouro: "R", numero: "1", complemento: null, bairro: "B", municipio: "BETIM",
+        municipio_ibge: "3106705", uf: "MG", cep: "32604182", serie_nfe: 1,
+        ambiente: "homologacao", emissao_ativa: true,
+      }),
       listPerfis: jest.fn(),
       criarDocumento: jest.fn(),
       criarItens: jest.fn(),

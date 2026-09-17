@@ -39,8 +39,8 @@ function documento(p: Partial<FiscalDocumento> = {}): FiscalDocumento {
 }
 
 const itensOrigem: FiscalDocumentoItem[] = [
-  { id: "fi_1", fiscal_documento_id: "doc_1", medusa_line_item_id: "li_a", ordem_enviada: 1, n_item_verificado: 1, ncm: "61091000", quantidade: 1, valor_unitario_centavos: 18900 },
-  { id: "fi_2", fiscal_documento_id: "doc_1", medusa_line_item_id: "li_b", ordem_enviada: 2, n_item_verificado: 2, ncm: "61046200", quantidade: 2, valor_unitario_centavos: 24900 },
+  { id: "fi_1", fiscal_documento_id: "doc_1", medusa_line_item_id: "li_a", ordem_enviada: 1, n_item_verificado: 1, codigo_enviado: "TOP-AURA-P", ncm: "61091000", quantidade: 1, valor_unitario_centavos: 18900 },
+  { id: "fi_2", fiscal_documento_id: "doc_1", medusa_line_item_id: "li_b", ordem_enviada: 2, n_item_verificado: 2, codigo_enviado: "LEG-VERTICE-M", ncm: "61046200", quantidade: 2, valor_unitario_centavos: 24900 },
 ]
 
 const itensPedido: ItemPedido[] = [
