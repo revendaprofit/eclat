@@ -48,6 +48,22 @@ const itensPedido: ItemPedido[] = [
   { line_item_id: "li_b", product_id: "prod_b", categoria_handle: "leggings", titulo: "Legging Vertice", sku: "LEG-VERTICE-M", ncm: "61046200", origem: 0, quantidade: 2, valor_unitario_centavos: 24900, desconto_centavos: 0 },
 ]
 
+// Fixtures do rateio proporcional do desconto na devolução (Tarefa B1) — no escopo do arquivo
+// porque também são usadas por "resumo da devolução" (Tarefa 9).
+const itensOrigemComDesconto: FiscalDocumentoItem[] = [
+  ...itensOrigem,
+  // Vendidas 2 unidades, desconto de 200 centavos na linha inteira.
+  { id: "fi_3", fiscal_documento_id: "doc_1", medusa_line_item_id: "li_c", ordem_enviada: 3, n_item_verificado: 3, codigo_enviado: "VEST-SOL-G", ncm: "61044200", quantidade: 2, valor_unitario_centavos: 10000, desconto_centavos: 200 },
+  // Vendidas 3 unidades, desconto de 100 centavos na linha inteira.
+  { id: "fi_4", fiscal_documento_id: "doc_1", medusa_line_item_id: "li_d", ordem_enviada: 4, n_item_verificado: 4, codigo_enviado: "SHORT-FLOW-M", ncm: "61046300", quantidade: 3, valor_unitario_centavos: 8000, desconto_centavos: 100 },
+]
+
+const itensPedidoComDesconto: ItemPedido[] = [
+  ...itensPedido,
+  { line_item_id: "li_c", product_id: "prod_c", categoria_handle: "vestidos", titulo: "Vestido Sol", sku: "VEST-SOL-G", ncm: "61044200", origem: 0, quantidade: 2, valor_unitario_centavos: 10000, desconto_centavos: 200 },
+  { line_item_id: "li_d", product_id: "prod_d", categoria_handle: "shorts", titulo: "Short Flow", sku: "SHORT-FLOW-M", ncm: "61046300", origem: 0, quantidade: 3, valor_unitario_centavos: 8000, desconto_centavos: 100 },
+]
+
 function chamar(over: Record<string, unknown> = {}) {
   return montarPayloadDevolucao({
     config, perfis: [perfilPadrao], documentoOrigem: documento(), itensOrigem,
@@ -197,20 +213,6 @@ describe("montarPayloadDevolucao", () => {
 // Rateio proporcional do desconto na devolução (Tarefa B1) — mesmo defeito que acabou de ser
 // corrigido do lado da venda (fiscal-pedido.ts), agora do lado da NFD.
 describe("rateio do desconto na devolução", () => {
-  const itensOrigemComDesconto: FiscalDocumentoItem[] = [
-    ...itensOrigem,
-    // Vendidas 2 unidades, desconto de 200 centavos na linha inteira.
-    { id: "fi_3", fiscal_documento_id: "doc_1", medusa_line_item_id: "li_c", ordem_enviada: 3, n_item_verificado: 3, codigo_enviado: "VEST-SOL-G", ncm: "61044200", quantidade: 2, valor_unitario_centavos: 10000, desconto_centavos: 200 },
-    // Vendidas 3 unidades, desconto de 100 centavos na linha inteira.
-    { id: "fi_4", fiscal_documento_id: "doc_1", medusa_line_item_id: "li_d", ordem_enviada: 4, n_item_verificado: 4, codigo_enviado: "SHORT-FLOW-M", ncm: "61046300", quantidade: 3, valor_unitario_centavos: 8000, desconto_centavos: 100 },
-  ]
-
-  const itensPedidoComDesconto: ItemPedido[] = [
-    ...itensPedido,
-    { line_item_id: "li_c", product_id: "prod_c", categoria_handle: "vestidos", titulo: "Vestido Sol", sku: "VEST-SOL-G", ncm: "61044200", origem: 0, quantidade: 2, valor_unitario_centavos: 10000, desconto_centavos: 200 },
-    { line_item_id: "li_d", product_id: "prod_d", categoria_handle: "shorts", titulo: "Short Flow", sku: "SHORT-FLOW-M", ncm: "61046300", origem: 0, quantidade: 3, valor_unitario_centavos: 8000, desconto_centavos: 100 },
-  ]
-
   it("devolução total de item com desconto estorna o desconto inteiro", () => {
     const { payload } = chamar({
       itensOrigem: itensOrigemComDesconto,
@@ -318,5 +320,37 @@ describe("trava de quantidade já devolvida em NFDs anteriores", () => {
   it("sem devoluções anteriores (mapa vazio, o padrão), comportamento é igual ao de antes", () => {
     const { payload } = chamar({ devolvidos: [{ line_item_id: "li_b", quantidade: 1 }] })
     expect((payload as any).Produtos).toHaveLength(1)
+  })
+})
+
+// Tarefa 9: o Cockpit para de ler o payload do fornecedor (payload.itens/payload.total, que a
+// Tarefa 4 removeu) para montar a prévia da NFD. O backend passa a devolver um resumo próprio,
+// em centavos, que a tela só precisa exibir.
+describe("resumo da devolução (para a tela, em centavos)", () => {
+  it("traz itens e totais sem depender do formato do payload do fornecedor", () => {
+    const { resumo } = chamar() // 1 de 2 leggings a 249.00, sem desconto
+    expect(resumo).toEqual({
+      itens: [{
+        codigo: "LEG-VERTICE-M", descricao: "Legging Vertice", quantidade: 1,
+        bruto_centavos: 24900, desconto_centavos: 0, liquido_centavos: 24900,
+      }],
+      produtos_centavos: 24900,
+      desconto_centavos: 0,
+      total_centavos: 24900,
+    })
+  })
+
+  it("os totais fecham com a soma das linhas, inclusive com desconto rateado", () => {
+    const { resumo } = chamar({
+      itensOrigem: itensOrigemComDesconto,
+      itensPedido: itensPedidoComDesconto,
+      devolvidos: [{ line_item_id: "li_c", quantidade: 2 }, { line_item_id: "li_d", quantidade: 1 }],
+    })
+    const soma = (f: (i: (typeof resumo.itens)[number]) => number) => resumo.itens.reduce((a, i) => a + f(i), 0)
+    expect(resumo.produtos_centavos).toBe(soma((i) => i.bruto_centavos))
+    expect(resumo.desconto_centavos).toBe(soma((i) => i.desconto_centavos))
+    expect(resumo.total_centavos).toBe(soma((i) => i.liquido_centavos))
+    expect(resumo.total_centavos).toBe(resumo.produtos_centavos - resumo.desconto_centavos)
+    for (const i of resumo.itens) expect(i.liquido_centavos).toBe(i.bruto_centavos - i.desconto_centavos)
   })
 })

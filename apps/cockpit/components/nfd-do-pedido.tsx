@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { rotuloStatus, statusBloqueiaDevolucao, type StatusDocumento } from "@/lib/fiscal"
-import { montarItensDevolvidos, type ItemDevolvido } from "@/lib/fiscal-devolucao"
+import { montarItensDevolvidos, resumoValido, type ItemDevolvido, type ResumoDevolucao } from "@/lib/fiscal-devolucao"
 
 // Botão manual "Emitir NFD" (spec §3, decisão do controlador na Task 14 — o brief não menciona,
 // mas a spec põe no escopo e a rota já existe no backend). Lista os itens do pedido com campo de
@@ -25,22 +25,6 @@ export type ItemParaDevolucao = {
   quantidade_pedido: number
 }
 
-type ItemPreviaDevolucao = {
-  codigo: string
-  descricao: string
-  quantidade: number
-  valor_unitario: string
-  valor_desconto: string
-  valor_total: string
-}
-type TotalPreviaDevolucao = {
-  valor_produtos: string
-  valor_desconto: string
-  valor_frete: string
-  valor_nota: string
-}
-type PreviaDevolucao = { itens: ItemPreviaDevolucao[]; total: TotalPreviaDevolucao }
-
 type ResultadoNfd = {
   status: StatusDocumento
   numero: number | null
@@ -49,10 +33,9 @@ type ResultadoNfd = {
   rejeicao_motivo: string | null
 }
 
-// Os valores vêm do backend como string decimal ("10.50", já em reais) — só formata para exibir.
-function brlDeString(v: string): string {
-  const n = Number(v)
-  return Number.isFinite(n) ? n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) : v
+// O resumo vem do backend em centavos inteiros (Invariante 3) — só formata para exibir.
+function brl(centavos: number): string {
+  return (centavos / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
 }
 
 export function NfdDoPedido({
@@ -65,7 +48,7 @@ export function NfdDoPedido({
   itens: ItemParaDevolucao[]
 }) {
   const [quantidades, setQuantidades] = useState<Record<string, number>>({})
-  const [previa, setPrevia] = useState<PreviaDevolucao | null>(null)
+  const [previa, setPrevia] = useState<ResumoDevolucao | null>(null)
   const [previaOcupada, setPreviaOcupada] = useState(false)
   const [ocupado, setOcupado] = useState(false)
   const [erro, setErro] = useState<string | null>(null)
@@ -113,8 +96,8 @@ export function NfdDoPedido({
         body: JSON.stringify({ order_id: orderId, itens: itensDevolvidos satisfies ItemDevolvido[], previa: true }),
       })
       const d = await r.json().catch(() => ({}))
-      if (!r.ok || !d.payload?.itens || !d.payload?.total) throw new Error(d.error || "Falha ao montar a prévia da NFD.")
-      setPrevia({ itens: d.payload.itens, total: d.payload.total })
+      if (!r.ok || !resumoValido(d.resumo)) throw new Error(d.error || "Falha ao montar a prévia da NFD.")
+      setPrevia(d.resumo)
     } catch (e) {
       setErro((e as Error).message)
     } finally {
@@ -125,7 +108,7 @@ export function NfdDoPedido({
   async function emitir() {
     const itensDevolvidos = montarOuAvisar()
     if (!itensDevolvidos || !previa) return
-    const totalTxt = brlDeString(previa.total.valor_nota)
+    const totalTxt = brl(previa.total_centavos)
     if (!confirm(`Emitir NFD no valor de ${totalTxt}? Essa ação transmite a nota à SEFAZ e não pode ser desfeita.`)) {
       return
     }
@@ -220,15 +203,15 @@ export function NfdDoPedido({
                     <tr key={idx} className="border-b border-eclat-pedra/10 last:border-0">
                       <td className="py-1">{it.descricao} <span className="text-xs text-eclat-grafite/50">({it.codigo})</span></td>
                       <td className="py-1 text-center">{it.quantidade}×</td>
-                      <td className="py-1 text-right text-eclat-grafite/60">{brlDeString(it.valor_desconto)} desc.</td>
-                      <td className="py-1 text-right font-medium">{brlDeString(it.valor_total)}</td>
+                      <td className="py-1 text-right text-eclat-grafite/60">{brl(it.desconto_centavos)} desc.</td>
+                      <td className="py-1 text-right font-medium">{brl(it.liquido_centavos)}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
               <div className="flex justify-between border-t border-eclat-pedra/20 pt-2 font-medium">
-                <span>Total da NFD (produtos {brlDeString(previa.total.valor_produtos)} − desconto {brlDeString(previa.total.valor_desconto)})</span>
-                <span>{brlDeString(previa.total.valor_nota)}</span>
+                <span>Total da NFD (produtos {brl(previa.produtos_centavos)} − desconto {brl(previa.desconto_centavos)})</span>
+                <span>{brl(previa.total_centavos)}</span>
               </div>
             </div>
           )}

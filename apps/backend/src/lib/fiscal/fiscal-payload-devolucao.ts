@@ -24,6 +24,18 @@ import {
   type ItemPedido,
 } from "./tipos"
 
+// Resumo para a tela, em centavos. A tela NUNCA lê o payload do fornecedor: o formato dele é
+// problema desta camada, não do Cockpit.
+export type ResumoDevolucao = {
+  itens: Array<{
+    codigo: string; descricao: string; quantidade: number
+    bruto_centavos: number; desconto_centavos: number; liquido_centavos: number
+  }>
+  produtos_centavos: number
+  desconto_centavos: number
+  total_centavos: number
+}
+
 export function montarPayloadDevolucao(args: {
   config: FiscalConfig
   perfis: FiscalPerfil[]
@@ -43,6 +55,7 @@ export function montarPayloadDevolucao(args: {
   payload: Record<string, unknown>
   itens_ordenados: ItemPedido[]
   itens_documento: Array<Omit<FiscalDocumentoItem, "id" | "fiscal_documento_id" | "n_item_verificado">>
+  resumo: ResumoDevolucao
 } {
   const {
     config, perfis, documentoOrigem, itensOrigem, devolvidos, itensPedido, ufDestinatarioOriginal,
@@ -74,6 +87,7 @@ export function montarPayloadDevolucao(args: {
   // fiscal-emissao.ts na venda) — calculados uma única vez aqui, junto com o rateio do
   // desconto, para a rota de emissão da NFD não precisar reimplementar a fórmula.
   const itensDocumento: Array<Omit<FiscalDocumentoItem, "id" | "fiscal_documento_id" | "n_item_verificado">> = []
+  const itensResumo: ResumoDevolucao["itens"] = []
 
   const linhas = devolvidos.map((dev, idx) => {
     const origem = itensOrigem.find((i) => i.medusa_line_item_id === dev.line_item_id)
@@ -130,6 +144,16 @@ export function montarPayloadDevolucao(args: {
       quantidade: dev.quantidade,
       valor_unitario_centavos: origem.valor_unitario_centavos,
       desconto_centavos: descontoAEstornar,
+    })
+
+    const brutoCentavos = origem.valor_unitario_centavos * dev.quantidade
+    itensResumo.push({
+      codigo: codigoEnviado,
+      descricao: doPedido.titulo,
+      quantidade: dev.quantidade,
+      bruto_centavos: brutoCentavos,
+      desconto_centavos: descontoAEstornar,
+      liquido_centavos: brutoCentavos - descontoAEstornar,
     })
 
     const produto: Record<string, unknown> = {
@@ -193,5 +217,14 @@ export function montarPayloadDevolucao(args: {
     Transporte: { ModalidadeFrete: 9 },
   }
 
-  return { payload, itens_ordenados: ordenados, itens_documento: itensDocumento }
+  const produtosCentavos = itensResumo.reduce((a, i) => a + i.bruto_centavos, 0)
+  const descontoCentavos = itensResumo.reduce((a, i) => a + i.desconto_centavos, 0)
+  const resumo: ResumoDevolucao = {
+    itens: itensResumo,
+    produtos_centavos: produtosCentavos,
+    desconto_centavos: descontoCentavos,
+    total_centavos: produtosCentavos - descontoCentavos,
+  }
+
+  return { payload, itens_ordenados: ordenados, itens_documento: itensDocumento, resumo }
 }

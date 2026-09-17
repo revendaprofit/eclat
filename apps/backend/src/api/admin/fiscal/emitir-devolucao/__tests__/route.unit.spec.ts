@@ -160,7 +160,8 @@ describe("POST /admin/fiscal/emitir-devolucao — wiring com prepararTentativa/t
     const config = { ...configBase, emissao_ativa: false }
     const prepararTentativa = jest.fn()
     const previsualizar = jest.fn().mockResolvedValue({ xml: "<NFe/>" })
-    const montarPayloadDevolucao = jest.fn().mockReturnValue({ payload: { x: 1 }, itens_ordenados: [], itens_documento: [] })
+    const resumo = { itens: [], produtos_centavos: 0, desconto_centavos: 0, total_centavos: 0 }
+    const montarPayloadDevolucao = jest.fn().mockReturnValue({ payload: { x: 1 }, itens_ordenados: [], itens_documento: [], resumo })
     jest.doMock("../../../../../lib/fiscal/fiscal-db", () => ({
       getConfig: jest.fn().mockResolvedValue(config),
       documentoDeVendaDoPedido: jest.fn().mockResolvedValue(docVenda),
@@ -193,5 +194,6 @@ describe("POST /admin/fiscal/emitir-devolucao — wiring com prepararTentativa/t
     expect(res.statusCode).toBe(200)
     expect(montarPayloadDevolucao.mock.calls[0][0].identificador).toMatch(/^previa:/)
     expect(previsualizar).toHaveBeenCalledTimes(1)
+    expect((res.body as { resumo: unknown }).resumo).toBe(resumo)
   })
 })

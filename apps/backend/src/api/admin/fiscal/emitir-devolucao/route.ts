@@ -108,7 +108,7 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
       key = tentativa.key
     }
 
-    const { payload, itens_documento } = montarPayloadDevolucao({
+    const { payload, itens_documento, resumo } = montarPayloadDevolucao({
       config,
       perfis,
       documentoOrigem: doc,
@@ -122,7 +122,7 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
     })
 
     if (previa) {
-      return res.json({ previa: await previsualizar(payload), payload })
+      return res.json({ previa: await previsualizar(payload), payload, resumo })
     }
 
     // 1) grava documento + itens ANTES de transmitir — mesma ordem inegociável de emitirVenda.
