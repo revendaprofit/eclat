@@ -1,3 +1,9 @@
+// Monta o payload da NF-e de venda a partir do pedido do Medusa + perfil tributário (spec §7.1).
+// Função PURA: não faz rede, não lê banco. Isso a torna testável sem credencial.
+//
+// Dinheiro: entra em centavos inteiros (Invariante 3) e só vira string decimal na fronteira
+// com a API, que espera reais. A conversão é feita com aritmética inteira — nunca somando floats.
+
 import { resolverPerfil } from "./fiscal-perfil"
 import { ErroFiscal, type FiscalConfig, type FiscalPerfil, type ItemPedido } from "./tipos"
 
@@ -14,6 +20,7 @@ export type DestinatarioNF = {
   cep: string
 }
 
+// Centavos inteiros -> "1234.56". Sem float em nenhum ponto.
 function reais(centavos: number): string {
   const sinal = centavos < 0 ? "-" : ""
   const abs = Math.abs(centavos)
@@ -33,7 +40,9 @@ export function montarPayloadVenda(args: {
     throw new ErroFiscal("Pedido sem itens: não há o que emitir.")
   }
 
-  const interestadual = destinatario.uf.toUpperCase() !== config.uf.toUpperCase()
+  const ufDestino = destinatario.uf.trim().toUpperCase()
+  const ufEmitente = config.uf.trim().toUpperCase()
+  const interestadual = ufDestino !== ufEmitente
 
   for (const it of itens) {
     if (!it.ncm) {
@@ -100,7 +109,7 @@ export function montarPayloadVenda(args: {
       bairro: destinatario.bairro,
       municipio: destinatario.municipio,
       municipio_ibge: destinatario.municipio_ibge,
-      uf: destinatario.uf,
+      uf: ufDestino,
       cep: destinatario.cep,
     },
     itens: linhas,

@@ -122,4 +122,25 @@ describe("montarPayloadVenda", () => {
     })
     expect((payload as any).itens[0].origem).toBe(1)
   })
+
+  it("normaliza UF com espaço à direita no payload", () => {
+    const { payload } = montarPayloadVenda({
+      config, perfis: [perfilPadrao], itens: [item()], destinatario: destino("MG "), frete_centavos: 0,
+    })
+    expect((payload as any).destinatario.uf).toBe("MG")
+  })
+
+  it("normaliza UF minúscula no payload", () => {
+    const { payload } = montarPayloadVenda({
+      config, perfis: [perfilPadrao], itens: [item()], destinatario: destino("mg"), frete_centavos: 0,
+    })
+    expect((payload as any).destinatario.uf).toBe("MG")
+  })
+
+  it("trata UF com espaço como dentro do estado se for a UF do emitente", () => {
+    const { payload } = montarPayloadVenda({
+      config, perfis: [perfilPadrao], itens: [item()], destinatario: destino("MG "), frete_centavos: 0,
+    })
+    expect((payload as any).itens[0].cfop).toBe("5102")
+  })
 })

@@ -1,5 +1,8 @@
 import { ErroFiscal, type FiscalPerfil } from "./tipos"
 
+// Resolve qual regra tributária vale para um item: produto → categoria → padrão (spec §7.1).
+// Nunca inventa valor: sem perfil padrão cadastrado, falha explícita (Invariante 6).
+
 export function resolverPerfil(
   perfis: FiscalPerfil[],
   productId: string,
