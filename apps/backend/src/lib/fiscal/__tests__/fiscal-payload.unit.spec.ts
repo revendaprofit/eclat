@@ -1,9 +1,9 @@
 import { cfopNumerico, montarPayloadVenda, tipoAmbiente } from "../fiscal-payload"
-import { ErroFiscal } from "../tipos"
+import { ErroFiscal, type FiscalConfig, type FiscalPerfil, type ItemPedido } from "../tipos"
 
 // Formato do payload: SDK brasilnfe@3.1.3, tipo NotaFiscalEnvio (spec §7.1.1).
 
-const config = {
+const config: FiscalConfig = {
   id: 1, cnpj: "68673407000113", razao_social: "CAMILA DE MOURA NOGUEIRA",
   nome_fantasia: "USE ECLAT", ie: "56295050042", im: null, crt: 1,
   logradouro: "R NORTE", numero: "180", complemento: null, bairro: "ANGOLA",
@@ -11,7 +11,7 @@ const config = {
   serie_nfe: 1, ambiente: "homologacao", emissao_ativa: true,
 }
 
-function perfil(p = {}) {
+function perfil(p: Partial<FiscalPerfil> = {}): FiscalPerfil {
   return {
     id: "padrao", escopo: "padrao", alvo_id: null, csosn: "102",
     cfop_dentro_uf: "5102", cfop_fora_uf: "6108",
@@ -20,7 +20,7 @@ function perfil(p = {}) {
   }
 }
 
-function item(p = {}) {
+function item(p: Partial<ItemPedido> = {}): ItemPedido {
   return {
     line_item_id: p.line_item_id ?? "li_1",
     product_id: p.product_id ?? "prod_1",
@@ -44,12 +44,12 @@ function destino(uf) {
   }
 }
 
-function montar(over = {}) {
+function montar(over: Partial<Parameters<typeof montarPayloadVenda>[0]> = {}) {
   return montarPayloadVenda({
     config, perfis: [perfil()], itens: [item()], destinatario: destino("MG"),
     frete_centavos: 0, pagamento: { forma: "99", descricao: "Pagamento online" },
     identificador: "order_1:venda:homologacao", ...over,
-  }).payload
+  }).payload as any
 }
 
 describe("tipoAmbiente / cfopNumerico", () => {
@@ -172,7 +172,7 @@ describe("montarPayloadVenda — produtos", () => {
   })
 
   it("preserva a ordem dos itens — a posição no array É o nItem", () => {
-    const r = montarPayloadVenda({
+    const r: any = montarPayloadVenda({
       config, perfis: [perfil()], destinatario: destino("MG"), frete_centavos: 0,
       pagamento: { forma: "99", descricao: "Pagamento online" }, identificador: "k",
       itens: [item({ line_item_id: "li_a", sku: "A" }), item({ line_item_id: "li_b", sku: "B" })],

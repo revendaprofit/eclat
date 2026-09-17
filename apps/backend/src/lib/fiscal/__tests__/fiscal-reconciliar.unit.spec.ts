@@ -52,7 +52,7 @@ describe("reconciliarDocumento", () => {
     expect(r.verificado).toBe(true)
     expect(atualizarNItem).toHaveBeenCalledWith("fi_1", 1)
     expect(atualizarNItem).toHaveBeenCalledWith("fi_2", 2)
-    const patch = atualizarDocumento.mock.calls.at(-1)![1] as any
+    const patch = atualizarDocumento.mock.calls[atualizarDocumento.mock.calls.length - 1][1] as any
     expect(patch.status).toBe("verificado")
     expect(patch.verificado_em).toBeTruthy()
   })
@@ -72,7 +72,7 @@ describe("reconciliarDocumento", () => {
     // valor da SEFAZ prevalece: TOP-P saiu como nItem 2
     expect(atualizarNItem).toHaveBeenCalledWith("fi_1", 2)
     expect(atualizarNItem).toHaveBeenCalledWith("fi_2", 1)
-    expect((atualizarDocumento.mock.calls.at(-1)![1] as any).status).toBe("verificado")
+    expect((atualizarDocumento.mock.calls[atualizarDocumento.mock.calls.length - 1][1] as any).status).toBe("verificado")
   })
 
   it("não marca verificado quando o XML tem menos itens que o documento", async () => {
@@ -204,7 +204,7 @@ describe("reconciliarDocumento", () => {
     expect(r.verificado).toBe(true)
     expect(r.divergencias.length).toBeGreaterThan(0)
     expect(atualizarNItem).toHaveBeenCalledWith("fi_1", 1)
-    expect((atualizarDocumento.mock.calls.at(-1)![1] as any).status).toBe("verificado")
+    expect((atualizarDocumento.mock.calls[atualizarDocumento.mock.calls.length - 1][1] as any).status).toBe("verificado")
   })
 })
 
