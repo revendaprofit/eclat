@@ -53,6 +53,7 @@ type Documento = {
   chave_acesso: string | null
   rejeicao_codigo: string | null
   rejeicao_motivo: string | null
+  verificado_em: string | null
 }
 
 const card = "border border-eclat-pedra/40 rounded-lg p-5 bg-eclat-luz flex flex-col gap-3"
@@ -149,7 +150,12 @@ export default function FiscalPage() {
 
       <PerfisBlock perfis={perfis} config={config} busy={busy} perfilPadraoAtivo={perfilPadraoAtivo} salvar={(p) => api("/api/fiscal/perfis", "POST", p)} />
 
-      <FilaBlock documentos={documentos} busy={busy} reconciliar={(id) => api("/api/fiscal/reconciliar", "POST", { documento_id: id })} />
+      <FilaBlock
+        documentos={documentos}
+        busy={busy}
+        reconciliar={(id) => api("/api/fiscal/reconciliar", "POST", { documento_id: id })}
+        resolver={(documento_id, acao, extra) => api("/api/fiscal/resolver", "POST", { documento_id, acao, ...extra })}
+      />
     </div>
   )
 }
@@ -283,9 +289,11 @@ function PerfisBlock({
               <option value="categoria">Categoria</option>
               <option value="produto">Produto</option>
             </select>
-            {/* Escopo e Alvo travados na edição: o backend faz upsert por escopo+alvo_id (merge-duplicates)
-                e descarta o "id" do corpo (não está na allowlist do PATCH) — mudar a chave aqui criaria
-                um perfil novo em silêncio e deixaria o antigo órfão, ainda ativo. */}
+            {/* Escopo e Alvo travados na edição: a edição manda "id" (allowlist do backend inclui "id",
+                achado crítico C4) e o PostgREST resolve o merge-duplicates pela CHAVE PRIMÁRIA — não
+                por escopo+alvo_id, que ele não tem como usar num ON CONFLICT sem a cláusula WHERE dos
+                índices parciais. Mudar escopo/alvo aqui editaria o mesmo registro sob uma chave de
+                negócio diferente da que ele tinha; mais seguro cadastrar um perfil novo. */}
             {editandoId && <p className={hint}>Travado na edição — para mudar o escopo, cadastre um perfil novo.</p>}
           </div>
           {form.escopo !== "padrao" && (
@@ -314,13 +322,23 @@ function PerfisBlock({
 }
 
 function FilaBlock({
-  documentos, busy, reconciliar,
+  documentos, busy, reconciliar, resolver,
 }: {
   documentos: Documento[]
   busy: boolean
   reconciliar: (id: string) => Promise<{ verificado?: boolean; divergencias?: string[] } | null>
+  // F3 entregue pela metade (achado I5/5.4): a rota /admin/fiscal/resolver existia mas nenhuma
+  // tela chamava. Cobre o documento preso em transmitido_sem_confirmacao sem chave (anexar a
+  // chave que o operador confirmou no painel da Brasil NFe, ou marcar como não transmitida) e a
+  // chave anexada errada em autorizado_nao_verificado (limpar pra tentar de novo).
+  resolver: (
+    documentoId: string,
+    acao: "anexar_chave" | "marcar_rejeitado" | "limpar_chave",
+    extra?: { chave_acesso?: string; motivo?: string }
+  ) => Promise<{ documento?: Documento } | null>
 }) {
   const [resultado, setResultado] = useState<Record<string, { verificado?: boolean; divergencias?: string[] }>>({})
+  const [chaves, setChaves] = useState<Record<string, string>>({})
 
   return (
     <section className={card}>
@@ -332,30 +350,77 @@ function FilaBlock({
 
       {documentos.length === 0 && <p className={hint}>Nenhum documento pendente de ação.</p>}
 
-      {documentos.map((d) => (
-        <div key={d.id} className="border border-eclat-pedra/30 rounded-md p-3 flex flex-col gap-2">
-          <div className="flex items-center gap-2 flex-wrap text-xs">
-            <span className={`px-2 py-0.5 rounded ${CORES_STATUS[corDoStatus(d.status)]}`}>{rotuloStatus(d.status)}</span>
-            <span className="text-eclat-grafite/60">{d.tipo === "venda" ? "Venda" : "Devolução"} · pedido {d.medusa_order_id} · {d.ambiente === "producao" ? "produção" : "homologação"}</span>
-          </div>
-          {d.rejeicao_motivo && (
-            <p className="text-sm text-red-800">
-              {d.rejeicao_codigo ? `[${d.rejeicao_codigo}] ` : ""}{d.rejeicao_motivo}
-            </p>
-          )}
-          <div className="flex gap-2 items-center">
-            <button disabled={busy} className={btn2} onClick={async () => { const res = await reconciliar(d.id); setResultado((r) => ({ ...r, [d.id]: res || {} })) }}>
-              Reconciliar
-            </button>
-          </div>
-          {resultado[d.id] && (
-            <div className="text-sm bg-white border border-eclat-pedra/40 rounded-md p-2">
-              <p>{resultado[d.id].verificado ? "Verificado com sucesso." : "Não verificado — veja divergências abaixo."}</p>
-              {(resultado[d.id].divergencias || []).map((div, i) => <p key={i} className="text-amber-800">{div}</p>)}
+      {documentos.map((d) => {
+        const semChaveTransmitida = d.status === "transmitido_sem_confirmacao" && !d.chave_acesso
+        const autorizadoSemVerificar = d.status === "autorizado_nao_verificado" && !d.verificado_em
+        return (
+          <div key={d.id} className="border border-eclat-pedra/30 rounded-md p-3 flex flex-col gap-2">
+            <div className="flex items-center gap-2 flex-wrap text-xs">
+              <span className={`px-2 py-0.5 rounded ${CORES_STATUS[corDoStatus(d.status)]}`}>{rotuloStatus(d.status)}</span>
+              <span className="text-eclat-grafite/60">{d.tipo === "venda" ? "Venda" : "Devolução"} · pedido {d.medusa_order_id} · {d.ambiente === "producao" ? "produção" : "homologação"}</span>
             </div>
-          )}
-        </div>
-      ))}
+            {d.rejeicao_motivo && (
+              <p className="text-sm text-red-800">
+                {d.rejeicao_codigo ? `[${d.rejeicao_codigo}] ` : ""}{d.rejeicao_motivo}
+              </p>
+            )}
+            <div className="flex gap-2 items-center">
+              <button disabled={busy} className={btn2} onClick={async () => { const res = await reconciliar(d.id); setResultado((r) => ({ ...r, [d.id]: res || {} })) }}>
+                Reconciliar
+              </button>
+            </div>
+            {resultado[d.id] && (
+              <div className="text-sm bg-white border border-eclat-pedra/40 rounded-md p-2">
+                <p>{resultado[d.id].verificado ? "Verificado com sucesso." : "Não verificado — veja divergências abaixo."}</p>
+                {(resultado[d.id].divergencias || []).map((div, i) => <p key={i} className="text-amber-800">{div}</p>)}
+              </div>
+            )}
+
+            {semChaveTransmitida && (
+              <div className="border-t border-eclat-pedra/30 pt-2 flex flex-col gap-2">
+                <p className={hint}>
+                  Transmitiu e a rede caiu antes da resposta. Consulte o painel da Brasil NFe: se a nota saiu, cole a
+                  chave de 44 dígitos abaixo; se não saiu, marque como não transmitida para liberar o pedido.
+                </p>
+                <div className="flex gap-2 items-center flex-wrap">
+                  <input
+                    className={input + " max-w-xs"}
+                    placeholder="Chave de acesso (44 dígitos)"
+                    maxLength={44}
+                    value={chaves[d.id] || ""}
+                    onChange={(e) => setChaves((c) => ({ ...c, [d.id]: e.target.value.replace(/\D/g, "") }))}
+                  />
+                  <button
+                    disabled={busy || (chaves[d.id] || "").length !== 44}
+                    className={btn2}
+                    onClick={() => resolver(d.id, "anexar_chave", { chave_acesso: chaves[d.id] })}
+                  >
+                    Anexar chave
+                  </button>
+                  <button
+                    disabled={busy}
+                    className={btn2}
+                    onClick={() => resolver(d.id, "marcar_rejeitado")}
+                  >
+                    Marcar como não transmitida
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {autorizadoSemVerificar && (
+              <div className="border-t border-eclat-pedra/30 pt-2 flex flex-col gap-2">
+                <p className={hint}>
+                  Chave anexada errada e a reconciliação ainda não confirmou — limpe para poder anexar a chave certa.
+                </p>
+                <button disabled={busy} className={btn2} onClick={() => resolver(d.id, "limpar_chave")}>
+                  Limpar chave
+                </button>
+              </div>
+            )}
+          </div>
+        )
+      })}
     </section>
   )
 }
