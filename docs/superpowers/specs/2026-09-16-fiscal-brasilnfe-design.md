@@ -53,7 +53,7 @@ O sistema **nunca infere** um valor tributário. Se falta perfil fiscal para um 
 | Dado | Onde | Justificativa |
 |---|---|---|
 | **NCM** | `variant.hs_code` (campo nativo do Medusa) | NCM é a extensão brasileira do HS code. Atributo de produto = comércio (Invariante 2) |
-| **Origem da mercadoria** (0–8) | `variant.origin_country` (nativo) + mapa | idem |
+| **Origem da mercadoria** (0–8) | `variant.origin_country` (nativo) (BR → 0; demais → `origem_padrao` do perfil) | idem |
 | **CFOP, CSOSN, alíquotas** | Supabase `fiscal_perfil` | regra tributária, não atributo de produto; muda com regime e UF de destino |
 | **Emitente** (CNPJ, IE, endereço, regime, série, ambiente) | Supabase `fiscal_config` | configuração fiscal |
 | **Tokens da Brasil NFe** | env: `BRASILNFE_USER_TOKEN`, `BRASILNFE_COMPANY_TOKEN`, `BRASILNFE_WEBHOOK_SECRET` | segredo, nunca no banco, nunca em log |
@@ -388,6 +388,7 @@ Nenhuma falha é silenciosa. Toda transição grava motivo legível.
 10. **Quem é o `Cliente` na NFD de entrada.** A revisão 1 decidiu que a destinatária é a própria ÉCLAT (leitura da VC02-50). Com o contrato real, `Cliente` é a única contraparte do payload, e a prática de mercado em devolução de pessoa física é informar **a consumidora** como remetente/destinatária da nota de entrada. Não há como decidir por leitura: **a pré-visualização e a transmissão em homologação decidem** (a SEFAZ de homologação valida a VC02-50), junto com a pergunta 4 já enviada ao contador. A NFD só é automatizada no Projeto B; até lá isto não bloqueia a venda.
 11. **`ObterNotasFiscais` enxerga a NFD?** O filtro por `IdentificadorInterno` é documentado como "somente saídas". A NFD é emissão própria com CFOP de entrada. Se a consulta não a enxergar, uma NFD em `transmitido_sem_confirmacao` só se resolve manualmente. Verificar em homologação.
 12. **`FormaPagamento: "99"` em todas as notas** enquanto o provedor de pagamento for o manual. É válido, mas pobre. Some quando o gateway real entrar e o mapa do §7.1.1 ganhar Pix e cartão.
+13. **Origem da mercadoria: o sistema só afirma `0` quando a variante é BR; para qualquer outro país usa `origem_padrao` do perfil — a classificação 1/2/3/5/6/7/8 é do contador (pergunta 5 já enviada).**
 
 ## 12. Critério de aceite
 

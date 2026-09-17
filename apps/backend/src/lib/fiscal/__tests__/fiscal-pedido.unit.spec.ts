@@ -81,11 +81,42 @@ describe("montarItensDoPedido", () => {
       line_item_id: "li_b",
       sku: "LEG-VERTICE-M",
       ncm: "61046200",
-      origem: 1, // origin_country "CN" -> importação
+      // I3 (achado importante da revisão final de 2026-09-17): o mapa país->origem não pode
+      // decidir sozinho entre 1 (importação direta) e 2 (importação por terceiro)/3/5/6/7/8 —
+      // isso é do contador. Qualquer país que não seja BR cai em null (perfil.origem_padrao).
+      origem: null, // origin_country "CN" -> null, não mais 1
       quantidade: 2,
       valor_unitario_centavos: 5000,
       desconto_centavos: 1000,
     })
+  })
+
+  // I3 (achado importante da revisão final de 2026-09-17): origemDoPais não pode escolher sozinho
+  // entre 1/2/3/5/6/7/8 — só BR (0) é uma leitura direta e inequívoca do cadastro. Qualquer outro
+  // valor (inclusive país ausente) cai em null, para o motor de payload usar perfil.origem_padrao
+  // (campo do contador) em vez de chutar "importação direta" para peça comprada de importador
+  // brasileiro, por exemplo.
+  it.each([
+    ["BR", 0],
+    ["br", 0],
+    ["CN", null],
+    ["US", null],
+  ] as const)("origin_country %s -> origem %s", async (pais, esperado) => {
+    const pedido = pedidoBase()
+    pedido.items[0].variant.origin_country = pais
+    const { scope } = scopeCom(pedido)
+
+    const { itens } = await montarItensDoPedido(scope, "order_1")
+    expect(itens[0].origem).toBe(esperado)
+  })
+
+  it("origin_country ausente -> origem null (não assume nacional nem importado)", async () => {
+    const pedido = pedidoBase()
+    delete pedido.items[0].variant.origin_country
+    const { scope } = scopeCom(pedido)
+
+    const { itens } = await montarItensDoPedido(scope, "order_1")
+    expect(itens[0].origem).toBeNull()
   })
 
   it("calcula desconto_centavos a partir de discount_total e passa a conferência do item", async () => {

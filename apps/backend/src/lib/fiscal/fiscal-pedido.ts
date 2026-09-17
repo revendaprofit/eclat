@@ -11,10 +11,15 @@ import { ErroFiscal, type ItemPedido } from "./tipos"
 import type { DestinatarioNF } from "./fiscal-payload"
 import { formaPagamentoDoPedido, type PagamentoNF } from "./fiscal-pagamento"
 
-// ISO 3166-1 alfa-2 -> código de origem da NF-e. 0 = nacional, 1 = importação direta.
+// ISO 3166-1 alfa-2 -> código de origem da NF-e (0-8). Só BR->0 é uma leitura direta e
+// inequívoca do cadastro. Para qualquer outro valor, o código NÃO pode decidir sozinho entre 1
+// (importação direta), 2 (importação por terceiro/adquirida no mercado interno), 3/5/6/7/8
+// (combinações com conteúdo nacional/importação) — ex.: peça fabricada fora e comprada de um
+// importador brasileiro é 2, não 1. Isso é decisão do contador (perfil.origem_padrao), não um
+// mapa país->origem (achado importante da revisão final de 2026-09-17, Invariante 6).
 function origemDoPais(pais: string | null | undefined): number | null {
   if (!pais) return null
-  return pais.toUpperCase() === "BR" ? 0 : 1
+  return pais.toUpperCase() === "BR" ? 0 : null
 }
 
 export async function montarItensDoPedido(
