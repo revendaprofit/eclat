@@ -87,3 +87,12 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 export function ehUuid(v: string): boolean {
   return UUID_RE.test(v)
 }
+
+// O orderId do pedido vai para dentro de uma URL da Admin API com o token de admin anexado
+// (app/api/fiscal-previa/[orderId]/route.ts) — mesma classe de defesa do ehUuid acima, mas para
+// o formato de id do Medusa ("order_" + alfanumérico), que não é um uuid.
+const ID_DE_PEDIDO_RE = /^order_[A-Za-z0-9]+$/
+
+export function ehIdDePedido(v: string): boolean {
+  return ID_DE_PEDIDO_RE.test(v)
+}

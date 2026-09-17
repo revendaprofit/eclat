@@ -28,6 +28,7 @@ export function FiscalDoPedido({
   erroCarregar,
   onAtualizado,
   onTentarNovamente,
+  orderId,
 }: {
   documento: DocumentoFiscal | null
   // Falha ao BUSCAR o documento (rede/servidor) — diferente de "não existe nota" (achado da
@@ -36,6 +37,10 @@ export function FiscalDoPedido({
   erroCarregar?: string | null
   onAtualizado?: () => void
   onTentarNovamente?: () => void
+  // I1 (achado importante da revisão final): id do pedido, para o link de prévia da NF-e
+  // (/api/fiscal-previa/[orderId]) — o roteiro de homologação pede prévia pelo Cockpit e não
+  // havia caminho na UI (emitir fica de propósito fora do proxy genérico).
+  orderId?: string
 }) {
   const [ocupado, setOcupado] = useState(false)
   const [erroReconciliar, setErroReconciliar] = useState<string | null>(null)
@@ -56,9 +61,10 @@ export function FiscalDoPedido({
 
   if (!documento) {
     return (
-      <section className="border border-eclat-pedra/40 rounded-lg p-4 bg-white/60">
+      <section className="border border-eclat-pedra/40 rounded-lg p-4 bg-white/60 flex flex-col gap-2">
         <h4 className="text-xs uppercase tracking-wider text-eclat-grafite/60 mb-1">Nota fiscal</h4>
         <p className="text-sm text-eclat-grafite/50">Nenhuma nota fiscal emitida para este pedido.</p>
+        <LinkPrevia orderId={orderId} />
       </section>
     )
   }
@@ -121,6 +127,10 @@ export function FiscalDoPedido({
         </div>
       )}
 
+      {/* I1: sem chave_acesso, o pedido ainda não tem nota autorizada — a prévia (XML, não
+          transmite) é o único jeito de conferir NCM/CFOP/CSOSN antes de emitir de verdade. */}
+      {!documento.chave_acesso && <LinkPrevia orderId={orderId} />}
+
       {statusBloqueiaDevolucao(documento.status) && (
         <div className="border border-amber-300 bg-amber-50 rounded-md p-2 text-sm text-amber-900">
           <p>Devolução bloqueada até a reconciliação (o nItem da SEFAZ ainda não foi lido).</p>
@@ -141,5 +151,24 @@ export function FiscalDoPedido({
         </div>
       )}
     </section>
+  )
+}
+
+// I1: link dedicado para /api/fiscal-previa/[orderId] — GET simples, o navegador abre o XML numa
+// aba nova. Sem orderId (chamador não passou a prop ainda), não renderiza nada em vez de montar
+// um link quebrado.
+function LinkPrevia({ orderId }: { orderId?: string }) {
+  if (!orderId) return null
+  return (
+    <div className="flex gap-3 text-sm">
+      <a
+        className="text-eclat-dourado underline"
+        href={`/api/fiscal-previa/${orderId}`}
+        target="_blank"
+        rel="noreferrer"
+      >
+        Ver prévia da NF-e (XML, não transmite)
+      </a>
+    </div>
   )
 }

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { rotuloStatus, statusBloqueiaDevolucao, corDoStatus, validarCaminhoFiscal, ehUuid } from "./fiscal"
+import { rotuloStatus, statusBloqueiaDevolucao, corDoStatus, validarCaminhoFiscal, ehUuid, ehIdDePedido } from "./fiscal"
 
 describe("rotuloStatus", () => {
   it("traduz cada status para português legível", () => {
@@ -93,5 +93,22 @@ describe("ehUuid", () => {
     for (const v of ["", "..", "../customers", "3f2b8c1e-5a4d-4e6f-9a7b-1c2d3e4f5a6b/../x", "3f2b8c1e%2f"]) {
       expect(ehUuid(v)).toBe(false)
     }
+  })
+})
+
+// I1 (achado importante da revisão final de 2026-09-17): valida o orderId ANTES de qualquer
+// chamada — ele vai para dentro de uma URL da Admin API com o token de admin anexado
+// (app/api/fiscal-previa/[orderId]/route.ts), mesma classe de defesa do ehUuid acima.
+describe("ehIdDePedido", () => {
+  it("aceita um order_id do Medusa", () => {
+    expect(ehIdDePedido("order_01H8Z9K3G7XQJ2R5T6V8W9Y1Z2")).toBe(true)
+  })
+  it("recusa vazio, path traversal e segmento com barra decodificada", () => {
+    for (const v of ["", "..", "order_x/../y", "order_%2f", "../../customers", "order_"]) {
+      expect(ehIdDePedido(v)).toBe(false)
+    }
+  })
+  it("recusa qualquer coisa sem o prefixo order_", () => {
+    expect(ehIdDePedido("cust_01H8Z9K3G7XQJ2R5T6V8W9Y1Z2")).toBe(false)
   })
 })

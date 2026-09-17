@@ -55,8 +55,11 @@ Pré-requisitos: migration 0012 aplicada; empresa cadastrada no painel da Brasil
 do §6.0 da spec, certificado A1 carregado, **ambiente = homologação**; tokens no `.env` do backend;
 perfil tributário padrão e NCM em ao menos um produto; `fiscal_config.ambiente = homologacao`.
 
-1. **Prévia de venda** (não transmite): Cockpit → pedido de teste → prévia. Conferir no XML: NCM,
-   CFOP, CSOSN, `vFrete` rateado, ausência de `infIntermed`. **Verificar se há grupo IBSCBS** (risco 1).
+1. **Prévia de venda** (não transmite): Cockpit → Pedidos → abra o pedido de teste → seção "Nota
+   fiscal" → link **"Ver prévia da NF-e (XML, não transmite)"** (só aparece enquanto o pedido não
+   tem nota autorizada, ou seja, sem `chave_acesso`; abre `/api/fiscal-previa/[orderId]` numa aba
+   nova). Conferir no XML: NCM, CFOP, CSOSN, `vFrete` rateado, ausência de `infIntermed`.
+   **Verificar se há grupo IBSCBS** (risco 1).
 2. Ligar `emissao_ativa`. **Despachar** o pedido de teste. Esperado: documento vai a `verificado`
    na hora; `numero`, `serie`, `chave_acesso` preenchidos; "Baixar DANFE" abre o PDF.
 3. **Despachar de novo** o mesmo pedido: nenhuma nota nova (conferir no painel deles).
