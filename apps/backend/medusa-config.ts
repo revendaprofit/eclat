@@ -20,6 +20,9 @@ const modulosDePagamento = process.env.MERCADOPAGO_ACCESS_TOKEN
                 maxParcelas: process.env.MERCADOPAGO_MAX_PARCELAS
                   ? Number(process.env.MERCADOPAGO_MAX_PARCELAS)
                   : 4,
+                pixExpiraMin: process.env.MERCADOPAGO_PIX_EXPIRA_MIN
+                  ? Number(process.env.MERCADOPAGO_PIX_EXPIRA_MIN)
+                  : 30,
                 descricaoFatura: 'USEECLAT',
               },
             },

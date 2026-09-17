@@ -25,6 +25,8 @@ export type PagamentoDaOrder = {
   paid_amount?: string
   status: string
   status_detail?: string
+  /** Só no Pix: quando o código expira (ISO). Vem de `expiration_time` mandado na criação. */
+  date_of_expiration?: string
   payment_method: PaymentMethodOrder
 }
 

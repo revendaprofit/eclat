@@ -42,6 +42,8 @@ export type OpcoesMercadoPago = {
   accessToken: string
   webhookSecret?: string
   maxParcelas?: number
+  /** Validade do código Pix em minutos (spec §6: 30). Vira `expiration_time: "PT{n}M"`. */
+  pixExpiraMin?: number
   descricaoFatura?: string
 }
 
@@ -269,7 +271,17 @@ export default class MercadoPagoProviderService extends AbstractPaymentProvider<
       total_amount: valor,
       description: this.opcoes_.descricaoFatura ?? "USEECLAT",
       payer: this.montarPayer(args.context, args.data),
-      transactions: { payments: [{ amount: valor, payment_method: paymentMethod }] },
+      transactions: {
+        payments: [
+          {
+            amount: valor,
+            // Confirmado no sandbox (2026-09-17): a Orders API aceita a validade por pagamento e
+            // devolve `date_of_expiration`. Sem isso o Pix fica com o prazo padrão da conta.
+            ...(args.metodo === "pix" ? { expiration_time: `PT${this.opcoes_.pixExpiraMin ?? 30}M` } : {}),
+            payment_method: paymentMethod,
+          },
+        ],
+      },
     }
   }
 
@@ -304,6 +316,7 @@ export default class MercadoPagoProviderService extends AbstractPaymentProvider<
       dados.qr_code = pagamento.payment_method.qr_code
       dados.qr_code_base64 = pagamento.payment_method.qr_code_base64
       dados.ticket_url = pagamento.payment_method.ticket_url
+      dados.expira_em = pagamento.date_of_expiration
     }
     if (estaAprovada(order)) {
       dados.aprovado_em = new Date().toISOString()

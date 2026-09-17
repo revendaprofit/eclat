@@ -95,6 +95,7 @@ describe("MercadoPagoProviderService", () => {
       expect(corpoEnviado.external_reference).toBe("payses_1")
       expect(corpoEnviado.processing_mode).toBe("automatic")
       expect(corpoEnviado.transactions.payments[0].payment_method).toEqual({ id: "pix", type: "bank_transfer" })
+      expect(corpoEnviado.transactions.payments[0].expiration_time).toBe("PT30M") // spec §6: Pix vale 30 min
     })
 
     it("Pix: sem CPF, lança em vez de mandar a order sem identificação", async () => {
