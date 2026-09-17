@@ -2,7 +2,6 @@
 // PreVisualizarNotaFiscalRetorno; ObterArquivoNotaFiscal devolve uma string JSON em base64.
 
 import { interpretarResposta } from "../fiscal-client"
-import { ErroFiscal } from "../tipos"
 
 const CHAVE = "31260968673407000113550010000000011000000017"
 const XML = `<nfeProc><NFe><infNFe Id="NFe${CHAVE}"><det nItem="1"><prod><cProd>TOP-P</cProd><NCM>61091000</NCM></prod></det></infNFe></NFe></nfeProc>`
@@ -52,6 +51,10 @@ describe("interpretarResposta", () => {
       const r = interpretarResposta({ ReturnNF: { Ok: false, CodStatusRespostaSefaz: cod, DsStatusRespostaSefaz: "Uso denegado" } }, 2)
       expect(r.desfecho).toBe("denegado")
     }
+  })
+
+  it("INCOERÊNCIA: Ok true com código de denegação é indefinido, não denegado", () => {
+    expect(interpretarResposta(autorizada({ CodStatusRespostaSefaz: 301 }), 2).desfecho).toBe("indefinido")
   })
 
   it("erro de validação do fornecedor (sem ReturnNF, com Error) é rejeitado — não chegou à SEFAZ", () => {
@@ -157,8 +160,12 @@ describe("fiscal-client — HTTP", () => {
     global.fetch = jest.fn().mockResolvedValueOnce(new Response("erro interno", { status: 502 })) as unknown as typeof fetch
     const { transmitir } = await import("../fiscal-client.js")
     const erro = await transmitir({ TipoAmbiente: 2 }).catch((e) => e)
+    // instanceof negativo precisa da classe do MESMO ciclo de módulo (ver testes de
+    // "ErroFiscal antes de qualquer rede" acima): comparar com a estática do topo do arquivo
+    // torna a asserção sempre verdadeira, mesmo que a implementação lance ErroFiscal por engano.
+    const { ErroFiscal: ErroFiscalDoCiclo } = await import("../tipos.js")
     expect(erro).toBeInstanceOf(Error)
-    expect(erro).not.toBeInstanceOf(ErroFiscal)
+    expect(erro).not.toBeInstanceOf(ErroFiscalDoCiclo)
   })
 
   it("408 também lança: timeout do lado deles é tão ambíguo quanto o nosso", async () => {
@@ -171,7 +178,8 @@ describe("fiscal-client — HTTP", () => {
     global.fetch = jest.fn().mockRejectedValueOnce(new TypeError("fetch failed")) as unknown as typeof fetch
     const { transmitir } = await import("../fiscal-client.js")
     const erro = await transmitir({ TipoAmbiente: 2 }).catch((e) => e)
-    expect(erro).not.toBeInstanceOf(ErroFiscal)
+    const { ErroFiscal: ErroFiscalDoCiclo } = await import("../tipos.js")
+    expect(erro).not.toBeInstanceOf(ErroFiscalDoCiclo)
   })
 
   it("a transmissão usa timeout de 5 minutos (o mesmo do SDK oficial)", async () => {
