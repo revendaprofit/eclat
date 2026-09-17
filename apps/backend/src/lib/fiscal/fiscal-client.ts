@@ -50,7 +50,15 @@ async function chamar<T = unknown>(
     let textoRedacionado = texto
     if (USER_TOKEN) textoRedacionado = textoRedacionado.split(USER_TOKEN).join("***")
     if (COMPANY_TOKEN) textoRedacionado = textoRedacionado.split(COMPANY_TOKEN).join("***")
-    throw new ErroFiscal(`Brasil NFe ${init.method || "GET"} ${caminho}: ${res.status} ${textoRedacionado}`)
+    const mensagem = `Brasil NFe ${init.method || "GET"} ${caminho}: ${res.status} ${textoRedacionado}`
+    // 4xx é recusa do fornecedor a uma requisição NOSSA (malformada) ou rejeição de negócio —
+    // ErroFiscal, que as rotas mapeiam para 422. 5xx/502/503 é QUEDA do fornecedor, infra, não
+    // erro do operador — Error comum, que vira 500 e pode disparar alerta (achado I2/5.1: antes
+    // disto, uma queda da Brasil NFe aparecia como erro do operador e nenhum alerta de 5xx disparava).
+    if (res.status >= 400 && res.status < 500) {
+      throw new ErroFiscal(mensagem)
+    }
+    throw new Error(mensagem)
   }
   return (texto ? JSON.parse(texto) : {}) as T
 }

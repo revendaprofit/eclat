@@ -164,7 +164,10 @@ export function montarPayloadDevolucao(args: {
     bairro: config.bairro,
     municipio: config.municipio,
     municipio_ibge: config.municipio_ibge,
-    uf: config.uf,
+    // Normalizada (trim + maiúsculas), a MESMA variável usada acima para decidir o CFOP — achado
+    // 5.5, mesmo resíduo do payload de venda: gravar config.uf cru deixava a UF potencialmente
+    // diferente da usada para decidir interestadual.
+    uf: ufEmitente,
     cep: config.cep,
   }
 
@@ -176,6 +179,13 @@ export function montarPayloadDevolucao(args: {
     tipo_nf: 0, // 0 = entrada
     ind_final: 0,
     ind_presenca: 0,
+    // Achado I9/5.7: na venda a destinatária é pessoa física não contribuinte (ind_ie_destinatario
+    // 9, fiscal-payload.ts). Na devolução a destinatária é a própria ÉCLAT, CONTRIBUINTE com IE (o
+    // CCC/SVRS registra "IE como destinatário: Obrigatória", e a IE já vai no bloco destinatario
+    // abaixo) — sem este indicador a IE fica inconsistente com o cadastro declarado. 1 = contribuinte
+    // ICMS; valor exato ainda pendente de confronto com a documentação da Brasil NFe, como os
+    // outros campos marcados "pendente" neste módulo.
+    ind_ie_destinatario: 1,
     natureza_operacao: "DEVOLUCAO DE VENDA",
     emitente: {
       cnpj: config.cnpj,

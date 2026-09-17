@@ -148,6 +148,23 @@ describe("montarPayloadDevolucao", () => {
     expect(p.destinatario.ie).toBe("56295050042")
   })
 
+  // Achado I9/5.7: na venda a destinatária é pessoa física não contribuinte (ind_ie_destinatario
+  // 9). Na devolução quem devolve para si mesma é a própria ÉCLAT, contribuinte COM IE — sem o
+  // indicador, a IE informada no destinatário fica inconsistente com o cadastro declarado.
+  it("declara ind_ie_destinatario de contribuinte (a ÉCLAT tem IE, ao contrário da venda)", () => {
+    const { payload } = chamar()
+    expect((payload as any).ind_ie_destinatario).toBe(1)
+  })
+
+  // Achado 5.5: emitente/destinatario.uf gravavam config.uf CRU (enderecoEclat compartilhado),
+  // enquanto a variável usada para decidir o CFOP já era normalizada logo acima.
+  it("normaliza a UF do emitente/destinatário (ambos são a ÉCLAT) no payload", () => {
+    const { payload } = chamar({ config: { ...config, uf: " mg " } })
+    const p = payload as any
+    expect(p.emitente.uf).toBe("MG")
+    expect(p.destinatario.uf).toBe("MG")
+  })
+
   it("recusa item devolvido que não existe na nota de origem", () => {
     expect(() => chamar({ devolvidos: [{ line_item_id: "li_zzz", quantidade: 1 }] })).toThrow(ErroFiscal)
   })

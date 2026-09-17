@@ -39,25 +39,36 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
     return res.status(400).json({ error: "itens é obrigatório e precisa ter ao menos um item." })
   }
   for (const it of itens) {
-    if (!it || typeof it.line_item_id !== "string" || typeof it.quantidade !== "number") {
+    // Achado I8/5.3: `typeof === "number"` deixa passar NaN (NaN < 1 e NaN > vendida são ambos
+    // falsos — as travas seguintes não pegam) e fração (1.5 vira "12.34.5" em reais()). Exige
+    // inteiro >= 1 explicitamente.
+    if (
+      !it ||
+      typeof it.line_item_id !== "string" ||
+      typeof it.quantidade !== "number" ||
+      !Number.isInteger(it.quantidade) ||
+      it.quantidade < 1
+    ) {
       return res.status(400).json({
-        error: "cada item precisa de line_item_id (string) e quantidade (number).",
+        error: "cada item precisa de line_item_id (string) e quantidade (número inteiro >= 1).",
       })
     }
   }
 
   try {
-    const doc = await documentoDeVendaDoPedido(order_id)
+    // A config vem primeiro: o documento de venda é escopado por AMBIENTE (achado I6/5.2) — sem
+    // isso, depois da virada para produção a devolução podia casar com a nota de homologação.
+    const config = await getConfig()
+    const doc = await documentoDeVendaDoPedido(order_id, config.ambiente)
     if (!doc) {
       throw new ErroFiscal(`O pedido ${order_id} não tem NF-e de venda emitida.`)
     }
 
     // A trava de "documento não verificado" já é responsabilidade de montarPayloadDevolucao —
     // não duplicamos a regra aqui, só deixamos a função lançar o ErroFiscal dela.
-    const [itensOrigem, dadosPedido, config, perfis, devolucoesAnteriores] = await Promise.all([
+    const [itensOrigem, dadosPedido, perfis, devolucoesAnteriores] = await Promise.all([
       listarItens(doc.id),
       montarItensDoPedido(req.scope, order_id),
-      getConfig(),
       listPerfis(),
       listarDevolucoesDoDocumento(doc.id),
     ])
@@ -150,9 +161,12 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
     } catch (e) {
       // Fica em transmitido_sem_confirmacao de propósito — mesma razão de emitirVenda: a
       // resolução (reconciliação ou /admin/fiscal/resolver) decide, nunca reemitir às cegas.
-      throw new ErroFiscal(
-        `Falha ao transmitir a NFD do pedido ${order_id}. O documento ficou pendente de resolução. Detalhe: ${(e as Error).message}`
-      )
+      //
+      // Mesma classe do achado I2/5.1: preserva ErroFiscal (recusa do fornecedor) vs Error comum
+      // (infra: 5xx, timeout, rede) — não mascarar queda da Brasil NFe como erro do operador.
+      const erro = e as Error
+      const mensagem = `Falha ao transmitir a NFD do pedido ${order_id}. O documento ficou pendente de resolução. Detalhe: ${erro.message}`
+      throw erro instanceof ErroFiscal ? new ErroFiscal(mensagem) : new Error(mensagem)
     }
 
     // 3) grava o resultado

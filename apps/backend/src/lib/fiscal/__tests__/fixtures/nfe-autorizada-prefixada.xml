@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nfe:nfeProc xmlns:nfe="http://www.portalfiscal.inf.br/nfe" versao="4.00">
+  <nfe:NFe>
+    <nfe:infNFe Id="NFe31260968673407000113550010000000011000000017" versao="4.00">
+      <nfe:ide><nfe:cUF>31</nfe:cUF><nfe:natOp>VENDA DE MERCADORIA</nfe:natOp><nfe:mod>55</nfe:mod><nfe:serie>1</nfe:serie><nfe:nNF>1</nfe:nNF></nfe:ide>
+      <nfe:det nItem="1">
+        <nfe:prod><nfe:cProd>TOP-AURA-P</nfe:cProd><nfe:xProd>Top Aura P</nfe:xProd><nfe:NCM>61091000</nfe:NCM><nfe:CFOP>5102</nfe:CFOP><nfe:qCom>1.0000</nfe:qCom><nfe:vUn>189.90</nfe:vUn></nfe:prod>
+      </nfe:det>
+      <nfe:det nItem="2">
+        <nfe:prod><nfe:cProd>LEG-VERTICE-M</nfe:cProd><nfe:xProd>Legging Vertice M</nfe:xProd><nfe:NCM>61046200</nfe:NCM><nfe:CFOP>5102</nfe:CFOP><nfe:qCom>2.0000</nfe:qCom><nfe:vUn>249.90</nfe:vUn></nfe:prod>
+      </nfe:det>
+      <nfe:det nItem="3">
+        <nfe:prod><nfe:cProd>SHORT-NIMBLE-G</nfe:cProd><nfe:xProd>Short Nimble G</nfe:xProd><nfe:NCM>61046300</nfe:NCM><nfe:CFOP>5102</nfe:CFOP><nfe:qCom>1.0000</nfe:qCom><nfe:vUn>159.90</nfe:vUn></nfe:prod>
+      </nfe:det>
+    </nfe:infNFe>
+  </nfe:NFe>
+  <nfe:protNFe versao="4.00">
+    <nfe:infProt>
+      <nfe:chNFe>31260968673407000113550010000000011000000017</nfe:chNFe>
+      <nfe:nProt>131260000000001</nfe:nProt>
+      <nfe:cStat>100</nfe:cStat>
+      <nfe:xMotivo>Autorizado o uso da NF-e</nfe:xMotivo>
+    </nfe:infProt>
+  </nfe:protNFe>
+</nfe:nfeProc>

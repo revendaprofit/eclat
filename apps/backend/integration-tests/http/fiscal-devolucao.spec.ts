@@ -43,6 +43,40 @@ medusaIntegrationTestRunner({
       ).rejects.toMatchObject({ response: { status: 400 } })
     })
 
+    // Achado I8/5.3: `typeof === "number"` deixava passar NaN e fração — NaN não é pego pelas
+    // travas de quantidade (NaN < 1 e NaN > vendida são ambas falsas) e chegava a reais(), que
+    // produzia "NaN.NaN"; 1.5 produzia "12.34.5". Com previa:true isso seria transmitido ao
+    // fornecedor. As três formas inválidas precisam responder 400 antes de tocar em qualquer coisa.
+    it("quantidade NaN responde 400", async () => {
+      await expect(
+        api.post(
+          "/admin/fiscal/emitir-devolucao",
+          { order_id: "order_1", itens: [{ line_item_id: "li_1", quantidade: NaN }] },
+          { headers: admin }
+        )
+      ).rejects.toMatchObject({ response: { status: 400 } })
+    })
+
+    it("quantidade fracionária (1.5) responde 400", async () => {
+      await expect(
+        api.post(
+          "/admin/fiscal/emitir-devolucao",
+          { order_id: "order_1", itens: [{ line_item_id: "li_1", quantidade: 1.5 }] },
+          { headers: admin }
+        )
+      ).rejects.toMatchObject({ response: { status: 400 } })
+    })
+
+    it("quantidade zero responde 400", async () => {
+      await expect(
+        api.post(
+          "/admin/fiscal/emitir-devolucao",
+          { order_id: "order_1", itens: [{ line_item_id: "li_1", quantidade: 0 }] },
+          { headers: admin }
+        )
+      ).rejects.toMatchObject({ response: { status: 400 } })
+    })
+
     it("pedido sem NF-e de venda responde 422 com mensagem legível", async () => {
       await expect(
         api.post(

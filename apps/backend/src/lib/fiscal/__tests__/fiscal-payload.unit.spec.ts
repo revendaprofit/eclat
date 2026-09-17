@@ -23,8 +23,12 @@ function item(p: Partial<ItemPedido> = {}): ItemPedido {
     categoria_handle: p.categoria_handle ?? "tops",
     titulo: p.titulo ?? "Top Aura",
     sku: p.sku ?? "TOP-AURA-P",
-    ncm: "ncm" in p ? p.ncm : "61091000",
-    origem: "origem" in p ? p.origem : 0,
+    // TS2322 (ruling F12, mesmo critério dos TS2835 zerados): "in" só confirma que a chave existe,
+    // não que o valor não é undefined — p.ncm/p.origem continuam string|null|undefined mesmo
+    // narrowed, e o campo de ItemPedido não aceita undefined. "?? null" distingue AUSENTE (usa o
+    // default do helper) de NULO explícito (preserva o null que o teste quis simular).
+    ncm: "ncm" in p ? (p.ncm ?? null) : "61091000",
+    origem: "origem" in p ? (p.origem ?? null) : 0,
     quantidade: p.quantidade ?? 1,
     valor_unitario_centavos: p.valor_unitario_centavos ?? 18900,
     desconto_centavos: p.desconto_centavos ?? 0,
@@ -159,5 +163,16 @@ describe("montarPayloadVenda", () => {
       config, perfis: [perfilPadrao], itens: [item()], destinatario: destino("MG "), frete_centavos: 0,
     })
     expect((payload as any).itens[0].cfop).toBe("5102")
+  })
+
+  // Achado 5.5: emitente.uf gravava config.uf CRU, enquanto a variável usada para decidir CFOP
+  // (interestadual) já era normalizada logo acima — meio normalizado é pior que qualquer um dos
+  // dois estados puros.
+  it("normaliza a UF do EMITENTE no payload (mesma variável usada para decidir o CFOP)", () => {
+    const { payload } = montarPayloadVenda({
+      config: { ...config, uf: " mg " }, perfis: [perfilPadrao], itens: [item()],
+      destinatario: destino("MG"), frete_centavos: 0,
+    })
+    expect((payload as any).emitente.uf).toBe("MG")
   })
 })

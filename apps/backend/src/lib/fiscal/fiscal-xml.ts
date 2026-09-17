@@ -12,11 +12,14 @@ import { ErroFiscal } from "./tipos"
 
 export type ItemXml = { n_item: number; codigo: string; ncm: string }
 
-const DET_RE = /<det\b([^>]*)>([\s\S]*?)<\/det>/g
+// Achado 5.8: sem o prefixo de namespace opcional, um XML que chegasse como <nfe:det> (em vez de
+// <det>) casava ZERO itens em silêncio e nenhum documento reconciliava. "(?:\w+:)?" aceita "<det>"
+// e "<nfe:det>" com a mesma regra, nas quatro tags que este parser lê.
+const DET_RE = /<(?:\w+:)?det\b([^>]*)>([\s\S]*?)<\/(?:\w+:)?det>/g
 const N_ITEM_RE = /\bnItem\s*=\s*["'](\d+)["']/
-const C_PROD_RE = /<cProd>([\s\S]*?)<\/cProd>/
-const NCM_RE = /<NCM>([\s\S]*?)<\/NCM>/
-const CHAVE_RE = /<chNFe>(\d{44})<\/chNFe>/
+const C_PROD_RE = /<(?:\w+:)?cProd>([\s\S]*?)<\/(?:\w+:)?cProd>/
+const NCM_RE = /<(?:\w+:)?NCM>([\s\S]*?)<\/(?:\w+:)?NCM>/
+const CHAVE_RE = /<(?:\w+:)?chNFe>(\d{44})<\/(?:\w+:)?chNFe>/
 
 export function extrairItensDoXml(xml: string): ItemXml[] {
   const itens: ItemXml[] = []

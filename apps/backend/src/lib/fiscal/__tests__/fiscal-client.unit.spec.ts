@@ -79,6 +79,43 @@ describe("fiscal-client", () => {
     expect(r.motivo).toMatch(/Duplicidade/)
   })
 
+  // Achado I2/5.1: 5xx é queda de INFRA do fornecedor, não recusa de negócio — não pode virar
+  // ErroFiscal (que as rotas mapeiam para 422, mascarando a queda como erro do operador).
+  it("lança ErroFiscal para 4xx do fornecedor (requisição malformada ou rejeição)", async () => {
+    global.fetch = jest.fn().mockResolvedValue(new Response("payload inválido", { status: 400 }))
+    const { transmitir } = await import("../fiscal-client.js")
+    const { ErroFiscal } = await import("../tipos.js")
+    await expect(transmitir({ modelo: 55 })).rejects.toBeInstanceOf(ErroFiscal)
+  })
+
+  it("NÃO lança ErroFiscal para 500 do fornecedor — é infra, deve virar 500 na rota", async () => {
+    global.fetch = jest.fn().mockResolvedValue(new Response("erro interno", { status: 500 }))
+    const { transmitir } = await import("../fiscal-client.js")
+    const { ErroFiscal } = await import("../tipos.js")
+    let capturado: unknown
+    try {
+      await transmitir({ modelo: 55 })
+    } catch (e) {
+      capturado = e
+    }
+    expect(capturado).toBeInstanceOf(Error)
+    expect(capturado).not.toBeInstanceOf(ErroFiscal)
+  })
+
+  it("NÃO lança ErroFiscal para 502/503 do fornecedor (indisponibilidade)", async () => {
+    global.fetch = jest.fn().mockResolvedValue(new Response("bad gateway", { status: 502 }))
+    const { transmitir } = await import("../fiscal-client.js")
+    const { ErroFiscal } = await import("../tipos.js")
+    let capturado: unknown
+    try {
+      await transmitir({ modelo: 55 })
+    } catch (e) {
+      capturado = e
+    }
+    expect(capturado).toBeInstanceOf(Error)
+    expect(capturado).not.toBeInstanceOf(ErroFiscal)
+  })
+
   it("reporta não configurado sem tokens", async () => {
     process.env = { ...OLD }
     delete process.env.BRASILNFE_USER_TOKEN

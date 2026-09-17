@@ -4,6 +4,9 @@ import { extrairItensDoXml, extrairChaveDoXml } from "../fiscal-xml"
 import { ErroFiscal } from "../tipos"
 
 const xml = readFileSync(join(__dirname, "fixtures", "nfe-autorizada.xml"), "utf8")
+// Achado 5.8: sem o prefixo de namespace opcional na regex, um XML que chegasse como <nfe:det>
+// (em vez de <det>) casava ZERO itens em silêncio e nenhum documento reconciliava.
+const xmlPrefixado = readFileSync(join(__dirname, "fixtures", "nfe-autorizada-prefixada.xml"), "utf8")
 
 describe("extrairItensDoXml", () => {
   it("extrai um item por <det>, com nItem, código e NCM", () => {
@@ -39,6 +42,13 @@ describe("extrairItensDoXml", () => {
       ErroFiscal
     )
   })
+
+  it("extrai itens de um XML com prefixo de namespace (<nfe:det>, <nfe:cProd>, <nfe:NCM>)", () => {
+    const itens = extrairItensDoXml(xmlPrefixado)
+    expect(itens).toHaveLength(3)
+    expect(itens[0]).toEqual({ n_item: 1, codigo: "TOP-AURA-P", ncm: "61091000" })
+    expect(itens[2]).toEqual({ n_item: 3, codigo: "SHORT-NIMBLE-G", ncm: "61046300" })
+  })
 })
 
 describe("extrairChaveDoXml", () => {
@@ -48,5 +58,9 @@ describe("extrairChaveDoXml", () => {
 
   it("falha quando não há chave", () => {
     expect(() => extrairChaveDoXml("<nfeProc></nfeProc>")).toThrow(ErroFiscal)
+  })
+
+  it("extrai a chave de acesso de um XML com prefixo de namespace (<nfe:chNFe>)", () => {
+    expect(extrairChaveDoXml(xmlPrefixado)).toBe("31260968673407000113550010000000011000000017")
   })
 })

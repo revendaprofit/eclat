@@ -104,7 +104,10 @@ export function montarPayloadVenda(args: {
       bairro: config.bairro,
       municipio: config.municipio,
       municipio_ibge: config.municipio_ibge,
-      uf: config.uf,
+      // Normalizada (trim + maiúsculas), a MESMA variável usada acima para decidir o CFOP —
+      // achado 5.5: gravar config.uf cru deixava a UF do emitente potencialmente diferente da
+      // UF usada para decidir interestadual, o que é pior que qualquer um dos dois estados puros.
+      uf: ufEmitente,
       cep: config.cep,
     },
     destinatario: {
