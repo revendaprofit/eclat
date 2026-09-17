@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { medusaGetOrder, medusaFulfillOrder, medusaMergeOrderMetadata, medusaShipFulfillment, medusaAdmin } from "@/lib/medusa"
 import { validarConferencia, type ConferenciaEnviada } from "@/lib/leitor"
-import type { StatusDocumento } from "@/lib/fiscal"
+import { decidirDespacho, type ResultadoEmissao } from "@/lib/fiscal-despacho"
 import { createSupabaseServer } from "@/lib/supabase/server"
 import { carrierCreateLabel } from "@/lib/shipping"
 import { sendWhatsappText } from "@/lib/evolution"
@@ -11,19 +11,11 @@ import { sendWhatsappText } from "@/lib/evolution"
 // transportadora (use_carrier). Conferência (spec leitor-codigo-barras F1): a tela manda as
 // leituras; o servidor recalcula contra os itens reais do pedido e só despacha conferência
 // divergente com motivo. O registro vai para metadata.conferencia ANTES do fulfillment.
-
-// Resposta de POST /admin/fiscal/emitir (Admin API, chamada direto por medusaAdmin — nunca pelo
-// proxy /api/fiscal/*: "emitir" fica de fora da allowlist de propósito, porque transmite nota real
-// à SEFAZ e o proxy é alcançável pelo navegador. Ver o comentário de validarCaminhoFiscal em
-// lib/fiscal.ts para a cadeia completa do achado da revisão).
-type DocumentoFiscalEmitido = {
-  id: string
-  status: StatusDocumento
-  chave_acesso: string | null
-  numero: number | null
-  rejeicao_codigo: string | null
-  rejeicao_motivo: string | null
-}
+//
+// A decisão "emissão falhou → aborta o despacho" mora em lib/fiscal-despacho.ts (decidirDespacho),
+// não aqui — é a regra fiscal/legal de maior risco do projeto, e uma route.ts sem teste (como toda
+// route.ts do Cockpit hoje) deixaria um refactor futuro reordenar os blocos e despachar sem nota
+// em silêncio. Aqui a rota fica fina: chama a Admin API, monta o ResultadoEmissao, obedece.
 
 function normalizaWhatsapp(phone: string): string {
   const d = phone.replace(/\D/g, "")
@@ -80,28 +72,15 @@ export async function POST(
         method: "POST",
         body: JSON.stringify({ order_id: id }),
       })
-      const dados = (await r.json().catch(() => ({}))) as { documento?: DocumentoFiscalEmitido; error?: string }
-      if (!r.ok || !dados.documento) {
-        return NextResponse.json(
-          { error: `NF-e não emitida: ${dados.error ?? "erro desconhecido"}` },
-          { status: 422 }
-        )
+      const dados = (await r.json().catch(() => ({}))) as {
+        documento?: ResultadoEmissao["documento"]
+        error?: string
       }
-      if (dados.documento.status === "rejeitado" || dados.documento.status === "denegado") {
-        return NextResponse.json(
-          {
-            error: `NF-e ${dados.documento.status}: ${dados.documento.rejeicao_motivo ?? "sem motivo informado"} (código ${dados.documento.rejeicao_codigo ?? "?"})`,
-          },
-          { status: 422 }
-        )
+      const decisao = decidirDespacho({ ok: r.ok, documento: dados.documento, error: dados.error })
+      if (!decisao.prosseguir) {
+        return NextResponse.json({ error: decisao.mensagem }, { status: decisao.status })
       }
-      await medusaMergeOrderMetadata(id, {
-        fiscal: {
-          documento_id: dados.documento.id,
-          chave_acesso: dados.documento.chave_acesso,
-          numero: dados.documento.numero,
-        },
-      })
+      await medusaMergeOrderMetadata(id, { fiscal: decisao.fiscal })
     } else {
       // Saída de escape para o operador despachar sem nota num caso excepcional — mas isso não
       // pode passar em silêncio: fica registrado no log do servidor.

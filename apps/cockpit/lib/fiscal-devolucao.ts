@@ -24,11 +24,15 @@ export function montarItensDevolvidos(
     if (!Number.isFinite(bruta)) {
       return { ok: false, erro: "Quantidade inválida — use um número inteiro maior ou igual a zero." }
     }
-    const quantidade = Math.trunc(bruta)
-    if (quantidade === 0) continue
-    if (quantidade < 0) {
+    // Sinal validado ANTES de truncar: Math.trunc(-0.5) é -0, e -0 === 0 é verdadeiro em JS — se o
+    // corte de sinal viesse depois do trunc, "-0.5" silenciosamente virava "não devolver" em vez
+    // de cair no erro de quantidade negativa (achado da revisão). -0 puro (sem casa decimal) segue
+    // tratado como zero, que é o valor que ele de fato representa.
+    if (bruta < 0) {
       return { ok: false, erro: "Quantidade inválida — use um número inteiro maior ou igual a zero." }
     }
+    const quantidade = Math.trunc(bruta)
+    if (quantidade === 0) continue
     if (quantidade > item.quantidade_pedido) {
       return {
         ok: false,

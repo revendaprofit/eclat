@@ -38,6 +38,19 @@ describe("montarItensDevolvidos", () => {
     expect(r.ok).toBe(false)
   })
 
+  // Achado da revisão: Math.trunc(-0.5) é -0, e -0 === 0 é verdadeiro em JS. Se o sinal fosse
+  // checado DEPOIS do trunc, "-0.5" seria descartado em silêncio (linha "continue") em vez de
+  // cair no erro de quantidade negativa.
+  it("erro quando a quantidade é -0.5 (trunca para -0, mas é negativa)", () => {
+    const r = montarItensDevolvidos(ITENS, { l1: -0.5 })
+    expect(r.ok).toBe(false)
+  })
+
+  it("-0 puro é tratado como zero (não devolver), não como negativo", () => {
+    const r = montarItensDevolvidos(ITENS, { l1: -0, l2: 1 })
+    expect(r).toEqual({ ok: true, itens: [{ line_item_id: "l2", quantidade: 1 }] })
+  })
+
   it("trunca quantidade fracionária", () => {
     const r = montarItensDevolvidos(ITENS, { l1: 1.9 })
     expect(r).toEqual({ ok: true, itens: [{ line_item_id: "l1", quantidade: 1 }] })

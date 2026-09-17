@@ -105,12 +105,22 @@ export default function PedidosPage() {
   const [motivo, setMotivo] = useState("")
   // Fiscal (Task 14): documento de venda do pedido, buscado à parte via o proxy fiscal
   const [docFiscal, setDocFiscal] = useState<DocumentoFiscal | null>(null)
+  // Falha ao CONSULTAR (rede/servidor) — nunca vira "nenhuma nota emitida" na tela: são situações
+  // diferentes e o operador pode estar decidindo se despacha de novo (achado da revisão).
+  const [erroFiscal, setErroFiscal] = useState<string | null>(null)
 
   const carregarFiscal = useCallback((orderId: string) => {
+    setErroFiscal(null)
     fetch(`/api/fiscal/documentos?order_id=${orderId}`, { cache: "no-store" })
-      .then((r) => r.json())
-      .then((d) => setDocFiscal(d?.documento ?? null))
-      .catch(() => setDocFiscal(null))
+      .then(async (r) => {
+        if (!r.ok) throw new Error("Falha ao consultar.")
+        const d = await r.json()
+        setDocFiscal(d?.documento ?? null)
+      })
+      .catch(() => {
+        setDocFiscal(null)
+        setErroFiscal("Não foi possível consultar o status fiscal deste pedido. Pode haver uma nota emitida mesmo assim.")
+      })
   }, [])
 
   const carregar = useCallback(async () => {
@@ -136,6 +146,7 @@ export default function PedidosPage() {
     if (!detId) {
       setDet(null)
       setDocFiscal(null)
+      setErroFiscal(null)
       return
     }
     setTrackNum("")
@@ -421,7 +432,12 @@ export default function PedidosPage() {
                 )}
 
                 {/* Fiscal (Task 14): status da NF-e de venda + devolução manual (NFD) */}
-                <FiscalDoPedido documento={docFiscal} onAtualizado={() => carregarFiscal(det.id)} />
+                <FiscalDoPedido
+                  documento={docFiscal}
+                  erroCarregar={erroFiscal}
+                  onAtualizado={() => carregarFiscal(det.id)}
+                  onTentarNovamente={() => carregarFiscal(det.id)}
+                />
                 {docFiscal && (
                   <NfdDoPedido orderId={det.id} statusDocumentoVenda={docFiscal.status} itens={itensParaDevolucao} />
                 )}

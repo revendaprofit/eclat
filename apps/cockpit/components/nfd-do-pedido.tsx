@@ -10,6 +10,13 @@ import { montarItensDevolvidos, type ItemDevolvido } from "@/lib/fiscal-devoluca
 // está na allowlist de lib/fiscal.ts, ao contrário de "emitir" (venda), que só o servidor chama.
 // Só libera quando o documento de venda está "verificado" (statusBloqueiaDevolucao); bloqueado,
 // explica o motivo em vez de só desabilitar o botão.
+//
+// Emitir é transmissão IRREVERSÍVEL à SEFAZ — categoria de risco diferente de excluir um produto
+// (achado da revisão: um `confirm()` sozinho não é proporcional a isso). Por isso o fluxo tem dois
+// passos: "Ver prévia" (previa: true, não transmite nada) mostra itens/quantidades/valores/desconto
+// rateado; só depois disso o botão "Emitir NFD" aparece. Qualquer mudança de quantidade invalida a
+// prévia e esconde o botão de emitir de novo, para o operador nunca conferir uma coisa e emitir
+// outra.
 
 export type ItemParaDevolucao = {
   line_item_id: string
@@ -18,12 +25,34 @@ export type ItemParaDevolucao = {
   quantidade_pedido: number
 }
 
+type ItemPreviaDevolucao = {
+  codigo: string
+  descricao: string
+  quantidade: number
+  valor_unitario: string
+  valor_desconto: string
+  valor_total: string
+}
+type TotalPreviaDevolucao = {
+  valor_produtos: string
+  valor_desconto: string
+  valor_frete: string
+  valor_nota: string
+}
+type PreviaDevolucao = { itens: ItemPreviaDevolucao[]; total: TotalPreviaDevolucao }
+
 type ResultadoNfd = {
   status: StatusDocumento
   numero: number | null
   chave_acesso: string | null
   rejeicao_codigo: string | null
   rejeicao_motivo: string | null
+}
+
+// Os valores vêm do backend como string decimal ("10.50", já em reais) — só formata para exibir.
+function brlDeString(v: string): string {
+  const n = Number(v)
+  return Number.isFinite(n) ? n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) : v
 }
 
 export function NfdDoPedido({
@@ -36,6 +65,8 @@ export function NfdDoPedido({
   itens: ItemParaDevolucao[]
 }) {
   const [quantidades, setQuantidades] = useState<Record<string, number>>({})
+  const [previa, setPrevia] = useState<PreviaDevolucao | null>(null)
+  const [previaOcupada, setPreviaOcupada] = useState(false)
   const [ocupado, setOcupado] = useState(false)
   const [erro, setErro] = useState<string | null>(null)
   const [resultado, setResultado] = useState<ResultadoNfd | null>(null)
@@ -49,16 +80,53 @@ export function NfdDoPedido({
     return `A nota de venda está "${rotuloStatus(statusDocumentoVenda)}" — a devolução só é liberada depois da reconciliação (status "Verificado").`
   }
 
-  async function emitir() {
+  function mudarQuantidade(itemId: string, valor: number) {
+    setQuantidades((q) => ({ ...q, [itemId]: valor }))
+    // Qualquer alteração invalida a prévia já vista e esconde "Emitir NFD" de novo.
+    setPrevia(null)
+    setResultado(null)
+  }
+
+  function montarOuAvisar() {
     const montagem = montarItensDevolvidos(
       itens.map((i) => ({ item_id: i.line_item_id, quantidade_pedido: i.quantidade_pedido })),
       quantidades
     )
     if (!montagem.ok) {
       setErro(montagem.erro)
-      return
+      return null
     }
-    if (!confirm("Emitir NFD (nota fiscal de devolução) para os itens selecionados? Essa ação transmite a nota à SEFAZ.")) {
+    return montagem.itens
+  }
+
+  async function verPrevia() {
+    const itensDevolvidos = montarOuAvisar()
+    if (!itensDevolvidos) return
+    setPreviaOcupada(true)
+    setErro(null)
+    setPrevia(null)
+    setResultado(null)
+    try {
+      const r = await fetch("/api/fiscal/emitir-devolucao", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ order_id: orderId, itens: itensDevolvidos satisfies ItemDevolvido[], previa: true }),
+      })
+      const d = await r.json().catch(() => ({}))
+      if (!r.ok || !d.payload?.itens || !d.payload?.total) throw new Error(d.error || "Falha ao montar a prévia da NFD.")
+      setPrevia({ itens: d.payload.itens, total: d.payload.total })
+    } catch (e) {
+      setErro((e as Error).message)
+    } finally {
+      setPreviaOcupada(false)
+    }
+  }
+
+  async function emitir() {
+    const itensDevolvidos = montarOuAvisar()
+    if (!itensDevolvidos || !previa) return
+    const totalTxt = brlDeString(previa.total.valor_nota)
+    if (!confirm(`Emitir NFD no valor de ${totalTxt}? Essa ação transmite a nota à SEFAZ e não pode ser desfeita.`)) {
       return
     }
     setOcupado(true)
@@ -68,7 +136,7 @@ export function NfdDoPedido({
       const r = await fetch("/api/fiscal/emitir-devolucao", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ order_id: orderId, itens: montagem.itens satisfies ItemDevolvido[] }),
+        body: JSON.stringify({ order_id: orderId, itens: itensDevolvidos satisfies ItemDevolvido[] }),
       })
       const d = await r.json().catch(() => ({}))
       if (!r.ok || !d.documento) throw new Error(d.error || "Falha ao emitir a NFD.")
@@ -80,6 +148,7 @@ export function NfdDoPedido({
         rejeicao_motivo: d.documento.rejeicao_motivo,
       })
       setQuantidades({})
+      setPrevia(null)
     } catch (e) {
       setErro((e as Error).message)
     } finally {
@@ -110,10 +179,8 @@ export function NfdDoPedido({
                         min={0}
                         max={i.quantidade_pedido}
                         value={quantidades[i.line_item_id] ?? 0}
-                        onChange={(e) =>
-                          setQuantidades((q) => ({ ...q, [i.line_item_id]: Number(e.target.value) }))
-                        }
-                        disabled={ocupado}
+                        onChange={(e) => mudarQuantidade(i.line_item_id, Number(e.target.value))}
+                        disabled={ocupado || previaOcupada}
                         className="w-20 border border-eclat-pedra/50 rounded-md px-2 py-1 text-sm text-right bg-white focus:outline-none focus:border-eclat-dourado"
                       />
                     </td>
@@ -123,14 +190,48 @@ export function NfdDoPedido({
             </table>
           </div>
 
-          <button
-            type="button"
-            onClick={emitir}
-            disabled={ocupado}
-            className="self-start bg-eclat-grafite text-eclat-luz uppercase tracking-widest text-xs px-4 py-2 rounded-md hover:bg-eclat-dourado hover:text-eclat-grafite disabled:opacity-50"
-          >
-            {ocupado ? "Emitindo…" : "Emitir NFD"}
-          </button>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={verPrevia}
+              disabled={previaOcupada || ocupado}
+              className="self-start border border-eclat-grafite/40 uppercase tracking-widest text-xs px-4 py-2 rounded-md hover:bg-eclat-areia/40 disabled:opacity-50"
+            >
+              {previaOcupada ? "Montando prévia…" : "Ver prévia"}
+            </button>
+            {previa && (
+              <button
+                type="button"
+                onClick={emitir}
+                disabled={ocupado}
+                className="self-start bg-eclat-grafite text-eclat-luz uppercase tracking-widest text-xs px-4 py-2 rounded-md hover:bg-eclat-dourado hover:text-eclat-grafite disabled:opacity-50"
+              >
+                {ocupado ? "Emitindo…" : "Emitir NFD"}
+              </button>
+            )}
+          </div>
+
+          {previa && (
+            <div className="border border-eclat-pedra/30 rounded-md p-3 bg-white text-sm flex flex-col gap-2">
+              <p className="text-xs uppercase tracking-wider text-eclat-grafite/60">Prévia da devolução (nada foi transmitido)</p>
+              <table className="w-full text-sm">
+                <tbody>
+                  {previa.itens.map((it, idx) => (
+                    <tr key={idx} className="border-b border-eclat-pedra/10 last:border-0">
+                      <td className="py-1">{it.descricao} <span className="text-xs text-eclat-grafite/50">({it.codigo})</span></td>
+                      <td className="py-1 text-center">{it.quantidade}×</td>
+                      <td className="py-1 text-right text-eclat-grafite/60">{brlDeString(it.valor_desconto)} desc.</td>
+                      <td className="py-1 text-right font-medium">{brlDeString(it.valor_total)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <div className="flex justify-between border-t border-eclat-pedra/20 pt-2 font-medium">
+                <span>Total da NFD (produtos {brlDeString(previa.total.valor_produtos)} − desconto {brlDeString(previa.total.valor_desconto)})</span>
+                <span>{brlDeString(previa.total.valor_nota)}</span>
+              </div>
+            </div>
+          )}
         </>
       )}
 

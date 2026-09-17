@@ -25,9 +25,36 @@ const CORES_STATUS: Record<"verde" | "amarelo" | "vermelho", string> = {
   vermelho: "bg-red-100 text-red-900",
 }
 
-export function FiscalDoPedido({ documento, onAtualizado }: { documento: DocumentoFiscal | null; onAtualizado?: () => void }) {
+export function FiscalDoPedido({
+  documento,
+  erroCarregar,
+  onAtualizado,
+  onTentarNovamente,
+}: {
+  documento: DocumentoFiscal | null
+  // Falha ao BUSCAR o documento (rede/servidor) — diferente de "não existe nota" (achado da
+  // revisão: um `.catch` que trata as duas situações igual faria o operador achar que o pedido
+  // não tem nota quando na verdade só a consulta falhou.
+  erroCarregar?: string | null
+  onAtualizado?: () => void
+  onTentarNovamente?: () => void
+}) {
   const [ocupado, setOcupado] = useState(false)
-  const [erro, setErro] = useState<string | null>(null)
+  const [erroReconciliar, setErroReconciliar] = useState<string | null>(null)
+
+  if (erroCarregar) {
+    return (
+      <section className="border border-red-200 bg-red-50 rounded-lg p-4 flex flex-col gap-1">
+        <h4 className="text-xs uppercase tracking-wider text-red-800/80 mb-1">Nota fiscal</h4>
+        <p className="text-sm text-red-800">{erroCarregar}</p>
+        {onTentarNovamente && (
+          <button type="button" onClick={onTentarNovamente} className="self-start text-sm text-red-800 underline">
+            Tentar de novo
+          </button>
+        )}
+      </section>
+    )
+  }
 
   if (!documento) {
     return (
@@ -40,7 +67,7 @@ export function FiscalDoPedido({ documento, onAtualizado }: { documento: Documen
 
   async function reconciliar() {
     setOcupado(true)
-    setErro(null)
+    setErroReconciliar(null)
     try {
       const r = await fetch("/api/fiscal/reconciliar", {
         method: "POST",
@@ -51,7 +78,7 @@ export function FiscalDoPedido({ documento, onAtualizado }: { documento: Documen
       if (!r.ok) throw new Error(d.error || "Falha ao reconciliar.")
       onAtualizado?.()
     } catch (e) {
-      setErro((e as Error).message)
+      setErroReconciliar((e as Error).message)
     } finally {
       setOcupado(false)
     }
@@ -109,7 +136,7 @@ export function FiscalDoPedido({ documento, onAtualizado }: { documento: Documen
           >
             {ocupado ? "Reconciliando…" : "Reconciliar agora"}
           </button>
-          {erro && <p className="mt-1 text-red-800">{erro}</p>}
+          {erroReconciliar && <p className="mt-1 text-red-800">{erroReconciliar}</p>}
         </div>
       )}
     </section>
