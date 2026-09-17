@@ -67,4 +67,46 @@ describe("decidirDespacho", () => {
       expect(d.mensagem).toBe("NF-e não emitida: erro desconhecido")
     }
   })
+
+  // Bloco 1 / achados C1+C2: emissao_ativa=false (o padrão de fábrica) é o interruptor mestre da
+  // spec §6.1, não uma trava de negócio. O backend responde 200 com documento null de propósito —
+  // o despacho prossegue sem nota, com aviso visível ao operador, sem gravar metadata.fiscal.
+  it("emissão desligada: prossegue SEM nota, com aviso — não é falha", () => {
+    const r: ResultadoEmissao = {
+      ok: true,
+      emissao_desligada: true,
+      motivo: "Emissão fiscal desligada em Fiscal → Configuração.",
+    }
+    const d = decidirDespacho(r)
+    expect(d.prosseguir).toBe(true)
+    if (d.prosseguir && d.fiscal === null) {
+      expect(d.aviso).toBe("Emissão fiscal desligada em Fiscal → Configuração.")
+    } else {
+      throw new Error("esperava prosseguir=true com fiscal=null")
+    }
+  })
+
+  it("emissão desligada sem motivo explícito: ainda prossegue, com um aviso de fallback legível", () => {
+    const r: ResultadoEmissao = { ok: true, emissao_desligada: true }
+    const d = decidirDespacho(r)
+    expect(d.prosseguir).toBe(true)
+    if (d.prosseguir && d.fiscal === null) {
+      expect(d.aviso).not.toMatch(/undefined/)
+      expect(d.aviso.length).toBeGreaterThan(0)
+    } else {
+      throw new Error("esperava prosseguir=true com fiscal=null")
+    }
+  })
+
+  // Não afrouxa o caso oposto: emissão LIGADA e falha continua abortando o despacho — o aviso de
+  // "desligada" só se aplica quando o backend confirma emissao_desligada explicitamente.
+  it("emissão LIGADA e falha continua abortando — emissao_desligada não é assumido por ausência de documento", () => {
+    const r: ResultadoEmissao = { ok: false, error: "Produto sem NCM: Top Aurora" }
+    const d = decidirDespacho(r)
+    expect(d.prosseguir).toBe(false)
+    if (!d.prosseguir) {
+      expect(d.status).toBe(422)
+      expect(d.mensagem).toContain("Produto sem NCM: Top Aurora")
+    }
+  })
 })

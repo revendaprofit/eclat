@@ -2,6 +2,7 @@
 // Mesmo padrão de src/lib/clube-db.ts. Só o backend escreve aqui.
 
 import type {
+  Ambiente,
   FiscalConfig,
   FiscalDocumento,
   FiscalDocumentoItem,
@@ -110,13 +111,32 @@ export async function atualizarNItem(itemId: string, nItem: number): Promise<voi
   })
 }
 
+// Escopado por ambiente (achado I6/5.2 da revisão final): a idempotência toda é por ambiente, e
+// sem esse filtro o card fiscal e a NFD podiam pegar o documento de HOMOLOGAÇÃO do mesmo pedido
+// depois da virada para produção — chave de homologação referenciada numa nota de produção é
+// rejeição certa na SEFAZ.
 export async function documentoDeVendaDoPedido(
-  orderId: string
+  orderId: string,
+  ambiente: Ambiente
 ): Promise<FiscalDocumento | null> {
   const rows = await sb<FiscalDocumento[]>(
-    `fiscal_documento?medusa_order_id=eq.${encodeURIComponent(orderId)}&tipo=eq.venda&select=*&order=created_at.desc&limit=1`
+    `fiscal_documento?medusa_order_id=eq.${encodeURIComponent(orderId)}&tipo=eq.venda&ambiente=eq.${encodeURIComponent(ambiente)}&select=*&order=created_at.desc&limit=1`
   )
   return rows?.[0] ?? null
+}
+
+// Todos os documentos fiscais de um pedido, tipo e ambiente, do mais novo pro mais velho (Bloco 2
+// / achado crítico C3): permite decidir se um documento REJEITADO (ou MONTADO órfão) pode ser
+// reemitido em vez de bater para sempre no índice único da chave de idempotência da tentativa
+// anterior — ver emitirVenda em fiscal-emissao.ts.
+export async function documentosDoPedido(
+  orderId: string,
+  tipo: "venda" | "devolucao",
+  ambiente: Ambiente
+): Promise<FiscalDocumento[]> {
+  return sb<FiscalDocumento[]>(
+    `fiscal_documento?medusa_order_id=eq.${encodeURIComponent(orderId)}&tipo=eq.${encodeURIComponent(tipo)}&ambiente=eq.${encodeURIComponent(ambiente)}&select=*&order=created_at.desc`
+  )
 }
 
 // Todas as NFDs já emitidas contra uma nota de venda (medusa_line_item da venda ==

@@ -24,7 +24,17 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
       return res.json({ previa: await previsualizar(payload), payload })
     }
 
-    return res.json({ documento: await emitirVenda({ orderId: order_id, ...dados }) })
+    const documento = await emitirVenda({ orderId: order_id, ...dados })
+    if (documento === null) {
+      // Interruptor mestre desligado (spec §6.1) — não é erro, é modo seguro (Bloco 1 / achados
+      // C1+C2). 200 com corpo explícito: o Cockpit reconhece este caso e despacha sem nota.
+      return res.json({
+        documento: null,
+        emissao_desligada: true,
+        motivo: "Emissão fiscal desligada em Fiscal → Configuração.",
+      })
+    }
+    return res.json({ documento })
   } catch (e) {
     const erro = e as Error
     logger.warn(`[fiscal] emitir ${order_id}: ${erro.message}`)

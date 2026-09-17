@@ -181,6 +181,7 @@ export default function PedidosPage() {
       const d = await r.json()
       if (!r.ok) throw new Error(d.error || "Falha ao despachar")
       let msg = `✓ Pedido #${det.display_id} despachado${d.conferencia === "divergente" ? " (conferência com divergência registrada)" : " com as peças conferidas"}.`
+      if (d.aviso_fiscal) msg += `\n⚠️ ${d.aviso_fiscal}`
       if (d.tracking_number) msg += `\nRastreio: ${d.tracking_number}`
       if (d.whatsapp)
         msg += d.whatsapp.ok

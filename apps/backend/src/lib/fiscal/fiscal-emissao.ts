@@ -7,7 +7,7 @@
 
 import { createHash } from "node:crypto"
 import {
-  acharPorIdempotencia, atualizarDocumento, criarDocumento, criarItens, getConfig, listPerfis,
+  atualizarDocumento, criarDocumento, criarItens, documentosDoPedido, getConfig, listPerfis,
 } from "./fiscal-db"
 import { transmitir } from "./fiscal-client"
 import { montarPayloadVenda, type DestinatarioNF } from "./fiscal-payload"
@@ -42,30 +42,51 @@ export function digestDevolvidos(
 // dois se desalinharem no futuro.
 export const JA_RESOLVIDO = new Set(["autorizado_nao_verificado", "verificado", "denegado"])
 
+// null = interruptor mestre desligado (spec §6.1, Bloco 1 / achados C1+C2): "desligado, o sistema
+// registra mas não transmite" — nesta implementação, desligado significa nem sequer tenta, sem
+// tocar no banco e sem lançar. Quem chama (admin/fiscal/emitir/route.ts) responde 200 com um corpo
+// explícito, e o Cockpit despacha sem nota, com aviso. Isso é modo seguro, não erro: o padrão de
+// fábrica é emissao_ativa=false, e antes deste fix isso derrubava todo despacho com 422.
 export async function emitirVenda(args: {
   orderId: string
   itens: ItemPedido[]
   destinatario: DestinatarioNF
   frete_centavos: number
-}): Promise<FiscalDocumento> {
+}): Promise<FiscalDocumento | null> {
   const config = await getConfig()
-  const key = chaveIdempotencia(args.orderId, "venda", config.ambiente)
 
-  const existente = await acharPorIdempotencia(key)
-  if (existente && JA_RESOLVIDO.has(existente.status)) {
-    return existente
+  // Checagem ANTES de montar payload ou tocar no banco — é o interruptor mestre, não uma trava de
+  // negócio para lançar como ErroFiscal.
+  if (!config.emissao_ativa) {
+    return null
   }
-  if (existente && existente.status === "transmitido_sem_confirmacao") {
+
+  // Busca por pedido+tipo+ambiente, não só pela chave de idempotência "canônica" (achado crítico
+  // C3): um documento `rejeitado` (ou `montado` órfão) não é beco sem saída permanente — só
+  // `autorizado_nao_verificado`/`verificado`/`denegado` (JA_RESOLVIDO) barram reemissão de verdade,
+  // e `transmitido_sem_confirmacao` continua exigindo resolução manual antes de tentar de novo.
+  const documentos = await documentosDoPedido(args.orderId, "venda", config.ambiente)
+
+  const jaResolvido = documentos.find((d) => JA_RESOLVIDO.has(d.status))
+  if (jaResolvido) {
+    return jaResolvido
+  }
+
+  const pendente = documentos.find((d) => d.status === "transmitido_sem_confirmacao")
+  if (pendente) {
     throw new ErroFiscal(
       "Já existe uma transmissão sem confirmação para este pedido. Rode a reconciliação antes de tentar de novo — reemitir criaria nota duplicada."
     )
   }
 
-  if (!config.emissao_ativa) {
-    throw new ErroFiscal(
-      "A emissão está desligada em Fiscal → Configuração (emissao_ativa). Ligue-a para transmitir notas."
-    )
-  }
+  // A chave ganha um sufixo de tentativa quando já existem documentos NÃO reaproveitáveis
+  // (rejeitado ou montado órfão) para este pedido/tipo/ambiente — senão a nova tentativa colide
+  // com o índice único da tentativa anterior (ERROR: duplicate key ... idempotency_key_key).
+  const tentativasAnteriores = documentos.filter(
+    (d) => d.status === "rejeitado" || d.status === "montado"
+  ).length
+  const baseKey = chaveIdempotencia(args.orderId, "venda", config.ambiente)
+  const key = tentativasAnteriores === 0 ? baseKey : `${baseKey}:r${tentativasAnteriores}`
 
   const perfis = await listPerfis()
   const { payload, itens_ordenados } = montarPayloadVenda({
@@ -124,9 +145,14 @@ export async function emitirVenda(args: {
   } catch (e) {
     // Fica em transmitido_sem_confirmacao de propósito: a reconciliação decide,
     // consultando pela chave. Nunca reemitir às cegas.
-    throw new ErroFiscal(
-      `Falha ao transmitir a NF-e do pedido ${args.orderId}. O documento ficou pendente de reconciliação. Detalhe: ${(e as Error).message}`
-    )
+    //
+    // A CLASSE do erro decide 422 vs 500 lá na rota (achado I2/5.1): se o fornecedor recusou
+    // (ErroFiscal, ex.: 4xx) continua ErroFiscal; se foi queda de infra (Error comum: 5xx, timeout,
+    // falha de rede) continua Error comum. Embrulhar tudo em ErroFiscal mascarava uma queda da
+    // Brasil NFe como erro do operador, e nenhum alerta de 5xx disparava.
+    const erro = e as Error
+    const mensagem = `Falha ao transmitir a NF-e do pedido ${args.orderId}. O documento ficou pendente de reconciliação. Detalhe: ${erro.message}`
+    throw erro instanceof ErroFiscal ? new ErroFiscal(mensagem) : new Error(mensagem)
   }
 
   // 3) grava o resultado

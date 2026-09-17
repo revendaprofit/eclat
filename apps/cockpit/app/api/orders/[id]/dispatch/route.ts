@@ -66,7 +66,10 @@ export async function POST(
 
     // 0.5) NF-e de venda — a DANFE precisa ir dentro da caixa, então emite antes do fulfillment.
     // Falha de emissão ABORTA o despacho: despachar sem nota é pior que não despachar. Nota
-    // rejeitada ou denegada também aborta, com código e motivo visíveis ao operador.
+    // rejeitada ou denegada também aborta, com código e motivo visíveis ao operador. Emissão
+    // DESLIGADA (interruptor mestre, Bloco 1) não é falha: o despacho prossegue sem nota, mas
+    // nunca em silêncio — fica registrado no log e o aviso volta na resposta para o operador ver.
+    let avisoFiscal: string | null = null
     if (body.emitir_nfe !== false) {
       const r = await medusaAdmin("/admin/fiscal/emitir", {
         method: "POST",
@@ -74,13 +77,28 @@ export async function POST(
       })
       const dados = (await r.json().catch(() => ({}))) as {
         documento?: ResultadoEmissao["documento"]
+        emissao_desligada?: boolean
+        motivo?: string
         error?: string
       }
-      const decisao = decidirDespacho({ ok: r.ok, documento: dados.documento, error: dados.error })
+      const decisao = decidirDespacho({
+        ok: r.ok,
+        documento: dados.documento,
+        emissao_desligada: dados.emissao_desligada,
+        motivo: dados.motivo,
+        error: dados.error,
+      })
       if (!decisao.prosseguir) {
         return NextResponse.json({ error: decisao.mensagem }, { status: decisao.status })
       }
-      await medusaMergeOrderMetadata(id, { fiscal: decisao.fiscal })
+      if (decisao.fiscal) {
+        await medusaMergeOrderMetadata(id, { fiscal: decisao.fiscal })
+      } else {
+        avisoFiscal = decisao.aviso
+        console.warn(
+          `[fiscal] pedido ${id} despachado SEM nota — ${decisao.aviso}${operador ? ` — operador ${operador}` : ""}`
+        )
+      }
     } else {
       // Saída de escape para o operador despachar sem nota num caso excepcional — mas isso não
       // pode passar em silêncio: fica registrado no log do servidor.
@@ -133,6 +151,7 @@ export async function POST(
       tracking_number: label?.tracking_number ?? null,
       label_url: label?.label_url ?? null,
       whatsapp,
+      aviso_fiscal: avisoFiscal,
     })
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 502 })
