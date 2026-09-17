@@ -26,8 +26,13 @@ import { retrieveCustomer, updateCustomer } from "./customer"
  */
 export async function retrieveCart(cartId?: string, fields?: string) {
   const id = cartId || (await getCartId())
+  // Os defaults da Store API listam os subcampos do endereço um a um e NÃO incluem
+  // metadata (query-config.js do carrinho) — sem os dois +campo abaixo,
+  // cart.shipping_address.metadata/billing_address.metadata vêm sempre undefined, e o
+  // useEffect de shipping-address/index.tsx apaga número/bairro/IBGE ao reabrir o passo
+  // de endereço (achado da revisão final).
   fields ??=
-    "*items, *region, *items.product, *items.variant, *items.thumbnail, *items.metadata, *items.adjustments, +items.total, *promotions, +shipping_methods.name"
+    "*items, *region, *items.product, *items.variant, *items.thumbnail, *items.metadata, *items.adjustments, +items.total, *promotions, +shipping_methods.name, +shipping_address.metadata, +billing_address.metadata"
 
   if (!id) {
     return null
