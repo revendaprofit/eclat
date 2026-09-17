@@ -52,6 +52,12 @@ type OrderDetail = Order & {
     // medusaGetOrder voltar a esquecer esse caminho (achado da revisão final).
     metadata?: Record<string, unknown> | null
   } | null
+  // Mesma razão do metadata acima: billing_address é a fonte de MAIOR prioridade do
+  // CPF em lerDadosFiscais (fallback de três fontes). Sem declarar aqui, a tipagem
+  // estrutural deixa a ausência invisível — hoje o objeto vem cru de medusaGetOrder e
+  // funciona, mas se alguém montar este objeto a partir de um mapeamento amanhã, o
+  // CPF de cobrança some sem erro de compilação e sem teste (achado da re-revisão).
+  billing_address?: { metadata?: Record<string, unknown> | null } | null
   shipping_methods: { name: string; total: number }[]
   fulfillments: {
     id: string
