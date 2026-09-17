@@ -15,8 +15,6 @@ export type DocumentoFiscal = {
   chave_acesso: string | null
   rejeicao_codigo: string | null
   rejeicao_motivo: string | null
-  xml_url: string | null
-  danfe_url: string | null
 }
 
 const CORES_STATUS: Record<"verde" | "amarelo" | "vermelho", string> = {
@@ -110,18 +108,16 @@ export function FiscalDoPedido({
         </p>
       )}
 
-      {(documento.danfe_url || documento.xml_url) && (
+      {documento.chave_acesso && (
         <div className="flex gap-3 text-sm">
-          {documento.danfe_url && (
-            <a className="text-eclat-dourado underline" href={documento.danfe_url} target="_blank" rel="noreferrer">
-              DANFE
-            </a>
-          )}
-          {documento.xml_url && (
-            <a className="text-eclat-dourado underline" href={documento.xml_url} target="_blank" rel="noreferrer">
-              XML
-            </a>
-          )}
+          <a
+            className="text-eclat-dourado underline"
+            href={`/api/fiscal-danfe/${documento.id}`}
+            target="_blank"
+            rel="noreferrer"
+          >
+            Baixar DANFE (PDF)
+          </a>
         </div>
       )}
 

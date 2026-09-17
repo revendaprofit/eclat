@@ -14,8 +14,13 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
   const permitidos = [
     "id", "escopo", "alvo_id", "csosn", "cfop_dentro_uf", "cfop_fora_uf",
     "cfop_devolucao_dentro_uf", "cfop_devolucao_fora_uf", "origem_padrao", "ativo",
+    "cst_pis_cofins", "cest",
   ]
   const patch: Record<string, unknown> = {}
   for (const k of permitidos) if (k in body) patch[k] = body[k]
+  // A tela manda "" quando o campo está em branco, e "" viola o check da migration 0012.
+  for (const k of ["cst_pis_cofins", "cest"]) {
+    if (k in patch && String(patch[k] ?? "").trim() === "") patch[k] = null
+  }
   return res.json({ perfil: await upsertPerfil(patch) })
 }

@@ -79,3 +79,11 @@ export function validarCaminhoFiscal(path: string[]): ValidacaoCaminhoFiscal {
   if (!ROTAS_FISCAL_PERMITIDAS.has(path[0])) return { ok: false, status: 404 }
   return { ok: true }
 }
+
+// O id do documento fiscal vai para dentro de uma URL da Admin API com o token de admin anexado.
+// Só uuid passa — mesma classe de defesa do validarCaminhoFiscal acima.
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+export function ehUuid(v: string): boolean {
+  return UUID_RE.test(v)
+}

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { rotuloStatus, statusBloqueiaDevolucao, corDoStatus, validarCaminhoFiscal } from "./fiscal"
+import { rotuloStatus, statusBloqueiaDevolucao, corDoStatus, validarCaminhoFiscal, ehUuid } from "./fiscal"
 
 describe("rotuloStatus", () => {
   it("traduz cada status para português legível", () => {
@@ -82,5 +82,16 @@ describe("validarCaminhoFiscal", () => {
 
   it("aceita um sub-segmento válido depois da rota permitida (ex.: perfis/<id>)", () => {
     expect(validarCaminhoFiscal(["documentos", "abc123"])).toEqual({ ok: true })
+  })
+})
+
+describe("ehUuid", () => {
+  it("aceita uuid", () => {
+    expect(ehUuid("3f2b8c1e-5a4d-4e6f-9a7b-1c2d3e4f5a6b")).toBe(true)
+  })
+  it("recusa qualquer coisa que possa escapar do caminho", () => {
+    for (const v of ["", "..", "../customers", "3f2b8c1e-5a4d-4e6f-9a7b-1c2d3e4f5a6b/../x", "3f2b8c1e%2f"]) {
+      expect(ehUuid(v)).toBe(false)
+    }
   })
 })
