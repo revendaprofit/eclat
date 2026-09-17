@@ -80,6 +80,9 @@ export const AtualizarCuradoSchema = z
 
 export default defineMiddlewares({
   routes: [
+    // Webhook da Brasil NFe: a assinatura HMAC é sobre os BYTES recebidos. preserveRawBody expõe
+    // req.rawBody; sem isso só existe o JSON já parseado, que não reproduz a assinatura.
+    { method: "POST", matcher: "/webhooks/brasilnfe", bodyParser: { preserveRawBody: true } },
     { method: "POST", matcher: "/admin/conjuntos/regras", middlewares: [validateAndTransformBody(CriarRegraSchema)] },
     { method: "PUT", matcher: "/admin/conjuntos/regras/:id", middlewares: [validateAndTransformBody(AtualizarRegraSchema)] },
     { method: "PUT", matcher: "/admin/conjuntos/pares", middlewares: [validateAndTransformBody(AtualizarParesSchema)] },
