@@ -9,6 +9,7 @@ import { ContainerRegistrationKeys } from "@medusajs/framework/utils"
 import type { MedusaContainer } from "@medusajs/framework/types"
 import { ErroFiscal, type ItemPedido } from "./tipos"
 import type { DestinatarioNF } from "./fiscal-payload"
+import { formaPagamentoDoPedido, type PagamentoNF } from "./fiscal-pagamento"
 
 // ISO 3166-1 alfa-2 -> código de origem da NF-e. 0 = nacional, 1 = importação direta.
 function origemDoPais(pais: string | null | undefined): number | null {
@@ -19,7 +20,7 @@ function origemDoPais(pais: string | null | undefined): number | null {
 export async function montarItensDoPedido(
   scope: MedusaContainer,
   orderId: string
-): Promise<{ itens: ItemPedido[]; destinatario: DestinatarioNF; frete_centavos: number }> {
+): Promise<{ itens: ItemPedido[]; destinatario: DestinatarioNF; frete_centavos: number; pagamento: PagamentoNF }> {
   const query = scope.resolve(ContainerRegistrationKeys.QUERY)
 
   const { data } = await query.graph({
@@ -33,6 +34,7 @@ export async function montarItensDoPedido(
       "items.variant.hs_code", "items.variant.origin_country",
       "items.product.categories.handle",
       "shipping_address.*", "billing_address.*",
+      "payment_collections.payments.provider_id",
     ],
   })
 
@@ -110,9 +112,15 @@ export async function montarItensDoPedido(
     cep: (a.postal_code ?? "").replace(/\D/g, ""),
   }
 
+  const providerIds: string[] = (order.payment_collections ?? [])
+    .flatMap((pc: any) => pc?.payments ?? [])
+    .map((p: any) => String(p?.provider_id ?? ""))
+    .filter(Boolean)
+
   return {
     itens,
     destinatario,
     frete_centavos: Math.round(Number(order.shipping_total ?? 0) * 100),
+    pagamento: formaPagamentoDoPedido(providerIds),
   }
 }
