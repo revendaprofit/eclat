@@ -16,6 +16,26 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
   if (!order_id) return res.status(400).json({ error: "order_id é obrigatório." })
 
   try {
+    // Achado N1 (re-revisão da onda de correção): o interruptor mestre precisa ser lido ANTES de
+    // montarItensDoPedido. Essa função lança ErroFiscal quando falta CPF ou municipio_ibge no
+    // pedido — que é TODO pedido real hoje, porque o checkout ainda não coleta esses dados. Com
+    // a ordem antiga (montar itens primeiro, checar o interruptor depois dentro de emitirVenda),
+    // o pedido sem CPF nunca chegava a saber que a emissão estava desligada: abortava com 422
+    // antes disso, no exato cenário que motivou o Bloco 1 (emissao_ativa=false, o padrão de
+    // fábrica). A rota é a ÚNICA dona desta decisão agora — emitirVenda não verifica mais
+    // emissao_ativa (ver comentário lá). Não afeta a prévia: previa=true nunca transmite nem
+    // consome numeração, então roda independente do interruptor, como sempre foi.
+    if (!previa) {
+      const config = await getConfig()
+      if (!config.emissao_ativa) {
+        return res.json({
+          documento: null,
+          emissao_desligada: true,
+          motivo: "Emissão fiscal desligada em Fiscal → Configuração.",
+        })
+      }
+    }
+
     const dados = await montarItensDoPedido(req.scope, order_id)
 
     if (previa) {
@@ -24,17 +44,7 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
       return res.json({ previa: await previsualizar(payload), payload })
     }
 
-    const documento = await emitirVenda({ orderId: order_id, ...dados })
-    if (documento === null) {
-      // Interruptor mestre desligado (spec §6.1) — não é erro, é modo seguro (Bloco 1 / achados
-      // C1+C2). 200 com corpo explícito: o Cockpit reconhece este caso e despacha sem nota.
-      return res.json({
-        documento: null,
-        emissao_desligada: true,
-        motivo: "Emissão fiscal desligada em Fiscal → Configuração.",
-      })
-    }
-    return res.json({ documento })
+    return res.json({ documento: await emitirVenda({ orderId: order_id, ...dados }) })
   } catch (e) {
     const erro = e as Error
     logger.warn(`[fiscal] emitir ${order_id}: ${erro.message}`)

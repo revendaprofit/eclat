@@ -98,29 +98,11 @@ describe("emitirVenda", () => {
     expect(transmitir).not.toHaveBeenCalled()
   })
 
-  // Bloco 1 / achados C1+C2: emissao_ativa=false (padrão de fábrica) não é mais uma trava que
-  // aborta o despacho — é o interruptor mestre da spec §6.1. Não toca no banco, não lança: retorna
-  // null, e quem chama (admin/fiscal/emitir/route.ts) decide o que fazer.
-  it("emissao_ativa desligada: retorna null sem tocar no banco nem lançar", async () => {
-    const documentosDoPedido = jest.fn()
-    const criarDocumento = jest.fn()
-    jest.doMock("../fiscal-db", () => ({
-      documentosDoPedido,
-      getConfig: jest.fn().mockResolvedValue({ ...configBase, emissao_ativa: false }),
-      listPerfis: jest.fn().mockResolvedValue([]),
-      criarDocumento,
-      criarItens: jest.fn(),
-      atualizarDocumento: jest.fn(),
-    }))
-    jest.doMock("../fiscal-client", () => ({ transmitir: jest.fn(), previsualizar: jest.fn(), brasilNfeConfigured: () => true }))
-
-    const { emitirVenda } = await import("../fiscal-emissao.js")
-    const resultado = await emitirVenda({ orderId: "order_1", itens, destinatario, frete_centavos: 0 })
-
-    expect(resultado).toBeNull()
-    expect(documentosDoPedido).not.toHaveBeenCalled()
-    expect(criarDocumento).not.toHaveBeenCalled()
-  })
+  // Achado N1 (re-revisão): a checagem de emissao_ativa saiu de emitirVenda e virou
+  // responsabilidade exclusiva do chamador (admin/fiscal/emitir/route.ts), que precisa decidir
+  // isso ANTES de montar os itens do pedido — ver os testes de ordem em
+  // src/api/admin/fiscal/emitir/__tests__/route.unit.spec.ts. emitirVenda não recebe mais
+  // emissao_ativa=false como entrada válida a tratar; ela assume que quem a chamou já checou.
 
   // Bloco 2 / achado crítico C3: `rejeitado` não é beco sem saída permanente. A nova tentativa
   // precisa de uma chave DIFERENTE da anterior (senão bate no índice único idempotency_key_key).

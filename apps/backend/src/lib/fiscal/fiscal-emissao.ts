@@ -42,24 +42,19 @@ export function digestDevolvidos(
 // dois se desalinharem no futuro.
 export const JA_RESOLVIDO = new Set(["autorizado_nao_verificado", "verificado", "denegado"])
 
-// null = interruptor mestre desligado (spec §6.1, Bloco 1 / achados C1+C2): "desligado, o sistema
-// registra mas não transmite" — nesta implementação, desligado significa nem sequer tenta, sem
-// tocar no banco e sem lançar. Quem chama (admin/fiscal/emitir/route.ts) responde 200 com um corpo
-// explícito, e o Cockpit despacha sem nota, com aviso. Isso é modo seguro, não erro: o padrão de
-// fábrica é emissao_ativa=false, e antes deste fix isso derrubava todo despacho com 422.
+// Não checa emissao_ativa aqui (achado N1 da re-revisão): quem decide isso é o ÚNICO chamador
+// hoje, admin/fiscal/emitir/route.ts — e precisa decidir ANTES de montar os itens do pedido
+// (montarItensDoPedido lança ErroFiscal por falta de CPF/IBGE, o que é todo pedido real agora),
+// não depois. Checar aqui de novo seria uma segunda fonte de verdade fadada a desalinhar da
+// primeira. Se um novo chamador aparecer, ele precisa repetir a checagem de emissao_ativa ANTES
+// de chamar emitirVenda — não delegar para cá.
 export async function emitirVenda(args: {
   orderId: string
   itens: ItemPedido[]
   destinatario: DestinatarioNF
   frete_centavos: number
-}): Promise<FiscalDocumento | null> {
+}): Promise<FiscalDocumento> {
   const config = await getConfig()
-
-  // Checagem ANTES de montar payload ou tocar no banco — é o interruptor mestre, não uma trava de
-  // negócio para lançar como ErroFiscal.
-  if (!config.emissao_ativa) {
-    return null
-  }
 
   // Busca por pedido+tipo+ambiente, não só pela chave de idempotência "canônica" (achado crítico
   // C3): um documento `rejeitado` (ou `montado` órfão) não é beco sem saída permanente — só
