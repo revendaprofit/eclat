@@ -24,6 +24,32 @@ describe("lerDadosFiscais", () => {
   it("normaliza o CPF, tirando a máscara", () => {
     expect(lerDadosFiscais({ metadata: { cpf: "529.982.247-25" } }).cpf).toBe("52998224725")
   })
+
+  it("encontra o CPF só em shipping_address.metadata — pedido antigo", () => {
+    const d = lerDadosFiscais({
+      shipping_address: {
+        metadata: { numero: "180", bairro: "Angola", municipio_ibge: "3106705", cpf: "52998224725" },
+      },
+    })
+    expect(d.cpf).toBe("52998224725")
+  })
+
+  it("encontra o CPF só em billing_address.metadata — pedido antigo", () => {
+    const d = lerDadosFiscais({
+      shipping_address: { metadata: { numero: "180", bairro: "Angola", municipio_ibge: "3106705" } },
+      billing_address: { metadata: { cpf: "52998224725" } },
+    })
+    expect(d.cpf).toBe("52998224725")
+  })
+
+  it("CPF em mais de uma fonte com valores diferentes: billing_address vence, igual ao backend", () => {
+    const d = lerDadosFiscais({
+      metadata: { cpf: "11144477735" },
+      shipping_address: { metadata: { cpf: "22233344456" } },
+      billing_address: { metadata: { cpf: "52998224725" } },
+    })
+    expect(d.cpf).toBe("52998224725")
+  })
 })
 
 describe("faltamDadosFiscaisPedido", () => {
@@ -51,5 +77,22 @@ describe("faltamDadosFiscaisPedido", () => {
       "bairro",
       "município (código IBGE)",
     ])
+  })
+
+  it("não acusa CPF quando ele só está em shipping_address.metadata", () => {
+    const d = lerDadosFiscais({
+      shipping_address: {
+        metadata: { numero: "180", bairro: "Angola", municipio_ibge: "3106705", cpf: "52998224725" },
+      },
+    })
+    expect(faltamDadosFiscaisPedido(d)).toEqual([])
+  })
+
+  it("não acusa CPF quando ele só está em billing_address.metadata", () => {
+    const d = lerDadosFiscais({
+      shipping_address: { metadata: { numero: "180", bairro: "Angola", municipio_ibge: "3106705" } },
+      billing_address: { metadata: { cpf: "52998224725" } },
+    })
+    expect(faltamDadosFiscaisPedido(d)).toEqual([])
   })
 })

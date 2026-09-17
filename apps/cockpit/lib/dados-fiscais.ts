@@ -22,9 +22,16 @@ export function lerDadosFiscais(order: unknown): DadosFiscaisPedido {
   const o = meta(order)
   const pedido = meta(o.metadata)
   const envio = meta(meta(o.shipping_address).metadata)
+  const cobranca = meta(meta(o.billing_address).metadata)
+
+  // Mesma cadeia de fallback e mesma ordem de prioridade de
+  // apps/backend/src/lib/fiscal/fiscal-pedido.ts: billing_address, depois
+  // shipping_address, depois o metadata do pedido — pedidos mais antigos guardaram
+  // o CPF num endereço, não no pedido.
+  const cpf = String(cobranca.cpf ?? envio.cpf ?? pedido.cpf ?? "").replace(/\D/g, "")
 
   return {
-    cpf: String(pedido.cpf ?? "").replace(/\D/g, ""),
+    cpf,
     numero: String(envio.numero ?? "").trim(),
     bairro: String(envio.bairro ?? "").trim(),
     municipio_ibge: String(envio.municipio_ibge ?? "").trim(),
