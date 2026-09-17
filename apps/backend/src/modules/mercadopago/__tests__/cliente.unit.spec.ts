@@ -1,4 +1,4 @@
-import { ClienteMercadoPago, ErroMercadoPago, extrairMotivoDeRecusa } from "../cliente.js"
+import { ClienteMercadoPago, ErroMercadoPago, extrairMotivoDeRecusa } from "../cliente"
 
 function mockFetch(status: number, corpo: unknown) {
   const spy = jest.fn().mockResolvedValue({

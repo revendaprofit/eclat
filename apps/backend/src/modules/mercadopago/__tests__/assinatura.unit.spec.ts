@@ -1,5 +1,5 @@
 import { createHmac } from "node:crypto"
-import { assinaturaValida } from "../assinatura.js"
+import { assinaturaValida } from "../assinatura"
 
 describe("assinatura (webhook do Mercado Pago)", () => {
   const segredo = "segredo-de-teste"

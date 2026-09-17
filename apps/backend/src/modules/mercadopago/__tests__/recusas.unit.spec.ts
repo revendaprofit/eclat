@@ -1,4 +1,4 @@
-import { mensagemDeRecusa } from "../recusas.js"
+import { mensagemDeRecusa } from "../recusas"
 
 describe("recusas (mensagens em pt-BR)", () => {
   it("traduz os motivos confirmados na F0 (sandbox real, 2026-09-17)", () => {

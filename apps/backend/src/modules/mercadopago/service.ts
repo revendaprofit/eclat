@@ -32,11 +32,11 @@ import type {
   UpdatePaymentOutput,
   WebhookActionResult,
 } from "@medusajs/framework/types"
-import { assinaturaValida } from "./assinatura.js"
-import { ClienteMercadoPago, ErroMercadoPago, extrairMotivoDeRecusa, type Order } from "./cliente.js"
-import { paraCentavos, paraValorMp } from "./dinheiro.js"
-import { mensagemDeRecusa } from "./recusas.js"
-import { estaAprovada, paraAcaoDoWebhook, paraStatusDaSessao } from "./status.js"
+import { assinaturaValida } from "./assinatura"
+import { ClienteMercadoPago, ErroMercadoPago, extrairMotivoDeRecusa, type Order } from "./cliente"
+import { paraCentavos, paraValorMp } from "./dinheiro"
+import { mensagemDeRecusa } from "./recusas"
+import { estaAprovada, paraAcaoDoWebhook, paraStatusDaSessao } from "./status"
 
 export type OpcoesMercadoPago = {
   accessToken: string
@@ -87,7 +87,11 @@ export default class MercadoPagoProviderService extends AbstractPaymentProvider<
 
     try {
       const order = await this.cliente_.criarOrder(payload, sessionId)
-      return { id: order.id, status: paraStatusDaSessao(order), data: await this.montarDadosDaSessao(order) }
+      return {
+        id: order.id,
+        status: paraStatusDaSessao(order),
+        data: { ...(await this.montarDadosDaSessao(order)), ...dadosDoCartaoInformados(input.data) },
+      }
     } catch (erro) {
       return this.tratarFalhaDeCriacao(erro, sessionId)
     }
@@ -123,7 +127,10 @@ export default class MercadoPagoProviderService extends AbstractPaymentProvider<
     const orderId = input.data?.mp_order_id as string | undefined
     if (!orderId) return { status: "pending", data: input.data }
     const order = await this.cliente_.buscarOrder(orderId)
-    return { status: paraStatusDaSessao(order), data: await this.montarDadosDaSessao(order) }
+    return {
+      status: paraStatusDaSessao(order),
+      data: { ...(await this.montarDadosDaSessao(order)), ...dadosDoCartaoInformados(input.data) },
+    }
   }
 
   /**
@@ -344,6 +351,15 @@ export default class MercadoPagoProviderService extends AbstractPaymentProvider<
       this.logger_.warn(`mercadopago: não deu pra buscar a tarifa da order ${order.id} agora: ${(erro as Error).message}`)
     }
   }
+}
+
+/**
+ * Os 4 últimos dígitos só existem no navegador (vêm do Brick junto com o token) — a Orders API
+ * não os devolve. São o único dado do cartão que guardamos (spec §9), e só para exibição.
+ */
+function dadosDoCartaoInformados(data: Record<string, unknown> | undefined): Record<string, unknown> {
+  const final = data?.final_cartao
+  return typeof final === "string" && /^\d{4}$/.test(final) ? { final_cartao: final } : {}
 }
 
 function pegarHeader(cabecalhos: Record<string, string | string[] | undefined>, nome: string): string | undefined {

@@ -2,6 +2,14 @@
 import { RadioGroup } from "@headlessui/react"
 import { isManual, isStripeLike, paymentInfoMap } from "@lib/constants"
 import { initiatePaymentSession } from "@lib/data/cart"
+import {
+  ehMetodoMercadoPago,
+  isMercadoPago,
+  lerOpcao,
+  opcoesDePagamento,
+  tituloDoMetodo,
+  valorDaOpcao,
+} from "@lib/util/pagamento-mercadopago"
 import { CheckCircleSolid, CreditCard } from "@medusajs/icons"
 import ErrorMessage from "@modules/checkout/components/error-message"
 import PaymentContainer, {
@@ -34,15 +42,29 @@ const Payment = ({
   const [error, setError] = useState<string | null>(null)
   const [cardBrand, setCardBrand] = useState<string | null>(null)
   const [cardComplete, setCardComplete] = useState(false)
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(
-    activeSession?.provider_id ?? ""
-  )
-
   const searchParams = useSearchParams()
   const router = useRouter()
   const pathname = usePathname()
 
   const isOpen = searchParams.get("step") === "payment"
+
+  // Mercado Pago (Parte 4): um provider, dois meios. A escolha entre Pix e cartão viaja na URL
+  // (`metodo=`) porque a sessão de pagamento só nasce no último passo, quando a cliente gera o
+  // Pix ou envia o cartão — ver @lib/util/pagamento-mercadopago.
+  const opcoes = opcoesDePagamento(
+    availablePaymentMethods ?? [],
+    !!process.env.NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY
+  )
+  const mercadoPagoId = availablePaymentMethods?.find((p) => isMercadoPago(p.id))?.id
+  const metodoParam = searchParams.get("metodo")
+  const metodoNaUrl =
+    mercadoPagoId && ehMetodoMercadoPago(metodoParam) ? metodoParam : null
+
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(
+    metodoNaUrl && mercadoPagoId
+      ? valorDaOpcao(mercadoPagoId, metodoNaUrl)
+      : activeSession?.provider_id ?? ""
+  )
 
   const setPaymentMethod = async (method: string) => {
     setError(null)
@@ -59,7 +81,9 @@ const Payment = ({
   )
 
   const paymentReady =
-    (activeSession && (cart?.shipping_methods?.length ?? 0) !== 0) || paidByGiftcard
+    ((activeSession || metodoNaUrl) &&
+      (cart?.shipping_methods?.length ?? 0) !== 0) ||
+    paidByGiftcard
 
   const createQueryString = useCallback(
     (name: string, value: string) => {
@@ -80,6 +104,15 @@ const Payment = ({
   const handleSubmit = async () => {
     setIsLoading(true)
     try {
+      const { metodo } = lerOpcao(selectedPaymentMethod)
+      if (metodo) {
+        // Meio do Mercado Pago: nada é cobrado nem criado aqui — só segue para a revisão.
+        const params = new URLSearchParams(searchParams)
+        params.set("step", "review")
+        params.set("metodo", metodo)
+        return router.push(pathname + "?" + params.toString(), { scroll: false })
+      }
+
       const shouldInputCard =
         isStripeLike(selectedPaymentMethod) && !activeSession
 
@@ -93,12 +126,12 @@ const Payment = ({
       }
 
       if (!shouldInputCard) {
-        return router.push(
-          pathname + "?" + createQueryString("step", "review"),
-          {
-            scroll: false,
-          }
-        )
+        const params = new URLSearchParams(searchParams)
+        params.set("step", "review")
+        params.delete("metodo")
+        return router.push(pathname + "?" + params.toString(), {
+          scroll: false,
+        })
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err))
@@ -147,9 +180,22 @@ const Payment = ({
                 value={selectedPaymentMethod}
                 onChange={(value: string) => setPaymentMethod(value)}
               >
-                {availablePaymentMethods.map((paymentMethod) => (
+                {opcoes.map(({ valor, metodo }) => {
+                  const paymentMethod = { id: valor, metodo }
+                  return (
                   <div key={paymentMethod.id}>
-                    {isStripeLike(paymentMethod.id) ? (
+                    {paymentMethod.metodo ? (
+                      <PaymentContainer
+                        paymentInfoMap={{
+                          [paymentMethod.id]: {
+                            title: tituloDoMetodo(paymentMethod.metodo),
+                            icon: <CreditCard />,
+                          },
+                        }}
+                        paymentProviderId={paymentMethod.id}
+                        selectedPaymentOptionId={selectedPaymentMethod}
+                      />
+                    ) : isStripeLike(paymentMethod.id) ? (
                       <StripeCardContainer
                         paymentProviderId={paymentMethod.id}
                         selectedPaymentOptionId={selectedPaymentMethod}
@@ -166,7 +212,8 @@ const Payment = ({
                       />
                     )}
                   </div>
-                ))}
+                  )
+                })}
               </RadioGroup>
             </>
           )}
@@ -208,7 +255,34 @@ const Payment = ({
         </div>
 
         <div className={isOpen ? "hidden" : "block"}>
-          {cart && paymentReady && activeSession ? (
+          {cart && paymentReady && metodoNaUrl ? (
+            <div className="flex items-start gap-x-1 w-full">
+              <div className="flex flex-col w-1/3">
+                <Text className="txt-medium-plus text-ui-fg-base mb-1">
+                  Forma de pagamento
+                </Text>
+                <Text
+                  className="txt-medium text-ui-fg-subtle"
+                  data-testid="payment-method-summary"
+                >
+                  {tituloDoMetodo(metodoNaUrl)}
+                </Text>
+              </div>
+              <div className="flex flex-col w-2/3">
+                <Text className="txt-medium-plus text-ui-fg-base mb-1">
+                  Detalhes do pagamento
+                </Text>
+                <Text
+                  className="txt-medium text-ui-fg-subtle"
+                  data-testid="payment-details-summary"
+                >
+                  {metodoNaUrl === "pix"
+                    ? "Você gera o código Pix na última etapa e paga pelo app do seu banco."
+                    : "Você informa o cartão na última etapa, em formulário seguro do Mercado Pago."}
+                </Text>
+              </div>
+            </div>
+          ) : cart && paymentReady && activeSession ? (
             <div className="flex items-start gap-x-1 w-full">
               <div className="flex flex-col w-1/3">
                 <Text className="txt-medium-plus text-ui-fg-base mb-1">

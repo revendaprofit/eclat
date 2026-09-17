@@ -1,5 +1,5 @@
 import { createHmac } from "node:crypto"
-import MercadoPagoProviderService from "../service.js"
+import MercadoPagoProviderService from "../service"
 
 function criarLoggerFalso() {
   return { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() }
@@ -151,6 +151,20 @@ describe("MercadoPagoProviderService", () => {
       expect(resultado.data?.mp_order_id).toBe("ORDTST_CARD_2")
       expect(resultado.data?.mensagem_recusa).toMatch(/banco emissor/)
       expect((global.fetch as jest.Mock).mock.calls).toHaveLength(1) // não buscou tarifa (não foi aprovado)
+    })
+
+    it("guarda só os 4 últimos dígitos do cartão, e só se forem 4 dígitos", async () => {
+      mockFetchSequencial({ status: 201, corpo: orderCartaoAprovada }, { status: 200, corpo: { results: [] } })
+      const { servico } = criarServico()
+      const base = { session_id: "payses_2", metodo: "cartao", cpf: "12345678909", token: "tok_1", bandeira: "master" }
+
+      const ok = await servico.initiatePayment({ amount: 199.9, currency_code: "brl", data: { ...base, final_cartao: "3311" }, context: {} })
+      expect(ok.data?.final_cartao).toBe("3311")
+      expect(ok.data?.token).toBeUndefined() // o token nunca volta nos dados do provider
+
+      mockFetchSequencial({ status: 201, corpo: orderCartaoAprovada }, { status: 200, corpo: { results: [] } })
+      const ruim = await servico.initiatePayment({ amount: 199.9, currency_code: "brl", data: { ...base, final_cartao: "5480832801033311" }, context: {} })
+      expect(ruim.data?.final_cartao).toBeUndefined()
     })
 
     it("respeita o teto de parcelas configurado (maxParcelas)", async () => {

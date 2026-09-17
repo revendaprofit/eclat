@@ -229,3 +229,13 @@ durante a escrita, não previstas na spec original:
 **Pendente pra próxima Halt (F2 — vitrine):** nenhuma UI ainda; o contrato que a vitrine precisa
 respeitar está documentado nos comentários de `service.ts` e no §5/§6 da spec.
 
+## Pagamento — F2 (vitrine) e aceite real da F1 (2026-09-17, noite)
+- **Import relativo com `.js` quebra o módulo no Medusa de verdade.** O Jest escondia (o `moduleNameMapper` do jest.config tira a extensão), mas `medusa db:migrate`/`develop` falham com `Cannot find module './service.js'`. Padrão do projeto (ver beneficio-conjunto): import estático SEM extensão; `.js` só em `import()` dinâmico nos testes. Só apareceu ao subir o backend real — o teste unitário sozinho não pega isso.
+- **Pix com validade por chamada existe na Orders API:** `transactions.payments[].expiration_time: "PT30M"` → resposta traz `date_of_expiration`. (A primeira leitura da doc não mostrava; confirmado no sandbox.)
+- **`POST /store/carts/:id/complete` com pagamento pendente** responde erro `not_allowed` (não `type: "cart"`); com o carrinho já concluído pelo webhook devolve `type: "order"` com o mesmo pedido. A consulta da tela de Pix se apoia nisso.
+- **Teste de integração real:** `integration-tests/http/pagamento-mercadopago.spec.ts` (6 casos, sandbox do MP + Medusa + Postgres em Docker). Pulado sem credenciais no `.env`. O arnês do projeto nunca tinha fechado um carrinho: precisa de stock location + fulfillment set + service zone BR + shipping profile ligado ao produto + shipping option (helper `montarFrete` no spec).
+- **A migração inicial do Medusa semeia frete só para a Europa** (`initial-data-seed.ts`): num banco novo, carrinho BR não tem opção de frete até criar a zona Brasil.
+- **Os campos seguros do Brick são iframes de outro domínio:** o navegador embutido do Claude não digita neles; Playwright sim (`frameLocator('iframe[name=cardNumber]').locator('input[name=cardNumber]')` — cada iframe contém os três inputs, só o próprio visível).
+- **Ambiente local da Parte 4:** `launch.json` da raiz ECLAT ganhou `backend-pagamento` (9100, banco `eclat_pagamento` no contêiner `eclat-pg-test`) e `storefront-pagamento` (8100). Admin local `admin@eclat.local`. `.env`/`.env.local` só no worktree, fora do git.
+- **Para a F4 (go-live), visto na PDP:** o texto "Pagamento por Pix, combinado no WhatsApp logo depois do pedido" precisa sair quando o Mercado Pago entrar.
+

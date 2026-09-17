@@ -1,4 +1,4 @@
-import { estaAprovada, paraAcaoDoWebhook, paraStatusDaSessao } from "../status.js"
+import { estaAprovada, paraAcaoDoWebhook, paraStatusDaSessao } from "../status"
 
 // Tabela oficial de status/status_detail da Orders API (doc lida em 2026-09-17,
 // checkout-api-orders/payment-management/status/order-status) — reproduzida na spec §7.

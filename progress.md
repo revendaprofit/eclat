@@ -1052,3 +1052,10 @@ sem push (push é sempre o dono quem faz).
 
 **F1 concluída.** Próximo: F2 — vitrine (seleção Pix/Cartão, Card Payment Brick, tela de Pix).
 
+## 2026-09-17 (noite) — Parte 4: aceite real da F1 + F2 CONCLUÍDA (vitrine)
+- `main` (19 commits, CPF no checkout) mesclado em `feat/pagamento-mercadopago` sem conflito.
+- **Aceite da F1 de verdade:** teste de integração contra o sandbox (6/6): Pix com QR e validade de 30 min, cartão aprovado → pedido `captured` com `tarifa_centavos`, cartão recusado, webhook assinado conclui o carrinho sozinho, assinatura inválida ignorada. Achou e corrigiu um bug que os unitários escondiam (imports `.js`).
+- **F2:** etapa Pagamento com "Pix" e "Cartão de crédito"; Revisão com "Gerar código Pix" (QR, copia e cola, contagem regressiva, consulta a cada 5 s) ou Card Payment Brick na identidade da marca; confirmação do pedido mostra "Pix" / "Cartão de crédito final 3311 em 3x". 12 testes novos de regras puras (298 na vitrine), tsc e eslint limpos.
+- **Verificado no navegador (backend local 9100 + vitrine 8100 + sandbox):** Pix gerado e persistente após recarregar; cartão APRO 1x → pedido confirmado; cartão FUND → mensagem "O cartão não tem limite…" e nova tentativa na mesma tela → pedido em 3x; 390 px sem rolagem horizontal. Pix PAGO não dá pra simular no sandbox — o caminho "pago → pedido" foi provado pelo cartão e pelo teste de webhook (mesma rotina `complete`).
+- Pendente do dono: olhar as telas (capturas enviadas) e aprovar a copy; push. Próximo: F3 (Cockpit/DRE) ou F4 (produção: credenciais reais, webhook, reconciliação, trocar o texto da PDP).
+

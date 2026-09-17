@@ -20,6 +20,7 @@
     "@medusajs/icons": "2.15.5",
     "@medusajs/js-sdk": "2.15.5",
     "@medusajs/ui-preset": "2.15.5",
+    "@mercadopago/sdk-react": "^1.0.7",
     "@radix-ui/react-accordion": "^1.2.3",
     "@stripe/react-stripe-js": "^5.3.0",
     "@stripe/stripe-js": "^8.2.0",

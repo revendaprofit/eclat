@@ -1,4 +1,4 @@
-import { paraCentavos, paraValorMp } from "../dinheiro.js"
+import { paraCentavos, paraValorMp } from "../dinheiro"
 
 describe("dinheiro", () => {
   describe("paraValorMp", () => {

@@ -98,6 +98,15 @@ O Medusa v2 guarda valores em **unidade maior decimal** (199.90), e a API de Ord
 
 **O pedido só nasce quando o Pix é pago.** Pix pendente não reserva estoque. Caso raro: duas clientes disputam a última peça e a segunda paga depois que a primeira levou → a conclusão do carrinho falha por estoque → o provider **estorna automaticamente** o Pix e o Cockpit recebe um alerta para o atendimento avisar a cliente.
 
+### 6.2 Como ficou na vitrine (F2, 2026-09-17)
+
+- **Etapa Pagamento:** o provider único aparece como duas opções — "Pix" e "Cartão de crédito" (o cartão só se `NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY` existir). Escolher não cria nada: a escolha segue na URL (`?step=review&metodo=pix|cartao`), porque a sessão de pagamento só pode nascer com tudo em mãos (contrato do `service.ts`).
+- **Etapa Revisão:** o texto dos termos continua ali, e o botão final vira a ação do meio escolhido — "Gerar código Pix" ou o "Finalizar pedido" do próprio Card Payment Brick (tema com as cores da marca, teto de parcelas por `NEXT_PUBLIC_MERCADOPAGO_MAX_PARCELAS`, débito e pré-pago excluídos).
+- **CPF, e-mail e valor saem do carrinho no servidor** (`lib/data/pagamento-mercadopago.ts`); o navegador só manda o que só ele tem: token de uso único, bandeira, parcelas, nome do titular e 4 últimos dígitos.
+- **Espera do Pix / cartão em análise:** a tela chama `cart.complete` a cada 5 s. Pendente → o Medusa responde `not_allowed` (tratado como "ainda não"); pago → vira pedido e redireciona; carrinho já concluído pelo webhook → `complete` devolve o mesmo pedido. Por isso o fluxo funciona **mesmo sem webhook** (ex.: ambiente local) — o webhook cobre quem fechou a aba.
+- **Pix só aparece se** foi gerado para o valor atual do carrinho e ainda não expirou (`pixVigente`); expirou ou o valor mudou → volta o botão de gerar.
+- Recusa de cartão: a mensagem pt-BR aparece acima do formulário e o Brick volta a ficar editável (token novo na tentativa seguinte).
+
 ## 7. Webhook
 
 - Rota nativa do Medusa: `POST {BACKEND}/hooks/payment/mercadopago_mercadopago`. Cadastrada em Suas integrações → Webhooks → Configurar notificações, evento **"Order"** (não "Payment" — é a nomenclatura da Orders API). Isso gera uma chave secreta própria da aplicação (`MERCADOPAGO_WEBHOOK_SECRET`), sem prazo de validade.

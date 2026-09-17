@@ -35,6 +35,12 @@ export const paymentInfoMap: Record<
     title: "Pix pelo WhatsApp",
     icon: <CreditCard />,
   },
+  // Mercado Pago (Parte 4): um provider, dois meios — o título por meio (Pix / Cartão de crédito)
+  // vem de @lib/util/pagamento-mercadopago; este é o nome genérico do provider.
+  pp_mercadopago_mercadopago: {
+    title: "Mercado Pago",
+    icon: <CreditCard />,
+  },
   // Add more payment providers here
 }
 

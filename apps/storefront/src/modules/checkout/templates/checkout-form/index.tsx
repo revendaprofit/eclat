@@ -1,5 +1,6 @@
 import { listCartShippingMethods } from "@lib/data/fulfillment"
 import { listCartPaymentMethods } from "@lib/data/payment"
+import { isMercadoPago } from "@lib/util/pagamento-mercadopago"
 import { HttpTypes } from "@medusajs/types"
 import Addresses from "@modules/checkout/components/addresses"
 import Payment from "@modules/checkout/components/payment"
@@ -32,7 +33,10 @@ export default async function CheckoutForm({
 
       <Payment cart={cart} availablePaymentMethods={paymentMethods} />
 
-      <Review cart={cart} />
+      <Review
+        cart={cart}
+        mercadoPagoDisponivel={paymentMethods.some((p) => isMercadoPago(p.id))}
+      />
     </div>
   )
 }
