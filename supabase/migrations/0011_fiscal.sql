@@ -54,7 +54,8 @@ create table if not exists public.fiscal_documento (
   modelo             int  not null default 55,
   serie              int,
   numero             int,
-  chave_acesso       text unique,
+  chave_acesso       text unique
+                       check (chave_acesso is null or chave_acesso ~ '^\d{44}$'),
   status             text not null default 'montado'
                        check (status in ('montado','transmitido_sem_confirmacao',
                                          'autorizado_nao_verificado','verificado',
@@ -87,11 +88,31 @@ create table if not exists public.fiscal_documento_item (
   quantidade             int  not null check (quantidade >= 1),
   valor_unitario_centavos int not null check (valor_unitario_centavos >= 0),
   desconto_centavos      int  not null default 0 check (desconto_centavos >= 0),
-  unique (fiscal_documento_id, ordem_enviada)
+  unique (fiscal_documento_id, ordem_enviada),
+  -- Achado I1: sem este unique, um codigo_enviado duplicado só falha na RECONCILIAÇÃO, depois de a
+  -- nota já estar autorizada — trava a NFD daquele pedido para sempre. Com o unique, a falha
+  -- acontece ANTES de transmitir (criarItens roda antes de atualizarDocumento->transmitido).
+  unique (fiscal_documento_id, codigo_enviado)
 );
 
 create index if not exists fiscal_documento_item_doc_idx
   on public.fiscal_documento_item (fiscal_documento_id);
+
+-- ============ updated_at TRIGGER ============
+-- Reusa public.set_updated_at(), já criada em 0001_crm_init.sql (mesmo padrão de 0010_clube.sql)
+-- — não recria a função aqui.
+
+drop trigger if exists trg_fiscal_config_updated_at on public.fiscal_config;
+create trigger trg_fiscal_config_updated_at before update on public.fiscal_config
+  for each row execute function public.set_updated_at();
+
+drop trigger if exists trg_fiscal_perfil_updated_at on public.fiscal_perfil;
+create trigger trg_fiscal_perfil_updated_at before update on public.fiscal_perfil
+  for each row execute function public.set_updated_at();
+
+drop trigger if exists trg_fiscal_documento_updated_at on public.fiscal_documento;
+create trigger trg_fiscal_documento_updated_at before update on public.fiscal_documento
+  for each row execute function public.set_updated_at();
 
 -- RLS: liga sem policy nenhuma => anon e authenticated não leem nem escrevem.
 alter table public.fiscal_config          enable row level security;
