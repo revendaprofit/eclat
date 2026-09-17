@@ -1,13 +1,13 @@
 "use client"
 
-import { useState } from "react"
+import { useRef, useState } from "react"
 import { lerDadosFiscais, faltamDadosFiscaisPedido } from "@/lib/dados-fiscais"
 import { cepValido, normalizarCep, type EnderecoCep } from "@/lib/cep"
 import type { StatusDocumento } from "@/lib/fiscal"
 
 // Completa os dados fiscais de um pedido que veio sem eles.
 //
-// Só aparece quando falta algo E o pedido já tem nota emitida de verdade (status
+// Só aparece quando falta algo E o pedido AINDA NÃO tem nota emitida de verdade (status
 // "verificado" ou "autorizado_nao_verificado"). Ter um documento fiscal não é a mesma
 // coisa: "montado", "rejeitado", "denegado" e "transmitido_sem_confirmacao" também são
 // documentos (fiscal-emissao.ts grava "montado" ANTES de transmitir), mas a nota não
@@ -15,6 +15,17 @@ import type { StatusDocumento } from "@/lib/fiscal"
 // para corrigir o dado e reemitir. Reduzir isso a um booleano na página escondia o
 // bloco bem na hora em que ele era mais necessário (achado da revisão).
 const NOTA_EXISTE: ReadonlySet<StatusDocumento> = new Set(["verificado", "autorizado_nao_verificado"])
+
+// Forma mínima do pedido que este bloco precisa — espelha exatamente o que
+// lerDadosFiscais (lib/dados-fiscais.ts) lê. Antes era `unknown`, e foi isso que deixou
+// o tsc sem como pegar o `fields` do medusaGetOrder faltando esses dois metadata
+// (achado da revisão final).
+export type PedidoComDadosFiscais = {
+  id: string
+  metadata?: Record<string, unknown> | null
+  shipping_address?: { metadata?: Record<string, unknown> | null } | null
+  billing_address?: { metadata?: Record<string, unknown> | null } | null
+}
 
 const card = "border border-eclat-pedra/40 rounded-lg p-5 bg-eclat-luz flex flex-col gap-3"
 const input =
@@ -28,7 +39,7 @@ export function DadosFiscaisDoPedido({
   order,
   statusFiscal,
 }: {
-  order: unknown
+  order: PedidoComDadosFiscais
   statusFiscal?: StatusDocumento | null
 }) {
   const atual = lerDadosFiscais(order)
@@ -38,17 +49,27 @@ export function DadosFiscaisDoPedido({
   const [ocupado, setOcupado] = useState(false)
   const [erro, setErro] = useState<string | null>(null)
 
+  // Guarda de sequência: se o operador corrigir o CEP antes da resposta anterior
+  // voltar, ficam duas buscas em voo. Sem isto, a resposta mais lenta pode chegar por
+  // último e sobrescrever o campo com o IBGE do CEP errado — mesma classe de bug já
+  // corrigida na vitrine (address-fields/index.tsx), copiada aqui (achado da revisão).
+  const sequenciaBusca = useRef(0)
+
   const notaExiste = !!statusFiscal && NOTA_EXISTE.has(statusFiscal)
   if (notaExiste || faltam.length === 0) return null
 
-  const orderId = (order as { id?: string })?.id ?? ""
+  const orderId = order?.id ?? ""
 
   async function buscarCep(bruto: string) {
     if (!cepValido(bruto)) return
+    const minhaBusca = ++sequenciaBusca.current
     try {
       const r = await fetch(`/api/cep/${normalizarCep(bruto)}`)
+      // Uma busca mais nova já começou: esta resposta chegou atrasada, descarta.
+      if (minhaBusca !== sequenciaBusca.current) return
       if (!r.ok) return
       const e = (await r.json()) as EnderecoCep
+      if (minhaBusca !== sequenciaBusca.current) return
       setForm((p) => ({ ...p, bairro: e.bairro || p.bairro, municipio_ibge: e.ibge }))
     } catch {
       // Silencioso: o operador pode digitar o IBGE à mão no campo abaixo.
