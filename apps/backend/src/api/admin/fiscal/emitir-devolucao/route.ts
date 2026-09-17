@@ -56,6 +56,19 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
       })
     }
   }
+  // M3 (achado menor da revisão final de 2026-09-17): [{li_a,1},{li_a,1}] contra 1 unidade
+  // vendida montava um payload de 2 linhas e um resumo de 2 unidades para o MESMO line_item_id —
+  // a emissão real só morria depois, no índice único do banco, com 500 cru e um documento
+  // "montado" órfão. Recusa aqui, antes de tocar em qualquer coisa.
+  const idsVistos = new Set<string>()
+  for (const it of itens) {
+    if (idsVistos.has(it.line_item_id)) {
+      return res.status(400).json({
+        error: "cada item só pode aparecer uma vez; some as quantidades.",
+      })
+    }
+    idsVistos.add(it.line_item_id)
+  }
 
   try {
     // A config vem primeiro: o documento de venda é escopado por AMBIENTE (achado I6/5.2) — sem

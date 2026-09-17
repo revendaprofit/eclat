@@ -63,6 +63,27 @@ describe("POST /admin/fiscal/emitir-devolucao — validação de quantidade", ()
   // errado" (a tabela não existe naquele schema → 500) e deixava a suíte unitária dependente de
   // rede e da disponibilidade do Supabase real. Mocka fiscal-db/fiscal-pedido, como os specs de
   // src/lib/fiscal já fazem, para provar a validação de quantidade sem sair da máquina.
+  // M3 (achado menor da revisão final de 2026-09-17): [{li_a,1},{li_a,1}] contra 1 unidade
+  // vendida montava payload de 2 linhas e resumo de 2 unidades — a emissão real só morria depois,
+  // no índice único do banco, com 500 cru e um documento "montado" órfão. A validação de entrada
+  // recusa ANTES de tocar em getConfig/banco.
+  it("line_item_id repetido: 400 sem tocar no banco, mesmo com quantidades somando <= vendida", async () => {
+    const { POST } = await import("../route.js")
+    const req = mockReq({
+      order_id: "order_1",
+      itens: [
+        { line_item_id: "li_a", quantidade: 1 },
+        { line_item_id: "li_a", quantidade: 1 },
+      ],
+    })
+    const res = mockRes()
+
+    await POST(req, res as unknown as MedusaResponse)
+
+    expect(res.statusCode).toBe(400)
+    expect((res.body as { error: string }).error).toMatch(/cada item só pode aparecer uma vez/i)
+  })
+
   it("quantidade inteira >= 1 passa da validação (segue adiante, não 400) — sem tocar rede", async () => {
     const getConfig = jest.fn().mockResolvedValue({
       id: 1, cnpj: "68673407000113", razao_social: "X", nome_fantasia: null, ie: "1", im: null, crt: 1,
