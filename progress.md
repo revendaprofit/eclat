@@ -1029,3 +1029,26 @@ teste real no sandbox: idempotência ok, formato do erro de recusa mapeado, canc
 ajustada pra não depender disso), tarifa real via `/v1/payments/search`. Achados completos em `findings.md`.
 Aguardando "pode aplicar" ou sinal do dono para começar a **F1 — módulo `mercadopago` no backend do Medusa**.
 
+## 2026-09-17 (tarde) — Parte 4: F1 CONCLUÍDA (módulo mercadopago no backend)
+Módulo `apps/backend/src/modules/mercadopago/` escrito e registrado condicionalmente em
+`medusa-config.ts` (só entra se `MERCADOPAGO_ACCESS_TOKEN` existir — deploy sem a variável não
+quebra nada). Implementa a interface `AbstractPaymentProvider` do Medusa 2.15.5 inteira:
+initiatePayment/authorizePayment/capturePayment/cancelPayment/refundPayment/retrievePayment/
+updatePayment/deletePayment/getWebhookActionAndData/getPaymentStatus.
+
+Dois achados de leitura do código-fonte do Medusa mudaram a spec original (detalhes em
+findings.md): (1) o `external_reference` da order tem que ser o `session_id` que o próprio
+Medusa injeta em `input.data` — não o `cart.id`; (2) o assinante nativo do webhook não reage a
+estorno/chargeback sozinho, então isso vira um `logger.warn` no provider até a F3 (alerta no
+Cockpit) existir de verdade.
+
+Testado: `npx tsc --noEmit` limpo (zero erros no módulo) e `npm run test:unit` — 74 testes novos,
+225 no total do backend, tudo passando. Sem servidor rodando (sem Postgres/Redis no worktree) —
+o teste de ponta a ponta de verdade (cart→pedido pago) fica pra quando a vitrine (F2) e um
+ambiente com banco estiverem prontos.
+
+Commitado localmente na branch `feat/pagamento-mercadopago` (worktree `../eclat-wt-pagamento`),
+sem push (push é sempre o dono quem faz).
+
+**F1 concluída.** Próximo: F2 — vitrine (seleção Pix/Cartão, Card Payment Brick, tela de Pix).
+

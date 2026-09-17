@@ -57,7 +57,7 @@ Modelagem do catálogo da Éclat no Medusa.
 > Spec: docs/superpowers/specs/2026-09-17-pagamento-mercadopago-design.md. Checkout Transparente (Bricks), Pix + cartão até 4x.
 > Getnet entra depois como segundo provider. Checkout segue no provider manual até a F4.
 - [x] F0 — prova de conceito em sandbox. CONCLUÍDA 2026-09-17: Orders API confirmada (não Payments legacy), Pix e cartão testados, idempotência, recusas, estorno e tarifa (via /v1/payments/search) confirmados. Achados em findings.md.
-- [ ] F1 — backend (módulo mercadopago, webhook, reconciliação, estorno)
+- [x] F1 — backend (módulo mercadopago, webhook, estorno). CONCLUÍDA 2026-09-17: src/modules/mercadopago/ completo, 74 testes, typecheck limpo. Rotina de reconciliação (spec §13 risco 2) ainda NÃO escrita — fica pra antes do go-live (F4).
 - [ ] F2 — vitrine (Brick de cartão, tela de Pix)
 - [ ] F3 — Cockpit/DRE (bloco Pagamento, linha de taxas)
 - [ ] F4 — produção (credenciais reais, webhook, ativar na região, desligar provider manual)

@@ -186,3 +186,46 @@ nunca calcula/adivinha.
 `GET /v1/payments/search?external_reference={cart.id}` pra achar o registro com `fee_details` e gravar a tarifa real
 em `payment.data`. Sem esse passo extra não tem como preencher a linha "Taxas de pagamento" do DRE.
 
+## Pagamento — F1: o Medusa não reage sozinho a estorno/chargeback (2026-09-17, mesma tarde)
+Lendo `@medusajs/medusa/dist/subscribers/payment-webhook.js` (v2.15.5): o assinante nativo do
+webhook só chama o `processPaymentWorkflow` quando a ação devolvida por `getWebhookActionAndData`
+é `"authorized"`, `"captured"` ou `"pending"` — para `"not_supported"`, `"canceled"`, `"failed"`
+e `"requires_more"` ele **retorna sem fazer nada**. Ou seja: **não existe reação automática do
+Medusa a um reembolso ou chargeback que chegue via webhook** — é sempre um efeito manual.
+Consequência pro `service.ts`: quando a order vem `refunded`/`charged_back`, o provider grava um
+`logger.warn(...)` como o único rastro até existir uma tela de alerta de verdade no Cockpit
+(Fase F3). Isso também confirma que a decisão D1 (Pix pendente não faz nada até ser pago) já é o
+comportamento natural do Medusa — não precisamos de nenhum código extra pra "segurar" um Pix
+pendente, o próprio core já ignora a ação `pending` sem efeito colateral.
+
+Outro achado da leitura de `@medusajs/payment/dist/services/payment-module.js`
+(`createPaymentSession_`/`createPaymentSession`): o Medusa cria a linha do `PaymentSession` no
+banco **antes** de chamar `initiatePayment`, e injeta o id dela em `input.data.session_id` —
+não é algo que o provider tem que inventar. Por isso o `external_reference` da order do Mercado
+Pago é esse `session_id` (não o `cart.id`, que era a suposição original da spec) — é assim que
+`getWebhookActionAndData` acha de volta a sessão certa a partir de qualquer webhook.
+
+## Pagamento — F1: módulo `mercadopago` escrito e testado (2026-09-17)
+`apps/backend/src/modules/mercadopago/` (`dinheiro.ts`, `assinatura.ts`, `status.ts`,
+`recusas.ts`, `cliente.ts`, `service.ts`, `index.ts`, `__tests__/`). Decisões técnicas tomadas
+durante a escrita, não previstas na spec original:
+
+- **Fetch cru em vez do SDK `mercadopago`** — documentado no topo de `cliente.ts`: a Orders API
+  é recente, não confirmamos que o SDK npm cobre `/v1/orders`, e a F0 já validou fetch cru contra
+  o sandbox real. Reavaliar se o SDK anunciar suporte explícito.
+- **`capturePayment` é um no-op** — a Orders API já vem com `capture_mode: "automatic_async"`
+  (visto na F0); não existe chamada de captura pra fazer.
+- **`initiatePayment` exige `data.metodo` já definido** — decisão registrada como comentário no
+  topo de `service.ts`: diferente do Stripe (cria intent vazia, confirma depois no navegador), a
+  Orders API cria E processa a order na mesma chamada, então a vitrine (F2) só pode chamar
+  `initiatePaymentSession` pro provider `mercadopago` depois que a cliente já escolheu Pix ou já
+  tokenizou o cartão — nunca no simples clique do rádio.
+- **`updatePayment` de cartão com valor mudado lança erro** (`NOT_ALLOWED`) em vez de tentar
+  recobrar — recriar automaticamente cobraria a cliente sem o consentimento dela num valor
+  diferente do que ela autorizou pelo Brick.
+- Typecheck limpo (`npx tsc --noEmit`, zero erros no módulo) e 74 testes unitários novos (225 no
+  total do backend, todos passando) via `npm run test:unit`.
+
+**Pendente pra próxima Halt (F2 — vitrine):** nenhuma UI ainda; o contrato que a vitrine precisa
+respeitar está documentado nos comentários de `service.ts` e no §5/§6 da spec.
+
