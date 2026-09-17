@@ -53,8 +53,14 @@ Modelagem do catálogo da Éclat no Medusa.
 - [ ] Copy pt-BR de telas de conta (login/perfil/pedidos) — pendente
 **Aceite:** ✅ pedido criado no Medusa a partir do fluxo da vitrine (sem pagamento real ainda).
 
-## Parte 4 — Pagamento (Mercado Pago)  [ADIADA por decisão do usuário em 2026-06-14]
-> Pulada por enquanto. Checkout opera com provider manual/sistema até retomarmos.
+## Parte 4 — Pagamento (Mercado Pago)  [RETOMADA em 2026-09-17 — spec aprovada]
+> Spec: docs/superpowers/specs/2026-09-17-pagamento-mercadopago-design.md. Checkout Transparente (Bricks), Pix + cartão até 4x.
+> Getnet entra depois como segundo provider. Checkout segue no provider manual até a F4.
+- [x] F0 — prova de conceito em sandbox. CONCLUÍDA 2026-09-17: Orders API confirmada (não Payments legacy), Pix e cartão testados, idempotência, recusas, estorno e tarifa (via /v1/payments/search) confirmados. Achados em findings.md.
+- [ ] F1 — backend (módulo mercadopago, webhook, reconciliação, estorno)
+- [ ] F2 — vitrine (Brick de cartão, tela de Pix)
+- [ ] F3 — Cockpit/DRE (bloco Pagamento, linha de taxas)
+- [ ] F4 — produção (credenciais reais, webhook, ativar na região, desligar provider manual)
 - [ ] Integração via SDK oficial (cartão + Pix). Nunca processar cartão na mão
 - [ ] Webhooks de status de pagamento
 - [ ] Ambiente de sandbox e testes

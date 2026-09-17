@@ -11,7 +11,7 @@ Nunca vincular a Éclat a nenhuma outra marca.
 - Core de loja: Medusa v2 (Node/TypeScript + Postgres)
 - Relacionamento: Supabase (CRM, leads, conversas). WhatsApp via Evolution API (self-hosted).
 - Cockpit: app Next.js SEPARADO (apps/cockpit) operando via APIs donas. Plano: architecture/cockpit.md.
-- Pagamento: Getnet — Global API (portal docs.globalgetnet.com; cartão + Pix), em fase futura. Decisão do dono em 2026-09-15 (substitui o Mercado Pago).
+- Pagamento: Mercado Pago — Checkout Transparente (Bricks; Pix + cartão até 4x), em construção. Decisão do dono em 2026-09-17: MP entra agora; a Getnet (Global API, portal docs.globalgetnet.com) entra depois como segundo provider do Medusa, quando liberar o sandbox. Spec: docs/superpowers/specs/2026-09-17-pagamento-mercadopago-design.md.
 
 ## Invariantes de arquitetura (inegociáveis)
 1. A Éclat é UM sistema, internamente modular. Sem segundo sistema independente.
@@ -21,7 +21,7 @@ Nunca vincular a Éclat a nenhuma outra marca.
    Supabase = relacionamento/financeiro; Evolution = WhatsApp). Não duplica dado de comércio;
    Medusa é a fonte da verdade do comércio. Ver architecture/cockpit.md (plano canônico do Cockpit).
 3. Dinheiro sempre em centavos inteiros (BRL). Nunca float.
-4. Pagamento sempre via API/SDK oficial do gateway (Getnet Global API), com o cartão tokenizado do lado da Getnet. Nunca processar cartão na mão.
+4. Pagamento sempre via API/SDK oficial do gateway (Mercado Pago; depois Getnet Global API), com o cartão tokenizado do lado do gateway. Nunca processar cartão na mão.
 5. RLS (Row Level Security) no Supabase desde o início.
 6. Nunca adivinhar business logic. Se houver ambiguidade, PERGUNTAR.
 
@@ -45,7 +45,7 @@ Nunca vincular a Éclat a nenhuma outra marca.
   (seed: apps/backend/src/scripts/seed-eclat.ts). PENDENTE: produtos REAIS + imagens.
 - Parte 2 — Vitrine: shell de marca pt-BR (nav, hero, home, footer). PENDENTE: telas de conta. (Busca com sugestões e SEO por listagem: entregues nas Fases 2–5 da spec de navegação por tipo de peça; PDP com vídeo do YouTube na galeria e recomendação de tamanho "Qual é o meu tamanho?" — plano `2026-09-07-pdp-video-e-recomendacao-tamanho`.)
 - Parte 3 — Carrinho & Checkout: fluxo validado (pedido criado) + pt-BR. Pagamento = provider manual.
-- Parte 4 — Pagamento (Getnet Global API): ADIADA até a Getnet liberar as credenciais de sandbox (Client ID/Secret, identificador da loja, URLs, webhook) e confirmar a versão da API na conta. Módulo de pagamento do Medusa; taxas no DRE. Não usar a Plataforma Digital antiga (developers.getnet.com.br, rotas /v1) — portal em descontinuação.
+- Parte 4 — Pagamento (Mercado Pago): EM ANDAMENTO desde 2026-09-17. Spec aprovada (D1: pedido só após Pix pago; D2: até 4x; D3: desligar o provider manual no go-live; D4: conta no CNPJ). Fases F0 (prova em sandbox) → F1 backend → F2 vitrine → F3 Cockpit/DRE → F4 produção, com Halt. Branch feat/pagamento-mercadopago (worktree ../eclat-wt-pagamento). Credenciais só por .env/Railway/Vercel, pelo dono. Getnet: segundo provider, depois; não usar a Plataforma Digital antiga (developers.getnet.com.br, rotas /v1).
 - Parte 5 — CRM/Supabase: architecture/crm.md + supabase/migrations/0001_crm_init.sql aplicados.
   Tabelas lead/cliente_rel/conversa com RLS (anon negado, backend via service_role). SUPABASE_DB_URL no .env.
 - Parte 6 — WhatsApp via Evolution API (instância eclat): integração montada (lib/evolution, lib/supabase,

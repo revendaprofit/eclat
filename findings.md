@@ -87,3 +87,102 @@ O prefixo `npm_config_script_shell` é necessário porque os scripts `test:db:up
 `test:integration:http` usam sintaxe `VAR=valor comando`, que o `cmd.exe` (shell padrão do npm no
 Windows) não interpreta — aponta a chamada do `npm run` para o Git Bash só para essa execução,
 sem alterar `.npmrc`/config global do npm.
+
+## Pagamento — Mercado Pago no Medusa 2.15.5 (2026-09-17, F0 da Parte 4)
+Lido no código instalado (`@medusajs/payment/dist/services/payment-module.js`, `@medusajs/core-flows/dist/payment/workflows/process-payment.js`):
+- **O webhook reautoriza a sessão.** Com ação `captured` e sem `payment` ainda criado (caso do Pix: o pedido não existe), o `processPaymentWorkflow` roda `authorizePaymentSessionStep` → chama o `authorizePayment` do provider de novo → captura → conclui o carrinho. **Constraint:** `authorizePayment` tem que ser idempotente: se `data.mp_payment_id` existe, só consulta `GET /v1/payments/{id}` e mapeia o status; criar pagamento só quando não há id (cartão no "Finalizar pedido"). Sem isso, cobra duas vezes.
+- **Pagamento não autorizado no `cart.complete`:** o módulo grava `status`/`data` na sessão e lança `Session: … was not authorized with the provider`. Se a gravação rodar dentro da transação que o erro desfaz, o `mp_payment_id` pode se perder → a proteção é a **chave de idempotência = id da sessão** (o Medusa já entrega em `context.idempotency_key`): repetir a criação devolve o mesmo pagamento no MP. Confirmar no sandbox (script `apps/backend/f0-mercadopago.mjs`, passo "idempotência").
+- **A conclusão do carrinho pós-pagamento falha em silêncio:** `completeCartAfterPaymentStep` roda com `continueOnPermanentFailure: true`. Pagamento capturado + carrinho que não conclui (estoque esgotado, promoção vencida) = dinheiro recebido sem pedido e sem erro. **Constraint (D1):** o estorno automático não pode depender de exceção; é uma rotina de reconciliação que procura sessão capturada cujo carrinho não virou pedido → estorna no MP → alerta no Cockpit.
+- Rota de webhook nativa: `POST /hooks/payment/{identifier}_{id}` → `pp_mercadopago_mercadopago` ⇒ `/hooks/payment/mercadopago_mercadopago`. O corpo bruto e os headers chegam em `getWebhookActionAndData({ data, rawData, headers })`.
+- Valores: Medusa v2 e a API de Payments do MP usam reais decimais; centavos inteiros só na nossa borda (tarifa/DRE).
+
+## Pagamento — Mercado Pago migrou o Checkout Transparente para a Orders API (2026-09-17)
+Ao criar a aplicação no painel do MP em 17/09 ("eclat-checkout", solução Checkout Transparente), o campo "Tipo de API"
+veio com **API de Orders** pré-selecionado — a API de Payments (`/v1/payments`) está marcada como **"legacy"** na doc
+oficial (`developers/pt/docs/checkout-api-orders/*`). A spec (`2026-09-17-pagamento-mercadopago-design.md`) foi
+reescrita para Orders API. Achados que não estavam na doc que eu conhecia:
+
+- **Prefixo de teste é `APP_USR`, não `TEST-`.** Confirmado 2x na doc: "Para integrações com Checkout Transparente via
+  Orders, a conta de teste vendedor é criada automaticamente após a criação da aplicação e suas credenciais passam a
+  ser suas credenciais de teste. É por isso que seu Access Token de teste começa com o prefixo APP_USR." Isso vale só
+  para apps criadas com "Tipo de API: Orders" — não confundir com uma credencial de produção de verdade.
+- **Endpoint único cria e processa:** `POST /v1/orders` com `type:"online"`, `processing_mode:"automatic"|"manual"`,
+  `external_reference`, `total_amount` (string decimal, ex. `"199.90"`), `payer:{email,first_name,identification}`,
+  `transactions.payments[]:{amount, payment_method:{id,type,token?,installments?}}`. Cartão: `type:"credit_card"`,
+  `id` = bandeira (`master`), `token` do Card Form/Brick. Pix: `type:"bank_transfer"`, `id:"pix"`, sem `token`.
+- **Resposta da order** tem status geral (`status`/`status_detail`) e por transação (`transactions.payments[].status`).
+  Tabela oficial completa de combinações em `checkout-api-orders/payment-management/status/order-status` — os que
+  importam pro nosso mapa: `processed/accredited` (sucesso), `action_required/waiting_transfer` (Pix aguardando),
+  `action_required/waiting_capture`, `canceled/canceled`, `expired/expired`, `failed/failed`, `refunded/refunded`,
+  `charged_back/*`. **Não existe mais `pending`/`in_process` simples como na API de Payments** — vira `processing` ou
+  `action_required` conforme o caso.
+- **Pix na Orders API não devolve** `date_of_expiration` no request nem no response — o QR vem em
+  `transactions.payments[0].payment_method.{qr_code, qr_code_base64, ticket_url}`, e a expiração parece ser a
+  configurada na conta (painel "Taxas e parcelas"), não um parâmetro por chamada como era em `/v1/payments`.
+  **Confirmar isso e o valor do prazo padrão na F0** — se não der pra fixar em 30 min por request, ajustar a copy da
+  tela de Pix e a decisão D1 (o pedido só nasce quando paga, então o prazo real da conta é o que vale).
+- **Webhook do evento "Order"** (não "Payment"): corpo `{action:"order.processed", type:"order", data:{id:"ORD...",
+  status, status_detail, transactions:{payments:[...]}}}`. **A fórmula de assinatura (`x-signature`) é a mesma da API
+  de Payments** — manifesto `id:{data.id em minúsculas};request-id:{x-request-id};ts:{ts};` + HMAC-SHA256. Confirmado
+  literalmente na doc, inclusive o detalhe de forçar minúsculas no id (que é alfanumérico tipo `ORD01M28...`, não só
+  dígitos como o id de payment clássico). O `assinaturaValida()` de `apps/backend/f0-mercadopago.mjs` já implementa
+  isso certo — só reescrevi as chamadas HTTP do script, a assinatura não mudou.
+- **Reembolso:** `POST /v1/orders/{order_id}/refund` — corpo vazio = total; `{amount, transaction_id}` = parcial. Uma
+  order só fica `refunded` quando **todas** as transações estiverem 100% estornadas (não achei ainda se isso importa
+  pro nosso caso de 1 transação por order — provavelmente não).
+- **Em aberto para a F0 confirmar empiricamente:** (1) se `GET /v1/orders/{id}` traz a tarifa (`fee_details` não
+  aparece nos exemplos da doc — pode exigir `GET /v1/payments/{payment_id}` complementar com o id `PAY...` de dentro
+  da order); (2) o prazo de expiração padrão do Pix sandbox; (3) idempotência de `POST /v1/orders` com o mesmo
+  `X-Idempotency-Key` (a doc de Orders não repete esse detalhe explicitamente como a de Payments).
+
+## Pagamento — F0 rodada no sandbox real (2026-09-17, mesma tarde)
+Script `apps/backend/f0-mercadopago.mjs` executado contra a conta de teste (site MLB) com credenciais `APP_USR-...`
+da aplicação eclat-checkout. Corrige/confirma os pontos que ficaram em aberto na primeira leitura da doc:
+
+- **`qr_code_base64` vem preenchido** no sandbox real (o exemplo da doc mostrava vazio — era só exemplo ilustrativo).
+  Não precisa de fallback para gerar o QR a partir do `qr_code` manualmente.
+- **`GET /v1/payments/{id}` não trouxe tarifa para o Pix pendente** (`fee_details` ausente) — esperado, a tarifa só é
+  calculada quando o pagamento é liquidado. **Falta confirmar com um Pix/cartão realmente pago** (a F0 só testou
+  cartão aprovado sem reconsultar `/v1/payments/{id}` depois — fazer isso na F1 antes de fechar o desenho da tarifa).
+- **Idempotência confirmada:** a mesma `X-Idempotency-Key` em `POST /v1/orders` devolve a mesma order (mesmo `id`),
+  cartão e Pix. Protege a reautorização que o Medusa faz quando o webhook chega (risco 1 da spec, §13).
+- **`POST /v1/orders/{id}/cancel` exige `X-Idempotency-Key`** (400 sem o header) **e devolve 422 numa order
+  `processing_mode: automatic` com transação Pix já embutida** — não é cancelável, porque nasce com a cobrança em
+  andamento do lado do banco. Spec §6 ajustada: não cancelamos mais orders Pix "trocadas"; deixamos expirar.
+- **Recusa de cartão não é um `status` normal — é HTTP 402** com corpo
+  `{"errors":[{"code":"failed","message":"The following transactions failed","details":["PAY_ID: <status_detail>"]}],"data":{...order completa, status:"failed"...}}`.
+  O `status_detail` da recusa fica dentro da string de `details[0]`, no formato `"PAY_ID: motivo"` — nosso parser de
+  recusas (`recusas.ts`, §8) precisa extrair esse motivo daí, não de `dados.status_detail` direto (que só existe
+  quando a resposta é 2xx). Confirmados nesta rodada: `rejected_by_issuer` (OTHE), `required_call_for_authorize`
+  (CALL), `insufficient_amount` (FUND), `bad_filled_card_data` (SECU — nome ligeiramente diferente do documentado
+  `cc_rejected_bad_filled_security_code`; usar o texto real observado no motivo genérico de "dados do formulário").
+- **CONT (pendente) não dá erro:** volta 2xx normal com `status:"processing"`, `status_detail:"in_process"` — cai
+  certinho no mapa de status da spec (§7).
+- **Estorno total confirmado:** `POST /v1/orders/{id}/refund` com corpo vazio (mas idempotency key) devolveu
+  `status:"refunded"` na order de um cartão aprovado.
+- IDs de order em sandbox vêm com prefixo `ORDTST` (não só `ORD`) — não depender do prefixo exato em nenhuma
+  validação, só tratar como string opaca.
+
+## Pagamento — Como pegar a tarifa real com a Orders API (fechamento da F0, 2026-09-17)
+`GET /v1/payments/{PAY_id}` com o id que vem dentro de `transactions.payments[].id` da order (formato `PAY01M2...`)
+devolve **404** — é um espaço de IDs diferente do da API clássica de Payments, não é consultável por ali.
+
+O caminho que funciona, testado no sandbox: **`GET /v1/payments/search?external_reference={valor}`**, usando o mesmo
+`external_reference` que mandamos ao criar a order (nós vamos usar `cart.id`). Devolve um `results[]` com o pagamento
+no formato clássico, **incluindo `fee_details`**:
+```json
+[{"amount":9.96,"fee_payer":"collector","type":"mercadopago_fee"},
+ {"amount":22.71,"fee_payer":"collector","type":"financing_fee"}]
+```
+(exemplo de uma compra de R$ 199,90 em 4x: `total_paid_amount` da order veio R$ 222,61 — o valor com juros que a
+cliente pagou — e a `financing_fee` de R$ 22,71 aparece cobrada do lojista (`fee_payer: "collector"`), quase o mesmo
+valor do acréscimo. **Isso sugere que, nesta conta de teste, o parcelamento default está "com juros para a cliente E
+com taxa de financiamento pro lojista" ao mesmo tempo — não necessariamente vai ser assim na conta real.** Quem
+decide isso é a configuração "Taxas e parcelas" no painel do MP (D2 na spec) — o dono precisa olhar essa tela antes
+do go-live pra confirmar quanto realmente sobra líquido por parcela; o código só lê e grava o que a API devolver,
+nunca calcula/adivinha.
+
+**Consequência para o F1:** o provider, depois que a order for aprovada (webhook ou resposta síncrona), faz um
+`GET /v1/payments/search?external_reference={cart.id}` pra achar o registro com `fee_details` e gravar a tarifa real
+em `payment.data`. Sem esse passo extra não tem como preencher a linha "Taxas de pagamento" do DRE.
+

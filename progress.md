@@ -991,3 +991,41 @@ PRÓXIMO (usuário, guiado): Railway (Postgres + serviço do repo, root /, vars,
 - Versão exata da API: a documentação pública não expõe número na visão geral — fixar ao receber o sandbox e registrar aqui e em architecture/.
 - Aguardando da Getnet: Client ID/Secret (sandbox e depois produção), identificador da loja, URLs dos ambientes, cadastro e chave de verificação do webhook, produtos habilitados (crédito, débito, Pix), 3DS, antifraude, tokenização, cartões de teste e roteiro de homologação; comercial: taxas por meio/parcelas, regras de parcelamento, prazo de recebimento/antecipação, conta de liquidação, chargeback. Segredos entram direto no `.env` pelo dono (nunca por chat).
 - CLAUDE.md atualizado (stack, invariante 4, Parte 4).
+
+
+## 2026-09-17 — Parte 4 retomada: Mercado Pago agora, Getnet depois
+- Decisão do dono: o sandbox da Getnet não saiu; o **Mercado Pago entra agora** (Checkout Transparente/Bricks, Pix + cartão) e a Getnet vira segundo provider do Medusa depois. Substitui a decisão de 15/09 quanto à ordem, não quanto à Getnet.
+- Spec aprovada: `docs/superpowers/specs/2026-09-17-pagamento-mercadopago-design.md`. D1 pedido só nasce com o Pix pago (estorno automático no conflito de última peça); D2 até 4x; D3 desligar `pp_system_default` no go-live; D4 conta MP no CNPJ (razão social = nome da titular). D5 (prazo de liberação) e "quantas parcelas sem juros" em aberto — configuração do painel do MP, não muda código.
+- Taxas públicas do Checkout consultadas em 17/09: Pix 0,99%; crédito 4,98% na hora / 4,49% 14 dias / 3,98% 30 dias; parcelado sem juros soma 7,64% (2x), 9,23% (3x), 10,86% (4x).
+- MCP do Mercado Pago (`https://mcp.mercadopago.com/mcp`, OAuth) é apoio de desenvolvimento (usuários de teste, webhook, avaliação de qualidade) — opcional.
+- **Incidente 11:19:** `apps/backend` apareceu vazio no working tree principal (causa não identificada; havia outra conversa ativa no repo). Restaurado com `git restore apps/backend` (123 arquivos). O `apps/backend/.env` local, não versionado, se perdeu — remontar a partir do Railway. Por isso a Parte 4 roda em worktree próprio (`../eclat-wt-pagamento`, branch `feat/pagamento-mercadopago`).
+- Próximo: F0 — aguarda `MERCADOPAGO_ACCESS_TOKEN` (teste), `MERCADOPAGO_WEBHOOK_SECRET` e `NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY` colocados pelo dono.
+
+## 2026-09-17 (tarde) — Parte 4: F0 rodada com sucesso no sandbox
+- Dono criou a aplicação "eclat-checkout" (Checkout Transparente) no painel do MP. Ela nasceu com **API de Orders**
+  (não a API de Payments que eu tinha usado na primeira versão da spec) — reescrevi a spec e o script da F0 para
+  `/v1/orders` depois de ler a doc oficial (`checkout-api-orders/*`). Credencial de teste confirmada com prefixo
+  `APP_USR` (não `TEST-`) — comportamento documentado só para apps criadas com "Tipo de API: Orders".
+- `apps/backend/f0-mercadopago.mjs` executado contra o sandbox real (conta MLB de teste): Pix criado com QR completo
+  (copia-e-cola + base64 + ticket_url), idempotência confirmada (mesma chave → mesma order), cartão aprovado 1x e 4x,
+  4 cenários de recusa/pendência confirmados (OTHE, CONT, CALL, FUND, SECU), estorno total confirmado. Achados
+  registrados em `findings.md` (formato do erro de recusa é HTTP 402 com motivo dentro de `details[]`; cancelar order
+  Pix não funciona em `processing_mode: automatic` — ajustei a spec para não depender disso).
+- **Pendente antes de fechar a F0:** confirmar se a tarifa (`fee_details`) aparece em `GET /v1/payments/{id}` depois
+  que um pagamento é de fato liquidado (só testamos com Pix pendente, sem tarifa calculada ainda).
+- `.env` local do worktree (`../eclat-wt-pagamento/apps/backend/.env`) tem as credenciais de teste — não é o `.env`
+  de produção do backend principal, que continua faltando desde o incidente de 11:19 (ver entrada anterior).
+- Próximo: fechar a checagem de tarifa pendente e começar a F1 (módulo `mercadopago` no Medusa).
+
+## 2026-09-17 (tarde) — Parte 4: F0 CONCLUÍDA
+Última pendência da F0 fechada: a tarifa real (`fee_details`) não existe em nenhum campo da Orders API — só aparece
+consultando `GET /v1/payments/search?external_reference={cart.id}` (API clássica de Payments, ainda viva só para
+consulta). Confirmado no sandbox com uma compra 4x: R$ 9,96 de tarifa MP + R$ 22,71 de "financing_fee" cobrados do
+lojista — vale o dono conferir a config "Taxas e parcelas" no painel antes do go-live pra saber quanto sobra líquido
+por parcela (o código só lê o que a API der, não calcula).
+
+**F0 da Parte 4: CONCLUÍDA.** Todos os riscos e decisões técnicas em aberto (§13 e §9 da spec) foram respondidos por
+teste real no sandbox: idempotência ok, formato do erro de recusa mapeado, cancelamento de Pix não funciona (spec
+ajustada pra não depender disso), tarifa real via `/v1/payments/search`. Achados completos em `findings.md`.
+Aguardando "pode aplicar" ou sinal do dono para começar a **F1 — módulo `mercadopago` no backend do Medusa**.
+
