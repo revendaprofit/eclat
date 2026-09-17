@@ -89,7 +89,8 @@ export type ItemPedido = {
   ncm: string | null          // variant.hs_code
   origem: number | null       // derivado de variant.origin_country
   quantidade: number
-  valor_unitario_centavos: number
+  valor_unitario_centavos: number   // valor BRUTO (unit_price), sem desconto — Invariante 3
+  desconto_centavos: number         // desconto do item inteiro (todas as unidades), somado
 }
 
 // Erro de negócio da camada fiscal: sempre com mensagem legível para o operador.

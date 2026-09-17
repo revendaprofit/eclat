@@ -44,8 +44,8 @@ const itensOrigem: FiscalDocumentoItem[] = [
 ]
 
 const itensPedido: ItemPedido[] = [
-  { line_item_id: "li_a", product_id: "prod_a", categoria_handle: "tops", titulo: "Top Aura", sku: "TOP-AURA-P", ncm: "61091000", origem: 0, quantidade: 1, valor_unitario_centavos: 18900 },
-  { line_item_id: "li_b", product_id: "prod_b", categoria_handle: "leggings", titulo: "Legging Vertice", sku: "LEG-VERTICE-M", ncm: "61046200", origem: 0, quantidade: 2, valor_unitario_centavos: 24900 },
+  { line_item_id: "li_a", product_id: "prod_a", categoria_handle: "tops", titulo: "Top Aura", sku: "TOP-AURA-P", ncm: "61091000", origem: 0, quantidade: 1, valor_unitario_centavos: 18900, desconto_centavos: 0 },
+  { line_item_id: "li_b", product_id: "prod_b", categoria_handle: "leggings", titulo: "Legging Vertice", sku: "LEG-VERTICE-M", ncm: "61046200", origem: 0, quantidade: 2, valor_unitario_centavos: 24900, desconto_centavos: 0 },
 ]
 
 function chamar(over: Record<string, unknown> = {}) {

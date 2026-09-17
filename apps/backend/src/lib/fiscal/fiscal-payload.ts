@@ -52,9 +52,14 @@ export function montarPayloadVenda(args: {
     }
   }
 
+  // valor_desconto: nome de campo é a nossa melhor leitura da API da Brasil NFe — ainda não
+  // confrontado com a documentação real (mesma situação de outros nomes já marcados como
+  // pendentes de confirmação neste módulo).
   const linhas = itens.map((it, idx) => {
     const perfil = resolverPerfil(perfis, it.product_id, it.categoria_handle)
-    const totalCentavos = it.valor_unitario_centavos * it.quantidade
+    // valor_unitario/produtos ficam no BRUTO; o desconto vai em campo próprio e é subtraído
+    // só no total da linha e da nota — nunca escondido dentro do valor unitário.
+    const totalCentavos = it.valor_unitario_centavos * it.quantidade - it.desconto_centavos
     return {
       numero_item: idx + 1,
       codigo: it.sku ?? it.line_item_id,
@@ -66,6 +71,7 @@ export function montarPayloadVenda(args: {
       unidade: "UN",
       quantidade: it.quantidade,
       valor_unitario: reais(it.valor_unitario_centavos),
+      valor_desconto: reais(it.desconto_centavos),
       valor_total: reais(totalCentavos),
     }
   })
@@ -74,6 +80,7 @@ export function montarPayloadVenda(args: {
     (acc, it) => acc + it.valor_unitario_centavos * it.quantidade,
     0
   )
+  const descontoCentavos = itens.reduce((acc, it) => acc + it.desconto_centavos, 0)
 
   const payload: Record<string, unknown> = {
     modelo: 55,
@@ -115,8 +122,9 @@ export function montarPayloadVenda(args: {
     itens: linhas,
     total: {
       valor_produtos: reais(produtosCentavos),
+      valor_desconto: reais(descontoCentavos),
       valor_frete: reais(frete_centavos),
-      valor_nota: reais(produtosCentavos + frete_centavos),
+      valor_nota: reais(produtosCentavos - descontoCentavos + frete_centavos),
     },
   }
 

@@ -27,6 +27,7 @@ function item(p: Partial<ItemPedido> = {}): ItemPedido {
     origem: "origem" in p ? p.origem : 0,
     quantidade: p.quantidade ?? 1,
     valor_unitario_centavos: p.valor_unitario_centavos ?? 18900,
+    desconto_centavos: p.desconto_centavos ?? 0,
   }
 }
 
@@ -86,6 +87,22 @@ describe("montarPayloadVenda", () => {
     expect(p.total.valor_frete).toBe("19.90")
     expect(p.total.valor_produtos).toBe("569.70")
     expect(p.total.valor_nota).toBe("589.60")
+  })
+
+  it("aplica o desconto do item no valor_total da linha e nos totais da nota, sem tocar no valor_unitario bruto", () => {
+    const { payload } = montarPayloadVenda({
+      config, perfis: [perfilPadrao],
+      itens: [item({ valor_unitario_centavos: 5000, quantidade: 2, desconto_centavos: 1000 })],
+      destinatario: destino("MG"), frete_centavos: 0,
+    })
+    const p = payload as any
+    // Bruto continua bruto — o desconto nunca é escondido dentro do valor_unitario.
+    expect(p.itens[0].valor_unitario).toBe("50.00")
+    expect(p.itens[0].valor_desconto).toBe("10.00")
+    expect(p.itens[0].valor_total).toBe("90.00") // 50*2 - 10
+    expect(p.total.valor_produtos).toBe("100.00") // soma dos brutos
+    expect(p.total.valor_desconto).toBe("10.00")
+    expect(p.total.valor_nota).toBe("90.00") // produtos - desconto + frete(0)
   })
 
   it("numera itens de 1 em diante e devolve a ordem enviada", () => {

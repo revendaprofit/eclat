@@ -30,7 +30,7 @@ describe("emitirVenda", () => {
   })
 
   const itens = [
-    { line_item_id: "li_a", product_id: "prod_a", categoria_handle: "tops", titulo: "Top Aura", sku: "TOP-P", ncm: "61091000", origem: 0, quantidade: 1, valor_unitario_centavos: 18900 },
+    { line_item_id: "li_a", product_id: "prod_a", categoria_handle: "tops", titulo: "Top Aura", sku: "TOP-P", ncm: "61091000", origem: 0, quantidade: 1, valor_unitario_centavos: 18900, desconto_centavos: 0 },
   ]
   const destinatario = {
     cpf: "12345678909", nome: "Maria", logradouro: "Rua A", numero: "10", complemento: null,

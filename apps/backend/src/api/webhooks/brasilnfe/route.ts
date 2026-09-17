@@ -2,6 +2,12 @@ import type { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import { ContainerRegistrationKeys } from "@medusajs/framework/utils"
 import { reconciliarDocumento } from "../../../lib/fiscal/fiscal-reconciliar"
 import { documentoPorChave } from "../../../lib/fiscal/fiscal-db"
+import type { StatusDocumento } from "../../../lib/fiscal/tipos"
+
+// Status que já não mudam mais: reconciliar de novo só baixaria XML à toa (achado da revisão
+// de 2026-09-17). "verificado" já foi lido; "rejeitado" nunca teve chave autorizada;
+// "denegado" consumiu numeração mas não tem XML de autorização para baixar.
+const STATUS_TERMINAIS = new Set<StatusDocumento>(["verificado", "rejeitado", "denegado"])
 
 // Webhook da Brasil NFe: avisa que um documento mudou de status.
 //
@@ -45,8 +51,8 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
       logger.warn(`[fiscal] webhook para chave desconhecida ${chave} — ignorado`)
       return res.status(200).json({ ok: true })
     }
-    if (doc.status === "verificado") {
-      return res.status(200).json({ ok: true, ja_verificado: true })
+    if (STATUS_TERMINAIS.has(doc.status)) {
+      return res.status(200).json({ ok: true, ja_resolvido: true })
     }
     const r = await reconciliarDocumento(doc.id)
     for (const d of r.divergencias) logger.warn(`[fiscal] ${d}`)
