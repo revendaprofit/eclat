@@ -155,4 +155,50 @@ describe("montarItensDoPedido", () => {
     const { frete_centavos } = await montarItensDoPedido(scope, "order_1")
     expect(frete_centavos).toBe(1990)
   })
+
+  it("extrai pagamento quando order NÃO tem payment_collections", async () => {
+    const pedido = pedidoBase()
+    // Não define payment_collections (ou deixa undefined) — deve cair no padrão "99"
+    delete (pedido as any).payment_collections
+    const { scope } = scopeCom(pedido)
+
+    const { pagamento } = await montarItensDoPedido(scope, "order_1")
+    expect(pagamento).toEqual({ forma: "99", descricao: "Pagamento online" })
+  })
+
+  it("extrai provider_ids de payment_collections e passa para formaPagamentoDoPedido", async () => {
+    // Usa jest.doMock para substituir o módulo fiscal-pagamento apenas neste teste
+    const mockFormaPagamento = jest.fn().mockReturnValue({ forma: "99", descricao: "Pagamento online" })
+
+    // Isola a importação de montarItensDoPedido dentro do contexto do mock
+    await jest.isolateModulesAsync(async () => {
+      jest.doMock("../fiscal-pagamento.js", () => ({
+        formaPagamentoDoPedido: mockFormaPagamento,
+      }))
+
+      // Re-importa fiscal-pedido com o mock ativo
+      const { montarItensDoPedido: montarItensDoPedidoMocked } = await import("../fiscal-pedido.js")
+
+      const pedido = pedidoBase()
+      // Simula uma payment_collection com múltiplos payments, alguns com null provider_id
+      pedido.payment_collections = [
+        {
+          payments: [
+            { provider_id: "pp_system_default" },
+            { provider_id: null },
+          ],
+        },
+        {
+          payments: null,
+        },
+      ]
+      const { scope } = scopeCom(pedido)
+
+      await montarItensDoPedidoMocked(scope, "order_1")
+
+      // Verifica que formaPagamentoDoPedido foi chamada com apenas os provider_ids válidos (filtrando nulls e vazios)
+      expect(mockFormaPagamento).toHaveBeenCalledWith(["pp_system_default"])
+      expect(mockFormaPagamento).toHaveBeenCalledTimes(1)
+    })
+  })
 })
