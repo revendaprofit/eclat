@@ -98,6 +98,13 @@ export async function POST(
         console.warn(
           `[fiscal] pedido ${id} despachado SEM nota — ${decisao.aviso}${operador ? ` — operador ${operador}` : ""}`
         )
+        // Correção da spec §6.1: com o interruptor desligado, o vestígio de auditoria não é a
+        // tabela fiscal_documento (que exigiria inventar CPF/IBGE/NCM/perfil pra um documento que
+        // não é tentativa real de nota) — é o metadata do próprio pedido. Antes só existia o
+        // console.warn acima e um alert() efêmero na tela; agora fica registrado no artefato certo.
+        await medusaMergeOrderMetadata(id, {
+          fiscal: { emitida: false, motivo: decisao.aviso, em: new Date().toISOString() },
+        })
       }
     } else {
       // Saída de escape para o operador despachar sem nota num caso excepcional — mas isso não

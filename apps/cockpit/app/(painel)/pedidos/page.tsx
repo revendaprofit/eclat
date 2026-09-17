@@ -56,7 +56,15 @@ type OrderDetail = Order & {
     labels: { tracking_number: string | null; tracking_url: string | null; label_url: string | null }[]
   }[]
   metadata?:
-    | ({ conferencia?: RegistroConferencia; fiscal?: { documento_id: string; chave_acesso: string | null; numero: number | null } } & Record<string, unknown>)
+    | ({
+        conferencia?: RegistroConferencia
+        // Duas formas: nota emitida (documento_id/chave/numero) OU despacho sem nota por
+        // interruptor desligado (emitida:false + motivo + carimbo de hora) — correção da spec
+        // §6.1, é o vestígio de auditoria deste caso (dispatch/route.ts).
+        fiscal?:
+          | { documento_id: string; chave_acesso: string | null; numero: number | null }
+          | { emitida: false; motivo: string; em: string }
+      } & Record<string, unknown>)
     | null
 }
 
