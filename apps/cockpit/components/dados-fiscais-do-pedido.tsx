@@ -3,11 +3,18 @@
 import { useState } from "react"
 import { lerDadosFiscais, faltamDadosFiscaisPedido } from "@/lib/dados-fiscais"
 import { cepValido, normalizarCep, type EnderecoCep } from "@/lib/cep"
+import type { StatusDocumento } from "@/lib/fiscal"
 
 // Completa os dados fiscais de um pedido que veio sem eles.
 //
-// Só aparece quando falta algo E o pedido ainda não tem nota. Depois de emitida,
-// o dado é histórico: alterá-lo criaria divergência com o XML já transmitido.
+// Só aparece quando falta algo E o pedido já tem nota emitida de verdade (status
+// "verificado" ou "autorizado_nao_verificado"). Ter um documento fiscal não é a mesma
+// coisa: "montado", "rejeitado", "denegado" e "transmitido_sem_confirmacao" também são
+// documentos (fiscal-emissao.ts grava "montado" ANTES de transmitir), mas a nota não
+// existe de fato — e é justamente nesses casos que o operador mais precisa deste bloco
+// para corrigir o dado e reemitir. Reduzir isso a um booleano na página escondia o
+// bloco bem na hora em que ele era mais necessário (achado da revisão).
+const NOTA_EXISTE: ReadonlySet<StatusDocumento> = new Set(["verificado", "autorizado_nao_verificado"])
 
 const card = "border border-eclat-pedra/40 rounded-lg p-5 bg-eclat-luz flex flex-col gap-3"
 const input =
@@ -19,10 +26,10 @@ const btn =
 
 export function DadosFiscaisDoPedido({
   order,
-  temNotaEmitida,
+  statusFiscal,
 }: {
   order: unknown
-  temNotaEmitida: boolean
+  statusFiscal?: StatusDocumento | null
 }) {
   const atual = lerDadosFiscais(order)
   const faltam = faltamDadosFiscaisPedido(atual)
@@ -31,7 +38,8 @@ export function DadosFiscaisDoPedido({
   const [ocupado, setOcupado] = useState(false)
   const [erro, setErro] = useState<string | null>(null)
 
-  if (temNotaEmitida || faltam.length === 0) return null
+  const notaExiste = !!statusFiscal && NOTA_EXISTE.has(statusFiscal)
+  if (notaExiste || faltam.length === 0) return null
 
   const orderId = (order as { id?: string })?.id ?? ""
 

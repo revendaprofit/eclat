@@ -442,7 +442,7 @@ export default function PedidosPage() {
                 )}
 
                 {/* Dados fiscais (Task 9): completa CPF/número/bairro/IBGE de pedidos que vieram sem eles */}
-                <DadosFiscaisDoPedido order={det} temNotaEmitida={Boolean(docFiscal)} />
+                <DadosFiscaisDoPedido order={det} statusFiscal={docFiscal?.status} />
 
                 {/* Fiscal (Task 14): status da NF-e de venda + devolução manual (NFD) */}
                 <FiscalDoPedido
