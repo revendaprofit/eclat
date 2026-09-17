@@ -1,6 +1,9 @@
 // Lê o XML autorizado e grava o nItem REAL de cada item (spec §7.3).
 //
 // A Brasil NFe gera o nItem pela ordem em que enviamos os itens, mas não devolve o valor.
+// A resposta síncrona de EnviarNotaFiscal já traz o XML autorizado (Base64Xml), então a emissão
+// reconcilia NA HORA, passando o XML em mãos (spec §7.3). O download só acontece na varredura
+// e na resolução manual.
 // Contrato posicional implícito quebra em silêncio — então aqui a verdade vem do XML assinado
 // pela SEFAZ. O casamento é feito pelo `codigo_enviado` (o mesmo `codigo`/SKU que foi no payload,
 // gravado em fiscal-emissao.ts), que é a chave única por linha do documento — NÃO por NCM nem por
@@ -24,12 +27,14 @@
 // melhor que gravar n_item_verificado trocado em silêncio.
 
 import { atualizarDocumento, atualizarNItem, lerDocumento, listarItens, listarPorStatus } from "./fiscal-db"
-import { baixarXml } from "./fiscal-client"
+import { baixarArquivo, localizarPorIdentificador } from "./fiscal-client"
+import { tipoAmbiente } from "./fiscal-payload"
 import { extrairChaveDoXml, extrairItensDoXml, type ItemXml } from "./fiscal-xml"
-import { ErroFiscal, type FiscalDocumentoItem } from "./tipos"
+import { ErroFiscal, type FiscalDocumento, type FiscalDocumentoItem } from "./tipos"
 
 export async function reconciliarDocumento(
-  documentoId: string
+  documentoId: string,
+  xmlEmMaos?: string
 ): Promise<{ verificado: boolean; divergencias: string[] }> {
   const doc = await lerDocumento(documentoId)
   if (!doc.chave_acesso) {
@@ -38,7 +43,13 @@ export async function reconciliarDocumento(
     )
   }
 
-  const xml = await baixarXml(doc.chave_acesso)
+  // Origem do XML, em ordem: em mãos (emissão síncrona) → já gravado → download.
+  let xml = xmlEmMaos ?? doc.xml_autorizado ?? null
+  let veioDeDownload = false
+  if (!xml) {
+    xml = (await baixarArquivo(doc.chave_acesso, "xml")).toString("utf8")
+    veioDeDownload = true
+  }
   const itensXml = extrairItensDoXml(xml)
   const itensDoc = await listarItens(documentoId)
 
@@ -109,13 +120,51 @@ export async function reconciliarDocumento(
   await atualizarDocumento(documentoId, {
     status: "verificado",
     verificado_em: new Date().toISOString(),
+    // O XML é o documento legal: se veio de download, fica guardado conosco.
+    ...(veioDeDownload ? { xml_autorizado: xml } : {}),
   })
 
   return { verificado: true, divergencias }
 }
 
-// Varredura de segurança (spec §7.3): o webhook pode se perder; obrigação fiscal não pode
-// depender de entrega de rede.
+// Procura no fornecedor uma nota emitida com o IdentificadorInterno deste documento (é a nossa
+// idempotency_key, enviada no payload). Serve à varredura e à barreira de duplicidade da emissão.
+//
+// NUNCA conclui que a nota "não foi emitida": ausência na consulta não é prova (a nota pode não
+// estar indexada ainda). Só a resolução manual (/admin/fiscal/resolver) declara isso.
+export async function localizarNoFornecedor(doc: FiscalDocumento): Promise<FiscalDocumento | null> {
+  const achada = await localizarPorIdentificador({
+    identificador: doc.idempotency_key,
+    ambiente: tipoAmbiente(doc.ambiente),
+    desde: doc.created_at ?? new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+  })
+  if (!achada) return null
+
+  if (achada.status === 3) {
+    await atualizarDocumento(doc.id, {
+      status: "denegado",
+      chave_acesso: achada.chave_acesso,
+      rejeicao_motivo: "Uso denegado — localizado na Brasil NFe pela varredura.",
+    })
+    return null
+  }
+  // status 2 = cancelada: a nota existiu mas não vale mais. Não adota e não mexe — o operador
+  // decide em Fiscal → Fila.
+  if (achada.status !== 1) return null
+
+  return atualizarDocumento(doc.id, {
+    status: "autorizado_nao_verificado",
+    chave_acesso: achada.chave_acesso,
+    numero: achada.numero,
+    serie: achada.serie,
+    rejeicao_codigo: null,
+    rejeicao_motivo: null,
+  })
+}
+
+// Varredura de segurança (spec §7.3). A emissão síncrona reconcilia na hora; a varredura cobre o
+// que ela não fecha sozinha: transmissão sem resposta (localiza pelo IdentificadorInterno) e
+// reconciliação que falhou ou ficou sem XML.
 export async function reconciliarPendentes(
   limite = 50
 ): Promise<{ processados: number; verificados: number }> {
@@ -124,9 +173,12 @@ export async function reconciliarPendentes(
     limite
   )
   let verificados = 0
-  for (const doc of pendentes) {
-    if (!doc.chave_acesso) continue
+  for (const pendente of pendentes) {
     try {
+      let doc: FiscalDocumento | null = pendente
+      // Sem chave: a transmissão não teve resposta. Pergunta ao fornecedor se a nota existe.
+      if (!doc.chave_acesso) doc = await localizarNoFornecedor(doc)
+      if (!doc) continue
       const r = await reconciliarDocumento(doc.id)
       if (r.verificado) verificados++
     } catch {

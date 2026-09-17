@@ -3,8 +3,9 @@ import { ContainerRegistrationKeys } from "@medusajs/framework/utils"
 import { reconciliarPendentes } from "../lib/fiscal/fiscal-reconciliar"
 import { fiscalDbConfigured } from "../lib/fiscal/fiscal-db"
 
-// Rede de segurança da reconciliação (spec §7.3): o webhook pode se perder, e um documento
-// preso em 'autorizado_nao_verificado' bloqueia a devolução daquele pedido para sempre.
+// Rede de segurança da emissão síncrona (spec §7.3): resolve transmissões que ficaram sem resposta
+// (timeout, 5xx) localizando a nota no fornecedor, e refaz reconciliações que falharam. Um
+// documento preso em 'autorizado_nao_verificado' bloqueia a devolução daquele pedido.
 
 export default async function fiscalReconciliarJob(container: MedusaContainer) {
   const logger = container.resolve(ContainerRegistrationKeys.LOGGER)
