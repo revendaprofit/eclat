@@ -6,6 +6,7 @@ import { resumoConferencia, type ItemPedido, type RegistroConferencia } from "@/
 import ConferenciaPedido from "@/components/conferencia-pedido"
 import { FiscalDoPedido, type DocumentoFiscal } from "@/components/fiscal-do-pedido"
 import { NfdDoPedido } from "@/components/nfd-do-pedido"
+import { DadosFiscaisDoPedido } from "@/components/dados-fiscais-do-pedido"
 
 type Order = {
   id: string
@@ -439,6 +440,9 @@ export default function PedidosPage() {
                     )}
                   </section>
                 )}
+
+                {/* Dados fiscais (Task 9): completa CPF/número/bairro/IBGE de pedidos que vieram sem eles */}
+                <DadosFiscaisDoPedido order={det} temNotaEmitida={Boolean(docFiscal)} />
 
                 {/* Fiscal (Task 14): status da NF-e de venda + devolução manual (NFD) */}
                 <FiscalDoPedido
