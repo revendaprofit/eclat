@@ -46,6 +46,17 @@ describe("fiscal-db", () => {
       new Response("boom", { status: 500 })
     ) as unknown as typeof fetch
     const { getConfig } = await import("../fiscal-db")
-    await expect(getConfig()).rejects.not.toThrow(/\bk\b.*service/i)
+    // Valida que a chave real definida no teste não vaza na mensagem de erro.
+    await expect(getConfig()).rejects.not.toThrow(new RegExp(process.env.SUPABASE_SERVICE_ROLE_KEY!))
+  })
+
+  it("redaciona o service key do corpo de erro se vazasse", async () => {
+    // Se o servidor retorna um erro contendo a chave literal, ela deve ser redacionada.
+    global.fetch = jest.fn().mockResolvedValue(
+      new Response("erro: chave k inválida", { status: 500 })
+    ) as unknown as typeof fetch
+    const { getConfig } = await import("../fiscal-db")
+    await expect(getConfig()).rejects.toThrow(/\*\*\*/)
+    await expect(getConfig()).rejects.not.toThrow(/\bk\b/)
   })
 })

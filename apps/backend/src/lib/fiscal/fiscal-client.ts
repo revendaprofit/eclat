@@ -45,8 +45,11 @@ async function chamar<T = unknown>(
   })
   const texto = await res.text()
   if (!res.ok) {
-    // Status e corpo da resposta apenas — sem echo dos headers.
-    throw new ErroFiscal(`Brasil NFe ${init.method || "GET"} ${caminho}: ${res.status} ${texto}`)
+    // Redaciona tokens caso vazem no corpo da resposta do servidor.
+    let textoRedacionado = texto
+    if (USER_TOKEN) textoRedacionado = textoRedacionado.replace(new RegExp(USER_TOKEN, "g"), "***")
+    if (COMPANY_TOKEN) textoRedacionado = textoRedacionado.replace(new RegExp(COMPANY_TOKEN, "g"), "***")
+    throw new ErroFiscal(`Brasil NFe ${init.method || "GET"} ${caminho}: ${res.status} ${textoRedacionado}`)
   }
   return (texto ? JSON.parse(texto) : {}) as T
 }
@@ -54,8 +57,10 @@ async function chamar<T = unknown>(
 function normalizar(bruto: Record<string, any>): RespostaTransmissao {
   const status = String(bruto.status ?? "").toLowerCase()
   const chave = bruto.chave ?? bruto.chave_acesso ?? null
+  // Aceita "autorizado" ou "autorizada" (gênero pode variar conforme API).
+  const autorizado = status.startsWith("autorizad")
   return {
-    autorizado: status === "autorizado",
+    autorizado,
     chave_acesso: chave ? String(chave) : null,
     numero: bruto.numero != null ? Number(bruto.numero) : null,
     serie: bruto.serie != null ? Number(bruto.serie) : null,

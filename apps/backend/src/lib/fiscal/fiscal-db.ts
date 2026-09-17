@@ -27,8 +27,10 @@ async function sb<T = unknown>(path: string, init: RequestInit = {}): Promise<T>
     },
   })
   if (!res.ok) {
-    // Só status e caminho — nunca o header de autenticação.
-    throw new Error(`Supabase ${init.method || "GET"} ${path}: ${res.status} ${await res.text()}`)
+    // Redaciona o corpo para remover a chave de serviço caso ela vaze do servidor.
+    const corpo = await res.text()
+    const corpoCensurado = SERVICE_KEY ? corpo.replace(new RegExp(SERVICE_KEY, "g"), "***") : corpo
+    throw new Error(`Supabase ${init.method || "GET"} ${path}: ${res.status} ${corpoCensurado}`)
   }
   if (res.status === 204) return undefined as T
   const text = await res.text()
@@ -76,7 +78,7 @@ export async function atualizarDocumento(
   id: string,
   patch: Partial<FiscalDocumento>
 ): Promise<FiscalDocumento> {
-  const rows = await sb<FiscalDocumento[]>(`fiscal_documento?id=eq.${id}`, {
+  const rows = await sb<FiscalDocumento[]>(`fiscal_documento?id=eq.${encodeURIComponent(id)}`, {
     method: "PATCH",
     headers: { Prefer: "return=representation" },
     body: JSON.stringify({ ...patch, updated_at: new Date().toISOString() }),
@@ -96,12 +98,12 @@ export async function criarItens(
 
 export async function listarItens(documentoId: string): Promise<FiscalDocumentoItem[]> {
   return sb<FiscalDocumentoItem[]>(
-    `fiscal_documento_item?fiscal_documento_id=eq.${documentoId}&select=*&order=ordem_enviada.asc`
+    `fiscal_documento_item?fiscal_documento_id=eq.${encodeURIComponent(documentoId)}&select=*&order=ordem_enviada.asc`
   )
 }
 
 export async function atualizarNItem(itemId: string, nItem: number): Promise<void> {
-  await sb(`fiscal_documento_item?id=eq.${itemId}`, {
+  await sb(`fiscal_documento_item?id=eq.${encodeURIComponent(itemId)}`, {
     method: "PATCH",
     body: JSON.stringify({ n_item_verificado: nItem }),
   })
@@ -111,13 +113,13 @@ export async function documentoDeVendaDoPedido(
   orderId: string
 ): Promise<FiscalDocumento | null> {
   const rows = await sb<FiscalDocumento[]>(
-    `fiscal_documento?medusa_order_id=eq.${orderId}&tipo=eq.venda&select=*&order=created_at.desc&limit=1`
+    `fiscal_documento?medusa_order_id=eq.${encodeURIComponent(orderId)}&tipo=eq.venda&select=*&order=created_at.desc&limit=1`
   )
   return rows?.[0] ?? null
 }
 
 export async function lerDocumento(id: string): Promise<FiscalDocumento> {
-  const rows = await sb<FiscalDocumento[]>(`fiscal_documento?id=eq.${id}&select=*&limit=1`)
+  const rows = await sb<FiscalDocumento[]>(`fiscal_documento?id=eq.${encodeURIComponent(id)}&select=*&limit=1`)
   if (!rows?.[0]) throw new Error(`Documento fiscal ${id} não encontrado.`)
   return rows[0]
 }
@@ -126,7 +128,22 @@ export async function listarPorStatus(
   status: StatusDocumento[],
   limite = 50
 ): Promise<FiscalDocumento[]> {
-  const lista = status.map((s) => `"${s}"`).join(",")
+  // Valores válidos de StatusDocumento.
+  const validos: StatusDocumento[] = [
+    "montado",
+    "transmitido_sem_confirmacao",
+    "autorizado_nao_verificado",
+    "verificado",
+    "rejeitado",
+    "denegado",
+    "em_contingencia",
+  ]
+  // Filtra e valida cada status antes de montar a query.
+  const statusValidos = status.filter((s) => validos.includes(s))
+  if (statusValidos.length === 0) {
+    throw new Error("Nenhum status válido fornecido.")
+  }
+  const lista = statusValidos.map((s) => `"${s}"`).join(",")
   return sb<FiscalDocumento[]>(
     `fiscal_documento?status=in.(${lista})&select=*&order=created_at.asc&limit=${limite}`
   )

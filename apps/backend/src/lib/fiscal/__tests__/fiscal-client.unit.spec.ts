@@ -26,12 +26,22 @@ describe("fiscal-client", () => {
   })
 
   it("nunca vaza o token na mensagem de erro", async () => {
-    global.fetch = jest
-      .fn()
-      .mockResolvedValue(new Response("erro interno", { status: 500 })) as unknown as typeof fetch
+    global.fetch = jest.fn()
+      .mockResolvedValueOnce(new Response("erro interno", { status: 500 }))
+      .mockResolvedValueOnce(new Response("erro interno", { status: 500 }))
     const { transmitir } = await import("../fiscal-client")
     await expect(transmitir({ modelo: 55 })).rejects.toThrow()
     await expect(transmitir({ modelo: 55 })).rejects.not.toThrow(/user-token|company-token/)
+  })
+
+  it("redaciona tokens do corpo de erro se vazassem", async () => {
+    // Se o servidor retorna um erro contendo os tokens literais, eles devem ser redacionados.
+    global.fetch = jest.fn().mockResolvedValue(
+      new Response("erro: token user-token rejeitado", { status: 500 })
+    ) as unknown as typeof fetch
+    const { transmitir } = await import("../fiscal-client")
+    await expect(transmitir({ modelo: 55 })).rejects.toThrow(/\*\*\*/)
+    await expect(transmitir({ modelo: 55 })).rejects.not.toThrow(/user-token/)
   })
 
   it("normaliza resposta autorizada", async () => {
@@ -74,5 +84,39 @@ describe("fiscal-client", () => {
     delete process.env.BRASILNFE_COMPANY_TOKEN
     const { brasilNfeConfigured } = await import("../fiscal-client")
     expect(brasilNfeConfigured()).toBe(false)
+  })
+
+  it("normaliza 'autorizada' com gênero feminino", async () => {
+    global.fetch = jest.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          status: "autorizada",
+          chave: "31260968673407000113550010000000011000000017",
+          numero: 1,
+          serie: 1,
+        }),
+        { status: 200 }
+      )
+    ) as unknown as typeof fetch
+    const { transmitir } = await import("../fiscal-client")
+    const r = await transmitir({ modelo: 55 })
+    expect(r.autorizado).toBe(true)
+  })
+
+  it("normaliza 'Autorizada' com capitalização variada", async () => {
+    global.fetch = jest.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          status: "Autorizada",
+          chave: "31260968673407000113550010000000011000000017",
+          numero: 1,
+          serie: 1,
+        }),
+        { status: 200 }
+      )
+    ) as unknown as typeof fetch
+    const { transmitir } = await import("../fiscal-client")
+    const r = await transmitir({ modelo: 55 })
+    expect(r.autorizado).toBe(true)
   })
 })
