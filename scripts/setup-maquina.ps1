@@ -39,7 +39,7 @@ if (-not $use) {
     foreach ($meu in @("Meu Drive", "My Drive")) {
       $p = Join-Path $d.Root $meu
       if (Test-Path -LiteralPath $p) {
-        $use = Get-ChildItem -LiteralPath $p -Directory | Where-Object { $_.Name -like "USE.?CLAT" } | Select-Object -First 1
+        $use = Get-ChildItem -LiteralPath $p -Directory | Where-Object { $_.Name -like "USE.?CLAT" -or $_.Name -like "?CLAT ADMINISTRATIVO" } | Select-Object -First 1
         if ($use) { break }
       }
     }
@@ -48,9 +48,9 @@ if (-not $use) {
 }
 if (-not $use) {
   Write-Host ""
-  Write-Host "NAO ACHEI a pasta USE.ECLAT no Google Drive deste computador." -ForegroundColor Yellow
+  Write-Host "NAO ACHEI a pasta ECLAT ADMINISTRATIVO (antiga USE.ECLAT) no Google Drive deste computador." -ForegroundColor Yellow
   Write-Host "1. Confira se o Google Drive para computador esta aberto e logado."
-  Write-Host "2. Em drive.google.com > Compartilhados comigo > botao direito em USE.ECLAT >"
+  Write-Host "2. Em drive.google.com > Compartilhados comigo > botao direito em ECLAT ADMINISTRATIVO >"
   Write-Host "   Organizar > Adicionar atalho > Meu Drive."
   Write-Host "3. Espere um minuto e rode este script de novo."
   exit 1
@@ -66,11 +66,19 @@ foreach ($nome in $Links) {
     $pendencias += "A pasta '$nome' ainda nao existe no Drive. Peca ao socio para concluir a migracao."
     continue
   }
-  if (Test-Path -LiteralPath $link) {
-    $item = Get-Item -LiteralPath $link -Force
-    if ($item.LinkType -eq "Junction") { Write-Host "ok  $nome (link ja existia)"; continue }
-    $pendencias += "Ja existe uma pasta REAL '$link'. Nao mexi. Renomeie-a e rode de novo."
-    continue
+  $item = Get-Item -LiteralPath $link -Force -ErrorAction SilentlyContinue
+  if ($item) {
+    if ($item.LinkType -eq "Junction") {
+      $destinoAtual = [string]($item.Target | Select-Object -First 1)
+      if ($destinoAtual -eq $alvo -and (Test-Path -LiteralPath $destinoAtual)) { Write-Host "ok  $nome (link ja existia)"; continue }
+      # Link aponta para outro lugar ou para pasta que sumiu (ex.: pasta do Drive renomeada).
+      # rmdir em junction apaga SO o link, nunca o conteudo do destino.
+      Write-Host "link antigo de $nome apontava para $destinoAtual. Refazendo."
+      cmd /c rmdir "$link"
+    } else {
+      $pendencias += "Ja existe uma pasta REAL '$link'. Nao mexi. Renomeie-a e rode de novo."
+      continue
+    }
   }
   cmd /c mklink /J "$link" "$alvo" | Out-Null
   $n = (Get-ChildItem -LiteralPath $link -Force | Measure-Object).Count
