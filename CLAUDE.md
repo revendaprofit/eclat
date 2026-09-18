@@ -39,6 +39,18 @@ Nunca vincular a Éclat a nenhuma outra marca.
 - progress.md  -> feito, erros, testes, resultados
 - architecture/ -> SOPs técnicos (ex.: catalog.md)
 
+## Dois computadores, uma pasta raiz
+Dono e sócia trabalham cada um no seu computador e na sua sessão do Claude Code. Em cada PC existe uma pasta
+raiz (a pasta PAI deste clone) com a mesma forma:
+- `eclat/` -> este repositório. Código só viaja por git (pull antes de começar, branch + commit, push é da pessoa).
+- `brand-assets/` -> link para o Google Drive da marca: fotos do ensaio, logos, backups JSON. É a pasta que
+  `scripts/import-lumiere.py` lê. Salvou ali, aparece no outro computador.
+- `contexto-claude/` -> link para o Google Drive da marca: contexto operacional compartilhado entre as sessões.
+- Este repositório é PÚBLICO. Conhecimento operacional (contas, preços, deploy, pendências com terceiros) vai em
+  `contexto-claude/`, não aqui. Segredos não vão para o git nem para o Drive.
+- Máquina nova: `powershell -ExecutionPolicy Bypass -File scripts\setup-maquina.ps1` cria os links e o
+  `CLAUDE.md` da raiz. O clone nunca fica dentro do Drive. Caminhos sempre relativos à raiz, sem letra de drive.
+
 ## Estado atual
 - Fundação (Parte 0): CONCLUÍDA. Repo: github.com/revendaprofit/eclat (conta revendaprofit fixada p/ push).
 - Parte 1 — Catálogo: architecture/catalog.md. Região Brasil/BRL, vitrine pt-BR. 4 produtos-exemplo
