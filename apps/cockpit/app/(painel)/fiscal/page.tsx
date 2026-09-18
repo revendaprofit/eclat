@@ -41,6 +41,8 @@ type Perfil = {
   cfop_devolucao_dentro_uf: string
   cfop_devolucao_fora_uf: string
   origem_padrao: number
+  cst_pis_cofins: string | null
+  cest: string | null
   ativo: boolean
 }
 
@@ -78,6 +80,8 @@ const PERFIL_VAZIO: Omit<Perfil, "id"> = {
   cfop_devolucao_dentro_uf: "",
   cfop_devolucao_fora_uf: "",
   origem_padrao: 0,
+  cst_pis_cofins: null,
+  cest: null,
   ativo: true,
 }
 
@@ -308,6 +312,8 @@ function PerfisBlock({
           <div><label className={label}>CFOP devolução dentro de {config.uf || "UF"}</label><input className={input} value={form.cfop_devolucao_dentro_uf} onChange={(e) => setForm({ ...form, cfop_devolucao_dentro_uf: e.target.value })} /></div>
           <div><label className={label}>CFOP devolução fora de {config.uf || "UF"}</label><input className={input} value={form.cfop_devolucao_fora_uf} onChange={(e) => setForm({ ...form, cfop_devolucao_fora_uf: e.target.value })} /></div>
           <div><label className={label}>Origem padrão</label><input type="number" min={0} className={input} value={form.origem_padrao} onChange={(e) => setForm({ ...form, origem_padrao: Number(e.target.value) })} /></div>
+          <div><label className={label}>CST PIS/COFINS (2 dígitos, opcional)</label><input className={input} maxLength={2} value={form.cst_pis_cofins ?? ""} onChange={(e) => setForm({ ...form, cst_pis_cofins: e.target.value.replace(/\D/g, "") || null })} /></div>
+          <div><label className={label}>CEST (7 dígitos, só se houver ICMS-ST)</label><input className={input} maxLength={7} value={form.cest ?? ""} onChange={(e) => setForm({ ...form, cest: e.target.value.replace(/\D/g, "") || null })} /></div>
           <div className="flex items-end pb-2"><label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={form.ativo} onChange={(e) => setForm({ ...form, ativo: e.target.checked })} /> ativo</label></div>
         </div>
         <div className="flex gap-2">
@@ -364,11 +370,15 @@ function FilaBlock({
                 {d.rejeicao_codigo ? `[${d.rejeicao_codigo}] ` : ""}{d.rejeicao_motivo}
               </p>
             )}
-            <div className="flex gap-2 items-center">
-              <button disabled={busy} className={btn2} onClick={async () => { const res = await reconciliar(d.id); setResultado((r) => ({ ...r, [d.id]: res || {} })) }}>
-                Reconciliar
-              </button>
-            </div>
+            {/* C1: denegado/rejeitado não têm nota autorizada — reconciliarDocumento recusa
+                (ErroFiscal), então o botão fica de fora para não convidar um clique inútil. */}
+            {corDoStatus(d.status) !== "vermelho" && (
+              <div className="flex gap-2 items-center">
+                <button disabled={busy} className={btn2} onClick={async () => { const res = await reconciliar(d.id); setResultado((r) => ({ ...r, [d.id]: res || {} })) }}>
+                  Reconciliar
+                </button>
+              </div>
+            )}
             {resultado[d.id] && (
               <div className="text-sm bg-white border border-eclat-pedra/40 rounded-md p-2">
                 <p>{resultado[d.id].verificado ? "Verificado com sucesso." : "Não verificado — veja divergências abaixo."}</p>

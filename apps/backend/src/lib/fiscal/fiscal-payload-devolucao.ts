@@ -1,7 +1,9 @@
 // Monta o payload da NF-e de devolução — entrada própria, finalidade 4 (spec §8).
 //
 // Desde 01/09/2026 (NT 2025.002-RTC v1.40) a devolução referencia a nota de origem ITEM A ITEM,
-// no grupo DFeReferenciado, com chave de acesso + nItem. Regras atendidas aqui:
+// pelos campos `ChaveAcessoReferenciada` + `NItemReferenciado` DE CADA PRODUTO — a API monta com
+// eles o grupo DFeReferenciado. `NFReferencia` (raiz) é o refNFe genérico que a VC02-14 proíbe, e
+// os dois não podem coexistir. Regras atendidas aqui:
 //   VC02-14  referência exclusivamente item a item (refNFe genérico é proibido)
 //   VC03-20  nItem obrigatório em cada referência
 //   VC02-40  emitente das notas referenciadas igual em todos os itens (só referenciamos 1 nota)
@@ -11,6 +13,8 @@
 // O CCC/SVRS informa "IE como destinatário: Obrigatória" — por isso a IE vai no destinatário também.
 
 import { resolverPerfil } from "./fiscal-perfil"
+import { numeroReais } from "./fiscal-dinheiro"
+import { cfopNumerico, impostoDoPerfil, tipoAmbiente } from "./fiscal-payload"
 import {
   ErroFiscal,
   type FiscalConfig,
@@ -20,10 +24,16 @@ import {
   type ItemPedido,
 } from "./tipos"
 
-function reais(centavos: number): string {
-  const sinal = centavos < 0 ? "-" : ""
-  const abs = Math.abs(centavos)
-  return `${sinal}${Math.trunc(abs / 100)}.${String(abs % 100).padStart(2, "0")}`
+// Resumo para a tela, em centavos. A tela NUNCA lê o payload do fornecedor: o formato dele é
+// problema desta camada, não do Cockpit.
+export type ResumoDevolucao = {
+  itens: Array<{
+    codigo: string; descricao: string; quantidade: number
+    bruto_centavos: number; desconto_centavos: number; liquido_centavos: number
+  }>
+  produtos_centavos: number
+  desconto_centavos: number
+  total_centavos: number
 }
 
 export function montarPayloadDevolucao(args: {
@@ -34,6 +44,7 @@ export function montarPayloadDevolucao(args: {
   devolvidos: Array<{ line_item_id: string; quantidade: number }>
   itensPedido: ItemPedido[]
   ufDestinatarioOriginal: string
+  identificador: string
   // Soma, por medusa_line_item_id, do que já foi devolvido em NFDs anteriores RESOLVIDAS deste
   // mesmo documento de venda (achado crítico da revisão de 2026-09-17). Sem isso, a chave de
   // idempotência por CONJUNTO devolvido (emitir-devolucao/route.ts) permitiria devolver o mesmo
@@ -44,9 +55,11 @@ export function montarPayloadDevolucao(args: {
   payload: Record<string, unknown>
   itens_ordenados: ItemPedido[]
   itens_documento: Array<Omit<FiscalDocumentoItem, "id" | "fiscal_documento_id" | "n_item_verificado">>
+  resumo: ResumoDevolucao
 } {
   const {
     config, perfis, documentoOrigem, itensOrigem, devolvidos, itensPedido, ufDestinatarioOriginal,
+    identificador,
     quantidadesJaDevolvidas = new Map<string, number>(),
   } = args
 
@@ -74,8 +87,7 @@ export function montarPayloadDevolucao(args: {
   // fiscal-emissao.ts na venda) — calculados uma única vez aqui, junto com o rateio do
   // desconto, para a rota de emissão da NFD não precisar reimplementar a fórmula.
   const itensDocumento: Array<Omit<FiscalDocumentoItem, "id" | "fiscal_documento_id" | "n_item_verificado">> = []
-  let totalProdutosCentavos = 0
-  let totalDescontoCentavos = 0
+  const itensResumo: ResumoDevolucao["itens"] = []
 
   const linhas = devolvidos.map((dev, idx) => {
     const origem = itensOrigem.find((i) => i.medusa_line_item_id === dev.line_item_id)
@@ -122,9 +134,6 @@ export function montarPayloadDevolucao(args: {
     const descontoAEstornar = Math.round(
       (origem.desconto_centavos * dev.quantidade) / origem.quantidade
     )
-    const totalItemCentavos = origem.valor_unitario_centavos * dev.quantidade - descontoAEstornar
-    totalProdutosCentavos += origem.valor_unitario_centavos * dev.quantidade
-    totalDescontoCentavos += descontoAEstornar
 
     const codigoEnviado = doPedido.sku ?? doPedido.line_item_id
     itensDocumento.push({
@@ -137,79 +146,85 @@ export function montarPayloadDevolucao(args: {
       desconto_centavos: descontoAEstornar,
     })
 
-    return {
-      numero_item: idx + 1,
+    const brutoCentavos = origem.valor_unitario_centavos * dev.quantidade
+    itensResumo.push({
       codigo: codigoEnviado,
       descricao: doPedido.titulo,
-      ncm: origem.ncm,
-      cfop: interestadual ? perfil.cfop_devolucao_fora_uf : perfil.cfop_devolucao_dentro_uf,
-      csosn: perfil.csosn,
-      origem: doPedido.origem ?? perfil.origem_padrao,
-      unidade: "UN",
       quantidade: dev.quantidade,
-      valor_unitario: reais(origem.valor_unitario_centavos),
-      valor_desconto: reais(descontoAEstornar),
-      valor_total: reais(totalItemCentavos),
-      // VC02-14 / VC03-20: referência item a item, chave + nItem da nota de origem.
-      documentos_referenciados: [
-        { chave_acesso: documentoOrigem.chave_acesso as string, numero_item: origem.n_item_verificado },
-      ],
+      bruto_centavos: brutoCentavos,
+      desconto_centavos: descontoAEstornar,
+      liquido_centavos: brutoCentavos - descontoAEstornar,
+    })
+
+    const produto: Record<string, unknown> = {
+      NmProduto: doPedido.titulo,
+      CodProdutoServico: codigoEnviado,
+      NCM: origem.ncm,
+      CFOP: cfopNumerico(
+        interestadual ? perfil.cfop_devolucao_fora_uf : perfil.cfop_devolucao_dentro_uf,
+        doPedido.titulo
+      ),
+      UnidadeComercial: "UN",
+      UnidadeComercialTributavel: "UN",
+      Quantidade: dev.quantidade,
+      QuantidadeTributavel: dev.quantidade,
+      ValorUnitario: numeroReais(origem.valor_unitario_centavos),
+      ValorUnitarioTributavel: numeroReais(origem.valor_unitario_centavos),
+      ValorTotal: numeroReais(origem.valor_unitario_centavos * dev.quantidade), // BRUTO
+      ValorDesconto: numeroReais(descontoAEstornar),
+      OrigemProduto: doPedido.origem ?? perfil.origem_padrao,
+      Imposto: impostoDoPerfil(perfil, doPedido.titulo),
+      // VC02-14 / VC03-20: referência item a item — chave + nItem DA NOTA DE VENDA.
+      ChaveAcessoReferenciada: documentoOrigem.chave_acesso as string,
+      NItemReferenciado: origem.n_item_verificado,
     }
+    if (perfil.cest) produto.CEST = perfil.cest
+    return produto
   })
 
-  const enderecoEclat = {
-    logradouro: config.logradouro,
-    numero: config.numero,
-    complemento: config.complemento,
-    bairro: config.bairro,
-    municipio: config.municipio,
-    municipio_ibge: config.municipio_ibge,
-    // Normalizada (trim + maiúsculas), a MESMA variável usada acima para decidir o CFOP — achado
-    // 5.5, mesmo resíduo do payload de venda: gravar config.uf cru deixava a UF potencialmente
-    // diferente da usada para decidir interestadual.
-    uf: ufEmitente,
-    cep: config.cep,
-  }
-
   const payload: Record<string, unknown> = {
-    modelo: 55,
-    serie: config.serie_nfe,
-    ambiente: config.ambiente,
-    finalidade: 4, // 4 = devolução
-    tipo_nf: 0, // 0 = entrada
-    ind_final: 0,
-    ind_presenca: 0,
-    // Achado I9/5.7: na venda a destinatária é pessoa física não contribuinte (ind_ie_destinatario
-    // 9, fiscal-payload.ts). Na devolução a destinatária é a própria ÉCLAT, CONTRIBUINTE com IE (o
-    // CCC/SVRS registra "IE como destinatário: Obrigatória", e a IE já vai no bloco destinatario
-    // abaixo) — sem este indicador a IE fica inconsistente com o cadastro declarado. 1 = contribuinte
-    // ICMS; valor exato ainda pendente de confronto com a documentação da Brasil NFe, como os
-    // outros campos marcados "pendente" neste módulo.
-    ind_ie_destinatario: 1,
-    natureza_operacao: "DEVOLUCAO DE VENDA",
-    emitente: {
-      cnpj: config.cnpj,
-      razao_social: config.razao_social,
-      nome_fantasia: config.nome_fantasia,
-      ie: config.ie,
-      crt: config.crt,
-      ...enderecoEclat,
+    ModeloDocumento: 55,
+    Finalidade: 4, // devolução. O tipo (entrada) a API deriva do CFOP 1xxx/2xxx.
+    TipoAmbiente: tipoAmbiente(config.ambiente),
+    NaturezaOperacao: "DEVOLUCAO DE VENDA",
+    ConsumidorFinal: false,
+    IndicadorPresenca: 0,
+    EnviarEmail: false,
+    IdentificadorInterno: identificador,
+    // Spec §11 risco 10 — decisão PROVISÓRIA, a confirmar em homologação: a contraparte da NFD é
+    // a própria ÉCLAT, contribuinte com IE (o CCC registra "IE como destinatário: Obrigatória").
+    // Se a homologação rejeitar (VC02-50), é ESTE bloco — e só ele — que muda.
+    Cliente: {
+      CpfCnpj: config.cnpj,
+      NmCliente: config.razao_social,
+      IndicadorIe: 1,
+      Ie: config.ie,
+      Endereco: {
+        Cep: config.cep,
+        Logradouro: config.logradouro,
+        Numero: config.numero,
+        Complemento: config.complemento,
+        Bairro: config.bairro,
+        CodMunicipio: config.municipio_ibge,
+        Municipio: config.municipio,
+        Uf: ufEmitente,
+        CodPais: 1058,
+        Pais: "BRASIL",
+      },
     },
-    // VC02-50: o destinatário da devolução é o emitente da nota referenciada — a própria ÉCLAT.
-    destinatario: {
-      cnpj: config.cnpj,
-      nome: config.razao_social,
-      ie: config.ie, // CCC: "IE como destinatário: Obrigatória"
-      ...enderecoEclat,
-    },
-    itens: linhas,
-    total: {
-      valor_produtos: reais(totalProdutosCentavos),
-      valor_desconto: reais(totalDescontoCentavos),
-      valor_frete: "0.00",
-      valor_nota: reais(totalProdutosCentavos - totalDescontoCentavos),
-    },
+    Produtos: linhas,
+    Pagamentos: [{ IndicadorPagamento: 0, FormaPagamento: "90", VlPago: 0 }],
+    Transporte: { ModalidadeFrete: 9 },
   }
 
-  return { payload, itens_ordenados: ordenados, itens_documento: itensDocumento }
+  const produtosCentavos = itensResumo.reduce((a, i) => a + i.bruto_centavos, 0)
+  const descontoCentavos = itensResumo.reduce((a, i) => a + i.desconto_centavos, 0)
+  const resumo: ResumoDevolucao = {
+    itens: itensResumo,
+    produtos_centavos: produtosCentavos,
+    desconto_centavos: descontoCentavos,
+    total_centavos: produtosCentavos - descontoCentavos,
+  }
+
+  return { payload, itens_ordenados: ordenados, itens_documento: itensDocumento, resumo }
 }

@@ -1,5 +1,7 @@
-import { montarPayloadVenda, type DestinatarioNF } from "../fiscal-payload"
+import { cfopNumerico, montarPayloadVenda, tipoAmbiente } from "../fiscal-payload"
 import { ErroFiscal, type FiscalConfig, type FiscalPerfil, type ItemPedido } from "../tipos"
+
+// Formato do payload: SDK brasilnfe@3.1.3, tipo NotaFiscalEnvio (spec §7.1.1).
 
 const config: FiscalConfig = {
   id: 1, cnpj: "68673407000113", razao_social: "CAMILA DE MOURA NOGUEIRA",
@@ -9,11 +11,13 @@ const config: FiscalConfig = {
   serie_nfe: 1, ambiente: "homologacao", emissao_ativa: true,
 }
 
-const perfilPadrao: FiscalPerfil = {
-  id: "padrao", escopo: "padrao", alvo_id: null, csosn: "102",
-  cfop_dentro_uf: "5102", cfop_fora_uf: "6108",
-  cfop_devolucao_dentro_uf: "1202", cfop_devolucao_fora_uf: "2202",
-  origem_padrao: 0, ativo: true,
+function perfil(p: Partial<FiscalPerfil> = {}): FiscalPerfil {
+  return {
+    id: "padrao", escopo: "padrao", alvo_id: null, csosn: "102",
+    cfop_dentro_uf: "5102", cfop_fora_uf: "6108",
+    cfop_devolucao_dentro_uf: "1202", cfop_devolucao_fora_uf: "2202",
+    origem_padrao: 0, ativo: true, ...p,
+  }
 }
 
 function item(p: Partial<ItemPedido> = {}): ItemPedido {
@@ -22,20 +26,17 @@ function item(p: Partial<ItemPedido> = {}): ItemPedido {
     product_id: p.product_id ?? "prod_1",
     categoria_handle: p.categoria_handle ?? "tops",
     titulo: p.titulo ?? "Top Aura",
-    sku: p.sku ?? "TOP-AURA-P",
-    // TS2322 (ruling F12, mesmo critério dos TS2835 zerados): "in" só confirma que a chave existe,
-    // não que o valor não é undefined — p.ncm/p.origem continuam string|null|undefined mesmo
-    // narrowed, e o campo de ItemPedido não aceita undefined. "?? null" distingue AUSENTE (usa o
-    // default do helper) de NULO explícito (preserva o null que o teste quis simular).
+    // "in" distingue AUSENTE (usa o default) de NULO explícito (preserva o null do teste).
+    sku: "sku" in p ? (p.sku ?? null) : "TOP-AURA-P",
     ncm: "ncm" in p ? (p.ncm ?? null) : "61091000",
     origem: "origem" in p ? (p.origem ?? null) : 0,
     quantidade: p.quantidade ?? 1,
-    valor_unitario_centavos: p.valor_unitario_centavos ?? 18900,
+    valor_unitario_centavos: p.valor_unitario_centavos ?? 18990,
     desconto_centavos: p.desconto_centavos ?? 0,
   }
 }
 
-function destino(uf: string): DestinatarioNF {
+function destino(uf) {
   return {
     cpf: "12345678909", nome: "Maria Silva", logradouro: "Rua A", numero: "10",
     complemento: null, bairro: "Centro", municipio: "Belo Horizonte",
@@ -43,136 +44,191 @@ function destino(uf: string): DestinatarioNF {
   }
 }
 
-describe("montarPayloadVenda", () => {
-  it("usa CFOP de dentro do estado quando o destino é MG", () => {
-    const { payload } = montarPayloadVenda({
-      config, perfis: [perfilPadrao], itens: [item()], destinatario: destino("MG"), frete_centavos: 0,
+function montar(over: Partial<Parameters<typeof montarPayloadVenda>[0]> = {}) {
+  return montarPayloadVenda({
+    config, perfis: [perfil()], itens: [item()], destinatario: destino("MG"),
+    frete_centavos: 0, pagamento: { forma: "99", descricao: "Pagamento online" },
+    identificador: "order_1:venda:homologacao", ...over,
+  }).payload as any
+}
+
+describe("tipoAmbiente / cfopNumerico", () => {
+  it("homologação é 2, produção é 1", () => {
+    expect(tipoAmbiente("homologacao")).toBe(2)
+    expect(tipoAmbiente("producao")).toBe(1)
+  })
+
+  it("CFOP vira número; CFOP malformado é erro, nunca NaN na nota", () => {
+    expect(cfopNumerico("5102", "Top")).toBe(5102)
+    expect(() => cfopNumerico("", "Top")).toThrow(ErroFiscal)
+    expect(() => cfopNumerico("51A2", "Top")).toThrow(ErroFiscal)
+  })
+})
+
+describe("montarPayloadVenda — cabeçalho", () => {
+  it("usa os nomes e tipos do contrato real", () => {
+    const p = montar()
+    expect(p.ModeloDocumento).toBe(55)
+    expect(p.Finalidade).toBe(1)
+    expect(p.TipoAmbiente).toBe(2)
+    expect(p.ConsumidorFinal).toBe(true)      // booleano, não 1
+    expect(p.IndicadorPresenca).toBe(2)       // não presencial, Internet
+    expect(p.CalcularIBPT).toBe(true)         // Lei 12.741/2012
+    expect(p.EnviarEmail).toBe(false)
+    expect(p.NaturezaOperacao).toBe("VENDA DE MERCADORIA")
+    expect(p.IdentificadorInterno).toBe("order_1:venda:homologacao")
+  })
+
+  it("NÃO envia o que o contrato não tem ou que causaria rejeição", () => {
+    const p = montar()
+    expect(p).not.toHaveProperty("Intermediador")   // rejeição 435 em venda direta
+    expect(p).not.toHaveProperty("NFReferencia")
+    expect(p).not.toHaveProperty("Serie")           // numeração é do fornecedor
+    expect(p).not.toHaveProperty("Numero")
+    expect(p).not.toHaveProperty("Lote")
+    expect(p).not.toHaveProperty("emitente")        // vem do cadastro no painel deles
+    expect(p).not.toHaveProperty("total")
+    expect(p).not.toHaveProperty("itens")
+  })
+
+  it("monta o Cliente como pessoa física não contribuinte", () => {
+    const c = montar().Cliente
+    expect(c.CpfCnpj).toBe("12345678909")
+    expect(c.NmCliente).toBe("Maria Silva")
+    expect(c.IndicadorIe).toBe(9)
+    expect(c.Endereco).toEqual({
+      Cep: "30110000", Logradouro: "Rua A", Numero: "10", Complemento: null, Bairro: "Centro",
+      CodMunicipio: "3106200", Municipio: "Belo Horizonte", Uf: "MG", CodPais: 1058, Pais: "BRASIL",
     })
-    const itens = (payload as any).itens
-    expect(itens[0].cfop).toBe("5102")
   })
 
-  it("usa CFOP interestadual quando o destino é fora de MG", () => {
-    const { payload } = montarPayloadVenda({
-      config, perfis: [perfilPadrao], itens: [item()], destinatario: destino("SP"), frete_centavos: 0,
+  it("envia ModalidadeFrete 0 de propósito (omitido, a API assume 9 = sem transporte)", () => {
+    expect(montar().Transporte).toEqual({ ModalidadeFrete: 0 })
+  })
+})
+
+describe("montarPayloadVenda — produtos", () => {
+  it("CFOP de dentro do estado quando o destino é MG, interestadual fora — como número", () => {
+    expect(montar({ destinatario: destino("MG") }).Produtos[0].CFOP).toBe(5102)
+    expect(montar({ destinatario: destino("SP") }).Produtos[0].CFOP).toBe(6108)
+  })
+
+  it("UF com espaço ou minúscula não vira interestadual por engano", () => {
+    expect(montar({ destinatario: destino(" mg ") }).Produtos[0].CFOP).toBe(5102)
+  })
+
+  it("valores em reais como NÚMERO, bruto e desconto separados", () => {
+    const prod = montar({
+      itens: [item({ quantidade: 2, valor_unitario_centavos: 18990, desconto_centavos: 3000 })],
+    }).Produtos[0]
+    expect(prod.ValorUnitario).toBe(189.9)
+    expect(prod.ValorUnitarioTributavel).toBe(189.9)
+    expect(prod.ValorTotal).toBe(379.8)      // bruto: 2 × 189.90
+    expect(prod.ValorDesconto).toBe(30)
+    expect(prod.Quantidade).toBe(2)
+    expect(prod.QuantidadeTributavel).toBe(2)
+    expect(prod.UnidadeComercial).toBe("UN")
+  })
+
+  it("o CSOSN vai dentro de Imposto.ICMS, não solto no item", () => {
+    const prod = montar().Produtos[0]
+    expect(prod.Imposto.ICMS.CodSituacaoTributaria).toBe("102")
+    expect(prod).not.toHaveProperty("csosn")
+  })
+
+  it("PIS/COFINS e CEST só entram quando o perfil os define", () => {
+    const sem = montar().Produtos[0]
+    expect(sem.Imposto).not.toHaveProperty("PIS")
+    expect(sem.Imposto).not.toHaveProperty("COFINS")
+    expect(sem).not.toHaveProperty("CEST")
+
+    const com = montar({ perfis: [perfil({ cst_pis_cofins: "99", cest: "2806000" })] }).Produtos[0]
+    expect(com.Imposto.PIS).toEqual({ CodSituacaoTributaria: "99" })
+    expect(com.Imposto.COFINS).toEqual({ CodSituacaoTributaria: "99" })
+    expect(com.CEST).toBe("2806000")
+  })
+
+  it("nunca envia o grupo IBSCBS (risco 1 da spec ainda aberto)", () => {
+    expect(montar().Produtos[0].Imposto).not.toHaveProperty("IBSCBS")
+  })
+
+  it("CSOSN que exige campos que não enviamos é recusado, não emitido pela metade", () => {
+    for (const csosn of ["101", "201", "202", "203", "900"]) {
+      expect(() => montar({ perfis: [perfil({ csosn })] })).toThrow(ErroFiscal)
+    }
+    for (const csosn of ["102", "103", "300", "400", "500"]) {
+      expect(() => montar({ perfis: [perfil({ csosn })] })).not.toThrow()
+    }
+  })
+
+  it("código é o SKU, ou o line_item_id na falta dele", () => {
+    expect(montar().Produtos[0].CodProdutoServico).toBe("TOP-AURA-P")
+    expect(montar({ itens: [item({ sku: null })] }).Produtos[0].CodProdutoServico).toBe("li_1")
+  })
+
+  it("origem da variante vence; sem ela, a do perfil", () => {
+    expect(montar({ itens: [item({ origem: 1 })] }).Produtos[0].OrigemProduto).toBe(1)
+    expect(montar({ itens: [item({ origem: null })], perfis: [perfil({ origem_padrao: 5 })] }).Produtos[0].OrigemProduto).toBe(5)
+  })
+
+  it("preserva a ordem dos itens — a posição no array É o nItem", () => {
+    const r: any = montarPayloadVenda({
+      config, perfis: [perfil()], destinatario: destino("MG"), frete_centavos: 0,
+      pagamento: { forma: "99", descricao: "Pagamento online" }, identificador: "k",
+      itens: [item({ line_item_id: "li_a", sku: "A" }), item({ line_item_id: "li_b", sku: "B" })],
     })
-    expect((payload as any).itens[0].cfop).toBe("6108")
+    expect(r.payload.Produtos.map((x) => x.CodProdutoServico)).toEqual(["A", "B"])
+    expect(r.itens_ordenados.map((x) => x.line_item_id)).toEqual(["li_a", "li_b"])
+    expect(r.payload.Produtos[0]).not.toHaveProperty("numero_item")
   })
 
-  it("marca consumidor final não contribuinte em operação pela Internet", () => {
-    const { payload } = montarPayloadVenda({
-      config, perfis: [perfilPadrao], itens: [item()], destinatario: destino("MG"), frete_centavos: 0,
+  it("produto sem NCM bloqueia, apontando o produto", () => {
+    expect(() => montar({ itens: [item({ ncm: null, titulo: "Legging Vértice" })] })).toThrow(/Legging Vértice/)
+  })
+
+  it("pedido sem itens é erro", () => {
+    expect(() => montar({ itens: [] })).toThrow(ErroFiscal)
+  })
+})
+
+describe("montarPayloadVenda — frete e pagamento", () => {
+  it("rateia o frete entre os itens e a soma fecha no centavo", () => {
+    const p = montar({
+      frete_centavos: 100,
+      itens: [
+        item({ line_item_id: "a", sku: "A", valor_unitario_centavos: 5000 }),
+        item({ line_item_id: "b", sku: "B", valor_unitario_centavos: 5000 }),
+        item({ line_item_id: "c", sku: "C", valor_unitario_centavos: 5000 }),
+      ],
     })
-    const p = payload as any
-    expect(p.ind_ie_destinatario).toBe(9)
-    expect(p.ind_final).toBe(1)
-    expect(p.ind_presenca).toBe(2)
-    expect(p.finalidade).toBe(1)
-    expect(p.tipo_nf).toBe(1)
+    expect(p.Produtos.map((x) => x.ValorFrete)).toEqual([0.34, 0.33, 0.33])
   })
 
-  it("preenche CSOSN do perfil e CRT do emitente (Simples Nacional)", () => {
-    const { payload } = montarPayloadVenda({
-      config, perfis: [perfilPadrao], itens: [item()], destinatario: destino("MG"), frete_centavos: 0,
+  it("o rateio pesa pelo valor LÍQUIDO da linha (bruto − desconto)", () => {
+    const p = montar({
+      frete_centavos: 1000,
+      itens: [
+        item({ line_item_id: "a", sku: "A", valor_unitario_centavos: 10000, desconto_centavos: 2500 }), // líquido 7500
+        item({ line_item_id: "b", sku: "B", valor_unitario_centavos: 2500 }),                            // líquido 2500
+      ],
     })
-    expect((payload as any).itens[0].csosn).toBe("102")
-    expect((payload as any).emitente.crt).toBe(1)
+    expect(p.Produtos.map((x) => x.ValorFrete)).toEqual([7.5, 2.5])
   })
 
-  it("converte centavos para reais com 2 casas, sem float acumulado", () => {
-    const { payload } = montarPayloadVenda({
-      config, perfis: [perfilPadrao],
-      itens: [item({ valor_unitario_centavos: 18990, quantidade: 3 })],
-      destinatario: destino("MG"), frete_centavos: 1990,
+  it("VlPago é o total da nota: produtos − desconto + frete", () => {
+    const p = montar({
+      frete_centavos: 2590,
+      itens: [item({ quantidade: 2, valor_unitario_centavos: 18990, desconto_centavos: 3000 })],
     })
-    const p = payload as any
-    expect(p.itens[0].valor_unitario).toBe("189.90")
-    expect(p.itens[0].valor_total).toBe("569.70")
-    expect(p.total.valor_frete).toBe("19.90")
-    expect(p.total.valor_produtos).toBe("569.70")
-    expect(p.total.valor_nota).toBe("589.60")
+    // 2 × 189.90 − 30.00 + 25.90 = 375.70
+    expect(p.Pagamentos).toEqual([
+      { IndicadorPagamento: 0, FormaPagamento: "99", Descricao: "Pagamento online", VlPago: 375.7 },
+    ])
   })
 
-  it("aplica o desconto do item no valor_total da linha e nos totais da nota, sem tocar no valor_unitario bruto", () => {
-    const { payload } = montarPayloadVenda({
-      config, perfis: [perfilPadrao],
-      itens: [item({ valor_unitario_centavos: 5000, quantidade: 2, desconto_centavos: 1000 })],
-      destinatario: destino("MG"), frete_centavos: 0,
-    })
-    const p = payload as any
-    // Bruto continua bruto — o desconto nunca é escondido dentro do valor_unitario.
-    expect(p.itens[0].valor_unitario).toBe("50.00")
-    expect(p.itens[0].valor_desconto).toBe("10.00")
-    expect(p.itens[0].valor_total).toBe("90.00") // 50*2 - 10
-    expect(p.total.valor_produtos).toBe("100.00") // soma dos brutos
-    expect(p.total.valor_desconto).toBe("10.00")
-    expect(p.total.valor_nota).toBe("90.00") // produtos - desconto + frete(0)
-  })
-
-  it("numera itens de 1 em diante e devolve a ordem enviada", () => {
-    const a = item({ line_item_id: "li_a" })
-    const b = item({ line_item_id: "li_b" })
-    const { payload, itens_ordenados } = montarPayloadVenda({
-      config, perfis: [perfilPadrao], itens: [a, b], destinatario: destino("MG"), frete_centavos: 0,
-    })
-    expect((payload as any).itens.map((i: any) => i.numero_item)).toEqual([1, 2])
-    expect(itens_ordenados.map((i) => i.line_item_id)).toEqual(["li_a", "li_b"])
-  })
-
-  it("falha com mensagem legível quando falta NCM", () => {
-    expect(() =>
-      montarPayloadVenda({
-        config, perfis: [perfilPadrao], itens: [item({ ncm: null, titulo: "Top Aura" })],
-        destinatario: destino("MG"), frete_centavos: 0,
-      })
-    ).toThrow(/Top Aura.*NCM/s)
-  })
-
-  it("falha quando não há itens", () => {
-    expect(() =>
-      montarPayloadVenda({
-        config, perfis: [perfilPadrao], itens: [], destinatario: destino("MG"), frete_centavos: 0,
-      })
-    ).toThrow(ErroFiscal)
-  })
-
-  it("usa origem do perfil quando a variante não tem origem", () => {
-    const { payload } = montarPayloadVenda({
-      config, perfis: [{ ...perfilPadrao, origem_padrao: 1 }], itens: [item({ origem: null })],
-      destinatario: destino("MG"), frete_centavos: 0,
-    })
-    expect((payload as any).itens[0].origem).toBe(1)
-  })
-
-  it("normaliza UF com espaço à direita no payload", () => {
-    const { payload } = montarPayloadVenda({
-      config, perfis: [perfilPadrao], itens: [item()], destinatario: destino("MG "), frete_centavos: 0,
-    })
-    expect((payload as any).destinatario.uf).toBe("MG")
-  })
-
-  it("normaliza UF minúscula no payload", () => {
-    const { payload } = montarPayloadVenda({
-      config, perfis: [perfilPadrao], itens: [item()], destinatario: destino("mg"), frete_centavos: 0,
-    })
-    expect((payload as any).destinatario.uf).toBe("MG")
-  })
-
-  it("trata UF com espaço como dentro do estado se for a UF do emitente", () => {
-    const { payload } = montarPayloadVenda({
-      config, perfis: [perfilPadrao], itens: [item()], destinatario: destino("MG "), frete_centavos: 0,
-    })
-    expect((payload as any).itens[0].cfop).toBe("5102")
-  })
-
-  // Achado 5.5: emitente.uf gravava config.uf CRU, enquanto a variável usada para decidir CFOP
-  // (interestadual) já era normalizada logo acima — meio normalizado é pior que qualquer um dos
-  // dois estados puros.
-  it("normaliza a UF do EMITENTE no payload (mesma variável usada para decidir o CFOP)", () => {
-    const { payload } = montarPayloadVenda({
-      config: { ...config, uf: " mg " }, perfis: [perfilPadrao], itens: [item()],
-      destinatario: destino("MG"), frete_centavos: 0,
-    })
-    expect((payload as any).emitente.uf).toBe("MG")
+  it("forma de pagamento sem descrição não manda o campo Descricao", () => {
+    const p = montar({ pagamento: { forma: "17", descricao: null } })
+    expect(p.Pagamentos[0].FormaPagamento).toBe("17")
+    expect(p.Pagamentos[0]).not.toHaveProperty("Descricao")
   })
 })

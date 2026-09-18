@@ -40,11 +40,14 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
 
     if (previa) {
       const [config, perfis] = await Promise.all([getConfig(), listPerfis()])
-      const { payload } = montarPayloadVenda({ config, perfis, ...dados })
+      // Prévia não consome numeração nem grava documento — o identificador só precisa existir.
+      const { payload } = montarPayloadVenda({ config, perfis, ...dados, identificador: `previa:${order_id}` })
       return res.json({ previa: await previsualizar(payload), payload })
     }
 
-    return res.json({ documento: await emitirVenda({ orderId: order_id, ...dados }) })
+    return res.json({
+      documento: await emitirVenda({ orderId: order_id, ...dados, avisar: (m) => logger.warn(m) }),
+    })
   } catch (e) {
     const erro = e as Error
     logger.warn(`[fiscal] emitir ${order_id}: ${erro.message}`)

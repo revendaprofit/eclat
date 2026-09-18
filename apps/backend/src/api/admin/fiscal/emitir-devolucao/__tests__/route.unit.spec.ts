@@ -63,6 +63,27 @@ describe("POST /admin/fiscal/emitir-devolucao — validação de quantidade", ()
   // errado" (a tabela não existe naquele schema → 500) e deixava a suíte unitária dependente de
   // rede e da disponibilidade do Supabase real. Mocka fiscal-db/fiscal-pedido, como os specs de
   // src/lib/fiscal já fazem, para provar a validação de quantidade sem sair da máquina.
+  // M3 (achado menor da revisão final de 2026-09-17): [{li_a,1},{li_a,1}] contra 1 unidade
+  // vendida montava payload de 2 linhas e resumo de 2 unidades — a emissão real só morria depois,
+  // no índice único do banco, com 500 cru e um documento "montado" órfão. A validação de entrada
+  // recusa ANTES de tocar em getConfig/banco.
+  it("line_item_id repetido: 400 sem tocar no banco, mesmo com quantidades somando <= vendida", async () => {
+    const { POST } = await import("../route.js")
+    const req = mockReq({
+      order_id: "order_1",
+      itens: [
+        { line_item_id: "li_a", quantidade: 1 },
+        { line_item_id: "li_a", quantidade: 1 },
+      ],
+    })
+    const res = mockRes()
+
+    await POST(req, res as unknown as MedusaResponse)
+
+    expect(res.statusCode).toBe(400)
+    expect((res.body as { error: string }).error).toMatch(/cada item só pode aparecer uma vez/i)
+  })
+
   it("quantidade inteira >= 1 passa da validação (segue adiante, não 400) — sem tocar rede", async () => {
     const getConfig = jest.fn().mockResolvedValue({
       id: 1, cnpj: "68673407000113", razao_social: "X", nome_fantasia: null, ie: "1", im: null, crt: 1,
@@ -80,10 +101,8 @@ describe("POST /admin/fiscal/emitir-devolucao — validação de quantidade", ()
       listPerfis: jest.fn(),
       listarDevolucoesDoDocumento: jest.fn(),
       listarItens: jest.fn(),
-      acharPorIdempotencia: jest.fn(),
       criarDocumento: jest.fn(),
       criarItens: jest.fn(),
-      atualizarDocumento: jest.fn(),
     }))
     jest.doMock("../../../../../lib/fiscal/fiscal-pedido", () => ({ montarItensDoPedido: jest.fn() }))
 
@@ -98,5 +117,104 @@ describe("POST /admin/fiscal/emitir-devolucao — validação de quantidade", ()
     expect(res.statusCode).not.toBe(400)
     expect(res.statusCode).toBe(422)
     expect((res.body as { error: string }).error).toMatch(/não tem NF-e de venda/i)
+  })
+})
+
+// Task 7: a rota agora delega a barreira de duplicidade e a transmissão a fiscal-emissao.ts
+// (prepararTentativa / transmitirEGravar) em vez de reimplementar a lógica de idempotência.
+describe("POST /admin/fiscal/emitir-devolucao — wiring com prepararTentativa/transmitirEGravar", () => {
+  beforeEach(() => jest.resetModules())
+  afterEach(() => jest.restoreAllMocks())
+
+  const configBase = {
+    id: 1, cnpj: "68673407000113", razao_social: "X", nome_fantasia: null, ie: "1", im: null, crt: 1,
+    logradouro: "R", numero: "1", complemento: null, bairro: "B", municipio: "BETIM",
+    municipio_ibge: "3106705", uf: "MG", cep: "32604182", serie_nfe: 1,
+    ambiente: "homologacao" as const, emissao_ativa: true,
+  }
+  const docVenda = { id: "doc_venda", status: "verificado", chave_acesso: "1".repeat(44), verificado_em: "2026-01-01" }
+  const dadosPedido = {
+    itens: [], destinatario: { uf: "MG" }, frete_centavos: 0,
+    pagamento: { forma: "99", descricao: "Pagamento online" },
+  }
+
+  it("prepararTentativa devolve { existente }: a rota responde com ele e não emite de novo", async () => {
+    const existente = { id: "doc_existente", status: "verificado" }
+    const criarDocumento = jest.fn()
+    const transmitirEGravar = jest.fn()
+    const prepararTentativa = jest.fn(async () => ({ existente }))
+    jest.doMock("../../../../../lib/fiscal/fiscal-db", () => ({
+      getConfig: jest.fn().mockResolvedValue(configBase),
+      documentoDeVendaDoPedido: jest.fn().mockResolvedValue(docVenda),
+      listarItens: jest.fn().mockResolvedValue([]),
+      listPerfis: jest.fn().mockResolvedValue([]),
+      listarDevolucoesDoDocumento: jest.fn().mockResolvedValue([]),
+      criarDocumento,
+      criarItens: jest.fn(),
+    }))
+    jest.doMock("../../../../../lib/fiscal/fiscal-pedido", () => ({
+      montarItensDoPedido: jest.fn().mockResolvedValue(dadosPedido),
+    }))
+    jest.doMock("../../../../../lib/fiscal/fiscal-emissao", () => ({
+      chaveIdempotencia: jest.fn(() => "order_1:devolucao:homologacao"),
+      digestDevolvidos: jest.fn(() => "digest123"),
+      JA_RESOLVIDO: new Set(["autorizado_nao_verificado", "verificado", "denegado"]),
+      prepararTentativa,
+      transmitirEGravar,
+    }))
+    jest.doMock("../../../../../lib/fiscal/fiscal-client", () => ({ previsualizar: jest.fn() }))
+
+    const { POST } = await import("../route.js")
+    const req = mockReq({ order_id: "order_1", itens: [{ line_item_id: "li_1", quantidade: 1 }] })
+    const res = mockRes()
+
+    await POST(req, res as unknown as MedusaResponse)
+
+    expect(prepararTentativa).toHaveBeenCalledTimes(1)
+    expect(criarDocumento).not.toHaveBeenCalled()
+    expect(transmitirEGravar).not.toHaveBeenCalled()
+    expect(res.statusCode).toBe(200)
+    expect(res.body).toEqual({ documento: existente })
+  })
+
+  it('previa=true: não chama prepararTentativa, ignora emissao_ativa=false, e o identificador começa com "previa:"', async () => {
+    const config = { ...configBase, emissao_ativa: false }
+    const prepararTentativa = jest.fn()
+    const previsualizar = jest.fn().mockResolvedValue({ xml: "<NFe/>" })
+    const resumo = { itens: [], produtos_centavos: 0, desconto_centavos: 0, total_centavos: 0 }
+    const montarPayloadDevolucao = jest.fn().mockReturnValue({ payload: { x: 1 }, itens_ordenados: [], itens_documento: [], resumo })
+    jest.doMock("../../../../../lib/fiscal/fiscal-db", () => ({
+      getConfig: jest.fn().mockResolvedValue(config),
+      documentoDeVendaDoPedido: jest.fn().mockResolvedValue(docVenda),
+      listarItens: jest.fn().mockResolvedValue([]),
+      listPerfis: jest.fn().mockResolvedValue([]),
+      listarDevolucoesDoDocumento: jest.fn().mockResolvedValue([]),
+      criarDocumento: jest.fn(),
+      criarItens: jest.fn(),
+    }))
+    jest.doMock("../../../../../lib/fiscal/fiscal-pedido", () => ({
+      montarItensDoPedido: jest.fn().mockResolvedValue(dadosPedido),
+    }))
+    jest.doMock("../../../../../lib/fiscal/fiscal-emissao", () => ({
+      chaveIdempotencia: jest.fn(() => "order_1:devolucao:homologacao"),
+      digestDevolvidos: jest.fn(() => "digest123"),
+      JA_RESOLVIDO: new Set(["autorizado_nao_verificado", "verificado", "denegado"]),
+      prepararTentativa,
+      transmitirEGravar: jest.fn(),
+    }))
+    jest.doMock("../../../../../lib/fiscal/fiscal-client", () => ({ previsualizar }))
+    jest.doMock("../../../../../lib/fiscal/fiscal-payload-devolucao", () => ({ montarPayloadDevolucao }))
+
+    const { POST } = await import("../route.js")
+    const req = mockReq({ order_id: "order_1", itens: [{ line_item_id: "li_1", quantidade: 1 }], previa: true })
+    const res = mockRes()
+
+    await POST(req, res as unknown as MedusaResponse)
+
+    expect(prepararTentativa).not.toHaveBeenCalled()
+    expect(res.statusCode).toBe(200)
+    expect(montarPayloadDevolucao.mock.calls[0][0].identificador).toMatch(/^previa:/)
+    expect(previsualizar).toHaveBeenCalledTimes(1)
+    expect((res.body as { resumo: unknown }).resumo).toBe(resumo)
   })
 })

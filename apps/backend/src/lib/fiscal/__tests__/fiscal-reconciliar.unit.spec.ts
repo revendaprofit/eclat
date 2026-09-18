@@ -26,6 +26,8 @@ function mockDb(over: Record<string, unknown> = {}) {
     lerDocumento: jest.fn().mockResolvedValue({
       id: "doc_1", chave_acesso: CHAVE,
       status: "autorizado_nao_verificado", verificado_em: null,
+      idempotency_key: "order_1:venda:homologacao", ambiente: "homologacao",
+      created_at: "2026-09-17T10:00:00Z", xml_autorizado: null,
     }),
     listarPorStatus: jest.fn().mockResolvedValue([]),
     ...over,
@@ -39,7 +41,10 @@ describe("reconciliarDocumento", () => {
 
   it("grava o nItem lido do XML e marca verificado_em", async () => {
     const { atualizarNItem, atualizarDocumento } = mockDb()
-    jest.doMock("../fiscal-client", () => ({ baixarXml: jest.fn().mockResolvedValue(XML_OK) }))
+    jest.doMock("../fiscal-client", () => ({
+      baixarArquivo: jest.fn().mockResolvedValue(Buffer.from(XML_OK, "utf8")),
+      localizarPorIdentificador: jest.fn(),
+    }))
 
     const { reconciliarDocumento } = await import("../fiscal-reconciliar.js")
     const r = await reconciliarDocumento("doc_1")
@@ -47,14 +52,17 @@ describe("reconciliarDocumento", () => {
     expect(r.verificado).toBe(true)
     expect(atualizarNItem).toHaveBeenCalledWith("fi_1", 1)
     expect(atualizarNItem).toHaveBeenCalledWith("fi_2", 2)
-    const patch = atualizarDocumento.mock.calls.at(-1)![1] as any
+    const patch = atualizarDocumento.mock.calls[atualizarDocumento.mock.calls.length - 1][1] as any
     expect(patch.status).toBe("verificado")
     expect(patch.verificado_em).toBeTruthy()
   })
 
   it("divergência entre ordem enviada e nItem da SEFAZ não é fatal: grava o valor real e alerta", async () => {
     const { atualizarNItem, atualizarDocumento } = mockDb()
-    jest.doMock("../fiscal-client", () => ({ baixarXml: jest.fn().mockResolvedValue(XML_DIVERGENTE) }))
+    jest.doMock("../fiscal-client", () => ({
+      baixarArquivo: jest.fn().mockResolvedValue(Buffer.from(XML_DIVERGENTE, "utf8")),
+      localizarPorIdentificador: jest.fn(),
+    }))
 
     const { reconciliarDocumento } = await import("../fiscal-reconciliar.js")
     const r = await reconciliarDocumento("doc_1")
@@ -64,15 +72,19 @@ describe("reconciliarDocumento", () => {
     // valor da SEFAZ prevalece: TOP-P saiu como nItem 2
     expect(atualizarNItem).toHaveBeenCalledWith("fi_1", 2)
     expect(atualizarNItem).toHaveBeenCalledWith("fi_2", 1)
-    expect((atualizarDocumento.mock.calls.at(-1)![1] as any).status).toBe("verificado")
+    expect((atualizarDocumento.mock.calls[atualizarDocumento.mock.calls.length - 1][1] as any).status).toBe("verificado")
   })
 
   it("não marca verificado quando o XML tem menos itens que o documento", async () => {
     mockDb()
     jest.doMock("../fiscal-client", () => ({
-      baixarXml: jest.fn().mockResolvedValue(
-        `<nfeProc><protNFe><infProt><chNFe>${"3".repeat(44)}</chNFe></infProt></protNFe><det nItem="1"><prod><cProd>TOP-P</cProd><NCM>61091000</NCM></prod></det></nfeProc>`
+      baixarArquivo: jest.fn().mockResolvedValue(
+        Buffer.from(
+          `<nfeProc><protNFe><infProt><chNFe>${"3".repeat(44)}</chNFe></infProt></protNFe><det nItem="1"><prod><cProd>TOP-P</cProd><NCM>61091000</NCM></prod></det></nfeProc>`,
+          "utf8"
+        )
       ),
+      localizarPorIdentificador: jest.fn(),
     }))
     const { reconciliarDocumento } = await import("../fiscal-reconciliar.js")
     await expect(reconciliarDocumento("doc_1")).rejects.toThrow(/quantidade de itens/i)
@@ -80,7 +92,7 @@ describe("reconciliarDocumento", () => {
 
   it("não reconcilia documento sem chave de acesso", async () => {
     mockDb({ lerDocumento: jest.fn().mockResolvedValue({ id: "doc_1", chave_acesso: null, status: "montado" }) })
-    jest.doMock("../fiscal-client", () => ({ baixarXml: jest.fn() }))
+    jest.doMock("../fiscal-client", () => ({ baixarArquivo: jest.fn(), localizarPorIdentificador: jest.fn() }))
     const { reconciliarDocumento } = await import("../fiscal-reconciliar.js")
     await expect(reconciliarDocumento("doc_1")).rejects.toThrow(/chave de acesso/i)
   })
@@ -93,7 +105,10 @@ describe("reconciliarDocumento", () => {
       <det nItem="1"><prod><cProd>TOP-P</cProd><NCM>61091000</NCM></prod></det>
       <det nItem="2"><prod><cProd>LEG-M</cProd><NCM>61046200</NCM></prod></det>
     </nfeProc>`
-    jest.doMock("../fiscal-client", () => ({ baixarXml: jest.fn().mockResolvedValue(XML_CHAVE_ERRADA) }))
+    jest.doMock("../fiscal-client", () => ({
+      baixarArquivo: jest.fn().mockResolvedValue(Buffer.from(XML_CHAVE_ERRADA, "utf8")),
+      localizarPorIdentificador: jest.fn(),
+    }))
 
     const { reconciliarDocumento } = await import("../fiscal-reconciliar.js")
     await expect(reconciliarDocumento("doc_1")).rejects.toThrow(/chave/i)
@@ -118,7 +133,10 @@ describe("reconciliarDocumento", () => {
       <det nItem="1"><prod><cProd>TOP-M</cProd><NCM>61091000</NCM></prod></det>
       <det nItem="2"><prod><cProd>TOP-P</cProd><NCM>61091000</NCM></prod></det>
     </nfeProc>`
-    jest.doMock("../fiscal-client", () => ({ baixarXml: jest.fn().mockResolvedValue(XML_NCM_DUPLICADO_TROCADO) }))
+    jest.doMock("../fiscal-client", () => ({
+      baixarArquivo: jest.fn().mockResolvedValue(Buffer.from(XML_NCM_DUPLICADO_TROCADO, "utf8")),
+      localizarPorIdentificador: jest.fn(),
+    }))
 
     const { reconciliarDocumento } = await import("../fiscal-reconciliar.js")
     const r = await reconciliarDocumento("doc_1")
@@ -137,7 +155,10 @@ describe("reconciliarDocumento", () => {
       <det nItem="1"><prod><cProd>TOP-P</cProd><NCM>61091000</NCM></prod></det>
       <det nItem="2"><prod><cProd>OUTRO-SKU</cProd><NCM>61046200</NCM></prod></det>
     </nfeProc>`
-    jest.doMock("../fiscal-client", () => ({ baixarXml: jest.fn().mockResolvedValue(XML_SEM_PAR) }))
+    jest.doMock("../fiscal-client", () => ({
+      baixarArquivo: jest.fn().mockResolvedValue(Buffer.from(XML_SEM_PAR, "utf8")),
+      localizarPorIdentificador: jest.fn(),
+    }))
 
     const { reconciliarDocumento } = await import("../fiscal-reconciliar.js")
     await expect(reconciliarDocumento("doc_1")).rejects.toThrow(/não foi encontrado/i)
@@ -153,7 +174,10 @@ describe("reconciliarDocumento", () => {
         { id: "fi_2", fiscal_documento_id: "doc_1", medusa_line_item_id: "li_b", ordem_enviada: 2, n_item_verificado: null, codigo_enviado: "TOP-P", ncm: "61046200", quantidade: 1, valor_unitario_centavos: 24900 },
       ]),
     })
-    jest.doMock("../fiscal-client", () => ({ baixarXml: jest.fn().mockResolvedValue(XML_OK) }))
+    jest.doMock("../fiscal-client", () => ({
+      baixarArquivo: jest.fn().mockResolvedValue(Buffer.from(XML_OK, "utf8")),
+      localizarPorIdentificador: jest.fn(),
+    }))
 
     const { reconciliarDocumento } = await import("../fiscal-reconciliar.js")
     await expect(reconciliarDocumento("doc_1")).rejects.toThrow(/mais de um item/i)
@@ -169,7 +193,10 @@ describe("reconciliarDocumento", () => {
       <det nItem="1"><prod><cProd>TOP-P</cProd><NCM>99999999</NCM></prod></det>
       <det nItem="2"><prod><cProd>LEG-M</cProd><NCM>61046200</NCM></prod></det>
     </nfeProc>`
-    jest.doMock("../fiscal-client", () => ({ baixarXml: jest.fn().mockResolvedValue(XML_NCM_MUDOU) }))
+    jest.doMock("../fiscal-client", () => ({
+      baixarArquivo: jest.fn().mockResolvedValue(Buffer.from(XML_NCM_MUDOU, "utf8")),
+      localizarPorIdentificador: jest.fn(),
+    }))
 
     const { reconciliarDocumento } = await import("../fiscal-reconciliar.js")
     const r = await reconciliarDocumento("doc_1")
@@ -177,6 +204,224 @@ describe("reconciliarDocumento", () => {
     expect(r.verificado).toBe(true)
     expect(r.divergencias.length).toBeGreaterThan(0)
     expect(atualizarNItem).toHaveBeenCalledWith("fi_1", 1)
-    expect((atualizarDocumento.mock.calls.at(-1)![1] as any).status).toBe("verificado")
+    expect((atualizarDocumento.mock.calls[atualizarDocumento.mock.calls.length - 1][1] as any).status).toBe("verificado")
+  })
+})
+
+// C1 (achado crítico da revisão final de 2026-09-17): reconciliarDocumento gravava
+// status:"verificado" incondicionalmente no fim, mesmo quando o documento já estava em um status
+// terminal RECUSADO (denegado/rejeitado) — o único caminho que produz esse estado é a varredura
+// (localizarNoFornecedor grava "denegado" JUNTO com a chave_acesso quando o fornecedor devolve
+// Status 3). Um clique em "Reconciliar" nesse documento baixava o XML, casava os itens e promovia
+// a nota denegada a "verificado", liberando NFD contra uma nota que a SEFAZ recusou.
+describe("reconciliarDocumento — recusa status terminal não autorizado (C1)", () => {
+  beforeEach(() => jest.resetModules())
+  afterEach(() => jest.restoreAllMocks())
+
+  it.each(["denegado", "rejeitado"] as const)(
+    "documento %s com chave: lança ErroFiscal e não toca em nItem/documento/download",
+    async (status) => {
+      const { atualizarNItem, atualizarDocumento } = mockDb({
+        lerDocumento: jest.fn().mockResolvedValue({
+          id: "doc_1", chave_acesso: CHAVE, status,
+          idempotency_key: "order_1:venda:homologacao", ambiente: "homologacao",
+          created_at: "2026-09-17T10:00:00Z", xml_autorizado: null,
+        }),
+      })
+      const baixarArquivo = jest.fn()
+      jest.doMock("../fiscal-client", () => ({ baixarArquivo, localizarPorIdentificador: jest.fn() }))
+
+      const { reconciliarDocumento } = await import("../fiscal-reconciliar.js")
+      const { ErroFiscal } = await import("../tipos.js")
+
+      await expect(reconciliarDocumento("doc_1")).rejects.toThrow(ErroFiscal)
+      await expect(reconciliarDocumento("doc_1")).rejects.toThrow(new RegExp(`doc_1 está ${status}`, "i"))
+
+      expect(baixarArquivo).not.toHaveBeenCalled()
+      expect(atualizarNItem).not.toHaveBeenCalled()
+      expect(atualizarDocumento).not.toHaveBeenCalled()
+    }
+  )
+
+  it("documento verificado: NÃO é bloqueado (re-reconciliar é idempotente)", async () => {
+    const { atualizarDocumento } = mockDb({
+      lerDocumento: jest.fn().mockResolvedValue({
+        id: "doc_1", chave_acesso: CHAVE, status: "verificado",
+        idempotency_key: "order_1:venda:homologacao", ambiente: "homologacao",
+        created_at: "2026-09-17T10:00:00Z", xml_autorizado: null,
+      }),
+    })
+    jest.doMock("../fiscal-client", () => ({
+      baixarArquivo: jest.fn().mockResolvedValue(Buffer.from(XML_OK, "utf8")),
+      localizarPorIdentificador: jest.fn(),
+    }))
+
+    const { reconciliarDocumento } = await import("../fiscal-reconciliar.js")
+    const r = await reconciliarDocumento("doc_1")
+
+    expect(r.verificado).toBe(true)
+    expect(atualizarDocumento).toHaveBeenCalled()
+  })
+})
+
+describe("STATUS_TERMINAIS exportado da lib", () => {
+  it("contém verificado, rejeitado e denegado — a mesma lista que o webhook usava redefinida", async () => {
+    const { STATUS_TERMINAIS } = await import("../fiscal-reconciliar.js")
+    expect(STATUS_TERMINAIS.has("verificado")).toBe(true)
+    expect(STATUS_TERMINAIS.has("rejeitado")).toBe(true)
+    expect(STATUS_TERMINAIS.has("denegado")).toBe(true)
+    expect(STATUS_TERMINAIS.has("montado")).toBe(false)
+  })
+})
+
+describe("reconciliarDocumento — origem do XML", () => {
+  beforeEach(() => jest.resetModules())
+  afterEach(() => jest.restoreAllMocks())
+
+  it("com XML em mãos (emissão síncrona) NÃO faz download", async () => {
+    const { atualizarNItem, atualizarDocumento } = mockDb()
+    const baixarArquivo = jest.fn()
+    jest.doMock("../fiscal-client", () => ({ baixarArquivo, localizarPorIdentificador: jest.fn() }))
+    const { reconciliarDocumento } = await import("../fiscal-reconciliar.js")
+
+    const r = await reconciliarDocumento("doc_1", XML_OK)
+
+    expect(r.verificado).toBe(true)
+    expect(baixarArquivo).not.toHaveBeenCalled()
+    expect(atualizarNItem).toHaveBeenCalledTimes(2)
+    // XML em mãos já foi gravado por quem emitiu — a reconciliação não o regrava.
+    expect(atualizarDocumento.mock.calls[0][1]).not.toHaveProperty("xml_autorizado")
+  })
+
+  it("usa o xml_autorizado já gravado antes de pensar em baixar", async () => {
+    mockDb({
+      lerDocumento: jest.fn().mockResolvedValue({
+        id: "doc_1", chave_acesso: CHAVE, status: "autorizado_nao_verificado", verificado_em: null,
+        xml_autorizado: XML_OK,
+      }),
+    })
+    const baixarArquivo = jest.fn()
+    jest.doMock("../fiscal-client", () => ({ baixarArquivo, localizarPorIdentificador: jest.fn() }))
+    const { reconciliarDocumento } = await import("../fiscal-reconciliar.js")
+
+    expect((await reconciliarDocumento("doc_1")).verificado).toBe(true)
+    expect(baixarArquivo).not.toHaveBeenCalled()
+  })
+
+  it("XML baixado é GRAVADO em xml_autorizado junto com a verificação", async () => {
+    const { atualizarDocumento } = mockDb()
+    jest.doMock("../fiscal-client", () => ({
+      baixarArquivo: jest.fn().mockResolvedValue(Buffer.from(XML_OK, "utf8")),
+      localizarPorIdentificador: jest.fn(),
+    }))
+    const { reconciliarDocumento } = await import("../fiscal-reconciliar.js")
+
+    await reconciliarDocumento("doc_1")
+
+    const patch = atualizarDocumento.mock.calls[0][1]
+    expect(patch.status).toBe("verificado")
+    expect(patch.xml_autorizado).toBe(XML_OK)
+  })
+})
+
+describe("localizarNoFornecedor", () => {
+  beforeEach(() => jest.resetModules())
+  afterEach(() => jest.restoreAllMocks())
+
+  const pendente = {
+    id: "doc_1", chave_acesso: null, status: "transmitido_sem_confirmacao",
+    idempotency_key: "order_1:venda:homologacao", ambiente: "homologacao",
+    created_at: "2026-09-17T10:00:00Z",
+  }
+
+  it("achou autorizada: grava chave/número/série e vai para autorizado_nao_verificado", async () => {
+    const { atualizarDocumento } = mockDb()
+    const localizarPorIdentificador = jest.fn().mockResolvedValue({ chave_acesso: CHAVE, status: 1, numero: 7, serie: 1 })
+    jest.doMock("../fiscal-client", () => ({ baixarArquivo: jest.fn(), localizarPorIdentificador }))
+    const { localizarNoFornecedor } = await import("../fiscal-reconciliar.js")
+
+    const doc = await localizarNoFornecedor(pendente as any)
+
+    expect(localizarPorIdentificador).toHaveBeenCalledWith({
+      identificador: "order_1:venda:homologacao", ambiente: 2, desde: "2026-09-17T10:00:00Z",
+    })
+    expect(atualizarDocumento).toHaveBeenCalledWith("doc_1", {
+      status: "autorizado_nao_verificado", chave_acesso: CHAVE, numero: 7, serie: 1,
+      rejeicao_codigo: null, rejeicao_motivo: null,
+    })
+    expect(doc?.chave_acesso).toBe(CHAVE)
+  })
+
+  it("NÃO achou: devolve null e não altera NADA — ausência não é prova de que não emitiu", async () => {
+    const { atualizarDocumento } = mockDb()
+    jest.doMock("../fiscal-client", () => ({
+      baixarArquivo: jest.fn(), localizarPorIdentificador: jest.fn().mockResolvedValue(null),
+    }))
+    const { localizarNoFornecedor } = await import("../fiscal-reconciliar.js")
+
+    expect(await localizarNoFornecedor(pendente as any)).toBeNull()
+    expect(atualizarDocumento).not.toHaveBeenCalled()
+  })
+
+  it("achou denegada: grava denegado e devolve null", async () => {
+    const { atualizarDocumento } = mockDb()
+    jest.doMock("../fiscal-client", () => ({
+      baixarArquivo: jest.fn(),
+      localizarPorIdentificador: jest.fn().mockResolvedValue({ chave_acesso: CHAVE, status: 3, numero: 7, serie: 1 }),
+    }))
+    const { localizarNoFornecedor } = await import("../fiscal-reconciliar.js")
+
+    expect(await localizarNoFornecedor(pendente as any)).toBeNull()
+    expect(atualizarDocumento.mock.calls[0][1].status).toBe("denegado")
+  })
+
+  it("achou CANCELADA: não adota (a nota não vale mais) e não altera nada", async () => {
+    const { atualizarDocumento } = mockDb()
+    jest.doMock("../fiscal-client", () => ({
+      baixarArquivo: jest.fn(),
+      localizarPorIdentificador: jest.fn().mockResolvedValue({ chave_acesso: CHAVE, status: 2, numero: 7, serie: 1 }),
+    }))
+    const { localizarNoFornecedor } = await import("../fiscal-reconciliar.js")
+
+    expect(await localizarNoFornecedor(pendente as any)).toBeNull()
+    expect(atualizarDocumento).not.toHaveBeenCalled()
+  })
+})
+
+describe("reconciliarPendentes — transmitido_sem_confirmacao sem chave", () => {
+  beforeEach(() => jest.resetModules())
+  afterEach(() => jest.restoreAllMocks())
+
+  it("localiza no fornecedor e reconcilia, em vez de pular o documento", async () => {
+    const semChave = {
+      id: "doc_1", chave_acesso: null, status: "transmitido_sem_confirmacao",
+      idempotency_key: "order_1:venda:homologacao", ambiente: "homologacao", created_at: "2026-09-17T10:00:00Z",
+    }
+    const { atualizarNItem } = mockDb({ listarPorStatus: jest.fn().mockResolvedValue([semChave]) })
+    jest.doMock("../fiscal-client", () => ({
+      baixarArquivo: jest.fn().mockResolvedValue(Buffer.from(XML_OK, "utf8")),
+      localizarPorIdentificador: jest.fn().mockResolvedValue({ chave_acesso: CHAVE, status: 1, numero: 7, serie: 1 }),
+    }))
+    const { reconciliarPendentes } = await import("../fiscal-reconciliar.js")
+
+    const r = await reconciliarPendentes()
+
+    expect(r).toEqual({ processados: 1, verificados: 1 })
+    expect(atualizarNItem).toHaveBeenCalledTimes(2)
+  })
+
+  it("não localizado: segue pendente, sem verificar e sem quebrar a varredura", async () => {
+    const semChave = {
+      id: "doc_1", chave_acesso: null, status: "transmitido_sem_confirmacao",
+      idempotency_key: "k", ambiente: "homologacao", created_at: "2026-09-17T10:00:00Z",
+    }
+    const { atualizarDocumento } = mockDb({ listarPorStatus: jest.fn().mockResolvedValue([semChave]) })
+    jest.doMock("../fiscal-client", () => ({
+      baixarArquivo: jest.fn(), localizarPorIdentificador: jest.fn().mockResolvedValue(null),
+    }))
+    const { reconciliarPendentes } = await import("../fiscal-reconciliar.js")
+
+    expect(await reconciliarPendentes()).toEqual({ processados: 1, verificados: 0 })
+    expect(atualizarDocumento).not.toHaveBeenCalled()
   })
 })

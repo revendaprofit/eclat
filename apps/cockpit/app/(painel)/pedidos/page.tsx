@@ -496,6 +496,7 @@ export default function PedidosPage() {
                   erroCarregar={erroFiscal}
                   onAtualizado={() => carregarFiscal(det.id)}
                   onTentarNovamente={() => carregarFiscal(det.id)}
+                  orderId={det.id}
                 />
                 {docFiscal && (
                   <NfdDoPedido orderId={det.id} statusDocumentoVenda={docFiscal.status} itens={itensParaDevolucao} />

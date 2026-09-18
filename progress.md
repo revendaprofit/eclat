@@ -1075,3 +1075,38 @@ sem push (push é sempre o dono quem faz).
 - SOP: `architecture/pagamento.md`. `.env.template` com as variáveis. CLAUDE.md/task_plan atualizados.
 - **Pendente do dono (go-live):** credenciais de produção no Railway (`MERCADOPAGO_ACCESS_TOKEN`, `MERCADOPAGO_WEBHOOK_SECRET`) e Vercel (`NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY`); webhook evento "Order" apontando pro backend do Railway; merge em main + push + `railway up`; "pode aplicar" pra rodar o script com `--so-mp`; Cockpit → Marketing → pagamento = gateway; compra real de valor baixo + estorno pelo Cockpit/MP; `quality_evaluation` do MP (MCP).
 
+
+## 2026-09-17 — Fiscal — revisão 2 (contrato real da Brasil NFe)
+- A revisão 1 do módulo fiscal (Brasil NFe) estava em `main` com `emissao_ativa = false`: nenhuma nota foi transmitida em produção. Ao receber a resposta escrita do fornecedor e ler a documentação pública e o SDK oficial, o contrato real divergiu do assumido em quatro frentes — se tivesse ido a produção como estava, nenhuma nota autorizada teria sido reconhecida.
+
+| Frente | Revisão 1 assumia | Contrato real | Consequência se tivesse ido a produção |
+|---|---|---|---|
+| Resposta da transmissão | `status: "autorizado"`, `chave`, `codigo_status` na raiz | `ReturnNF.Ok` (booleano), `ChaveNF`, `CodStatusRespostaSefaz` | **toda nota autorizada seria gravada como `rejeitado`**; a nova tentativa emitiria uma segunda nota válida para o mesmo pedido |
+| Endpoints | `/v1/nfe`, `/v1/nfe/previa`, `/v1/nfe/{chave}/xml` | `/services/fiscal/EnviarNotaFiscal` etc., todos `POST` | 404 em toda chamada |
+| Payload | `snake_case` em português, bloco `emitente`, totais, `numero_item` | `PascalCase`, sem emitente, sem totais, `nItem` posicional, imposto aninhado | rejeição na validação do fornecedor |
+| Webhook | `?token=` na URL; gatilho primário da reconciliação | HMAC-SHA256 do corpo bruto no header; **a rota síncrona não dispara webhook** | reconciliação nunca seria acionada pelo webhook |
+
+**Entregue neste plano** (`docs/superpowers/plans/2026-09-17-fiscal-contrato-real.md`), por tarefa:
+- Task 1 — Dinheiro: conversão centavos↔reais e rateio de frete pelo maior resto (`fiscal-dinheiro.ts`), sem aritmética em float.
+- Task 2 — Forma de pagamento do pedido extraída do provedor real do pedido (Medusa), não mais adivinhada.
+- Task 3 — Migration 0012, tipos e payload de venda no contrato real (`PascalCase`, sem emitente/totais, `nItem` posicional).
+- Task 4 — Payload da NFD no contrato real: referência por produto (`ChaveAcessoReferenciada`/`NItemReferenciado`), nunca na raiz.
+- Task 5 — Cliente HTTP reescrito para os endpoints reais (`/services/fiscal/*`) e interpretação de `ReturnNF.Ok` + código SEFAZ.
+- Task 6 — Reconciliação com o XML em mãos (nunca por NCM/posição) e localização de transmissão sem resposta via `ObterNotasFiscais`.
+- Task 7 — Emissão: barreira de duplicidade pelo fornecedor (`prepararTentativa`), gravação do resultado e reconciliação inline.
+- Task 8 — Webhook: autenticação por HMAC-SHA256 do corpo bruto (não mais `?token=` na URL).
+- Task 9 — Prévia da NFD no Cockpit passa a usar resumo próprio em centavos, parando de ler o payload do fornecedor.
+- Task 10 — DANFE sob demanda e campos novos do perfil tributário (CST PIS/COFINS, CEST).
+- T3b (corretiva, fora do plano) — zerados 39 erros de `tsc` que a branch havia introduzido em dois arquivos de teste fiscais (payload e reconciliação).
+- Task 11 (esta) — SOP fiscal (`architecture/fiscal.md`) e roteiro de homologação; verificação final.
+
+**Verificação final (2026-09-17):** backend 227/227 (18 suítes), Cockpit 117/117 (11 arquivos), storefront 286/286 (26 arquivos, inalterado — igual ao esperado 286/26). `tsc --noEmit` no backend: 0 erros. Varredura por resíduo do contrato antigo: três dos quatro greps vazios; o quarto (comentários "pendente de confirmação"/"ainda não confrontado"/"melhor leitura") encontrou uma ocorrência em `fiscal-payload-devolucao.ts:130`, mas é uma decisão de negócio pendente do contador (rateio do desconto estornado na devolução), não uma suposição sobre o contrato da Brasil NFe — não é resíduo desta revisão e não foi tocada.
+
+**Pendências do dono:**
+1. Aplicar a migration 0012.
+2. Cadastrar a empresa e o certificado A1 no painel da Brasil NFe.
+3. Colocar os tokens (`Token`/`UserToken`) e o segredo do webhook no `.env` do backend.
+4. Cadastrar o webhook no painel da Brasil NFe apontando para `/webhooks/brasilnfe`.
+5. Obter a tabela do contador (perfis tributários/NCM pendentes — risco 3 da spec).
+6. Executar o roteiro de homologação de `architecture/fiscal.md` e anotar o resultado aqui.
+7. `git push`.

@@ -101,8 +101,9 @@ describe("POST /admin/fiscal/emitir — ordem do interruptor mestre (achado N1)"
   it("previa=true roda independente do interruptor (emissao_ativa=false não bloqueia a prévia)", async () => {
     const montarItensDoPedido = jest.fn().mockResolvedValue({
       itens: [], destinatario: { uf: "MG" }, frete_centavos: 0,
+      pagamento: { forma: "99", descricao: "Pagamento online" },
     })
-    const previsualizar = jest.fn().mockResolvedValue({ ok: true })
+    const previsualizar = jest.fn().mockResolvedValue({ xml: "<NFe/>" })
     jest.doMock("../../../../../lib/fiscal/fiscal-pedido", () => ({ montarItensDoPedido }))
     jest.doMock("../../../../../lib/fiscal/fiscal-db", () => ({
       getConfig: jest.fn().mockResolvedValue(configDesligada),

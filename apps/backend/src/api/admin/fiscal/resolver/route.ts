@@ -22,9 +22,11 @@ function ehErroDeNaoEncontrado(erro: Error): boolean {
 // POST /admin/fiscal/resolver { documento_id, acao, chave_acesso?, motivo? }
 //
 // Saída manual para o documento que fica preso em transmitido_sem_confirmacao sem chave de
-// acesso: transmitir() falhou por erro de rede, reconciliarPendentes pula quem não tem chave, e
-// emitirVenda recusa reemitir de propósito (evitar nota duplicada). O operador consulta o painel
-// da Brasil NFe e informa o desfecho real (spec — Tarefa A do plano 2026-09-16).
+// acesso: transmitir() falhou por erro de rede, a varredura tenta localizar a nota no fornecedor
+// pelo IdentificadorInterno; esta rota é a saída manual para quando nem isso resolve — e é o
+// ÚNICO lugar que pode declarar que uma nota não foi emitida, e emitirVenda recusa reemitir de
+// propósito (evitar nota duplicada). O operador consulta o painel da Brasil NFe e informa o
+// desfecho real (spec — Tarefa A do plano 2026-09-16).
 export async function POST(req: MedusaRequest, res: MedusaResponse) {
   const logger = req.scope.resolve(ContainerRegistrationKeys.LOGGER)
   const { documento_id, acao, chave_acesso, motivo } = (req.body || {}) as {

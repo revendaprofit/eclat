@@ -44,6 +44,8 @@ export type FiscalPerfil = {
   cfop_devolucao_fora_uf: string
   origem_padrao: number
   ativo: boolean
+  cst_pis_cofins?: string | null   // migration 0012 — CST espelhado de PIS e COFINS
+  cest?: string | null             // migration 0012 — obrigatório quando há ICMS-ST
 }
 
 export type FiscalDocumento = {
@@ -65,6 +67,8 @@ export type FiscalDocumento = {
   danfe_url: string | null
   documento_origem_id: string | null
   verificado_em: string | null
+  xml_autorizado?: string | null   // migration 0012 — XML autorizado (Base64Xml decodificado)
+  created_at?: string              // vem do select=*; usado para a janela de busca no fornecedor
 }
 
 export type FiscalDocumentoItem = {

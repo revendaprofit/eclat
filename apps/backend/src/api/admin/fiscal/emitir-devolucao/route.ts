@@ -1,11 +1,13 @@
 import type { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import { ContainerRegistrationKeys } from "@medusajs/framework/utils"
-import { chaveIdempotencia, digestDevolvidos, JA_RESOLVIDO } from "../../../../lib/fiscal/fiscal-emissao"
+import {
+  chaveIdempotencia, digestDevolvidos, JA_RESOLVIDO, prepararTentativa, transmitirEGravar,
+} from "../../../../lib/fiscal/fiscal-emissao"
 import { montarItensDoPedido } from "../../../../lib/fiscal/fiscal-pedido"
 import { montarPayloadDevolucao } from "../../../../lib/fiscal/fiscal-payload-devolucao"
-import { previsualizar, transmitir } from "../../../../lib/fiscal/fiscal-client"
+import { previsualizar } from "../../../../lib/fiscal/fiscal-client"
 import {
-  acharPorIdempotencia, atualizarDocumento, criarDocumento, criarItens,
+  criarDocumento, criarItens,
   documentoDeVendaDoPedido, getConfig, listPerfis, listarDevolucoesDoDocumento, listarItens,
 } from "../../../../lib/fiscal/fiscal-db"
 import { ErroFiscal } from "../../../../lib/fiscal/tipos"
@@ -54,6 +56,19 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
       })
     }
   }
+  // M3 (achado menor da revisão final de 2026-09-17): [{li_a,1},{li_a,1}] contra 1 unidade
+  // vendida montava um payload de 2 linhas e um resumo de 2 unidades para o MESMO line_item_id —
+  // a emissão real só morria depois, no índice único do banco, com 500 cru e um documento
+  // "montado" órfão. Recusa aqui, antes de tocar em qualquer coisa.
+  const idsVistos = new Set<string>()
+  for (const it of itens) {
+    if (idsVistos.has(it.line_item_id)) {
+      return res.status(400).json({
+        error: "cada item só pode aparecer uma vez; some as quantidades.",
+      })
+    }
+    idsVistos.add(it.line_item_id)
+  }
 
   try {
     // A config vem primeiro: o documento de venda é escopado por AMBIENTE (achado I6/5.2) — sem
@@ -88,7 +103,25 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
       }
     }
 
-    const { payload, itens_documento } = montarPayloadDevolucao({
+    const baseKey = `${chaveIdempotencia(order_id, "devolucao", config.ambiente)}:${digestDevolvidos(itens)}`
+
+    // Na prévia nada é transmitido nem gravado — não consulta o fornecedor nem exige o interruptor.
+    let key = `previa:${baseKey}`
+    if (!previa) {
+      if (!config.emissao_ativa) {
+        throw new ErroFiscal(
+          "A emissão está desligada em Fiscal → Configuração (emissao_ativa). Ligue-a para transmitir notas."
+        )
+      }
+      const tentativa = await prepararTentativa({
+        orderId: order_id, tipo: "devolucao", ambiente: config.ambiente, baseKey,
+        avisar: (m) => logger.warn(m),
+      })
+      if ("existente" in tentativa) return res.json({ documento: tentativa.existente })
+      key = tentativa.key
+    }
+
+    const { payload, itens_documento, resumo } = montarPayloadDevolucao({
       config,
       perfis,
       documentoOrigem: doc,
@@ -98,30 +131,11 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
       // A UF do destinatário ORIGINAL (a mesma da venda) — não a UF atual do cadastro.
       ufDestinatarioOriginal: dadosPedido.destinatario.uf,
       quantidadesJaDevolvidas,
+      identificador: key,
     })
 
     if (previa) {
-      return res.json({ previa: await previsualizar(payload), payload })
-    }
-
-    if (!config.emissao_ativa) {
-      throw new ErroFiscal(
-        "A emissão está desligada em Fiscal → Configuração (emissao_ativa). Ligue-a para transmitir notas."
-      )
-    }
-
-    // Idempotência: uma chave por pedido+tipo+ambiente+conjunto devolvido. Documento já
-    // resolvido para o MESMO conjunto não é reemitido; um conjunto diferente gera chave nova.
-    const key = `${chaveIdempotencia(order_id, "devolucao", config.ambiente)}:${digestDevolvidos(itens)}`
-    const existente = await acharPorIdempotencia(key)
-    if (existente && JA_RESOLVIDO.has(existente.status)) {
-      return res.json({ documento: existente })
-    }
-    if (existente && existente.status === "transmitido_sem_confirmacao") {
-      throw new ErroFiscal(
-        "Já existe uma transmissão sem confirmação para a devolução deste pedido. Resolva-a " +
-          "(reconciliação ou /admin/fiscal/resolver) antes de tentar de novo — reemitir criaria nota duplicada."
-      )
+      return res.json({ previa: await previsualizar(payload), payload, resumo })
     }
 
     // 1) grava documento + itens ANTES de transmitir — mesma ordem inegociável de emitirVenda.
@@ -129,7 +143,7 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
       medusa_order_id: order_id,
       tipo: "devolucao",
       modelo: 55,
-      serie: config.serie_nfe,
+      serie: null, // a numeração é do fornecedor; série e número reais voltam na resposta
       numero: null,
       chave_acesso: null,
       status: "montado",
@@ -152,36 +166,10 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
       }))
     )
 
-    // 2) transmite
-    await atualizarDocumento(docDevolucao.id, { status: "transmitido_sem_confirmacao" })
-
-    let r
-    try {
-      r = await transmitir(payload)
-    } catch (e) {
-      // Fica em transmitido_sem_confirmacao de propósito — mesma razão de emitirVenda: a
-      // resolução (reconciliação ou /admin/fiscal/resolver) decide, nunca reemitir às cegas.
-      //
-      // Mesma classe do achado I2/5.1: preserva ErroFiscal (recusa do fornecedor) vs Error comum
-      // (infra: 5xx, timeout, rede) — não mascarar queda da Brasil NFe como erro do operador.
-      const erro = e as Error
-      const mensagem = `Falha ao transmitir a NFD do pedido ${order_id}. O documento ficou pendente de resolução. Detalhe: ${erro.message}`
-      throw erro instanceof ErroFiscal ? new ErroFiscal(mensagem) : new Error(mensagem)
-    }
-
-    // 3) grava o resultado
-    const atualizado = await atualizarDocumento(docDevolucao.id, {
-      status: r.autorizado ? "autorizado_nao_verificado" : "rejeitado",
-      chave_acesso: r.chave_acesso,
-      numero: r.numero,
-      serie: r.serie ?? config.serie_nfe,
-      rejeicao_codigo: r.autorizado ? null : r.status_sefaz,
-      rejeicao_motivo: r.autorizado ? null : r.motivo,
-      xml_url: r.xml_url,
-      danfe_url: r.danfe_url,
-      resposta_bruta: r.bruto,
+    // 2) transmite, grava o resultado e reconcilia
+    const atualizado = await transmitirEGravar({
+      doc: docDevolucao, payload, rotulo: `NFD do pedido ${order_id}`, avisar: (m) => logger.warn(m),
     })
-
     return res.json({ documento: atualizado })
   } catch (e) {
     const erro = e as Error

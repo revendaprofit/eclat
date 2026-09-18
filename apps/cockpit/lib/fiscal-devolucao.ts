@@ -47,3 +47,27 @@ export function montarItensDevolvidos(
   }
   return { ok: true, itens: devolvidos }
 }
+
+// Resumo da prévia da NFD, como o backend devolve (em centavos — Invariante 3). A tela lê ISTO,
+// nunca o payload do fornecedor.
+export type ResumoDevolucao = {
+  itens: Array<{
+    codigo: string; descricao: string; quantidade: number
+    bruto_centavos: number; desconto_centavos: number; liquido_centavos: number
+  }>
+  produtos_centavos: number
+  desconto_centavos: number
+  total_centavos: number
+}
+
+export function resumoValido(v: unknown): v is ResumoDevolucao {
+  const r = v as ResumoDevolucao | undefined
+  if (!r || !Array.isArray(r.itens) || r.itens.length === 0) return false
+  const inteiros = [r.produtos_centavos, r.desconto_centavos, r.total_centavos]
+  if (!inteiros.every((n) => Number.isInteger(n))) return false
+  return r.itens.every(
+    (i) =>
+      typeof i?.codigo === "string" && typeof i?.descricao === "string" &&
+      [i.quantidade, i.bruto_centavos, i.desconto_centavos, i.liquido_centavos].every((n) => Number.isInteger(n))
+  )
+}

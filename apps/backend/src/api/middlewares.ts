@@ -80,6 +80,12 @@ export const AtualizarCuradoSchema = z
 
 export default defineMiddlewares({
   routes: [
+    // Webhook da Brasil NFe: a assinatura HMAC é sobre os BYTES recebidos. preserveRawBody expõe
+    // req.rawBody; sem isso só existe o JSON já parseado, que não reproduz a assinatura.
+    // `methods` (não `method`, que é @deprecated — types.d.ts do @medusajs/framework/http) porque
+    // o loader do bodyParser só lê `methods`; com `method` isto funcionava por acidente, caindo
+    // no default "todos os verbos" (achado I2 da revisão final de 2026-09-17).
+    { methods: ["POST"], matcher: "/webhooks/brasilnfe", bodyParser: { preserveRawBody: true } },
     { method: "POST", matcher: "/admin/conjuntos/regras", middlewares: [validateAndTransformBody(CriarRegraSchema)] },
     { method: "PUT", matcher: "/admin/conjuntos/regras/:id", middlewares: [validateAndTransformBody(AtualizarRegraSchema)] },
     { method: "PUT", matcher: "/admin/conjuntos/pares", middlewares: [validateAndTransformBody(AtualizarParesSchema)] },

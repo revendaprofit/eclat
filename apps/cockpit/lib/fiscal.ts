@@ -79,3 +79,20 @@ export function validarCaminhoFiscal(path: string[]): ValidacaoCaminhoFiscal {
   if (!ROTAS_FISCAL_PERMITIDAS.has(path[0])) return { ok: false, status: 404 }
   return { ok: true }
 }
+
+// O id do documento fiscal vai para dentro de uma URL da Admin API com o token de admin anexado.
+// Só uuid passa — mesma classe de defesa do validarCaminhoFiscal acima.
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+export function ehUuid(v: string): boolean {
+  return UUID_RE.test(v)
+}
+
+// O orderId do pedido vai para dentro de uma URL da Admin API com o token de admin anexado
+// (app/api/fiscal-previa/[orderId]/route.ts) — mesma classe de defesa do ehUuid acima, mas para
+// o formato de id do Medusa ("order_" + alfanumérico), que não é um uuid.
+const ID_DE_PEDIDO_RE = /^order_[A-Za-z0-9]+$/
+
+export function ehIdDePedido(v: string): boolean {
+  return ID_DE_PEDIDO_RE.test(v)
+}

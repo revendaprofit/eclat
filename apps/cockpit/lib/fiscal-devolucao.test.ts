@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { montarItensDevolvidos } from "./fiscal-devolucao"
+import { montarItensDevolvidos, resumoValido } from "./fiscal-devolucao"
 
 const ITENS = [
   { item_id: "l1", quantidade_pedido: 2 },
@@ -70,5 +70,27 @@ describe("montarItensDevolvidos", () => {
         { line_item_id: "l2", quantidade: 1 },
       ],
     })
+  })
+})
+
+describe("resumoValido", () => {
+  const ok = {
+    itens: [{ codigo: "A", descricao: "Top", quantidade: 1, bruto_centavos: 100, desconto_centavos: 0, liquido_centavos: 100 }],
+    produtos_centavos: 100, desconto_centavos: 0, total_centavos: 100,
+  }
+
+  it("aceita o resumo bem formado", () => {
+    expect(resumoValido(ok)).toBe(true)
+  })
+
+  it("recusa ausente, sem itens, ou com total que não é inteiro", () => {
+    expect(resumoValido(undefined)).toBe(false)
+    expect(resumoValido({ ...ok, itens: [] })).toBe(false)
+    expect(resumoValido({ ...ok, total_centavos: 1.5 })).toBe(false)
+    expect(resumoValido({ ...ok, total_centavos: "100" })).toBe(false)
+  })
+
+  it("recusa o formato ANTIGO (payload do fornecedor) — a tela não deve mais entendê-lo", () => {
+    expect(resumoValido({ itens: [{ codigo: "A", valor_total: "1.00" }], total: { valor_nota: "1.00" } })).toBe(false)
   })
 })
