@@ -330,3 +330,42 @@ Obs.: o conector pausa a campanha ao mudar orçamento — reativar depois de cad
   (padrão 40); (4) manter o número em uso normal no celular; (5) conferir `connectionState` na leitura diária.
 - Caminho sem risco para depois do lançamento: WhatsApp Cloud API oficial (BM verificada), ~2 dias de trabalho.
 - Teste real pendente: mensagem "Quero entrar no Clube Éclat" de outro número → 2 respostas + lead no Cockpit.
+
+### 15/09/2026 — Ação 10/10 "Primeira Remessa" (plano pela skill lancamento-avalanche)
+Potencial da largada ≈ R$ 13 mil (< R$ 25 mil) e pré-venda já aberta → sem avalanche cheia; ação de 48h com gatilho
+verdadeiro (10/10 = início dos envios). Plano completo, oferta em janelas, verba 55/25/20, cronograma D-dias, sequência
+do grupo e checklist em `docs/marketing/acao-1010-avalanche.md`. Muda o reequilíbrio acima: catálogo F1 pausado durante
+a captação (25/09–08/10) e ligado só no D0. Perguntas em aberto para o dono no fim do arquivo (custo do lote, verba,
+brindes, frete, confirmação das janelas). Nada foi alterado na conta de anúncios.
+
+### 17/09/2026 — Mudança de foco: aquisição para o grupo + preço novo em análise
+Leitura da conta (10–17/09, R$ 129): aquecimento vazou para Audience Network (ponto de virada: 99,9% em vídeo
+recompensado; seja qual for: R$ 25,51 em AN + R$ 7,27 em Marketplace); catálogo F1 parado com erro (product set
+1076107274890077 filtra "in stock" e o feed virou "preorder", conjunto vazio); Clube a R$ 9,48 por conversa (5
+resultados, amostra pequena, retenção de 25% do vídeo em 15%). Plano completo (preço 159/259/299, funil sempre
+aberto, verba 30/12/8, quatro criativos por ângulo) em `docs/marketing/estrategia-aquisicao-2026-09.md`.
+Nada aplicado na conta nem na Medusa; tudo aguarda "pode aplicar" do dono.
+
+### 17/09/2026 (noite) — APLICADO com "pode aplicar tudo" do dono
+- **Medusa (produção):** 30 variações repreçadas (top/short R$ 159, Macaquinho Solaris R$ 259). As 3 regras do
+  Benefício Conjunto (padrão + curados Aurora e Orvalho) passaram de `total_percentual` 10 para `total_valor` 1900
+  → conjunto fecha em **R$ 299**. Cupom **CLUBE10** criado (10%, itens, 1 uso por cliente via campanha
+  `clube-primeira-compra`, budget `use_by_attribute`/`customer_id`); o gancho do conjunto já pôs a exclusão, então
+  o cupom não alcança peças em conjunto. Provado com carrinhos reais na Store API: top+short = 299; top com cupom
+  = 143,10; Solaris com cupom = 233,10; conjunto com cupom = 299 (sem acúmulo). Único pedido na base era um teste
+  cancelado de junho: ninguém comprou no preço antigo.
+- **Meta:** product set 1076107274890077 agora aceita `in stock`, `preorder` e `available for order` (voltou a ter
+  5 produtos). Ad "ponto de virada" 120250160321780107 PAUSADO. Aquecimento 120250160320680107: R$ 8/dia e
+  posicionamento manual (Instagram feed/stories/reels/explorar/perfil + Facebook Reels, só mobile). Clube
+  120250160265150107: R$ 30/dia. Campanha F1 120250224901140107: CBO R$ 12/dia (conector pausou ao mudar
+  orçamento; reativada). Obs.: os conjuntos têm idade 18–65 com Advantage+ público, não 25–45 como o nome diz.
+- **Pendente:** conjunto frio com os 4 criativos por ângulo (espera os vídeos da Camila); robô do Clube entregar o
+  CLUBE10 na mensagem de convite; conferir se o erro do conjunto de catálogo some após o Meta reprocessar.
+- **Varredura de preço antigo (17/09):** FAQ dos 4 produtos (metadata.faq) dizia "10% de desconto no conjunto" →
+  trocado para "o conjunto sai por R$ 299" em produção e em `scripts/lumiere-textos.json`. Três rascunhos da agenda
+  do Clube (22, 24 e 26/09) e o roteiro `.txt` atualizados para R$ 159 / R$ 259. Feed público confirmado com os
+  preços novos após o cache de 5 min. O erro "product set vazio" do conjunto de catálogo ainda aparecia minutos
+  depois da correção do filtro: reconferir na próxima leitura; se persistir, recriar o anúncio de catálogo.
+- **Cupom no funil (17/09, "pode aplicar"):** robô do Clube passou a entregar o `CLUBE10` no convite (`CLUBE_CUPOM`, env
+  `CLUBE_ECLAT_CUPOM`); mensagem fixada para o grupo em `docs/marketing/mensagem-fixada-cupom-clube.txt`. Backend
+  deployado via `railway up` (deploy 510c7b06).

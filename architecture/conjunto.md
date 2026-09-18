@@ -344,3 +344,9 @@ Achados da execução F1 (Task 8, registrados aqui por não terem virado risco r
 3. Com o **"pode aplicar"** do dono: `python scripts/setup-conjunto.py --apply` — cria a regra padrão **inativa**, os 2 pares, reconcilia promoções/cupons existentes.
 4. Validar `GET /store/conjuntos` em produção (deve vir `{ curados: [], colecoes: [] }` — vazio até existir regra **ativa**) e testar um carrinho em dev apontando para o backend de produção (`MEDUSA_BACKEND_URL`/`--base` conforme `architecture/cockpit.md`/`architecture/deploy.md`).
 5. O dono **ativa a regra padrão** — no Cockpit (F2, quando existir) ou via `PUT /admin/conjuntos/regras/:id { "ativa": true }` — quando quiser ligar o benefício de fato.
+
+## Mudança de regra em produção — 17/09/2026
+Com a reprecificação da Lumière (peças a R$ 159), o dono aprovou trocar as 3 regras ativas (padrão e curados Aurora
+e Orvalho) de `total_percentual` 10 para `total_valor` 1900, para o conjunto fechar em R$ 299 redondo. As promoções
+`CONJUNTO-*` sincronizaram para `fixed` 9,50 por unidade. Cupom `CLUBE10` (primeira compra, 1 uso por cliente) criado
+no mesmo dia e convertido pelo gancho com a exclusão de conjunto. Detalhe em `architecture/ads.md` (17/09, noite).

@@ -133,7 +133,7 @@ export function montarGatilhos(
 
 export function tituloGatilho(g: Gatilho): string {
   const colecao = g.colecaoNome ? ` da coleção ${g.colecaoNome}` : ""
-  return `Mais uma peça de ${g.categoriaNome}${colecao} fecha outro conjunto — ${descricaoRegra(g.regra, 2)}.`
+  return `Mais uma peça de ${g.categoriaNome}${colecao} fecha outro conjunto e ganha ${descricaoRegra(g.regra, 2)}.`
 }
 
 // Linha separada para a peça do gatilho (Global Constraints), mesmo formato dos slots da F3.

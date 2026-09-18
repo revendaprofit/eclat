@@ -222,20 +222,27 @@ export function hrefConjunto(card: Pick<CardConjunto, "handle" | "cor">): string
   return `/conjuntos/${card.handle}${card.cor ? `?cor=${encodeURIComponent(card.cor)}` : ""}`
 }
 
-// Texto pt-BR do benefício, para o card e a página do conjunto.
-export function descricaoRegra(regra: RegraStore, n: number): string {
+// Texto pt-BR do benefício, para o card e a página do conjunto. Sempre diz "desconto":
+// a cliente precisa ler que ganha algo, não o valor técnico da regra (decisão do dono, 17/09/2026).
+export function descricaoRegra(regra: RegraStore, _n: number): string {
   switch (regra.tipo_desconto) {
     case "menor_peca_percentual":
-      return `${regra.valor}% na peça de menor valor`
+      return `${regra.valor}% de desconto na peça de menor valor`
     case "menor_peca_valor":
-      return `${formatarReais(regra.valor)} na peça de menor valor`
+      return `${formatarReais(regra.valor)} de desconto na peça de menor valor`
     case "total_percentual":
-      return `${regra.valor}% sobre o conjunto`
-    case "total_valor": {
-      const porPeca = Math.round(regra.valor / n)
-      return `${formatarReais(regra.valor)} no conjunto (${formatarReais(porPeca)} por peça)`
-    }
+      return `${regra.valor}% de desconto no conjunto`
+    case "total_valor":
+      return `${formatarReais(regra.valor)} de desconto no conjunto`
   }
+}
+
+// Frase de economia para o rodapé/card: usa a diferença REAL entre preço cheio e preço com
+// benefício (já calculada com os preços da cor escolhida), não o valor nominal da regra.
+export function fraseEconomia(precoCheio: number, precoComBeneficio: number): string | null {
+  const economia = precoCheio - precoComBeneficio
+  if (economia <= 0) return null
+  return `Você economiza ${formatarReais(economia)} levando o conjunto`
 }
 
 function corComVarianteDisponivel(produto: HttpTypes.StoreProduct, cor: string): boolean {

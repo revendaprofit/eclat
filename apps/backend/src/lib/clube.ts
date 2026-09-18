@@ -27,8 +27,14 @@ export const CLUBE_SAUDACAO = [
   "São poucas peças nesse primeiro lote: quem reservar primeiro leva. No Clube você fica sabendo primeiro da reposição e das próximas cores.",
 ].join("\n")
 
+// Cupom de primeira compra (criado em 17/09/2026: 10%, 1 uso por cliente, não vale para
+// peças em conjunto — o conjunto já sai por R$ 299). Override por env se o código mudar.
+export const CLUBE_CUPOM = process.env.CLUBE_ECLAT_CUPOM || "CLUBE10"
+
 export const CLUBE_CONVITE = [
   `Aqui está a sua entrada no grupo: ${CLUBE_GRUPO_URL}`,
+  "",
+  `E o seu cupom de primeira compra: *${CLUBE_CUPOM}* — 10% na peça avulsa ou no macaquinho, uso único, é só digitar na sacola. O conjunto top + short já sai por R$ 299.`,
   "",
   "Te espero lá 💛",
 ].join("\n")

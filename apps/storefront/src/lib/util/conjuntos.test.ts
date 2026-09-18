@@ -7,6 +7,7 @@ import {
   descricaoRegra,
   elegibilidade,
   formatarReais,
+  fraseEconomia,
   montarCardCurado,
   montarCardPar,
   precoMinDisponivel,
@@ -189,22 +190,29 @@ describe("montarCardCurado", () => {
   })
 })
 
+describe("fraseEconomia", () => {
+  it("usa a diferença real entre preço cheio e com benefício", () => {
+    expect(fraseEconomia(31800, 29900)).toBe("Você economiza R$ 19,00 levando o conjunto")
+    expect(fraseEconomia(29900, 29900)).toBeNull()
+  })
+})
+
 describe("descricaoRegra", () => {
   it("menor_peca_percentual", () => {
-    expect(descricaoRegra({ tipo_desconto: "menor_peca_percentual", valor: 20 }, 2)).toBe("20% na peça de menor valor")
-    expect(descricaoRegra({ tipo_desconto: "menor_peca_percentual", valor: 20 }, 3)).toBe("20% na peça de menor valor")
+    expect(descricaoRegra({ tipo_desconto: "menor_peca_percentual", valor: 20 }, 2)).toBe("20% de desconto na peça de menor valor")
+    expect(descricaoRegra({ tipo_desconto: "menor_peca_percentual", valor: 20 }, 3)).toBe("20% de desconto na peça de menor valor")
   })
   it("menor_peca_valor", () => {
-    expect(descricaoRegra({ tipo_desconto: "menor_peca_valor", valor: 5000 }, 2)).toBe("R$ 50,00 na peça de menor valor")
-    expect(descricaoRegra({ tipo_desconto: "menor_peca_valor", valor: 5000 }, 3)).toBe("R$ 50,00 na peça de menor valor")
+    expect(descricaoRegra({ tipo_desconto: "menor_peca_valor", valor: 5000 }, 2)).toBe("R$ 50,00 de desconto na peça de menor valor")
+    expect(descricaoRegra({ tipo_desconto: "menor_peca_valor", valor: 5000 }, 3)).toBe("R$ 50,00 de desconto na peça de menor valor")
   })
   it("total_percentual", () => {
-    expect(descricaoRegra({ tipo_desconto: "total_percentual", valor: 10 }, 2)).toBe("10% sobre o conjunto")
-    expect(descricaoRegra({ tipo_desconto: "total_percentual", valor: 10 }, 3)).toBe("10% sobre o conjunto")
+    expect(descricaoRegra({ tipo_desconto: "total_percentual", valor: 10 }, 2)).toBe("10% de desconto no conjunto")
+    expect(descricaoRegra({ tipo_desconto: "total_percentual", valor: 10 }, 3)).toBe("10% de desconto no conjunto")
   })
-  it("total_valor: reparte pelo n informado", () => {
-    expect(descricaoRegra({ tipo_desconto: "total_valor", valor: 4500 }, 2)).toBe("R$ 45,00 no conjunto (R$ 22,50 por peça)")
-    expect(descricaoRegra({ tipo_desconto: "total_valor", valor: 4500 }, 3)).toBe("R$ 45,00 no conjunto (R$ 15,00 por peça)")
+  it("total_valor: sempre diz desconto, sem repartir por peça", () => {
+    expect(descricaoRegra({ tipo_desconto: "total_valor", valor: 4500 }, 2)).toBe("R$ 45,00 de desconto no conjunto")
+    expect(descricaoRegra({ tipo_desconto: "total_valor", valor: 4500 }, 3)).toBe("R$ 45,00 de desconto no conjunto")
   })
 })
 

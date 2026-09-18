@@ -34,7 +34,7 @@ export default async function CompleteSet({
           <h2 className="font-serif text-2xl text-eclat-grafite">Complete o conjunto</h2>
           {regra && (
             <p className="mt-1 text-sm text-eclat-grafite/70" data-testid="complete-set-regra">
-              Leve as duas com {descricaoRegra(regra, 2)}
+              Leve as duas e ganhe {descricaoRegra(regra, 2)}
             </p>
           )}
           <ul className="mt-6 grid grid-cols-2 small:grid-cols-3 medium:grid-cols-4 large:grid-cols-6 gap-x-6 gap-y-10">

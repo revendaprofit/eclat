@@ -1,7 +1,7 @@
 "use client"
 
 import { Button } from "@modules/common/components/ui"
-import { descricaoRegra, formatarReais, type RegraStore } from "@lib/util/conjuntos"
+import { descricaoRegra, formatarReais, fraseEconomia, type RegraStore } from "@lib/util/conjuntos"
 
 // Rodapé de compra do conjunto (spec §7.2, ruling 4): preço cheio riscado + total com benefício,
 // texto da regra e o botão "Adicionar o conjunto". Fixo (rodapé) no mobile, painel lateral
@@ -38,7 +38,9 @@ export default function RodapeConjunto({
           {formatarReais(precoComBeneficio)}
         </span>
       </div>
-      <p className="text-xs text-eclat-grafite/70">{descricaoRegra(regra, numPecas)}</p>
+      <p className="text-xs text-eclat-grafite/70" data-testid="rodape-conjunto-regra">
+        {fraseEconomia(precoCheio, precoComBeneficio) ?? descricaoRegra(regra, numPecas)}
+      </p>
       {erro && (
         <p className="text-xs text-red-600" role="alert" data-testid="rodape-conjunto-erro">
           {erro}

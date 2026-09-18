@@ -124,3 +124,9 @@ jitter 0–9 min; 1 mensagem por rodada; falha (ex.: "Connection Closed") → st
 - **F3 (ativação) PENDENTE do dono**: aprovar a agenda, ligar o interruptor, primeiro envio acompanhado.
 - Primeira rodada do job só grava o snapshot (sem eventos); gatilhos passam a valer a partir da 2ª rodada (5 min depois).
 - Validar depois do 1º envio real: `texto_final`, `midia_url_final`, `evolution_msg_id` na linha; e se a foto chegou no grupo.
+
+## Cupom no convite — 17/09/2026
+Decisão do dono: a Camila fixa o cupom no grupo (texto em `docs/marketing/mensagem-fixada-cupom-clube.txt`) **e** o
+robô entrega o cupom na 2ª mensagem (`CLUBE_CONVITE` em `src/lib/clube.ts`, constante `CLUBE_CUPOM`, override por env
+`CLUBE_ECLAT_CUPOM`). Cupom `CLUBE10`: 10%, 1 uso por cliente, não alcança peças em conjunto (conjunto já sai por R$ 299).
+Deploy do backend via `railway up` em 17/09 à noite.
