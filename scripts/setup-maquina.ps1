@@ -23,12 +23,26 @@ if (@("Meu Drive", "My Drive", "OneDrive", "Dropbox") | Where-Object { $Raiz -li
   throw "A raiz esta dentro de uma pasta sincronizada. O clone do git nao pode ficar no Drive/OneDrive/Dropbox."
 }
 
-# 1) Achar a pasta USE.ÉCLAT: o Drive expõe atalhos em <letra>:\.shortcut-targets-by-id\<id>\<nome>
+# 1) Achar a pasta USE.ÉCLAT. Dois casos:
+#    a) quem recebeu a pasta por compartilhamento: <letra>:\.shortcut-targets-by-id\<id>\<nome>
+#    b) quem é dona da pasta: <letra>:\Meu Drive\USE.ÉCLAT (ou "My Drive")
 $use = $null
 foreach ($d in Get-PSDrive -PSProvider FileSystem) {
   $p = Join-Path $d.Root ".shortcut-targets-by-id\$IdPastaDrive"
   if (Test-Path -LiteralPath $p) {
     $use = Get-ChildItem -LiteralPath $p -Directory | Select-Object -First 1
+    if ($use) { break }
+  }
+}
+if (-not $use) {
+  foreach ($d in Get-PSDrive -PSProvider FileSystem) {
+    foreach ($meu in @("Meu Drive", "My Drive")) {
+      $p = Join-Path $d.Root $meu
+      if (Test-Path -LiteralPath $p) {
+        $use = Get-ChildItem -LiteralPath $p -Directory | Where-Object { $_.Name -like "USE.?CLAT" } | Select-Object -First 1
+        if ($use) { break }
+      }
+    }
     if ($use) { break }
   }
 }
