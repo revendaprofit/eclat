@@ -1,6 +1,6 @@
 # Pagamento — Mercado Pago (Parte 4)
 
-Data: 2026-09-17 · Status: **aprovada pelo dono em 2026-09-17** (D1–D4 decididas; D5 em aberto) · Depende de: `feat/dados-fiscais-checkout` (CPF no checkout) · Relaciona-se com: Projeto B (Reversa/estornos), DRE (Fase 5 do Cockpit).
+Data: 2026-09-17 · Status: **aprovada pelo dono em 2026-09-17** (D1–D4 decididas; D5 em aberto) · F0–F3 concluídas e F4 com código pronto em 17/09; go-live pendente do dono (ver progress.md). SOP: `architecture/pagamento.md` · Depende de: `feat/dados-fiscais-checkout` (CPF no checkout) · Relaciona-se com: Projeto B (Reversa/estornos), DRE (Fase 5 do Cockpit).
 
 ## 1. Contexto e objetivo
 

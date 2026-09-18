@@ -1068,3 +1068,10 @@ sem push (push é sempre o dono quem faz).
 - Verificado: Cockpit tsc limpo, 120 testes (vitest); Admin API local devolve os pagamentos com os campos novos (#11 cartão 1x tarifa 533, #12 3x, #13 Pix 212, #14 2x). Pendente do dono: abrir Pedidos e Financeiro no Cockpit apontando pro backend local (ou depois do deploy) e conferir o bloco e a linha.
 - Próximo: **F4 — produção** (credenciais reais no Railway/Vercel, webhook com evento "Order", ativar o provider na região e desligar `pp_system_default`, rotina de reconciliação, trocar o texto "Pix pelo WhatsApp" da PDP, compra real de valor baixo + estorno).
 
+## 2026-09-17 (noite) — Parte 4: F4 — código pronto, go-live aguarda o dono
+- **Reconciliação** (`src/modules/mercadopago/reconciliar.ts` + job `mercadopago-reconciliar`, */10 min): risco 2 (webhook perdido → conclui carrinho via `processPaymentWorkflow`) e risco 3 (Payment capturado sem pedido há >15 min → última tentativa de concluir → estorno automático no MP + `logger.error`). 3 testes de integração novos contra o sandbox (9/9 na suíte).
+- Bug encontrado por eles: `refundPayment` passava BigNumber pra `paraValorMp` → estorno quebrava. Corrigido em `dinheiro.ts` (77 testes unitários).
+- `apps/backend/ativar-mercadopago-regiao.mjs`: simula/aplica a troca de providers da região Brasil pela Admin API (`--aplicar`, `--so-mp` = D3, `--reverter`). Simulação validada no backend local.
+- SOP: `architecture/pagamento.md`. `.env.template` com as variáveis. CLAUDE.md/task_plan atualizados.
+- **Pendente do dono (go-live):** credenciais de produção no Railway (`MERCADOPAGO_ACCESS_TOKEN`, `MERCADOPAGO_WEBHOOK_SECRET`) e Vercel (`NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY`); webhook evento "Order" apontando pro backend do Railway; merge em main + push + `railway up`; "pode aplicar" pra rodar o script com `--so-mp`; Cockpit → Marketing → pagamento = gateway; compra real de valor baixo + estorno pelo Cockpit/MP; `quality_evaluation` do MP (MCP).
+

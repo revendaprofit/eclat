@@ -18,6 +18,11 @@ describe("dinheiro", () => {
       expect(paraValorMp(199.905)).toBe("199.91")
     })
 
+    it("aceita BigNumber do Medusa (objeto com .numeric) e valor bruto {value, precision}", () => {
+      expect(paraValorMp({ numeric: 213.9, raw: { value: "213.9", precision: 20 } } as unknown as number)).toBe("213.90")
+      expect(paraValorMp({ value: "213.9", precision: 20 } as unknown as number)).toBe("213.90")
+    })
+
     it("lança em valor inválido", () => {
       expect(() => paraValorMp("não é número" as unknown as number)).toThrow()
     })

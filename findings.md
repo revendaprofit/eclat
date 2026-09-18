@@ -245,3 +245,9 @@ respeitar está documentado nos comentários de `service.ts` e no §5/§6 da spe
 - Os pedidos locais #13 (Pix, `captured`, tarifa R$ 2,12 = 0,99% de R$ 213,90) e #14 (cartão 2x) não foram criados pelo agente nesta sessão. No sandbox, um Pix com `payer.first_name = "APRO"` pode ser aprovado sozinho depois de um tempo — se foi isso, a tela de espera da F2 concluiu o carrinho como desenhado.
 - Cockpit: as rotas `/api/*` passam pelo mesmo middleware de login Supabase das páginas — sem a sessão do dono não dá pra bater no `/api/finance/dre` localmente. Validação visual do bloco "Pagamento" e da linha de taxas fica com o dono (convenção do projeto).
 
+## Pagamento — F4 (2026-09-17, noite)
+- **`refundPayment` recebe `amount` como BigNumber** (objeto com `.numeric`/`.raw`), não número: `Number(amount)` dava `NaN` → "Valor inválido para o Mercado Pago: [object Object]". Apareceu só no teste de integração do estorno automático — teria quebrado TODO estorno real (inclusive os do Projeto B). `dinheiro.ts` agora trata número, BigNumber e `{value, precision}`.
+- Reconciliação testada de ponta a ponta no sandbox: (a) cartão aprovado sem `complete` → job conclui o carrinho; (b) Pix pendente → consultado e deixado em paz; (c) carrinho apagado depois do pagamento → 1ª passada autoriza/captura (vira Payment), 2ª passada estorna no MP (`status: refunded`) e grava `ESTORNO AUTOMÁTICO` no log.
+- No `query.graph`, `payment_collection.cart` e `payment_collection.order` resolvem pelos links `cart_payment_collection`/`order_payment_collection`; `payment_session.payment` também.
+- O texto "Pagamento por Pix, combinado no WhatsApp" da PDP/checkout/pedido é a configuração `pagamento: pix_whatsapp | gateway` da pré-venda (Cockpit → Marketing) — go-live é trocar pra `gateway`, sem código.
+

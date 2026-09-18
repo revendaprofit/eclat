@@ -9,8 +9,10 @@ import { existsSync, readFileSync } from "node:fs"
 import { join } from "node:path"
 import { medusaIntegrationTestRunner } from "@medusajs/test-utils"
 import type { AxiosInstance } from "axios"
+import { Modules } from "@medusajs/framework/utils"
 import { criarAdmin } from "../helpers/admin"
 import { criarCatalogoBase, type CatalogoBase } from "../helpers/catalogo"
+import { reconciliarPagamentos } from "../../src/modules/mercadopago/reconciliar"
 
 const SEGREDO_WEBHOOK_DE_TESTE = "segredo-webhook-do-teste-de-integracao"
 const PROVIDER = "pp_mercadopago_mercadopago"
@@ -203,6 +205,51 @@ suite({
       // concluiu, isso tem que devolver o MESMO pedido (é assim que a tela de Pix descobre o pedido).
       const deNovo = await api.post(`/store/carts/${carrinho.id}/complete`, {}, { headers: cat.storeHeaders })
       expect(deNovo.data.type).toBe("order")
+    })
+
+    it("Reconciliação (risco 2): cartão aprovado sem complete nem webhook → o job conclui o carrinho", async () => {
+      const carrinho = await carrinhoProntoPraPagar()
+      const token = await tokenDeCartao("APRO")
+      await abrirSessao(carrinho.colecaoId, { metodo: "cartao", cpf: CPF_TESTE, email: "test_user_br@testuser.com", nomeTitular: "APRO", token, bandeira: "master", parcelas: 1 })
+
+      const r = await reconciliarPagamentos(getContainer(), { minutosSemPayment: 0, minutosSemPedido: 0 })
+      expect("pulado" in r).toBe(false)
+      if ("pulado" in r) return
+      expect(r.carrinhosConcluidos).toBeGreaterThanOrEqual(1)
+      expect(r.estornados).toBe(0)
+
+      const cart = (await api.get(`/store/carts/${carrinho.id}?fields=id,completed_at`, { headers: cat.storeHeaders })).data.cart
+      expect(cart.completed_at).not.toBeNull()
+    })
+
+    it("Reconciliação (risco 2): Pix ainda não pago é consultado e deixado em paz (D1)", async () => {
+      const carrinho = await carrinhoProntoPraPagar()
+      await abrirSessao(carrinho.colecaoId, { metodo: "pix", cpf: CPF_TESTE, email: "test_user_br@testuser.com", nomeTitular: "APRO" })
+
+      const r = await reconciliarPagamentos(getContainer(), { minutosSemPayment: 0, minutosSemPedido: 0 })
+      if ("pulado" in r) throw new Error("não devia pular")
+      const cart = (await api.get(`/store/carts/${carrinho.id}?fields=id,completed_at`, { headers: cat.storeHeaders })).data.cart
+      expect(cart.completed_at).toBeNull()
+    })
+
+    it("Reconciliação (risco 3): dinheiro recebido e carrinho que não vira pedido → estorno automático no MP", async () => {
+      const carrinho = await carrinhoProntoPraPagar()
+      const token = await tokenDeCartao("APRO")
+      const sessao = await abrirSessao(carrinho.colecaoId, { metodo: "cartao", cpf: CPF_TESTE, email: "test_user_br@testuser.com", nomeTitular: "APRO", token, bandeira: "master", parcelas: 1 })
+      const orderIdMp = sessao.data.mp_order_id as string
+
+      // Simula o pior caso: o carrinho deixa de existir depois de o MP já ter cobrado.
+      await getContainer().resolve(Modules.CART).deleteCarts([carrinho.id])
+
+      // 1ª passada: autoriza/captura a sessão (vira Payment) mas não há carrinho pra concluir.
+      // 2ª passada: Payment capturado sem pedido → estorno.
+      await reconciliarPagamentos(getContainer(), { minutosSemPayment: 0, minutosSemPedido: 0 })
+      const r = await reconciliarPagamentos(getContainer(), { minutosSemPayment: 0, minutosSemPedido: 0 })
+      if ("pulado" in r) throw new Error("não devia pular")
+      expect(r.estornados).toBeGreaterThanOrEqual(1)
+
+      const noMp = await (await fetch(`https://api.mercadopago.com/v1/orders/${orderIdMp}`, { headers: { authorization: `Bearer ${process.env.MERCADOPAGO_ACCESS_TOKEN}` } })).json()
+      expect(noMp.status).toBe("refunded")
     })
 
     it("Webhook com assinatura inválida é ignorado (carrinho segue aberto)", async () => {

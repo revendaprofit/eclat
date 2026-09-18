@@ -8,9 +8,23 @@
 // Invariante 3 do CLAUDE.md: dinheiro sempre em centavos inteiros, nunca float.
 import type { BigNumberInput } from "@medusajs/framework/types"
 
+/**
+ * O Medusa passa `amount` ora como número, ora como BigNumber (objeto com `.numeric`) ou como
+ * valor bruto `{ value, precision }` — o `refundPayment` chega assim (achado da F4, estorno da
+ * reconciliação falhava com "[object Object]").
+ */
+function paraNumero(valor: BigNumberInput): number {
+  if (typeof valor === "object" && valor !== null) {
+    const o = valor as { numeric?: unknown; value?: unknown }
+    if (typeof o.numeric === "number") return o.numeric
+    if (o.value !== undefined) return Number(o.value)
+  }
+  return Number(valor)
+}
+
 /** Formata um valor do Medusa (BigNumberInput) como a Orders API do MP espera: string, 2 casas. */
 export function paraValorMp(valor: BigNumberInput): string {
-  const numero = Number(valor)
+  const numero = paraNumero(valor)
   if (!Number.isFinite(numero)) {
     throw new Error(`Valor inválido para o Mercado Pago: ${String(valor)}`)
   }
