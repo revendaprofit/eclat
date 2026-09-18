@@ -6,7 +6,10 @@
     contexto-claude\   junction -> Drive USE.ÉCLAT\contexto-claude   (contexto operacional do Claude)
     CLAUDE.md          instruções da raiz, que importam contexto-claude\INDICE.md
 
-  Pode rodar quantas vezes quiser. Nunca apaga nem sobrescreve pasta ou arquivo que já exista.
+  Pode rodar quantas vezes quiser. Nunca apaga nem sobrescreve pasta REAL ou arquivo que já exista.
+  Única coisa que ele refaz: um link (junction) que aponte para o lugar errado, por exemplo depois de a
+  pasta do Drive mudar de nome (USE.ÉCLAT virou ÉCLAT ADMINISTRATIVO em 2026-09-18). Refazer o link não
+  toca no conteúdo do Drive.
   Pré-requisito: Google Drive para computador instalado e o atalho da pasta USE.ÉCLAT adicionado ao "Meu Drive".
 
   Uso:  powershell -ExecutionPolicy Bypass -File scripts\setup-maquina.ps1
