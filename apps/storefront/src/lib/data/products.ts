@@ -4,6 +4,7 @@ import { sdk } from "@lib/config"
 import { applyFilters, computeFacets, paginate, sortByKey, type Facets } from "@lib/util/catalog-facets"
 import { DEFAULT_FILTERS, type FilterState } from "@lib/util/catalog-filters"
 import { entradasPorCor, type ListingEntry } from "@lib/util/listagem-cores"
+import { semOcultos } from "@lib/util/produto-oculto"
 import { getListagemConfig } from "./listagem"
 import { HttpTypes } from "@medusajs/types"
 import { getAuthHeaders, getCacheOptions } from "./cookies"
@@ -82,8 +83,11 @@ export const listProducts = async ({
         cache: "force-cache",
       }
     )
-    .then(({ products, count }) => {
-      const nextPage = count > offset + limit ? pageParam + 1 : null
+    .then((resposta) => {
+      // produto com metadata.oculto some de toda listagem (vitrine, sitemap, feeds);
+      // consulta por handle/id continua enxergando — ver lib/util/produto-oculto.ts
+      const { products, count } = semOcultos(resposta, queryParams)
+      const nextPage = resposta.count > offset + limit ? pageParam + 1 : null
 
       return {
         response: {

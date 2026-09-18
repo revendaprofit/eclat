@@ -5,6 +5,7 @@ import { getPersonaMediaForProduct, personasAtivas } from "@lib/data/personas"
 import { getRegion, listRegions } from "@lib/data/regions"
 import ProductTemplate from "@modules/products/templates"
 import { galeriaDaCor, initialSelection, selectedColor } from "@lib/util/pdp-variants"
+import { isProdutoOculto } from "@lib/util/produto-oculto"
 
 type Props = {
   params: Promise<{ countryCode: string; handle: string }>
@@ -88,6 +89,8 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
     alternates: {
       canonical: path,
     },
+    // produto oculto (compra de teste) abre pelo link, mas não entra no índice do Google
+    ...(isProdutoOculto(product) ? { robots: { index: false, follow: false } } : {}),
     openGraph: {
       title: `${product.title} | use.ÉCLAT`,
       description,
