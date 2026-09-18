@@ -32,6 +32,31 @@ const modulosDePagamento = process.env.MERCADOPAGO_ACCESS_TOKEN
     ]
   : []
 
+// E-mail transacional (architecture/email.md): o Notification Module só ganha o provider do
+// Resend se a chave existir no ambiente. Sem RESEND_API_KEY o backend sobe normal e o
+// subscriber de pedido simplesmente não envia.
+const modulosDeNotificacao = process.env.RESEND_API_KEY
+  ? [
+      {
+        resolve: '@medusajs/medusa/notification',
+        options: {
+          providers: [
+            {
+              resolve: './src/modules/resend',
+              id: 'resend',
+              options: {
+                channels: ['email'],
+                apiKey: process.env.RESEND_API_KEY,
+                from: process.env.RESEND_FROM || 'use.ÉCLAT <pedidos@useeclat.com.br>',
+                replyTo: process.env.RESEND_REPLY_TO || undefined,
+              },
+            },
+          ],
+        },
+      },
+    ]
+  : []
+
 module.exports = defineConfig({
   projectConfig: {
     databaseUrl: process.env.DATABASE_URL,
@@ -49,5 +74,5 @@ module.exports = defineConfig({
   admin: {
     disable: process.env.DISABLE_ADMIN === "true",
   },
-  modules: [{ resolve: "./src/modules/beneficio-conjunto" }, ...modulosDePagamento],
+  modules: [{ resolve: "./src/modules/beneficio-conjunto" }, ...modulosDePagamento, ...modulosDeNotificacao],
 })
