@@ -1,7 +1,7 @@
 # PLANO MESTRE — Lançamento da ÉCLAT (perfil + site + vendas)
 > Consolidado em 01/08/2026 a partir de 3 frentes trabalhadas por agentes
 > (brand/storytelling, auditoria SEO do repo, traffic-masters). Complementa o
-> architecture/ads.md (acessos e infra já concluídos).
+> contexto-claude/eclat-ads-sop.md (acessos e infra já concluídos).
 
 ## Visão geral e ordem de dependências
 

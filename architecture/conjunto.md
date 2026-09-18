@@ -349,4 +349,4 @@ Achados da execução F1 (Task 8, registrados aqui por não terem virado risco r
 Com a reprecificação da Lumière (peças a R$ 159), o dono aprovou trocar as 3 regras ativas (padrão e curados Aurora
 e Orvalho) de `total_percentual` 10 para `total_valor` 1900, para o conjunto fechar em R$ 299 redondo. As promoções
 `CONJUNTO-*` sincronizaram para `fixed` 9,50 por unidade. Cupom `CLUBE10` (primeira compra, 1 uso por cliente) criado
-no mesmo dia e convertido pelo gancho com a exclusão de conjunto. Detalhe em `architecture/ads.md` (17/09, noite).
+no mesmo dia e convertido pelo gancho com a exclusão de conjunto. Detalhe em `contexto-claude/eclat-ads-sop.md` (17/09, noite).
