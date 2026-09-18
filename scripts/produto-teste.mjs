@@ -57,7 +57,27 @@ if (modo === "--despublicar" || modo === "--publicar" || modo === "--remover") {
   process.exit(0)
 }
 
-if (existente) { console.log(`já existe (${existente.id}, ${existente.status}); nada a criar`); process.exit(0) }
+// Estoque idempotente: cria o nível no local; se já existe, só acerta a quantidade.
+async function garantirEstoque(variants, localId) {
+  for (const v of variants) {
+    const item = v.inventory_items?.[0]?.inventory_item_id
+    if (!item) throw new Error(`variante ${v.sku} sem item de estoque`)
+    const corpo = { stocked_quantity: ESTOQUE }
+    await api(`/admin/inventory-items/${item}/location-levels`, { method: "POST", body: { location_id: localId, ...corpo } })
+      .catch(() => api(`/admin/inventory-items/${item}/location-levels/${localId}`, { method: "POST", body: corpo }))
+  }
+}
+
+if (existente) {
+  console.log(`já existe (${existente.id}, ${existente.status}); não crio outro`)
+  if (modo === "--aplicar") {
+    const { product } = await api(`/admin/products/${existente.id}?fields=id,*variants,*variants.inventory_items`)
+    const { stock_locations } = await api("/admin/stock-locations")
+    await garantirEstoque(product.variants, stock_locations[0].id)
+    console.log(`estoque conferido: ${ESTOQUE} por tamanho`)
+  }
+  process.exit(0)
+}
 
 const [{ sales_channels }, { shipping_profiles }, { stock_locations }, { products: [modelo] }] = await Promise.all([
   api("/admin/sales-channels"), api("/admin/shipping-profiles"), api("/admin/stock-locations"),
@@ -97,9 +117,5 @@ console.log(`produto: "${produto.title}" /${HANDLE} | R$ ${PRECO.toFixed(2)} | $
 if (modo !== "--aplicar") { console.log("\nSIMULAÇÃO: nada foi gravado. Rode com --aplicar para criar."); process.exit(0) }
 
 const { product } = await api("/admin/products?fields=id,handle,*variants,*variants.inventory_items", { method: "POST", body: produto })
-for (const v of product.variants) {
-  const item = v.inventory_items?.[0]?.inventory_item_id
-  if (!item) throw new Error(`variante ${v.sku} sem item de estoque`)
-  await api(`/admin/inventory-items/${item}/location-levels`, { method: "POST", body: { location_id: local.id, stocked_quantity: ESTOQUE } })
-}
+await garantirEstoque(product.variants, local.id)
 console.log(`\ncriado: ${product.id}\nlink direto: /br/products/${HANDLE}`)
