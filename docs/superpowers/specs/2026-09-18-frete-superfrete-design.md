@@ -74,7 +74,7 @@ Na região Brasil são criadas três shipping options `price_type: "calculated"`
 
 | Nome na vitrine | `data.id` | Código do tipo |
 |---|---|---|
-| Econômica (Mini Envios) | `mini` | `economica` |
+| Econômica (Mini Envios) | `mini` | `mini` |
 | PAC | `pac` | `pac` |
 | SEDEX | `sedex` | `sedex` |
 
@@ -120,7 +120,7 @@ Exemplo (MG, base R$ 520,00; PAC cotado 14,30; SEDEX cotado 22,10): normal PAC =
 
 Observações:
 - Quando Mini Envios e PAC estão disponíveis e o pedido é grátis, **só a mais barata** zera; a outra cobra a diferença (normalmente PAC − Mini).
-- A `base` é calculada a partir dos itens do `context`. Se o `context` do `calculatePrice` não trouxer os `adjustments` dos itens, o provider busca o carrinho via Query (`cart.items.adjustments`). O plano de implementação começa verificando isso com um teste de integração (carrinho com cupom).
+- A `base` sai dos itens do carrinho. Verificado no core-flows do Medusa 2.15.5: o `context` do `calculatePrice` **não** traz `items.adjustments`, e provider de módulo não recebe o Query da aplicação. O provider busca os descontos pelo container global do framework (`import { container } from "@medusajs/framework"`). Coberto por teste de integração (carrinho com cupom).
 - `is_calculated_price_tax_inclusive: true` (a região Brasil não soma imposto ao frete).
 - O Medusa recalcula métodos de envio calculados quando o carrinho muda; se a cliente cair abaixo do piso, o grátis some. Coberto por teste de integração.
 
@@ -161,7 +161,7 @@ Erros com mensagem clara para o operador: saldo insuficiente ("Sem saldo na Supe
 
 ### 4.8 Embalagem compartilhada
 
-A regra de embalagem precisa ser a mesma na cotação (backend) e na etiqueta (Cockpit), senão a etiqueta custa diferente do cotado. Os dois apps não compartilham pacote hoje. Decisão: **o backend grava o pacote usado no `data` do shipping method** (`data.pacote = { largura, altura, comprimento, peso_kg }`, via `validateFulfillmentData`), e o Cockpit lê esse pacote do pedido. Pedidos sem `data.pacote` (antigos) usam uma cópia mínima da tabela da seção 4.3 em `apps/cockpit/lib/shipping.ts`.
+A regra de embalagem precisa ser a mesma na cotação (backend) e na etiqueta (Cockpit), senão a etiqueta custa diferente do cotado. Os dois apps não compartilham pacote hoje. Decisão: **o backend grava o pacote usado no `data` do shipping method** (`data.pacote = { pecas, largura, altura, comprimento, peso_kg }`, via `validateFulfillmentData`), e o Cockpit lê esse pacote do pedido. O Medusa refaz o preço do método quando o carrinho muda, mas não o `data`; por isso o Cockpit só confia no pacote gravado se `pecas` bater com o pedido. Pedidos sem `data.pacote` (antigos) ou com contagem divergente usam uma cópia mínima da tabela da seção 4.3 em `apps/cockpit/lib/shipping.ts`.
 
 ## 5. Variáveis de ambiente (nomes; valores são do dono)
 
@@ -179,9 +179,9 @@ Header obrigatório em toda chamada: `User-Agent: use.ECLAT (<e-mail de contato>
 
 ## 6. Ativação em produção
 
-Script `apps/backend/src/scripts/ativar-superfrete.ts` (idempotente, com `--dry-run`): vincula o provider ao CD Brasil, cria as três opções calculadas e marca a "Entrega Padrão" como `enabled_in_store = false` (não apaga — pedidos antigos apontam para ela, e ela volta a ser ligada se for preciso desfazer). **Só roda em produção com o "pode aplicar" do dono**, depois do `railway up` com o módulo novo.
+Script `apps/backend/ativar-superfrete.mjs` (idempotente, via Admin API, no padrão do `ativar-mercadopago-regiao.mjs`: sem argumento só simula, `--aplicar` grava): vincula o provider ao CD Brasil, cria as três opções calculadas e marca a "Entrega Padrão" como `enabled_in_store = false` (não apaga — pedidos antigos apontam para ela, e ela volta a ser ligada se for preciso desfazer). **Só roda em produção com o "pode aplicar" do dono**, depois do `railway up` com o módulo novo.
 
-Desfazer: religar a "Entrega Padrão" e desligar as três opções (flag `--desfazer` do mesmo script).
+Desfazer: religar a "Entrega Padrão" e desligar as três opções (`--aplicar --desfazer` no mesmo script).
 
 ## 7. Testes
 
