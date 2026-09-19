@@ -554,7 +554,7 @@ export default function PedidosPage() {
                         title="Gera a etiqueta na transportadora (requer credenciais configuradas)"
                         className="border border-eclat-grafite/40 text-xs uppercase tracking-widest px-4 py-2.5 rounded-md hover:bg-eclat-areia/40 disabled:opacity-50"
                       >
-                        Gerar etiqueta (Melhor Envio)
+                        Gerar etiqueta (SuperFrete)
                       </button>
                     </div>
                     <p className="text-xs text-eclat-grafite/50">

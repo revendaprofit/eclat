@@ -4,6 +4,7 @@ import { validarConferencia, type ConferenciaEnviada } from "@/lib/leitor"
 import { decidirDespacho, type ResultadoEmissao } from "@/lib/fiscal-despacho"
 import { createSupabaseServer } from "@/lib/supabase/server"
 import { carrierCreateLabel } from "@/lib/shipping"
+import { lerDadosFiscais } from "@/lib/dados-fiscais"
 import { sendWhatsappText } from "@/lib/evolution"
 
 // Despacha um pedido: confere as peças (leitor) + emite a NF-e + cria fulfillment + marca envio
@@ -70,6 +71,7 @@ export async function POST(
     // DESLIGADA (interruptor mestre, Bloco 1) não é falha: o despacho prossegue sem nota, mas
     // nunca em silêncio — fica registrado no log e o aviso volta na resposta para o operador ver.
     let avisoFiscal: string | null = null
+    let chaveNfe: string | null = null
     if (body.emitir_nfe !== false) {
       const r = await medusaAdmin("/admin/fiscal/emitir", {
         method: "POST",
@@ -93,6 +95,7 @@ export async function POST(
       }
       if (decisao.fiscal) {
         await medusaMergeOrderMetadata(id, { fiscal: decisao.fiscal })
+        chaveNfe = decisao.fiscal.chave_acesso ?? null
       } else {
         avisoFiscal = decisao.aviso
         console.warn(
@@ -114,20 +117,29 @@ export async function POST(
       )
     }
 
-    // 1) rastreio: transportadora ou manual
+    // 1) rastreio: transportadora (SuperFrete) ou manual
     let label: { tracking_number: string; tracking_url: string; label_url: string } | undefined
     if (body.use_carrier) {
-      const a = order.shipping_address
-      label = await carrierCreateLabel({
-        destino: {
-          nome: [a?.first_name, a?.last_name].filter(Boolean).join(" ") || order.email || "Cliente",
-          telefone: a?.phone ?? null,
-          endereco: a?.address_1 ?? null,
-          cidade: a?.city ?? null,
-          estado: a?.province ?? null,
-          cep: a?.postal_code ?? null,
+      const fiscais = lerDadosFiscais(order)
+      const etiqueta = await carrierCreateLabel(
+        {
+          itens: order.items.map((i) => ({ titulo: [i.title, i.variant_title].filter(Boolean).join(" — "), quantidade: i.quantity, preco_unitario: i.unit_price })),
+          endereco: order.shipping_address,
+          email: order.email ?? null,
+          cpf: fiscais.cpf,
+          numero: fiscais.numero,
+          bairro: fiscais.bairro,
+          display_id: order.display_id ?? null,
+          dados_do_frete: order.shipping_methods?.[0]?.data ?? null,
         },
+        chaveNfe
+      )
+      // Grava o id do frete na SuperFrete ANTES do fulfillment: se ele falhar, o id não se perde
+      // (é o que permitiria cancelar a etiqueta depois e o valor voltar para a carteira).
+      await medusaMergeOrderMetadata(id, {
+        frete: { transportadora: "superfrete", superfrete_id: etiqueta.carrier_order_id, em: new Date().toISOString() },
       })
+      label = { tracking_number: etiqueta.tracking_number, tracking_url: etiqueta.tracking_url, label_url: etiqueta.label_url }
     } else if (body.tracking_number?.trim()) {
       label = {
         tracking_number: body.tracking_number.trim(),
