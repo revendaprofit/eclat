@@ -31,6 +31,11 @@ const GPC_POR_HANDLE: Record<string, string> = {
   meias: "Apparel & Accessories > Clothing > Underwear & Socks > Socks",
   acessorios: "Apparel & Accessories > Clothing Accessories",
 }
+// Acessórios (óculos, meias) são unissex — decisão da sócia em 2026-09-19. As demais peças seguem femininas.
+function feedGender(p: { categories?: { handle?: string | null }[] | null }): "unisex" | "female" {
+  const handles = (p?.categories ?? []).map((c) => c?.handle ?? "")
+  return handles.some((h) => Object.keys(GPC_POR_HANDLE).includes(h)) ? "unisex" : "female"
+}
 function googleCategory(
   p: { title?: string | null; categories?: { handle?: string | null }[] | null },
   type?: string
@@ -87,7 +92,7 @@ ${prevenda.ativa && variantInStock(v) ? `    <g:availability_date>${prevenda.env
     <g:condition>new</g:condition>
     <g:identifier_exists>no</g:identifier_exists>
     <g:google_product_category>${esc(googleCategory(p, type))}</g:google_product_category>
-    <g:gender>female</g:gender>
+    <g:gender>${feedGender(p)}</g:gender>
     <g:age_group>adult</g:age_group>
 ${size ? `    <g:size>${esc(size)}</g:size>\n` : ""}${color ? `    <g:color>${esc(color)}</g:color>\n` : ""}${type ? `    <g:product_type>${esc(type)}</g:product_type>\n` : ""}  </item>`)
     }
