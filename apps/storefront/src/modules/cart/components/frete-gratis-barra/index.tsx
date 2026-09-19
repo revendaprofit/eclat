@@ -23,7 +23,7 @@ const FreteGratisBarra = ({ cart, regras }: { cart: HttpTypes.StoreCart; regras:
     <div className="flex flex-col gap-y-2" data-testid="frete-gratis-barra">
       <span className="text-small-regular text-ui-fg-base">
         {p.atingiu ? (
-          <>Você ganhou <strong>frete grátis</strong> na entrega econômica.</>
+          <>Você ganhou <strong>frete grátis</strong>.</>
         ) : (
           <>Faltam <strong>{reais(p.falta, cart.currency_code)}</strong> para o frete grátis.</>
         )}
