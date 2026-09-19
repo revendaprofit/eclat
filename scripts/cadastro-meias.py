@@ -33,10 +33,8 @@ CATEGORIA = "meias"
 PRECO = 34.90            # reais cheios (Medusa v2) — sócia, 2026-09-19
 TAMANHOS = ["34-38", "39-43"]
 ESTOQUE = 10             # pares por cor e tamanho (20 por cor, 60 no total) — sócia, 2026-09-19
-# PENDENTE (sócia): 95% poliamida + 3% elastano + "3% outras fibras" soma 101%. Preencher com o que está na etiqueta.
-COMPOSICAO = None        # ex.: "95% poliamida, 3% elastano, 2% outras fibras"
-# PENDENTE: peso do par embalado, em gramas (entra na cotação do frete).
-PESO_G = None
+COMPOSICAO = "95% poliamida, 3% elastano, 2% outras fibras"   # sócia, 2026-09-19
+PESO_G = 46              # gramas por par (sócia, 2026-09-19); entra na cotação do frete
 
 # Cores: nome na vitrine; slug = prefixo do arquivo de foto; sku = 3 letras; a/b = as duas metades da bolinha (corpo, punho).
 CORES = [
@@ -110,7 +108,7 @@ class Storage:
 def main():
     print("backend: %s\nmodo: %s" % (BASE, "APLICAR" if APPLY else "SIMULAÇÃO (use --apply para gravar)"))
     pendencias = []
-    if not COMPOSICAO: pendencias.append("COMPOSICAO (a soma informada dá 101%)")
+    if not COMPOSICAO: pendencias.append("COMPOSICAO")
     if not PESO_G: pendencias.append("PESO_G (peso do par embalado, em gramas)")
     fotos = {}
     for c in CORES:
