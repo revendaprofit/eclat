@@ -6,10 +6,13 @@ import CartTotals from "@modules/common/components/cart-totals"
 import Divider from "@modules/common/components/divider"
 import DiscountCode from "@modules/checkout/components/discount-code"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
+import FreteGratisBarra from "@modules/cart/components/frete-gratis-barra"
 import { HttpTypes } from "@medusajs/types"
+import type { RegrasDeFrete } from "@lib/util/frete"
 
 type SummaryProps = {
   cart: HttpTypes.StoreCart
+  regrasDeFrete: RegrasDeFrete | null
 }
 
 function getCheckoutStep(cart: HttpTypes.StoreCart) {
@@ -22,7 +25,7 @@ function getCheckoutStep(cart: HttpTypes.StoreCart) {
   }
 }
 
-const Summary = ({ cart }: SummaryProps) => {
+const Summary = ({ cart, regrasDeFrete }: SummaryProps) => {
   const step = getCheckoutStep(cart)
 
   return (
@@ -30,6 +33,7 @@ const Summary = ({ cart }: SummaryProps) => {
       <Heading level="h2" className="text-[2rem] leading-[2.75rem]">
         Resumo
       </Heading>
+      <FreteGratisBarra cart={cart} regras={regrasDeFrete} />
       <DiscountCode cart={cart} />
       <Divider />
       <CartTotals totals={cart} />
