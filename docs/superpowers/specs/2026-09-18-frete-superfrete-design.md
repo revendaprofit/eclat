@@ -1,6 +1,6 @@
 # Frete e etiquetas — SuperFrete
 
-Data: 2026-09-18 · Status: **desenho aprovado pelo dono em 2026-09-18; aguardando revisão desta spec** · Branch `feat/frete-superfrete` (worktree `../eclat-wt-frete`) · SOP a atualizar: `architecture/envios.md` · Relaciona-se com: Fiscal Brasil NFe (chave da nota na etiqueta), Benefício Conjunto e cupons (base do frete grátis), DRE (linha Frete).
+Data: 2026-09-18 · Status: **aprovada pelo dono em 2026-09-18; F0–F3 concluídas em código em 2026-09-19; go-live (F4) pendente do dono** · Branch `feat/frete-superfrete` (worktree `../eclat-wt-frete`) · SOP a atualizar: `architecture/envios.md` · Relaciona-se com: Fiscal Brasil NFe (chave da nota na etiqueta), Benefício Conjunto e cupons (base do frete grátis), DRE (linha Frete).
 
 ## 1. Contexto e objetivo
 
