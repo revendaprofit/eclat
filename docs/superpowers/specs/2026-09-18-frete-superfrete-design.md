@@ -96,7 +96,7 @@ Peso enviado = soma das peças + embalagem, em kg.
 
 **Mini Envios** (limites da SuperFrete/Correios: até 0,3 kg, altura 1–4 cm, largura 10–16 cm, comprimento 15–24 cm) só é elegível no primeiro caso da tabela, com peso total ≤ 300 g. Na prática: uma peça de até 290 g. Pendência de confirmação física do dono: o saquinho P com uma peça fecha em 4 cm de altura. Se não fechar, basta trocar a constante e o Mini Envios deixa de aparecer.
 
-Para PAC e SEDEX, medidas abaixo do mínimo dos Correios (16 × 4 × 24) são enviadas como estão; a API ajusta ao mínimo tarifável.
+Para PAC e SEDEX, medidas abaixo do mínimo dos Correios (16 × 4 × 24) são enviadas como estão, contando que a API ajuste ao mínimo tarifável. Isso é verificado na F0 com uma chamada real ao sandbox; se a API recusar, `embalagem.ts` passa a elevar as medidas ao mínimo do serviço.
 
 ### 4.4 Regra de preço (`preco.ts`)
 
