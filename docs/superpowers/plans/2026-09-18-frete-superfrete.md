@@ -79,7 +79,7 @@
 - Modify: `docs/superpowers/specs/2026-09-18-frete-superfrete-design.md` (só se a sonda contradisser a spec)
 
 **Interfaces:**
-- Consumes: `SUPERFRETE_TOKEN` (sandbox) e `SUPERFRETE_CONTACT_EMAIL` em `apps/backend/.env`, colocados pelo dono.
+- Consumes: `SUPERFRETE_TOKEN` e `SUPERFRETE_CONTACT_EMAIL` em `apps/backend/.env`, colocados pelo dono. **Decisão do dono em 2026-09-18: sem conta sandbox** — a sonda roda contra a API real (só consulta, sem custo); `SUPERFRETE_SANDBOX=true` continua suportado. **Executada em 2026-09-18:** formato confere, medidas abaixo do mínimo são aceitas, e dentro de MG o SEDEX sai mais barato e mais rápido (origem da Task 7b).
 - Produces: confirmação (ou correção) do formato `{ id, price, delivery_range: { min, max }, has_error }` usado na Task 5.
 
 - [ ] **Step 1: Instalar dependências na worktree**
@@ -1275,6 +1275,141 @@ Expected: PASS, incluindo as suítes antigas.
 
 - [ ] **Step 8: Commit** — `git commit -m "feat(frete): fulfillment provider da SuperFrete"`
 
+### Task 7b: Esconder opção dominada
+
+Decisão do dono em 2026-09-18, depois da sonda F0 (spec §4.4, "Opção dominada"): opção mais cara **e** mais lenta que outra não aparece. Dentro de MG o SEDEX ganha de PAC e Mini Envios nos dois quesitos.
+
+**Files:**
+- Modify: `apps/backend/src/modules/superfrete/preco.ts`, `apps/backend/src/modules/superfrete/service.ts`
+- Test: `apps/backend/src/modules/superfrete/__tests__/preco.unit.spec.ts`, `apps/backend/src/modules/superfrete/__tests__/service.unit.spec.ts`
+
+**Interfaces:**
+- Consumes: `precosNormais`, `SERVICOS`, `Servico`, `Precos`, `Parametros` (Task 4); `Cotacao` tem `{ servico, centavos, prazoMin, prazoMax }` (Task 5).
+- Produces (em `preco.ts`):
+  - `type CotacaoParaVitrine = { servico: Servico; centavos: number; prazoMax: number }`
+  - `semDominadas(normais: Precos, prazos: Partial<Record<Servico, number>>): Precos`
+  - `precosDeVitrine(cotacoes: CotacaoParaVitrine[], p: Parametros): Precos` — `precosNormais` + `semDominadas`. É o que o provider e a rota de prazos (Task 8) usam.
+
+- [ ] **Step 1: Testes que falham — acrescentar ao fim de `preco.unit.spec.ts`**
+
+Trocar o import do topo por `import { aplicarFreteGratis, normalizaUf, pisoPara, precosDeVitrine, precosNormais, semDominadas } from "../preco"` e acrescentar:
+
+```ts
+describe("opção dominada", () => {
+  it("BH: SEDEX mais barato e mais rápido esconde PAC e Mini Envios", () => {
+    expect(semDominadas({ mini: 1690, pac: 2090, sedex: 1490 }, { mini: 8, pac: 5, sedex: 1 })).toEqual({ sedex: 1490 })
+  })
+
+  it("São Paulo: cada uma ganha em preço ou em prazo, ficam as três", () => {
+    const normais = { mini: 1890, pac: 2390, sedex: 3590 }
+    expect(semDominadas(normais, { mini: 8, pac: 5, sedex: 1 })).toEqual(normais)
+  })
+
+  it("mesmo preço de vitrine e prazo pior: some a mais lenta", () => {
+    expect(semDominadas({ mini: 1690, pac: 1690 }, { mini: 8, pac: 5 })).toEqual({ pac: 1690 })
+  })
+
+  it("empate nos dois quesitos mantém as duas", () => {
+    expect(semDominadas({ pac: 1690, sedex: 1690 }, { pac: 3, sedex: 3 })).toEqual({ pac: 1690, sedex: 1690 })
+  })
+
+  it("sem prazo conhecido não dá para comparar: a opção fica", () => {
+    expect(semDominadas({ pac: 2090, sedex: 1490 }, { sedex: 1 })).toEqual({ pac: 2090, sedex: 1490 })
+  })
+
+  it("precosDeVitrine aplica margem, ,90 e tira a dominada (cotação real de BH em 2026-09-18)", () => {
+    const P = { margem: 200, pisoMg: 49900, pisoBrasil: 59900, reservaPac: 2490 }
+    expect(
+      precosDeVitrine(
+        [
+          { servico: "mini", centavos: 1452, prazoMax: 8 },
+          { servico: "pac", centavos: 1871, prazoMax: 5 },
+          { servico: "sedex", centavos: 1191, prazoMax: 1 },
+        ],
+        P
+      )
+    ).toEqual({ sedex: 1490 })
+  })
+})
+```
+
+- [ ] **Step 2: Rodar e ver falhar** — `…jest src/modules/superfrete/__tests__/preco.unit.spec.ts`. Expected: FAIL (`semDominadas` não existe).
+
+- [ ] **Step 3: Implementar em `preco.ts`** (acrescentar ao fim do arquivo)
+
+```ts
+export type CotacaoParaVitrine = { servico: Servico; centavos: number; prazoMax: number }
+
+/**
+ * Tira a opção DOMINADA: mais cara e mais lenta que outra (spec §4.4). A sonda F0 mostrou que dentro
+ * de MG o SEDEX sai mais barato e mais rápido que PAC e Mini — mostrar os três só confunde.
+ * Compara o preço de VITRINE (o ,90 cria empates que a cotação crua não tem). Empate nos dois
+ * quesitos mantém as duas; sem prazo conhecido não há como comparar, e a opção fica.
+ */
+export function semDominadas(normais: Precos, prazos: Partial<Record<Servico, number>>): Precos {
+  const ativos = SERVICOS.filter((s) => typeof normais[s] === "number")
+  const finais: Precos = {}
+  for (const s of ativos) {
+    const dominada = ativos.some((t) => {
+      if (t === s || typeof prazos[t] !== "number" || typeof prazos[s] !== "number") return false
+      const precoT = normais[t] as number
+      const precoS = normais[s] as number
+      const prazoT = prazos[t] as number
+      const prazoS = prazos[s] as number
+      return precoT <= precoS && prazoT <= prazoS && (precoT < precoS || prazoT < prazoS)
+    })
+    if (!dominada) finais[s] = normais[s]
+  }
+  return finais
+}
+
+/** Cotações da SuperFrete → preços que a vitrine pode mostrar (antes do frete grátis). */
+export function precosDeVitrine(cotacoes: CotacaoParaVitrine[], p: Parametros): Precos {
+  const crus: Precos = {}
+  const prazos: Partial<Record<Servico, number>> = {}
+  for (const c of cotacoes) {
+    crus[c.servico] = c.centavos
+    prazos[c.servico] = c.prazoMax
+  }
+  return semDominadas(precosNormais(crus, p), prazos)
+}
+```
+
+- [ ] **Step 4: Rodar e ver passar.** Expected: PASS (16 testes no arquivo).
+
+- [ ] **Step 5: Teste do provider (falha) — acrescentar em `service.unit.spec.ts`, dentro do `describe("provider superfrete")`**
+
+```ts
+  it("opção dominada não se aplica: em BH só o SEDEX aparece, e é ele que fica grátis", async () => {
+    const BH: Cotacao[] = [
+      { servico: "mini", centavos: 1452, prazoMin: 8, prazoMax: 8 },
+      { servico: "pac", centavos: 1871, prazoMin: 5, prazoMax: 5 },
+      { servico: "sedex", centavos: 1191, prazoMin: 1, prazoMax: 1 },
+    ]
+    const normal = provider({ cotacoes: BH })
+    expect((await normal.svc.calculatePrice({ id: "sedex" }, {}, contexto())).calculated_amount).toBe(14.9)
+    await expect(normal.svc.calculatePrice({ id: "pac" }, {}, contexto())).rejects.toMatchObject({ type: "not_allowed" })
+    await expect(normal.svc.calculatePrice({ id: "mini" }, {}, contexto())).rejects.toMatchObject({ type: "not_allowed" })
+
+    const gratis = provider({ cotacoes: BH, base: 52000 })
+    expect((await gratis.svc.calculatePrice({ id: "sedex" }, {}, contexto())).calculated_amount).toBe(0)
+  })
+```
+
+- [ ] **Step 6: Usar `precosDeVitrine` no provider**
+
+Em `service.ts`, no import de `./preco`, trocar `precosNormais` por `precosDeVitrine`. Em `precosNormais_`, trocar o trecho que monta `crus` e chama `precosNormais(crus, parametros)` por:
+
+```ts
+    return precosDeVitrine(cotacoes, parametros)
+```
+
+(`Cotacao` já tem `servico`, `centavos` e `prazoMax`, então casa com `CotacaoParaVitrine` sem conversão. O tipo de retorno do método continua `Promise<Precos>`; remover do import só o que deixar de ser usado.)
+
+- [ ] **Step 7: Rodar todos os testes do módulo e o typecheck** — `…npx jest src/modules/superfrete` e `npx tsc --noEmit -p .`. Expected: PASS, incluindo os casos antigos do provider (neles ninguém é dominado: Mini é mais barato e mais lento, SEDEX mais caro e mais rápido); nenhum erro de tipo em `src/modules/superfrete`.
+
+- [ ] **Step 8: Commit** — `git commit -m "feat(frete): esconde opção de frete dominada (mais cara e mais lenta)"`
+
 ### Task 8: Rotas da loja e teste de integração
 
 **Files:**
@@ -1532,6 +1667,8 @@ import type { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import { ContainerRegistrationKeys, MedusaError } from "@medusajs/framework/utils"
 import { obterCotador } from "../../../../modules/superfrete/cotador"
 import { cabeNoMiniEnvios, montarPacote } from "../../../../modules/superfrete/embalagem"
+import { parametrosDoAmbiente } from "../../../../modules/superfrete/parametros"
+import { precosDeVitrine } from "../../../../modules/superfrete/preco"
 
 export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
   const cartId = req.query.cart_id
@@ -1554,9 +1691,11 @@ export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
   if (cep.length === 8 && cart.items?.length) {
     try {
       const pacote = montarPacote(cart.items.map((i: any) => ({ quantidade: Number(i.quantity), peso_g: i.variant?.weight ?? i.product?.weight ?? null })))
-      for (const c of await obterCotador().cotar(cep, pacote)) {
-        if (c.servico === "mini" && !cabeNoMiniEnvios(pacote)) continue
-        prazos[c.servico] = { min: c.prazoMin, max: c.prazoMax }
+      const cotacoes = (await obterCotador().cotar(cep, pacote)).filter((c) => c.servico !== "mini" || cabeNoMiniEnvios(pacote))
+      // Só as opções que o provider de fato oferece (sem as dominadas — spec §4.4).
+      const visiveis = precosDeVitrine(cotacoes, parametrosDoAmbiente())
+      for (const c of cotacoes) {
+        if (typeof visiveis[c.servico] === "number") prazos[c.servico] = { min: c.prazoMin, max: c.prazoMax }
       }
     } catch {
       // o provider já loga a falha da cotação; aqui o prazo só fica ausente

@@ -96,7 +96,7 @@ Peso enviado = soma das peças + embalagem, em kg.
 
 **Mini Envios** (limites da SuperFrete/Correios: até 0,3 kg, altura 1–4 cm, largura 10–16 cm, comprimento 15–24 cm) só é elegível no primeiro caso da tabela, com peso total ≤ 300 g. Na prática: uma peça de até 290 g. Pendência de confirmação física do dono: o saquinho P com uma peça fecha em 4 cm de altura. Se não fechar, basta trocar a constante e o Mini Envios deixa de aparecer.
 
-Para PAC e SEDEX, medidas abaixo do mínimo dos Correios (16 × 4 × 24) são enviadas como estão, contando que a API ajuste ao mínimo tarifável. Isso é verificado na F0 com uma chamada real ao sandbox; se a API recusar, `embalagem.ts` passa a elevar as medidas ao mínimo do serviço.
+Para PAC e SEDEX, medidas abaixo do mínimo dos Correios (16 × 4 × 24) são enviadas como estão: a sonda F0 (2026-09-18, API real) confirmou que a SuperFrete aceita e tarifa pelo mínimo (eleva o comprimento a 24 cm quando precisa).
 
 ### 4.4 Regra de preço (`preco.ts`)
 
@@ -117,6 +117,8 @@ preço final:
 ```
 
 Exemplo (MG, base R$ 520,00; PAC cotado 14,30; SEDEX cotado 22,10): normal PAC = 1690, normal SEDEX = 2490. Com frete grátis: PAC = 0, SEDEX = 800. Com base R$ 480,00: PAC = 1690, SEDEX = 2490.
+
+**Opção dominada (decisão do dono em 2026-09-18, depois da sonda F0):** uma opção que é mais cara **e** mais lenta que outra não aparece. A sonda mostrou que dentro de MG o SEDEX sai mais barato e mais rápido que PAC e Mini Envios (BH, 1 peça: PAC 18,71 em 5 dias; SEDEX 11,91 em 1 dia; Mini 14,52 em 8 dias). Regra: o serviço `s` some quando existe outro `t` com `normal(t) ≤ normal(s)` e `prazo_max(t) ≤ prazo_max(s)`, sendo pelo menos uma das duas comparações estrita. A comparação usa o preço normal de vitrine (depois da margem e do `,90`) e acontece **antes** do frete grátis — a "mais barata" do frete grátis é escolhida só entre as opções que sobraram. Empate nos dois quesitos mantém as duas. Sem prazo conhecido não há como comparar, e a opção fica. No modo de reserva (só PAC) não há o que comparar.
 
 Observações:
 - Quando Mini Envios e PAC estão disponíveis e o pedido é grátis, **só a mais barata** zera; a outra cobra a diferença (normalmente PAC − Mini).
@@ -203,6 +205,7 @@ Desfazer: religar a "Entrega Padrão" e desligar as três opções (`--aplicar -
 
 ## 9. Riscos e pendências
 
+0. **Sem conta sandbox (decisão do dono em 2026-09-18).** A cotação é testada na API real (consulta, sem custo). O token de produção fica no `.env` local da worktree, fora do git. A verificação da etiqueta (F3) é uma etiqueta real cancelada em seguida; confirmar na documentação da SuperFrete a regra de reembolso do cancelamento antes de emitir.
 1. **Altura do saquinho P (4 cm)** — confirmação física do dono; define se o Mini Envios existe na prática.
 2. **Pesos de embalagem (10 g / 150 g) e capacidade da caixa** — suposições aprovadas no desenho; pedido com muitas peças pode não caber em uma caixa. Fora do escopo tratar mais de um volume; o operador resolve no modo manual.
 3. **Divergência cotado × cobrado na etiqueta** — mitigada por `data.pacote` (seção 4.8); a validação em produção confere os dois valores.
