@@ -135,10 +135,14 @@ GALERIA = {
     # sem recorte. A 1ª e a 2ª foto viram card 9:16 (corta ~8% de cada lado): cabeça, peça e logo ficam dentro.
     ("top-aurora", "grafitti"): [("conjunto aurora", n) for n in [204, 205, 203, 206, 208, 201]],
     ("short-aurora", "telha"): [("conjunto aurora", 7), ("short aurora", 1), ("short aurora", 2), ("short aurora", 4), ("conjunto aurora", 2), ("conjunto aurora", 6)],
-    ("short-aurora", "grafitti"): [("conjunto aurora", n) for n in [208, 205, 207, 203, 202, 201]],
+    # ATENÇÃO (sócia, 19/09/2026): no ensaio Grafitti os SHORTS foram fotografados trocados entre os conjuntos.
+    # Short Orvalho = cós LARGO + "ÉCLAT" na barra -> aparece nas fotos "Conjunto Aurora" Grafitti (top de zíper).
+    # Short Aurora  = cós ESTREITO + nó na barra   -> aparece nas fotos "Conjunto Orvalho" Grafitti (top de alças).
+    # Em Telha não há troca. Os tops seguem o nome do conjunto da foto.
+    ("short-aurora", "grafitti"): [("conjunto orvalho", n) for n in [210, 206, 218, 209, 212, 204]],
     ("top-orvalho", "grafitti"): [("conjunto orvalho", n) for n in [205, 207, 214, 211, 209, 212]],
     ("top-orvalho", "telha"): [("arquivo", "050"), ("arquivo", "060"), ("arquivo", "052"), ("arquivo", "056"), ("conjunto orvalho", 1), ("conjunto orvalho", 2)],   # 050/060/052/056: top Telha com short Grafitti
-    ("short-orvalho", "grafitti"): [("conjunto orvalho", n) for n in [210, 206, 218, 209, 212, 204]],
+    ("short-orvalho", "grafitti"): [("conjunto aurora", n) for n in [208, 205, 207, 203, 202, 201]],
     ("short-orvalho", "telha"): [("conjunto orvalho", 1, (0.285, 0.45, 0.755, 0.92)), ("conjunto orvalho", 1), ("conjunto orvalho", 2)],   # CO3 saiu: corta o short
 }
 
