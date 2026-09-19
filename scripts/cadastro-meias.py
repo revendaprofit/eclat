@@ -9,7 +9,8 @@ Idempotente: se o produto já existe (por handle), só confere fotos, estoque e 
 
 Requisitos: pip install requests pillow
 Credenciais: apps/cockpit/.env.local (MEDUSA_ADMIN_EMAIL/PASSWORD, NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
-Fotos: <raiz>/brand-assets/meias/editadas/<cor>-perfil.png (foto inteira, sem recorte)
+Fotos: <raiz>/brand-assets/meias/editadas/<cor>-perfil-9x16.png — 9:16, a proporção do card da vitrine
+(object-cover): numa foto 3:4 o card cortava a ponta do pé. O fundo foi estendido; a meia não é recortada.
 """
 import hashlib, io, os, sys
 
@@ -116,7 +117,7 @@ def main():
     if not PESO_G: pendencias.append("PESO_G (peso do par embalado, em gramas)")
     fotos = {}
     for c in CORES:
-        p = os.path.join(FOTOS, "%s-perfil.png" % c["slug"])
+        p = os.path.join(FOTOS, "%s-perfil-9x16.png" % c["slug"])
         if os.path.exists(p): fotos[c["slug"]] = p
         else: pendencias.append("foto ausente: %s" % p)
     if pendencias:
@@ -173,6 +174,11 @@ def main():
     todas = [urls[c["slug"]] for c in CORES]
     if existente:
         pid = existente[0]["id"]; print("produto já existe (%s): confiro fotos e estoque" % pid)
+        atuais_img = [i["url"] for i in api.get("/admin/products/%s?fields=id,images.url" % pid)["product"]["images"]]
+        if atuais_img != todas:
+            # o Medusa substitui a lista inteira de imagens
+            api.post("/admin/products/%s" % pid, {"images": [{"url": u} for u in todas], "thumbnail": todas[0]})
+            print("fotos trocadas: %d -> %d" % (len(atuais_img), len(todas)))
     else:
         prod = api.post("/admin/products", {
             "title": TITULO, "handle": HANDLE, "status": "published", "description": descricao(),
@@ -199,7 +205,9 @@ def main():
             try:
                 api.post("/admin/inventory-items/%s/location-levels" % iid, {"location_id": sloc["id"], "stocked_quantity": ESTOQUE})
             except RuntimeError:
-                api.post("/admin/inventory-items/%s/location-levels/%s" % (iid, sloc["id"]), {"stocked_quantity": ESTOQUE})
+                # nível já existe: num produto que já estava no ar NÃO regrava a quantidade (apagaria as vendas do estoque)
+                if not existente:
+                    api.post("/admin/inventory-items/%s/location-levels/%s" % (iid, sloc["id"]), {"stocked_quantity": ESTOQUE})
     print("estoque: %d pares por variante em \"%s\"\nlink: /br/products/%s" % (ESTOQUE, sloc["name"], HANDLE))
 
 if __name__ == "__main__":
