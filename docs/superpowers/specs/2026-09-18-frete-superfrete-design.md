@@ -84,7 +84,7 @@ O stock location "CD Brasil" ganha o vínculo com o provider `superfrete_superfr
 
 ### 4.3 Embalagem (`embalagem.ts`)
 
-Entrada: `context.items` (quantidade e `variant.weight` em gramas; peça sem peso cadastrado conta 300 g).
+Entrada: `context.items` (quantidade e peso em gramas). Peso da peça = `variant.weight`, senão `product.weight`, senão 300 g. Em produção (consulta de 2026-09-18) o peso está cadastrado no produto e nenhuma variante tem peso próprio.
 
 | Peças no carrinho | Embalagem | Dimensões enviadas (cm) | Peso da embalagem |
 |---|---|---|---|

@@ -26,7 +26,7 @@
 ## Achados do levantamento (já verificados no código, não re-derivar)
 
 1. O `context` que o Medusa entrega a `calculatePrice` vem de `cartFieldsForCalculateShippingOptionsPrices`: `id`, `items.*`, `items.variant.weight`, `shipping_address.*` — **sem `items.adjustments`**. Logo o provider não enxerga descontos pelo `context`; ele busca a base pelo Query do container global (`import { container } from "@medusajs/framework"`), já que provider de módulo não recebe o container da aplicação. Task 6 implementa; Task 8 prova com cupom.
-2. `variant.weight` está em **gramas** (`scripts/import-lumiere.py` grava `peso_g`).
+2. Peso em **gramas**. Em produção (consulta de 2026-09-18) o peso está no **produto** (`product.weight`) e nenhuma variante tem `weight`. O cálculo usa `variant.weight ?? product.weight ?? 300 g`. O `context` do `calculatePrice` traz os dois (`items.variant.weight`, `items.product.weight`).
 3. O passo Entrega da vitrine já chama `/store/shipping-options/{id}/calculate` por opção (`modules/checkout/components/shipping/index.tsx`), mas trata preço `0` como ausente (`calculatedPricesMap[id] ? … : "-"`). Frete grátis exige corrigir isso.
 4. Scripts de ativação do repo são `.mjs` na raiz de `apps/backend`, via Admin API, com `--aplicar` (padrão de `ativar-mercadopago-regiao.mjs`). A spec §6 foi alinhada a isso.
 5. O Cockpit lê o pedido por `ORDER_DETAIL_FIELDS` (`apps/cockpit/lib/medusa.ts:711`), com teste de trava em `lib/medusa-order-fields.test.ts`. CPF, número e bairro vêm de `lerDadosFiscais` (`lib/dados-fiscais.ts`). A chave da NFe sai de `decisao.fiscal.chave_acesso` na rota de despacho.
@@ -1000,6 +1000,14 @@ describe("provider superfrete", () => {
     expect(buscarBase).not.toHaveBeenCalled()
   })
 
+  it("sem peso na variante, usa o peso do produto (é onde ele mora em produção)", async () => {
+    const { svc, cotar } = provider()
+    const ctx = contexto()
+    ctx.items = [{ quantity: 1, unit_price: 200, variant: { weight: null }, product: { weight: 200 } }]
+    expect((await svc.calculatePrice({ id: "mini" }, {}, ctx)).calculated_amount).toBe(11.9)
+    expect(cotar).toHaveBeenCalledWith("30130010", { pecas: 1, largura: 15, altura: 4, comprimento: 15, peso_kg: 0.21 })
+  })
+
   it("Mini Envios não se aplica a pacote fora do limite, mesmo que a API cote", async () => {
     const { svc } = provider()
     await expect(svc.calculatePrice({ id: "mini" }, {}, contexto({ qtd: 2 }))).rejects.toMatchObject({ type: "not_allowed" })
@@ -1178,7 +1186,13 @@ export default class SuperfreteProviderService extends AbstractFulfillmentProvid
   }
 
   private pacote_(context: Contexto): Pacote {
-    return montarPacote((context.items ?? []).map((i) => ({ quantidade: Number(i.quantity), peso_g: i.variant?.weight ?? null })))
+    // Em produção o peso mora no PRODUTO; a variante só tem peso quando difere (ex.: produto de teste).
+    return montarPacote(
+      (context.items ?? []).map((i) => ({
+        quantidade: Number(i.quantity),
+        peso_g: i.variant?.weight ?? (i as { product?: { weight?: number | null } }).product?.weight ?? null,
+      }))
+    )
   }
 
   /** Cotações válidas para o pacote, ou `null` se a SuperFrete não respondeu (já logado). */
@@ -1222,7 +1236,7 @@ export default ModuleProvider(Modules.FULFILLMENT, {
 })
 ```
 
-- [ ] **Step 5: Rodar o teste do provider e ver passar.** Expected: PASS (11 testes).
+- [ ] **Step 5: Rodar o teste do provider e ver passar.** Expected: PASS (12 testes).
 
 - [ ] **Step 6: Registrar no `medusa-config.ts`**
 
@@ -1529,7 +1543,7 @@ export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
   const query: any = req.scope.resolve(ContainerRegistrationKeys.QUERY)
   const { data } = await query.graph({
     entity: "cart",
-    fields: ["id", "items.quantity", "items.variant.weight", "shipping_address.postal_code"],
+    fields: ["id", "items.quantity", "items.variant.weight", "items.product.weight", "shipping_address.postal_code"],
     filters: { id: cartId },
   })
   const cart = data[0]
@@ -1539,7 +1553,7 @@ export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
   const cep = String(cart.shipping_address?.postal_code ?? "").replace(/\D/g, "")
   if (cep.length === 8 && cart.items?.length) {
     try {
-      const pacote = montarPacote(cart.items.map((i: any) => ({ quantidade: Number(i.quantity), peso_g: i.variant?.weight ?? null })))
+      const pacote = montarPacote(cart.items.map((i: any) => ({ quantidade: Number(i.quantity), peso_g: i.variant?.weight ?? i.product?.weight ?? null })))
       for (const c of await obterCotador().cotar(cep, pacote)) {
         if (c.servico === "mini" && !cabeNoMiniEnvios(pacote)) continue
         prazos[c.servico] = { min: c.prazoMin, max: c.prazoMax }
