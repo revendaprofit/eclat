@@ -30,6 +30,8 @@ export type EditorialBanner = {
   cta_label?: string
   cta_href?: string
   image_url?: string
+  // 2+ fotos = carrossel de fotos inteiras 2:3 no lugar de `image_url` (que segue como reserva)
+  image_urls?: string[]
   image_side?: "left" | "right"
 }
 
