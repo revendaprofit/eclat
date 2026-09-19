@@ -13,8 +13,8 @@ export const CLUBE_GRUPO_URL =
 
 const GATILHO = /clube|primeira m[ãa]o|quero entrar|lan[çc]amento|vip|em breve|lista/i
 
-// Texto da pré-venda (15/09/2026): loja aberta em pré-venda, envios a partir de 10/10,
-// pagamento por Pix combinado no WhatsApp. Ajustar quando a pré-venda acabar.
+// Texto pós-pré-venda (18/09/2026): loja aberta de verdade, estoque chegou, envios já
+// começaram, pagamento pelo checkout (Mercado Pago). Ajustar de novo se mudar o gateway.
 //
 // Proteção do número (API não oficial): duas mensagens com "digitando…" entre elas,
 // a saudação sem link primeiro e o convite depois, e um teto de respostas por hora.
@@ -22,9 +22,9 @@ const GATILHO = /clube|primeira m[ãa]o|quero entrar|lan[çc]amento|vip|em breve
 export const CLUBE_SAUDACAO = [
   "Oi! Que bom ter você no Clube Éclat ✨",
   "",
-  "A pré-venda da Coleção Lumière já está aberta em useeclat.com.br: você reserva a sua peça agora e os envios começam em 10/10. O pagamento é por Pix, combinado aqui no WhatsApp logo depois do pedido.",
+  "A Coleção Lumière já está disponível em useeclat.com.br, com envios já começando. Você compra pelo site, com Pix ou cartão.",
   "",
-  "São poucas peças nesse primeiro lote: quem reservar primeiro leva. No Clube você fica sabendo primeiro da reposição e das próximas cores.",
+  "São poucas peças nesse primeiro lote: quem garantir primeiro leva. No Clube você fica sabendo primeiro da reposição e das próximas cores.",
 ].join("\n")
 
 // Cupom de primeira compra (criado em 17/09/2026: 10%, 1 uso por cliente, não vale para
