@@ -3,7 +3,8 @@ import { medusaGetOrder, medusaFulfillOrder, medusaMergeOrderMetadata, medusaShi
 import { validarConferencia, type ConferenciaEnviada } from "@/lib/leitor"
 import { decidirDespacho, type ResultadoEmissao } from "@/lib/fiscal-despacho"
 import { createSupabaseServer } from "@/lib/supabase/server"
-import { carrierCreateLabel } from "@/lib/shipping"
+import { carrierCriarFrete, carrierPagarFrete, carrierConsultarFrete } from "@/lib/shipping"
+import { garantirEtiqueta, lerEstadoDoFrete } from "@/lib/etiqueta-segura"
 import { lerDadosFiscais } from "@/lib/dados-fiscais"
 import { sendWhatsappText } from "@/lib/evolution"
 
@@ -17,6 +18,17 @@ import { sendWhatsappText } from "@/lib/evolution"
 // não aqui — é a regra fiscal/legal de maior risco do projeto, e uma route.ts sem teste (como toda
 // route.ts do Cockpit hoje) deixaria um refactor futuro reordenar os blocos e despachar sem nota
 // em silêncio. Aqui a rota fica fina: chama a Admin API, monta o ResultadoEmissao, obedece.
+//
+// A decisão "não pagar a etiqueta em dobro numa retentativa" mora em lib/etiqueta-segura.ts
+// (garantirEtiqueta) pelo mesmo motivo: é dinheiro de verdade, com teste dedicado pra cada situação
+// (retentativa pós-pagamento, timeout, frete cancelado etc.) — ver revisão de 2026-09-19.
+//
+// Trava por pedido (mesma instância do processo): evita que um duplo clique no botão de despachar
+// dispare duas compras de etiqueta ao mesmo tempo para o mesmo pedido. A janela residual — poucos
+// milissegundos entre ler o pedido e gravar "iniciando" no metadata, e o caso de duas instâncias do
+// Cockpit rodando ao mesmo tempo — fica coberta por garantirEtiqueta (que confere o status na
+// SuperFrete antes de comprar de novo); aceitável para uma operação de duas pessoas.
+const emCompra = new Set<string>()
 
 function normalizaWhatsapp(phone: string): string {
   const d = phone.replace(/\D/g, "")
@@ -44,6 +56,12 @@ export async function POST(
     const order = await medusaGetOrder(id)
     if (order.fulfillment_status !== "not_fulfilled") {
       return NextResponse.json({ error: "Este pedido já foi despachado." }, { status: 400 })
+    }
+    if (body.use_carrier && emCompra.has(id)) {
+      return NextResponse.json(
+        { error: "Já existe uma compra de etiqueta em andamento para este pedido. Aguarde e tente de novo." },
+        { status: 409 }
+      )
     }
     const items = order.items.map((i) => ({ id: i.id, quantity: i.quantity }))
 
@@ -117,12 +135,14 @@ export async function POST(
       )
     }
 
-    // 1) rastreio: transportadora (SuperFrete) ou manual
+    // 1) rastreio: transportadora (SuperFrete, com garantirEtiqueta cuidando de nunca pagar em
+    // dobro numa retentativa) ou manual
     let label: { tracking_number: string; tracking_url: string; label_url: string } | undefined
     if (body.use_carrier) {
-      const fiscais = lerDadosFiscais(order)
-      const etiqueta = await carrierCreateLabel(
-        {
+      emCompra.add(id)
+      try {
+        const fiscais = lerDadosFiscais(order)
+        const pedidoParaEtiqueta = {
           itens: order.items.map((i) => ({ titulo: [i.title, i.variant_title].filter(Boolean).join(" — "), quantidade: i.quantity, preco_unitario: i.unit_price })),
           endereco: order.shipping_address,
           email: order.email ?? null,
@@ -131,15 +151,23 @@ export async function POST(
           bairro: fiscais.bairro,
           display_id: order.display_id ?? null,
           dados_do_frete: order.shipping_methods?.[0]?.data ?? null,
-        },
-        chaveNfe
-      )
-      // Grava o id do frete na SuperFrete ANTES do fulfillment: se ele falhar, o id não se perde
-      // (é o que permitiria cancelar a etiqueta depois e o valor voltar para a carteira).
-      await medusaMergeOrderMetadata(id, {
-        frete: { transportadora: "superfrete", superfrete_id: etiqueta.carrier_order_id, em: new Date().toISOString() },
-      })
-      label = { tracking_number: etiqueta.tracking_number, tracking_url: etiqueta.tracking_url, label_url: etiqueta.label_url }
+        }
+        const etiqueta = await garantirEtiqueta(
+          {
+            criar: () => carrierCriarFrete(pedidoParaEtiqueta, chaveNfe),
+            pagar: carrierPagarFrete,
+            consultar: carrierConsultarFrete,
+            // Grava o estado do frete no metadata a cada passo (iniciando/pendente/paga) — ANTES do
+            // fulfillment: se ele falhar, o id/status não se perde (é o que permite a retentativa
+            // acertar sozinha, sem pagar de novo, e o que permitiria cancelar a etiqueta depois).
+            salvar: (estado) => medusaMergeOrderMetadata(id, { frete: estado }),
+          },
+          lerEstadoDoFrete(order.metadata)
+        )
+        label = { tracking_number: etiqueta.tracking_number, tracking_url: etiqueta.tracking_url, label_url: etiqueta.label_url }
+      } finally {
+        emCompra.delete(id)
+      }
     } else if (body.tracking_number?.trim()) {
       label = {
         tracking_number: body.tracking_number.trim(),
