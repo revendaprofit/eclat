@@ -674,6 +674,7 @@ export type OrderAddress = {
   first_name: string | null
   last_name: string | null
   address_1: string | null
+  address_2?: string | null
   city: string | null
   province: string | null
   postal_code: string | null
@@ -694,7 +695,9 @@ export type CockpitOrderDetail = CockpitOrder & {
   // Só o metadata é pedido no `fields` (dados fiscais de fallback) — os demais
   // campos do endereço de cobrança não são usados no Cockpit.
   billing_address: { metadata?: Record<string, unknown> | null } | null
-  shipping_methods: { name: string; total: number }[]
+  // `data` (Task 7): serviço e pacote cotados na compra da etiqueta SuperFrete — ausente em
+  // pedidos antigos ("Entrega Padrão").
+  shipping_methods: { name: string; total: number; data?: Record<string, unknown> | null }[]
   fulfillments: OrderFulfillment[]
   metadata?: Record<string, unknown> | null
   // Pagamentos (Parte 4): lidos por lib/pagamento.ts (método, tarifa real do Mercado Pago).
@@ -711,9 +714,9 @@ export type CockpitOrderDetail = CockpitOrder & {
 export const ORDER_DETAIL_FIELDS =
   "id,display_id,status,payment_status,fulfillment_status,email,customer_id,currency_code,created_at,subtotal,item_subtotal,discount_total,shipping_total,shipping_subtotal,tax_total,total,metadata," +
   "items.id,items.title,items.variant_id,items.variant_sku,items.variant_title,items.quantity,items.detail.quantity,items.unit_price,items.total,items.metadata,items.adjustments.code,items.adjustments.amount," +
-  "shipping_address.first_name,shipping_address.last_name,shipping_address.address_1,shipping_address.city,shipping_address.province,shipping_address.postal_code,shipping_address.country_code,shipping_address.phone,shipping_address.metadata," +
+  "shipping_address.first_name,shipping_address.last_name,shipping_address.address_1,shipping_address.address_2,shipping_address.city,shipping_address.province,shipping_address.postal_code,shipping_address.country_code,shipping_address.phone,shipping_address.metadata," +
   "billing_address.metadata," +
-  "shipping_methods.name,shipping_methods.total," +
+  "shipping_methods.name,shipping_methods.total,shipping_methods.data," +
   "fulfillments.id,fulfillments.shipped_at,fulfillments.delivered_at,fulfillments.canceled_at,fulfillments.labels.tracking_number,fulfillments.labels.tracking_url,fulfillments.labels.label_url," +
   CAMPOS_DE_PAGAMENTO
 
@@ -810,6 +813,29 @@ export async function medusaFulfillOrder(
   return aberto.id
 }
 
+// Monta o corpo de POST .../shipments — função pura, sem rede, para poder testar a regra sem stub
+// de fetch. Grava o label sempre que houver rastreio OU PDF (revisão de 2026-09-19: uma etiqueta paga
+// pode ainda não ter rastreio da SuperFrete, mas já tem o PDF — perder o PDF por causa disso é dinheiro
+// gasto sem nenhuma forma de abrir a etiqueta no Cockpit). Os 3 campos do label são obrigatórios
+// quando há label (architecture/envios.md); nunca inclui outras chaves do objeto de origem (ex.:
+// `carrier_order_id`, que não faz parte do contrato do Medusa).
+export function corpoDoEnvio(
+  items: { id: string; quantity: number }[],
+  label?: { tracking_number?: string; tracking_url?: string; label_url?: string }
+): Record<string, unknown> {
+  const body: Record<string, unknown> = { items }
+  if (label && (label.tracking_number || label.label_url)) {
+    body.labels = [
+      {
+        tracking_number: label.tracking_number ?? "",
+        tracking_url: label.tracking_url ?? "",
+        label_url: label.label_url ?? "",
+      },
+    ]
+  }
+  return body
+}
+
 // Marca o fulfillment como enviado, com rótulo de rastreio (opcional).
 export async function medusaShipFulfillment(
   orderId: string,
@@ -817,8 +843,7 @@ export async function medusaShipFulfillment(
   items: { id: string; quantity: number }[],
   label?: { tracking_number: string; tracking_url: string; label_url: string }
 ): Promise<void> {
-  const body: Record<string, unknown> = { items }
-  if (label?.tracking_number) body.labels = [label]
+  const body = corpoDoEnvio(items, label)
   const r = await medusaAdmin(
     `/admin/orders/${orderId}/fulfillments/${fulfillmentId}/shipments`,
     { method: "POST", body: JSON.stringify(body) }

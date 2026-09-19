@@ -57,6 +57,24 @@ const modulosDeNotificacao = process.env.RESEND_API_KEY
     ]
   : []
 
+// Frete — spec docs/superpowers/specs/2026-09-18-frete-superfrete-design.md §4.1: o provider da
+// SuperFrete só é registrado se o token existir. Ao declarar o módulo de fulfillment à mão, o
+// provider manual deixa de vir por padrão — por isso ele é listado junto (pedidos antigos e o modo
+// manual do Cockpit dependem dele).
+const modulosDeFrete = process.env.SUPERFRETE_TOKEN
+  ? [
+      {
+        resolve: '@medusajs/medusa/fulfillment',
+        options: {
+          providers: [
+            { resolve: '@medusajs/medusa/fulfillment-manual', id: 'manual' },
+            { resolve: './src/modules/superfrete', id: 'superfrete' },
+          ],
+        },
+      },
+    ]
+  : []
+
 module.exports = defineConfig({
   projectConfig: {
     databaseUrl: process.env.DATABASE_URL,
@@ -74,5 +92,5 @@ module.exports = defineConfig({
   admin: {
     disable: process.env.DISABLE_ADMIN === "true",
   },
-  modules: [{ resolve: "./src/modules/beneficio-conjunto" }, ...modulosDePagamento, ...modulosDeNotificacao],
+  modules: [{ resolve: "./src/modules/beneficio-conjunto" }, ...modulosDePagamento, ...modulosDeNotificacao, ...modulosDeFrete],
 })

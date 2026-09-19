@@ -14,6 +14,7 @@ type CartTotalsProps = {
     shipping_subtotal?: number | null
     discount_subtotal?: number | null
     items?: LinhaComAjustes[] | null
+    shipping_methods?: { id: string }[] | null
   }
 }
 
@@ -25,6 +26,7 @@ const CartTotals: React.FC<CartTotalsProps> = ({ totals }) => {
     item_subtotal,
     shipping_subtotal,
     discount_subtotal,
+    shipping_methods,
   } = totals
 
   const grupos = agruparDescontos(totals.items)
@@ -43,7 +45,9 @@ const CartTotals: React.FC<CartTotalsProps> = ({ totals }) => {
         <div className="flex items-center justify-between">
           <span>Frete</span>
           <span data-testid="cart-shipping" data-value={shipping_subtotal || 0}>
-            {convertToLocale({ amount: shipping_subtotal ?? 0, currency_code })}
+            {(shipping_subtotal ?? 0) === 0 && (shipping_methods?.length ?? 0) > 0
+              ? "Grátis"
+              : convertToLocale({ amount: shipping_subtotal ?? 0, currency_code })}
           </span>
         </div>
         {grupos.conjunto > 0 && (

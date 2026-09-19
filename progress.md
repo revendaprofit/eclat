@@ -1110,3 +1110,14 @@ sem push (push é sempre o dono quem faz).
 5. Obter a tabela do contador (perfis tributários/NCM pendentes — risco 3 da spec).
 6. Executar o roteiro de homologação de `architecture/fiscal.md` e anotar o resultado aqui.
 7. `git push`.
+
+## Frete SuperFrete — go-live (dono)
+1. Railway (serviço do backend) → Variables: `SUPERFRETE_CONTACT_EMAIL`, `SUPERFRETE_TOKEN` (produção), `SUPERFRETE_SANDBOX=false`, `SUPERFRETE_FROM_POSTAL_CODE`.
+2. Ambiente do Cockpit: `SUPERFRETE_CONTACT_EMAIL` + as mesmas `SUPERFRETE_TOKEN`/`SUPERFRETE_SANDBOX` + `SUPERFRETE_FROM_*` (remetente completo — `_NAME` com nome E sobrenome, a SuperFrete recusa remetente de uma palavra só —, `_DOCUMENT` = CNPJ, `_PHONE`, `_ADDRESS`, `_NUMBER`, `_COMPLEMENT`, `_DISTRICT`, `_CITY`, `_STATE`, `_POSTAL_CODE`).
+3. Merge/push da branch `feat/frete-superfrete`; backend: `railway up --detach`; deploy da vitrine e do Cockpit.
+4. `node apps/backend/ativar-superfrete.mjs` (simulação) → conferir → dizer "pode aplicar" → `--aplicar`.
+5. Na vitrine: carrinho com CEP de MG e de outra UF, abaixo e acima do piso. Conferir preço `,90`, prazo e "Grátis".
+6. Saldo na carteira da SuperFrete.
+7. Pedido real → Cockpit › Despachar › "Gerar etiqueta (SuperFrete)". Essa primeira etiqueta real É o teste final: conferir o valor debitado da carteira contra o frete cobrado da cliente antes de postar a encomenda; se for só um teste, cancelar a etiqueta pelo painel da SuperFrete antes de postar.
+8. Conferir: rastreio chega no WhatsApp; PDF da etiqueta abre.
+9. Se algo der errado: `node apps/backend/ativar-superfrete.mjs --aplicar --desfazer` volta a "Entrega Padrão".
