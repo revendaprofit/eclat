@@ -123,4 +123,19 @@ describe("provider superfrete", () => {
     expect(await svc.createFulfillment({}, [], undefined, {})).toEqual({ data: {}, labels: [] })
     expect(cotar).not.toHaveBeenCalled()
   })
+
+  it("opção dominada não se aplica: em BH só o SEDEX aparece, e é ele que fica grátis", async () => {
+    const BH: Cotacao[] = [
+      { servico: "mini", centavos: 1452, prazoMin: 8, prazoMax: 8 },
+      { servico: "pac", centavos: 1871, prazoMin: 5, prazoMax: 5 },
+      { servico: "sedex", centavos: 1191, prazoMin: 1, prazoMax: 1 },
+    ]
+    const normal = provider({ cotacoes: BH })
+    expect((await normal.svc.calculatePrice({ id: "sedex" }, {}, contexto())).calculated_amount).toBe(14.9)
+    await expect(normal.svc.calculatePrice({ id: "pac" }, {}, contexto())).rejects.toMatchObject({ type: "not_allowed" })
+    await expect(normal.svc.calculatePrice({ id: "mini" }, {}, contexto())).rejects.toMatchObject({ type: "not_allowed" })
+
+    const gratis = provider({ cotacoes: BH, base: 52000 })
+    expect((await gratis.svc.calculatePrice({ id: "sedex" }, {}, contexto())).calculated_amount).toBe(0)
+  })
 })

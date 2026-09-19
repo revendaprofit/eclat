@@ -1,4 +1,4 @@
-import { aplicarFreteGratis, normalizaUf, pisoPara, precosNormais } from "../preco"
+import { aplicarFreteGratis, normalizaUf, pisoPara, precosDeVitrine, precosNormais, semDominadas } from "../preco"
 import { parametrosDoAmbiente } from "../parametros"
 
 const P = { margem: 200, pisoMg: 49900, pisoBrasil: 59900, reservaPac: 2490 }
@@ -57,5 +57,42 @@ describe("parâmetros do ambiente", () => {
       ...P,
       margem: 300,
     })
+  })
+})
+
+describe("opção dominada", () => {
+  it("BH: SEDEX mais barato e mais rápido esconde PAC e Mini Envios", () => {
+    expect(semDominadas({ mini: 1690, pac: 2090, sedex: 1490 }, { mini: 8, pac: 5, sedex: 1 })).toEqual({ sedex: 1490 })
+  })
+
+  it("São Paulo: cada uma ganha em preço ou em prazo, ficam as três", () => {
+    const normais = { mini: 1890, pac: 2390, sedex: 3590 }
+    expect(semDominadas(normais, { mini: 8, pac: 5, sedex: 1 })).toEqual(normais)
+  })
+
+  it("mesmo preço de vitrine e prazo pior: some a mais lenta", () => {
+    expect(semDominadas({ mini: 1690, pac: 1690 }, { mini: 8, pac: 5 })).toEqual({ pac: 1690 })
+  })
+
+  it("empate nos dois quesitos mantém as duas", () => {
+    expect(semDominadas({ pac: 1690, sedex: 1690 }, { pac: 3, sedex: 3 })).toEqual({ pac: 1690, sedex: 1690 })
+  })
+
+  it("sem prazo conhecido não dá para comparar: a opção fica", () => {
+    expect(semDominadas({ pac: 2090, sedex: 1490 }, { sedex: 1 })).toEqual({ pac: 2090, sedex: 1490 })
+  })
+
+  it("precosDeVitrine aplica margem, ,90 e tira a dominada (cotação real de BH em 2026-09-18)", () => {
+    const P = { margem: 200, pisoMg: 49900, pisoBrasil: 59900, reservaPac: 2490 }
+    expect(
+      precosDeVitrine(
+        [
+          { servico: "mini", centavos: 1452, prazoMax: 8 },
+          { servico: "pac", centavos: 1871, prazoMax: 5 },
+          { servico: "sedex", centavos: 1191, prazoMax: 1 },
+        ],
+        P
+      )
+    ).toEqual({ sedex: 1490 })
   })
 })

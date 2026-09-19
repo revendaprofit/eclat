@@ -20,7 +20,7 @@ import { obterCotador, type Cotador } from "./cotador"
 import { paraValorMedusa } from "./dinheiro"
 import { cabeNoMiniEnvios, montarPacote, type Pacote } from "./embalagem"
 import { parametrosDoAmbiente } from "./parametros"
-import { aplicarFreteGratis, ID_SUPERFRETE, normalizaUf, precosNormais, SERVICOS, type Parametros, type Precos, type Servico } from "./preco"
+import { aplicarFreteGratis, ID_SUPERFRETE, normalizaUf, precosDeVitrine, SERVICOS, type Parametros, type Precos, type Servico } from "./preco"
 
 export type OpcoesSuperfrete = {
   cotador?: Cotador
@@ -162,9 +162,7 @@ export default class SuperfreteProviderService extends AbstractFulfillmentProvid
     const cotacoes = await this.cotar_(cep, pacote)
     // Reserva (spec §4.5): checkout não trava — só PAC, pelo valor fixo, já como preço final de vitrine.
     if (!cotacoes) return { pac: parametros.reservaPac }
-    const crus: Precos = {}
-    for (const c of cotacoes) crus[c.servico] = c.centavos
-    return precosNormais(crus, parametros)
+    return precosDeVitrine(cotacoes, parametros)
   }
 
   private async base_(context: Contexto): Promise<number> {
