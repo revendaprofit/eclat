@@ -1117,7 +1117,7 @@ Pedido da sócia: aba Acessórios com as subcategorias Meias e Óculos de sol. A
 - Feed Google/Meta com a categoria certa para óculos e meias (antes cairiam em Activewear).
 - Sinônimos de busca: `meia`, `óculos de sol`, `óculos escuros`.
 - Feed: acessório sai com `gender` = `unisex` (decisão da sócia: meias e óculos são unissex).
-- Meias (dados da sócia, 2026-09-19): tamanhos 34-39 e 39-43; cores Cinza & Grafitti, Off & Brown, Exército & Brown; 10 pares por tamanho e cor (60 no total). Falta preço, nome e fotos para cadastrar. Óculos: a sócia ainda vai relacionar modelos e nomes.
+- Meias (dados da sócia, 2026-09-19): tamanhos 34-38 e 39-43; cores Cinza & Grafitti, Branco & Brown, Exército & Brown; nome "Meia Cano Médio"; bolinha de cor metade de cada cor; 10 pares por tamanho e cor (60 no total). Falta preço, nome e fotos para cadastrar. Óculos: a sócia ainda vai relacionar modelos e nomes.
 - Testes: storefront 309/309 (28 arquivos); `tsc --noEmit` sem erro.
 
-**Pendências:** renomear "Óculos" para "Óculos de sol" no Cockpit (handle fica `oculos`); cadastrar os produtos (opção `Cor` obrigatória; `Tamanho` opcional — meias 34-38/39-43, óculos sem tamanho); `git push` e deploy da vitrine.
+**Pendências:** renomear "Óculos" para "Óculos de sol" no Cockpit (handle fica `oculos`); cadastrar os produtos (opção `Cor` obrigatória; `Tamanho` opcional — meias 34-38 / 39-43, óculos sem tamanho); `git push` e deploy da vitrine.
