@@ -68,7 +68,7 @@ describe("provider superfrete", () => {
     const ctx = contexto()
     ctx.items = [{ quantity: 1, unit_price: 200, variant: { weight: null }, product: { weight: 200 } }]
     expect((await svc.calculatePrice({ id: "mini" }, {}, ctx)).calculated_amount).toBe(11.9)
-    expect(cotar).toHaveBeenCalledWith("30130010", { pecas: 1, largura: 15, altura: 4, comprimento: 15, peso_kg: 0.21 })
+    expect(cotar).toHaveBeenCalledWith("30130010", { pecas: 1, largura: 15, altura: 4, comprimento: 15, peso_kg: 0.25 })
   })
 
   it("Mini Envios não se aplica a pacote fora do limite, mesmo que a API cote", async () => {
@@ -104,7 +104,7 @@ describe("provider superfrete", () => {
     const { svc } = provider()
     expect(await svc.validateFulfillmentData({ id: "sedex" }, { servico: 999, pacote: "forjado" }, contexto())).toEqual({
       servico: 2,
-      pacote: { pecas: 1, largura: 15, altura: 4, comprimento: 15, peso_kg: 0.21 },
+      pacote: { pecas: 1, largura: 15, altura: 4, comprimento: 15, peso_kg: 0.25 },
       prazo_min: 1,
       prazo_max: 2,
     })
@@ -114,7 +114,7 @@ describe("provider superfrete", () => {
     const { svc } = provider({ cotacoes: new ErroSuperfrete("caiu") })
     expect(await svc.validateFulfillmentData({ id: "pac" }, {}, contexto())).toEqual({
       servico: 1,
-      pacote: { pecas: 1, largura: 15, altura: 4, comprimento: 15, peso_kg: 0.21 },
+      pacote: { pecas: 1, largura: 15, altura: 4, comprimento: 15, peso_kg: 0.25 },
     })
   })
 
