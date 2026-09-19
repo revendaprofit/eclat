@@ -34,3 +34,12 @@ describe("campos de pagamento (Parte 4)", () => {
     }
   )
 })
+
+// Etiqueta SuperFrete (spec 2026-09-18-frete-superfrete-design.md §4.8): o serviço e o pacote cotados
+// vivem em shipping_methods.data. Sem esse caminho no `fields`, toda etiqueta sairia como PAC com o
+// pacote da tabela — e custaria diferente do frete cobrado, em silêncio.
+describe("campos da etiqueta (frete)", () => {
+  it.each(["shipping_methods.data", "shipping_address.address_2"])("ORDER_DETAIL_FIELDS inclui %s", (caminho) => {
+    expect(ORDER_DETAIL_FIELDS.split(",")).toContain(caminho)
+  })
+})
