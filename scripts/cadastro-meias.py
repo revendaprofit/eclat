@@ -136,6 +136,7 @@ def main():
         "sku": "ECL-MEIA-%s-%s" % (c["sku"], t.replace("-", "")),
         "options": {"Tamanho": t, "Cor": c["nome"]},
         "manage_inventory": True, "allow_backorder": False,
+        "weight": PESO_G,   # o frete da SuperFrete lê variant.weight e só depois o peso do produto
         "prices": [{"amount": PRECO, "currency_code": "brl"}],
     } for c in CORES for t in TAMANHOS]
 
