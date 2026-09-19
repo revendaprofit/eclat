@@ -6,9 +6,26 @@ export type Prazos = Partial<Record<ServicoDeFrete, { min: number; max: number }
 
 const centavos = (v?: number | null) => Math.round((v ?? 0) * 100)
 
-/** Mesma base do backend: valor das peças já com desconto, sem o frete. */
-export function baseDoCarrinho(cart: { item_subtotal?: number | null; discount_total?: number | null }): number {
-  return Math.max(0, centavos(cart.item_subtotal) - centavos(cart.discount_total))
+export type ItemDeBase = {
+  unit_price?: number | null
+  quantity?: number | null
+  adjustments?: { amount?: number | null }[] | null
+}
+
+/**
+ * Mesma base do backend (modules/superfrete/base-carrinho.ts `calcularBase`): soma preço × quantidade
+ * de cada linha, subtrai os adjustments DA PRÓPRIA LINHA (cupom e Benefício Conjunto — "amount" é o
+ * desconto da linha inteira, não por unidade) e só arredonda em 0 no TOTAL. NUNCA usar
+ * `cart.discount_total`: esse campo do Medusa soma também descontos de MÉTODO DE FRETE, que não fazem
+ * parte da base do frete grátis (achado da revisão do Task 12).
+ */
+export function baseDoCarrinho(cart: { items?: ItemDeBase[] | null }): number {
+  let base = 0
+  for (const item of cart.items ?? []) {
+    base += centavos(item.unit_price) * (item.quantity ?? 0)
+    for (const a of item.adjustments ?? []) base -= centavos(a.amount)
+  }
+  return Math.max(0, base)
 }
 
 export function progressoFreteGratis(base: number, uf: string | null | undefined, regras: RegrasDeFrete) {
@@ -30,4 +47,9 @@ export function textoPrazo(p?: { min: number; max: number }): string | null {
 export function servicoDaOpcao(opcao: { type?: { code?: string | null } | null }): ServicoDeFrete | null {
   const code = opcao.type?.code
   return code === "mini" || code === "pac" || code === "sedex" ? code : null
+}
+
+/** Casas decimais para exibir um valor em centavos: reais redondos sem decimais, com centavos sempre com 2. */
+export function casasDoValor(centavosDoValor: number): 0 | 2 {
+  return centavosDoValor % 100 === 0 ? 0 : 2
 }
