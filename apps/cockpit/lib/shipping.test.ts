@@ -131,6 +131,28 @@ describe("carrierPagarFrete", () => {
     const { carrierPagarFrete } = await import("./shipping")
     await expect(carrierPagarFrete("ord_1")).rejects.toThrow(MSG_TIMEOUT)
   })
+
+  it("timeout durante a LEITURA DO CORPO da resposta (não só no cabeçalho) também vira a mensagem exata", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => ({
+      ok: true,
+      status: 200,
+      text: async () => { throw abortado() },
+      json: async () => { throw abortado() },
+    })))
+    const { carrierPagarFrete } = await import("./shipping")
+    await expect(carrierPagarFrete("ord_1")).rejects.toThrow(MSG_TIMEOUT)
+  })
+
+  it("sem rastreio ainda na resposta: tracking_number fica vazio, NUNCA cai pro id do frete", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => resposta(200, {
+      success: true, purchase: { status: "pending", orders: [{ id: "ord_1" }] },
+    })))
+    const { carrierPagarFrete } = await import("./shipping")
+    const label = await carrierPagarFrete("ord_1")
+    expect(label.tracking_number).toBe("")
+    expect(label.tracking_url).toBe("")
+    expect(label.carrier_order_id).toBe("ord_1")
+  })
 })
 
 describe("carrierConsultarFrete", () => {
@@ -178,6 +200,21 @@ describe("carrierConsultarFrete", () => {
     expect(await carrierConsultarFrete("ord_1")).toEqual({ status: "canceled", label: null })
   })
 
+  it("status finalizado mas sem rastreio na resposta: tracking_number fica vazio, NUNCA cai pro id do frete", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => resposta(200, { id: "ord_1", status: "released", print: { url: "pdf" } })))
+    const { carrierConsultarFrete } = await import("./shipping")
+    const r = await carrierConsultarFrete("ord_1")
+    expect(r.label?.tracking_number).toBe("")
+    expect(r.label?.tracking_url).toBe("")
+    expect(r.label?.carrier_order_id).toBe("ord_1")
+  })
+
+  it("HTTP 404 (frete não encontrado na SuperFrete): lança erro, NUNCA devolve um resultado 'sem etiqueta'", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => resposta(404, { message: "order not found" })))
+    const { carrierConsultarFrete } = await import("./shipping")
+    await expect(carrierConsultarFrete("ord_1")).rejects.toThrow(/SuperFrete \/api\/v0\/order\/info\/ord_1 → HTTP 404/)
+  })
+
   it("sem token, lança CarrierNotConfigured", async () => {
     vi.stubEnv("SUPERFRETE_TOKEN", "")
     const { carrierConsultarFrete } = await import("./shipping")
@@ -186,6 +223,17 @@ describe("carrierConsultarFrete", () => {
 
   it("SuperFrete não responde a tempo: mensagem exata", async () => {
     vi.stubGlobal("fetch", vi.fn(async () => { throw abortado() }))
+    const { carrierConsultarFrete } = await import("./shipping")
+    await expect(carrierConsultarFrete("ord_1")).rejects.toThrow(MSG_TIMEOUT)
+  })
+
+  it("timeout durante a LEITURA DO CORPO da resposta também vira a mensagem exata", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => ({
+      ok: true,
+      status: 200,
+      text: async () => { throw abortado() },
+      json: async () => { throw abortado() },
+    })))
     const { carrierConsultarFrete } = await import("./shipping")
     await expect(carrierConsultarFrete("ord_1")).rejects.toThrow(MSG_TIMEOUT)
   })

@@ -63,26 +63,30 @@ type RespostaSuperFrete = {
 async function requisitar(path: string, init: RequestInit): Promise<RespostaSuperFrete> {
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS)
-  let r: Response
+  // O timer fica de pé até a LEITURA DO CORPO terminar (r.text()/r.json() aqui dentro do try), não só
+  // até o fetch() devolver os cabeçalhos: um corpo grande ou lento também pode pendurar, e nesse caso
+  // a resposta "foi cobrado?" fica tão em aberto quanto no timeout do próprio fetch(). O `finally` que
+  // limpa o timer envolve a função inteira, e o `catch` que traduz AbortError pra MSG_TIMEOUT também —
+  // um abort no meio da leitura do corpo cai no mesmo lugar que um abort no fetch().
   try {
-    r = await fetch(`${base()}${path}`, { ...init, signal: controller.signal })
+    const r = await fetch(`${base()}${path}`, { ...init, signal: controller.signal })
+    if (!r.ok) {
+      const texto = (await r.text()).slice(0, 300)
+      // "saldo insuficiente" é o texto oficial da SuperFrete pra carteira sem saldo; qualquer outro
+      // erro que só cite "saldo" de passagem (ex.: "saldo devedor de tributos") não pode ser
+      // confundido com isso — vira o erro genérico abaixo, com o texto original visível pro operador.
+      if (r.status === 402 || /saldo\s+insuficiente/i.test(texto)) {
+        throw new Error("Sem saldo na SuperFrete. Recarregue a carteira e tente de novo.")
+      }
+      throw new Error(`SuperFrete ${path} → HTTP ${r.status}: ${texto}`)
+    }
+    return await r.json()
   } catch (e) {
     if ((e as { name?: string })?.name === "AbortError") throw new Error(MSG_TIMEOUT)
     throw e
   } finally {
     clearTimeout(timer)
   }
-  if (!r.ok) {
-    const texto = (await r.text()).slice(0, 300)
-    // "saldo insuficiente" é o texto oficial da SuperFrete pra carteira sem saldo; qualquer outro
-    // erro que só cite "saldo" de passagem (ex.: "saldo devedor de tributos") não pode ser confundido
-    // com isso — vira o erro genérico abaixo, com o texto original visível pro operador.
-    if (r.status === 402 || /saldo\s+insuficiente/i.test(texto)) {
-      throw new Error("Sem saldo na SuperFrete. Recarregue a carteira e tente de novo.")
-    }
-    throw new Error(`SuperFrete ${path} → HTTP ${r.status}: ${texto}`)
-  }
-  return r.json()
 }
 
 const post = (path: string, corpo: unknown) => requisitar(path, { method: "POST", headers: headersPadrao(), body: JSON.stringify(corpo) })
@@ -106,9 +110,11 @@ export async function carrierPagarFrete(id: string): Promise<CarrierLabel> {
   if (!carrierConfigured()) throw new CarrierNotConfigured()
   const compra = await post("/api/v0/checkout", { orders: [id] })
   const emitida = compra?.purchase?.orders?.find((o) => o.id === id) ?? compra?.purchase?.orders?.[0]
+  // Rastreio real ou vazio — NUNCA o id do frete: o id não rastreia nada nos Correios/transportadora,
+  // e um `carrier_order_id` já carrega o id pra quem precisar dele (cancelamento, consulta).
   const rastreio = String(emitida?.tracking ?? "")
   return {
-    tracking_number: rastreio || id,
+    tracking_number: rastreio,
     tracking_url: rastreio ? `https://rastreamento.correios.com.br/app/index.php?objetos=${rastreio}` : "",
     label_url: String(emitida?.print?.url ?? ""),
     carrier_order_id: id,
@@ -127,11 +133,12 @@ export async function carrierConsultarFrete(id: string): Promise<{ status: strin
   const info = await get(`/api/v0/order/info/${id}`)
   const status = String(info?.status ?? "")
   if (!STATUS_COM_ETIQUETA.has(status)) return { status, label: null }
+  // Idem carrierPagarFrete: rastreio real ou vazio, nunca o id do frete.
   const rastreio = String(info?.tracking ?? "")
   return {
     status,
     label: {
-      tracking_number: rastreio || id,
+      tracking_number: rastreio,
       tracking_url: rastreio ? `https://rastreamento.correios.com.br/app/index.php?objetos=${rastreio}` : "",
       label_url: String(info?.print?.url ?? ""),
       carrier_order_id: id,

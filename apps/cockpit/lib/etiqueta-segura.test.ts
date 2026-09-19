@@ -165,7 +165,37 @@ describe("garantirEtiqueta — segurança contra pagar em dobro", () => {
     const label = await garantirEtiqueta(d, atual)
     expect(label).toEqual(LABEL)
     expect(d.criar).toHaveBeenCalledTimes(1)
+    expect(d.consultar).not.toHaveBeenCalled()
     expect(d.salvar).toHaveBeenCalledTimes(3)
+  })
+
+  it("regra 2: se `consultar` falhar (ex.: 404 na SuperFrete), não tenta pagar nem criar — erro propaga", async () => {
+    const atual: EstadoDoFrete = { transportadora: "superfrete", status: "pendente", superfrete_id: "ord_1", em: "2026-09-19T10:00:00.000Z" }
+    const d = deps({
+      consultar: vi.fn(async () => {
+        throw new Error("SuperFrete /api/v0/order/info/ord_1 → HTTP 404: order not found")
+      }),
+    })
+    await expect(garantirEtiqueta(d, atual)).rejects.toThrow("HTTP 404")
+    expect(d.pagar).not.toHaveBeenCalled()
+    expect(d.criar).not.toHaveBeenCalled()
+    expect(d.salvar).not.toHaveBeenCalled()
+  })
+
+  it("consequência de nunca cair pro id como rastreio: 'paga' sem tracking_number NÃO cai na regra 1 — a próxima chamada consulta (regra 2) antes de reusar", async () => {
+    const semRastreioAinda: CarrierLabel = { tracking_number: "", tracking_url: "", label_url: "https://sandbox.superfrete.com/etiqueta.pdf", carrier_order_id: "ord_1" }
+    const d1 = deps({ pagar: vi.fn(async () => semRastreioAinda) })
+    const label1 = await garantirEtiqueta(d1, null)
+    expect(label1).toEqual(semRastreioAinda)
+    const estadoSalvo = (d1.salvar as ReturnType<typeof vi.fn>).mock.calls.at(-1)?.[0] as EstadoDoFrete
+    expect(estadoSalvo.status).toBe("paga")
+    expect(estadoSalvo.tracking_number).toBe("")
+
+    const d2 = deps({ consultar: vi.fn(async () => ({ status: "released", label: LABEL })) })
+    const label2 = await garantirEtiqueta(d2, estadoSalvo)
+    expect(label2).toEqual(LABEL)
+    expect(d2.consultar).toHaveBeenCalledWith("ord_1") // regra 2, não regra 1 (que devolveria sem chamar nada)
+    expect(d2.criar).not.toHaveBeenCalled()
   })
 
   it("regra 4: compra do zero — iniciando → pendente → paga, nessa ordem", async () => {
@@ -239,5 +269,42 @@ describe("garantirEtiqueta — segurança contra pagar em dobro", () => {
     expect(d2.criar).not.toHaveBeenCalled()
     expect(d2.consultar).toHaveBeenCalledWith("ord_1")
     expect(d2.pagar).toHaveBeenCalledWith("ord_1")
+  })
+
+  it("regra 4, `salvar` falha logo depois de `criar` (gravar 'pendente'): erro traz o id pro operador não perder o frete, e NÃO tenta pagar", async () => {
+    const d = deps({
+      salvar: vi.fn(async (estado: EstadoDoFrete) => {
+        if (estado.status === "pendente") throw new Error("Falha de rede ao gravar metadata")
+      }),
+    })
+    let erro: Error | undefined
+    try {
+      await garantirEtiqueta(d, null)
+    } catch (e) {
+      erro = e as Error
+    }
+    expect(erro?.message).toContain("ord_1")
+    expect(erro?.message).toContain("Falha de rede ao gravar metadata")
+    expect(erro?.message).toContain("Nada foi cobrado")
+    expect(d.pagar).not.toHaveBeenCalled()
+  })
+
+  it("regra 4, `salvar` falha depois de `pagar` (gravar 'paga'): o erro propaga, mas a retentativa reaproveita a etiqueta sem pagar de novo", async () => {
+    const d1 = deps({
+      salvar: vi.fn(async (estado: EstadoDoFrete) => {
+        if (estado.status === "paga") throw new Error("Falha ao gravar o metadata final")
+      }),
+    })
+    await expect(garantirEtiqueta(d1, null)).rejects.toThrow("Falha ao gravar o metadata final")
+    expect(d1.pagar).toHaveBeenCalledTimes(1)
+
+    // retentativa: o estado ficou "pendente" (o salvar de "paga" falhou, nunca foi persistido) —
+    // a SuperFrete já mostra a etiqueta liberada, então a regra 2a reaproveita sem pagar de novo.
+    const estadoPendente: EstadoDoFrete = { transportadora: "superfrete", status: "pendente", superfrete_id: "ord_1", em: AGORA }
+    const d2 = deps({ consultar: vi.fn(async () => ({ status: "released", label: LABEL })) })
+    const label = await garantirEtiqueta(d2, estadoPendente)
+    expect(label).toEqual(LABEL)
+    expect(d2.pagar).not.toHaveBeenCalled()
+    // pagar foi chamado UMA vez no total, somando as duas tentativas (só em d1)
   })
 })

@@ -149,7 +149,17 @@ export async function garantirEtiqueta(deps: Deps, atual: EstadoDoFrete | null):
     await deps.salvar({ transportadora: "superfrete", status: "iniciando", em: EPOCH_ZERO })
     throw e
   }
-  await deps.salvar({ transportadora: "superfrete", status: "pendente", superfrete_id: id, em: agora().toISOString() })
+  try {
+    await deps.salvar({ transportadora: "superfrete", status: "pendente", superfrete_id: id, em: agora().toISOString() })
+  } catch (e) {
+    // Este é o único ponto em que uma falha de gravação perde o rastro do frete: "iniciando" já foi
+    // salvo, mas SEM o id — se essa gravação também falhar, ninguém mais sabe que `id` existe. O
+    // frete não foi pago (não custou nada), mas o operador precisa do id pra achar e, se quiser,
+    // cancelar essa etiqueta órfã no painel da SuperFrete.
+    throw new Error(
+      `Frete criado na SuperFrete (id ${id}), mas não consegui gravar no pedido: ${(e as Error).message}. Nada foi cobrado. Tente de novo em 2 minutos; se sobrar um frete pendente no painel da SuperFrete, ele não tem custo.`
+    )
+  }
   // Se `pagar` falhar daqui pra baixo (achado 2: sem saldo, timeout), o estado fica "pendente" com o
   // id gravado — a próxima chamada cai na regra 2 e conserta sozinha (consulta antes de pagar de novo).
   const label = await deps.pagar(id)
