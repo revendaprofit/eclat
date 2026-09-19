@@ -1120,4 +1120,6 @@ Pedido da sócia: aba Acessórios com as subcategorias Meias e Óculos de sol. A
 - Meias (dados da sócia, 2026-09-19): tamanhos 34-38 e 39-43; cores Cinza & Grafitti, Branco & Brown, Exército & Brown; nome "Meia Cano Médio"; bolinha de cor metade de cada cor; 10 pares por tamanho e cor (60 no total). Falta preço, nome e fotos para cadastrar. Óculos: a sócia ainda vai relacionar modelos e nomes.
 - Testes: storefront 309/309 (28 arquivos); `tsc --noEmit` sem erro.
 
+- Cadastro das meias: `scripts/cadastro-meias.py` (simulação por padrão; `--apply` grava). Simulação de 2026-09-19 em produção: produto `meia-cano-medio` ainda não existe, categoria Meias ativa, 6 variantes (`ECL-MEIA-<COR>-<TAM>`), 1 foto por cor (vista de perfil, pedido da sócia), bolinha de cor metade/metade via `swatch_url` em `site_content.cores`. O `--apply` fica travado enquanto faltarem composição (a soma informada dá 101%) e peso do par.
+
 **Pendências:** renomear "Óculos" para "Óculos de sol" no Cockpit (handle fica `oculos`); cadastrar os produtos (opção `Cor` obrigatória; `Tamanho` opcional — meias 34-38 / 39-43, óculos sem tamanho); `git push` e deploy da vitrine.
