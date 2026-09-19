@@ -10,7 +10,7 @@
 - **Subscriber** `src/subscribers/pedido-confirmado.ts` — `order.placed` → template `pedido-confirmado`.
   Como o pedido só nasce com o pagamento aprovado (D1 de architecture/pagamento.md), este e-mail também
   é o "pagamento recebido".
-- **Rota de teste** `POST /admin/email/teste { to, pedido_id? }` — envia o e-mail pelo caminho real, com um
+- **Rota de teste** `POST /admin/email/enviar-exemplo { to, pedido_id? }` — envia o e-mail pelo caminho real, com um
   pedido de exemplo ou um pedido de verdade. Exige sessão admin.
 
 ## E-mails que saem hoje
@@ -34,13 +34,16 @@ Ainda NÃO existem: pedido enviado (rastreio), redefinição de senha, pedido ca
    `Idempotency-Key` no Resend (`pedido-confirmado-<order.id>`).
 3. Todo valor que entra no HTML passa por `esc()`.
 4. Template novo = arquivo em `templates/` + entrada no mapa `TEMPLATES` de `service.ts` + teste unitário.
-5. Imports relativos SEM extensão `.js` (o Jest esconde o erro, o Medusa real quebra — ver architecture/pagamento.md).
+5. Nenhum arquivo de produção pode ter "test" no caminho, nem como parte de palavra ("teste"): o `medusa build`
+   descarta esses arquivos em silêncio (filtro `relativeFileName.includes("test")`). Em 2026-09-18 a rota
+   `admin/email/teste` compilou local, passou no build e deu 404 em produção por isso.
+6. Imports relativos SEM extensão `.js` (o Jest esconde o erro, o Medusa real quebra — ver architecture/pagamento.md).
 
 ## Ordem segura de ativação
 1. Deploy do código SEM `RESEND_API_KEY`: o backend sobe igual a antes (prova que nada quebrou).
 2. Domínio verificado no Resend (registros DNS de DKIM, SPF e MX do subdomínio de envio).
 3. Criar `RESEND_API_KEY` no Railway (redeploy automático). Se o backend não subir, apagar a variável volta ao estado anterior.
-4. `POST /admin/email/teste` para uma caixa real; conferir aparência e se caiu na entrada.
+4. `POST /admin/email/enviar-exemplo` para uma caixa real; conferir aparência e se caiu na entrada.
 5. Compra de teste de ponta a ponta.
 
 ## Testes
