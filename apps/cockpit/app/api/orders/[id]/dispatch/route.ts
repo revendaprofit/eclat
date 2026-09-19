@@ -152,12 +152,17 @@ export async function POST(
           display_id: order.display_id ?? null,
           dados_do_frete: order.shipping_methods?.[0]?.data ?? null,
         }
-        // Estado do frete: relido do Medusa AGORA, nunca do `order` carregado lá no início do
-        // handler — a conferência e a emissão de NF-e já podem ter passado, e é o metadata.frete
-        // gravado por uma execução concorrente nesse meio-tempo (outra instância do Cockpit, ver
-        // comentário acima) que a regra 3 de garantirEtiqueta precisa enxergar para não comprar uma
-        // segunda etiqueta.
-        const estadoAtual = lerEstadoDoFrete((await medusaGetOrder(id)).metadata)
+        // Pedido relido do Medusa AGORA, nunca o `order` carregado lá no início do handler — a
+        // conferência e a emissão de NF-e já podem ter passado. Duas checagens nessa cópia fresca:
+        // (1) fulfillment_status — se uma execução concorrente (outra instância do Cockpit) já
+        // despachou o pedido nesse meio-tempo, aborta aqui, ANTES de gastar dinheiro com uma etiqueta
+        // pra um pedido que já foi enviado; (2) metadata.frete, que a regra 3 de garantirEtiqueta
+        // precisa enxergar para não comprar uma segunda etiqueta. Uma leitura só, não duas.
+        const pedidoFresco = await medusaGetOrder(id)
+        if (pedidoFresco.fulfillment_status !== "not_fulfilled") {
+          return NextResponse.json({ error: "Este pedido já foi despachado." }, { status: 400 })
+        }
+        const estadoAtual = lerEstadoDoFrete(pedidoFresco.metadata)
         const etiqueta = await garantirEtiqueta(
           {
             criar: () => carrierCriarFrete(pedidoParaEtiqueta, chaveNfe),

@@ -813,6 +813,29 @@ export async function medusaFulfillOrder(
   return aberto.id
 }
 
+// Monta o corpo de POST .../shipments — função pura, sem rede, para poder testar a regra sem stub
+// de fetch. Grava o label sempre que houver rastreio OU PDF (revisão de 2026-09-19: uma etiqueta paga
+// pode ainda não ter rastreio da SuperFrete, mas já tem o PDF — perder o PDF por causa disso é dinheiro
+// gasto sem nenhuma forma de abrir a etiqueta no Cockpit). Os 3 campos do label são obrigatórios
+// quando há label (architecture/envios.md); nunca inclui outras chaves do objeto de origem (ex.:
+// `carrier_order_id`, que não faz parte do contrato do Medusa).
+export function corpoDoEnvio(
+  items: { id: string; quantity: number }[],
+  label?: { tracking_number?: string; tracking_url?: string; label_url?: string }
+): Record<string, unknown> {
+  const body: Record<string, unknown> = { items }
+  if (label && (label.tracking_number || label.label_url)) {
+    body.labels = [
+      {
+        tracking_number: label.tracking_number ?? "",
+        tracking_url: label.tracking_url ?? "",
+        label_url: label.label_url ?? "",
+      },
+    ]
+  }
+  return body
+}
+
 // Marca o fulfillment como enviado, com rótulo de rastreio (opcional).
 export async function medusaShipFulfillment(
   orderId: string,
@@ -820,8 +843,7 @@ export async function medusaShipFulfillment(
   items: { id: string; quantity: number }[],
   label?: { tracking_number: string; tracking_url: string; label_url: string }
 ): Promise<void> {
-  const body: Record<string, unknown> = { items }
-  if (label?.tracking_number) body.labels = [label]
+  const body = corpoDoEnvio(items, label)
   const r = await medusaAdmin(
     `/admin/orders/${orderId}/fulfillments/${fulfillmentId}/shipments`,
     { method: "POST", body: JSON.stringify(body) }
