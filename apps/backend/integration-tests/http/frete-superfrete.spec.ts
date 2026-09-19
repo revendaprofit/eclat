@@ -207,10 +207,28 @@ medusaIntegrationTestRunner({
       expect(r.data).toEqual({ prazos: { pac: { min: 5, max: 6 }, sedex: { min: 1, max: 2 } } })
     })
 
-    it("prazos sem CEP ou com a SuperFrete fora do ar voltam vazios, nunca erro", async () => {
+    it("prazos sem CEP voltam vazios, nunca erro", async () => {
       const cart = (await api.post("/store/carts", { region_id: cat.regionId, sales_channel_id: cat.salesChannelId }, { headers: cat.storeHeaders })).data.cart
       await api.post(`/store/carts/${cart.id}/line-items`, { variant_id: cat.top.variantId, quantity: 1 }, { headers: cat.storeHeaders })
       expect((await api.get(`/store/frete/prazos?cart_id=${cart.id}`, { headers: cat.storeHeaders })).data).toEqual({ prazos: {} })
+    })
+
+    it("prazos com a SuperFrete fora do ar voltam vazios, nunca erro", async () => {
+      foraDoAr = true
+      const id = await carrinho([{ variantId: cat.top.variantId, quantity: 1 }])
+      const r = await api.get(`/store/frete/prazos?cart_id=${id}`, { headers: cat.storeHeaders })
+      expect(r.status).toBe(200)
+      expect(r.data).toEqual({ prazos: {} })
+    })
+
+    it("GET /store/frete/prazos sem cart_id → 400", async () => {
+      const r = await api.get("/store/frete/prazos", { headers: cat.storeHeaders }).catch((e) => e.response)
+      expect(r.status).toBe(400)
+    })
+
+    it("GET /store/frete/prazos com cart_id inexistente → 404", async () => {
+      const r = await api.get("/store/frete/prazos?cart_id=cart_inexistente", { headers: cat.storeHeaders }).catch((e) => e.response)
+      expect(r.status).toBe(404)
     })
   },
 })

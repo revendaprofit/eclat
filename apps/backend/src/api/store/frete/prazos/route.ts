@@ -9,11 +9,12 @@ import { parametrosDoAmbiente } from "../../../../modules/superfrete/parametros"
 import { precosDeVitrine } from "../../../../modules/superfrete/preco"
 
 export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
+  res.setHeader("Cache-Control", "no-store")
+
   const cartId = req.query.cart_id
   if (typeof cartId !== "string" || !cartId.trim()) {
     throw new MedusaError(MedusaError.Types.INVALID_DATA, "cart_id é obrigatório.")
   }
-  res.setHeader("Cache-Control", "no-store")
 
   const query: any = req.scope.resolve(ContainerRegistrationKeys.QUERY)
   const { data } = await query.graph({
@@ -35,8 +36,12 @@ export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
       for (const c of cotacoes) {
         if (typeof visiveis[c.servico] === "number") prazos[c.servico] = { min: c.prazoMin, max: c.prazoMax }
       }
-    } catch {
-      // o provider já loga a falha da cotação; aqui o prazo só fica ausente
+    } catch (e) {
+      // Esta rota chama `obterCotador()` direto (não passa por `cotar_` do provider, que é quem
+      // loga lá) — sem isto, SuperFrete fora do ar ou token ausente ficaria mudo. Nunca logar
+      // token, CPF ou conteúdo do carrinho: a mensagem do cliente HTTP já vem sem eles.
+      const logger: any = req.scope.resolve(ContainerRegistrationKeys.LOGGER)
+      logger.error(`[superfrete] prazos indisponíveis: ${(e as Error).message}`)
     }
   }
   res.json({ prazos })
