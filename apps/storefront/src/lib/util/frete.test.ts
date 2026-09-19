@@ -22,6 +22,11 @@ describe("frete na vitrine", () => {
     expect(progressoFreteGratis(99900, "MG", REGRAS).percentual).toBe(100)
   })
 
+  it("piso zero (campanha de frete grátis para todos): atingiu, 100%, sem NaN", () => {
+    expect(progressoFreteGratis(0, "MG", { piso_mg: 0, piso_brasil: 59900 })).toEqual({ piso: 0, falta: 0, atingiu: true, percentual: 100 })
+    expect(progressoFreteGratis(12000, "SP", { piso_mg: 49900, piso_brasil: 0 })).toEqual({ piso: 0, falta: 0, atingiu: true, percentual: 100 })
+  })
+
   it("texto do prazo", () => {
     expect(textoPrazo({ min: 5, max: 6 })).toBe("Chega em 5 a 6 dias úteis")
     expect(textoPrazo({ min: 2, max: 2 })).toBe("Chega em 2 dias úteis")

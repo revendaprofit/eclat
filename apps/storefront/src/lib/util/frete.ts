@@ -14,6 +14,9 @@ export function baseDoCarrinho(cart: { item_subtotal?: number | null; discount_t
 export function progressoFreteGratis(base: number, uf: string | null | undefined, regras: RegrasDeFrete) {
   const sigla = (uf ?? "").trim().toUpperCase().replace(/^BR-/, "")
   const piso = sigla === "MG" ? regras.piso_mg : regras.piso_brasil
+  if (piso <= 0) {
+    return { piso, falta: 0, atingiu: true, percentual: 100 }
+  }
   const falta = Math.max(0, piso - base)
   return { piso, falta, atingiu: falta === 0, percentual: Math.min(100, Math.floor((base / piso) * 100)) }
 }
