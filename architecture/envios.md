@@ -78,11 +78,23 @@ antes de qualquer chamada — erro de dado não gasta saldo).
 - Exige CPF/CNPJ no pedido. Sem CPF, sem saldo, endereço inválido ou erro da SuperFrete, o despacho NÃO
   acontece (o fulfillment não chega a ser criado) e o modo manual segue disponível.
 - A compra é uma máquina de estados gravada em `order.metadata.frete` (`lib/etiqueta-segura.ts`,
-  `garantirEtiqueta`): `iniciando` → `pendente` (com `superfrete_id`) → `paga` (com rastreio e PDF). Uma
-  retentativa nunca paga duas vezes: já paga com rastreio → reaproveita sem chamar a API; id gravado →
-  consulta o status antes de decidir pagar (só paga o que está `pending`); `canceled` → libera uma compra
-  nova; `iniciando` com menos de 2 minutos → recusa nova tentativa; se `criar` falhou, a tentativa
-  seguinte não fica presa nos 2 minutos.
+  `garantirEtiqueta`): `iniciando` → `pendente` (com `superfrete_id`) → `paga` (com rastreio e/ou PDF).
+  Três fatos aprendidos com a etiqueta real comprada e cancelada pelo dono em 2026-09-19:
+  - **O status da SuperFrete atrasa alguns segundos em relação ao pagamento** (`GET .../order/info/{id}`
+    respondeu `pending` por alguns segundos logo depois de um `/checkout` que já tinha sido aceito). Por
+    isso um pedido `pendente` que a consulta diz `pending` espera 8s e confere de novo antes de decidir
+    pagar — um único `pending` não prova que não foi pago.
+  - **Uma etiqueta já registrada como `paga` nunca volta a pagar nem a criar outra**, não importa o que a
+    consulta diga depois (inclusive `pending`) — só `canceled` é motivo pra parar e pedir conferência
+    manual; qualquer outro status vira só uma tentativa a mais de achar o rastreio.
+  - **O rastreio pode estar vazio na hora do pagamento** (a resposta do `/checkout` trouxe o PDF mas
+    `tracking` vazio). Por isso toda compra bem-sucedida busca o rastreio logo em seguida (até 3
+    consultas, ~12 s no total) — e pode continuar vazio: nesse caso o despacho segue registrado só com o
+    PDF, e a mensagem de WhatsApp ao cliente sai sem código de rastreio.
+  Trava de duplo pagamento: já paga com rastreio → reaproveita sem chamar a API (zero chamadas); id
+  gravado sem confirmação → consulta (com a espera de 8s acima) antes de decidir pagar; `canceled` →
+  libera uma compra nova; `iniciando` com menos de 2 minutos → recusa nova tentativa; se `criar` falhou, a
+  tentativa seguinte não fica presa nos 2 minutos.
 - Trava de despacho em memória por pedido (`lib/trava-despacho.ts`), no TOPO da rota de despacho: um
   segundo clique no mesmo pedido recebe HTTP 409 sem nenhum efeito, nem NFe. Limite conhecido: vale para
   UMA instância do Cockpit; entre instâncias, quem protege a etiqueta é a releitura do pedido feita antes
@@ -95,5 +107,6 @@ antes de qualquer chamada — erro de dado não gasta saldo).
   Valores só no ambiente — este repositório é público.
 - Pendências conhecidas: não há botão de cancelar etiqueta no Cockpit (o id da SuperFrete fica só em
   `metadata.frete.superfrete_id`; cancelar hoje é pelo painel da SuperFrete ou por `POST
-  /api/v0/order/cancel`, só antes de postar, com estorno na carteira) nem re-consulta de rastreio depois
-  do despacho.
+  /api/v0/order/cancel`, só antes de postar, com estorno na carteira). A busca de rastreio só acontece
+  durante a compra (até ~12s); se ainda faltar depois disso, não há uma re-consulta automática depois do
+  despacho — o operador confere manualmente no painel da SuperFrete e atualiza o pedido, se precisar.

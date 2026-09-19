@@ -8,6 +8,7 @@ const LABEL: CarrierLabel = {
   label_url: "https://sandbox.superfrete.com/etiqueta.pdf",
   carrier_order_id: "ord_1",
 }
+const SEM_RASTREIO: CarrierLabel = { tracking_number: "", tracking_url: "", label_url: "https://sandbox.superfrete.com/etiqueta.pdf", carrier_order_id: "ord_1" }
 const AGORA = "2026-09-19T12:00:00.000Z"
 
 function deps(overrides: Partial<Deps> = {}): Deps {
@@ -16,6 +17,7 @@ function deps(overrides: Partial<Deps> = {}): Deps {
     pagar: vi.fn(async () => LABEL),
     consultar: vi.fn(async () => ({ status: "pending", label: null })),
     salvar: vi.fn(async () => {}),
+    esperar: vi.fn(async () => {}),
     agora: () => new Date(AGORA),
     ...overrides,
   }
@@ -97,12 +99,92 @@ describe("garantirEtiqueta — segurança contra pagar em dobro", () => {
     expect(d.salvar).not.toHaveBeenCalled()
   })
 
-  it("regra 2a: frete pendente e a SuperFrete já mostra etiqueta liberada — confere e NÃO paga de novo", async () => {
+  // ---- Regra A (revisão 2026-09-19 com API real): "paga" sem rastreio ainda -----------------------
+  // A API real devolveu tracking VAZIO no /checkout e "pending" por alguns segundos no /order/info
+  // logo depois de um pagamento que já tinha sido aceito — o status da SuperFrete é EVENTUALMENTE
+  // CONSISTENTE. Uma etiqueta que NÓS já registramos como paga nunca pode voltar a pagar ou criar,
+  // não importa o que a consulta disser (exceto "canceled", que é a única forma de escapar do "paga").
+
+  it("achado 1 (API real): 'paga' sem rastreio + consulta fica 'pending' o tempo todo — NÃO paga de novo, NÃO cria outro, devolve a etiqueta registrada (com o PDF)", async () => {
+    const atual: EstadoDoFrete = {
+      transportadora: "superfrete", status: "paga", superfrete_id: "ord_1",
+      label_url: SEM_RASTREIO.label_url, em: "2026-09-19T10:00:00.000Z",
+    }
+    const d = deps({ consultar: vi.fn(async () => ({ status: "pending", label: null })) })
+    const label = await garantirEtiqueta(d, atual)
+    expect(label).toEqual(SEM_RASTREIO)
+    expect(d.pagar).not.toHaveBeenCalled()
+    expect(d.criar).not.toHaveBeenCalled()
+    expect(d.consultar).toHaveBeenCalledTimes(3) // esgota as tentativas de achar rastreio (TENTATIVAS_RASTREIO)
+    expect(d.esperar).toHaveBeenCalledWith(4000)
+  })
+
+  it("'paga' sem rastreio + a SuperFrete acha o rastreio na 2ª tentativa — devolve com rastreio e grava de novo", async () => {
+    const atual: EstadoDoFrete = {
+      transportadora: "superfrete", status: "paga", superfrete_id: "ord_1",
+      label_url: SEM_RASTREIO.label_url, em: "2026-09-19T10:00:00.000Z",
+    }
+    let chamada = 0
+    const d = deps({
+      consultar: vi.fn(async () => {
+        chamada++
+        return chamada < 2 ? { status: "pending", label: null } : { status: "released", label: LABEL }
+      }),
+    })
+    const label = await garantirEtiqueta(d, atual)
+    expect(label).toEqual(LABEL)
+    expect(d.consultar).toHaveBeenCalledTimes(2)
+    expect(d.esperar).toHaveBeenCalledWith(4000)
+    expect(d.pagar).not.toHaveBeenCalled()
+    expect(d.criar).not.toHaveBeenCalled()
+    expect(d.salvar).toHaveBeenCalledTimes(1)
+    expect(d.salvar).toHaveBeenCalledWith({
+      transportadora: "superfrete", status: "paga", superfrete_id: "ord_1",
+      tracking_number: LABEL.tracking_number, tracking_url: LABEL.tracking_url, label_url: LABEL.label_url,
+      em: AGORA,
+    })
+  })
+
+  it("'paga' sem rastreio + `consultar` falha: devolve a etiqueta já registrada, NÃO lança, NÃO paga de novo (dinheiro já gasto — o operador precisa conseguir terminar)", async () => {
+    const atual: EstadoDoFrete = {
+      transportadora: "superfrete", status: "paga", superfrete_id: "ord_1",
+      label_url: SEM_RASTREIO.label_url, em: "2026-09-19T10:00:00.000Z",
+    }
+    const d = deps({
+      consultar: vi.fn(async () => {
+        throw new Error("SuperFrete /api/v0/order/info/ord_1 → HTTP 500")
+      }),
+    })
+    const label = await garantirEtiqueta(d, atual)
+    expect(label).toEqual(SEM_RASTREIO)
+    expect(d.pagar).not.toHaveBeenCalled()
+    expect(d.criar).not.toHaveBeenCalled()
+    expect(d.salvar).not.toHaveBeenCalled()
+  })
+
+  it("'paga' sem rastreio + consulta devolve 'canceled': lança erro de etiqueta cancelada — nunca compra outra sozinho sobre um registro pago", async () => {
+    const atual: EstadoDoFrete = {
+      transportadora: "superfrete", status: "paga", superfrete_id: "ord_1",
+      label_url: SEM_RASTREIO.label_url, em: "2026-09-19T10:00:00.000Z",
+    }
+    const d = deps({ consultar: vi.fn(async () => ({ status: "canceled", label: null })) })
+    await expect(garantirEtiqueta(d, atual)).rejects.toThrow(
+      "A etiqueta ord_1 consta como CANCELADA na SuperFrete. Confira o painel antes de tentar de novo; para comprar outra, limpe o frete do pedido."
+    )
+    expect(d.pagar).not.toHaveBeenCalled()
+    expect(d.criar).not.toHaveBeenCalled()
+  })
+
+  // ---- Regra B (antiga regra 2): "pendente" + id — agora com 2ª checagem depois de esperar --------
+
+  it("regra B: '1ª consulta released' — confere e NÃO paga de novo (sem precisar esperar)", async () => {
     const atual: EstadoDoFrete = { transportadora: "superfrete", status: "pendente", superfrete_id: "ord_1", em: "2026-09-19T10:00:00.000Z" }
     const d = deps({ consultar: vi.fn(async () => ({ status: "released", label: LABEL })) })
     const label = await garantirEtiqueta(d, atual)
     expect(label).toEqual(LABEL)
     expect(d.consultar).toHaveBeenCalledWith("ord_1")
+    expect(d.consultar).toHaveBeenCalledTimes(1)
+    expect(d.esperar).not.toHaveBeenCalled()
     expect(d.pagar).not.toHaveBeenCalled()
     expect(d.criar).not.toHaveBeenCalled()
     expect(d.salvar).toHaveBeenCalledTimes(1)
@@ -117,17 +199,39 @@ describe("garantirEtiqueta — segurança contra pagar em dobro", () => {
     })
   })
 
-  it("regra 2b: frete criado mas nunca chegou a pagar (pending na SuperFrete) — paga com o MESMO id, não cria outro", async () => {
+  it("regra B: 1ª consulta 'pending', 2ª (depois de esperar 8s) 'released' — NÃO paga de novo", async () => {
+    const atual: EstadoDoFrete = { transportadora: "superfrete", status: "pendente", superfrete_id: "ord_1", em: "2026-09-19T10:00:00.000Z" }
+    let chamada = 0
+    const d = deps({
+      consultar: vi.fn(async () => {
+        chamada++
+        return chamada === 1 ? { status: "pending", label: null } : { status: "released", label: LABEL }
+      }),
+    })
+    const label = await garantirEtiqueta(d, atual)
+    expect(label).toEqual(LABEL)
+    expect(d.pagar).not.toHaveBeenCalled()
+    expect(d.criar).not.toHaveBeenCalled()
+    expect(d.consultar).toHaveBeenCalledTimes(2)
+    expect(d.esperar).toHaveBeenCalledTimes(1)
+    expect(d.esperar).toHaveBeenCalledWith(8000)
+    expect(d.salvar).toHaveBeenCalledTimes(1)
+  })
+
+  it("regra B: 'pending' nas duas consultas (não é só lentidão de status, é mesmo não pago) — só então paga, com o MESMO id, não cria outro", async () => {
     const atual: EstadoDoFrete = { transportadora: "superfrete", status: "pendente", superfrete_id: "ord_1", em: "2026-09-19T10:00:00.000Z" }
     const d = deps({ consultar: vi.fn(async () => ({ status: "pending", label: null })) })
     const label = await garantirEtiqueta(d, atual)
     expect(label).toEqual(LABEL)
+    expect(d.consultar).toHaveBeenCalledTimes(2)
+    expect(d.esperar).toHaveBeenCalledTimes(1)
+    expect(d.esperar).toHaveBeenCalledWith(8000)
+    expect(d.pagar).toHaveBeenCalledTimes(1)
     expect(d.pagar).toHaveBeenCalledWith("ord_1")
     expect(d.criar).not.toHaveBeenCalled()
-    expect(d.salvar).toHaveBeenCalledTimes(1)
   })
 
-  it("regra 2c: frete cancelado na SuperFrete — comprar um novo é legítimo (passa pela regra 4 inteira)", async () => {
+  it("regra B: 'canceled' na 1ª consulta — comprar um novo é legítimo (passa pela regra 4 inteira)", async () => {
     const atual: EstadoDoFrete = { transportadora: "superfrete", status: "pendente", superfrete_id: "ord_1", em: "2026-09-19T10:00:00.000Z" }
     const d = deps({ consultar: vi.fn(async () => ({ status: "canceled", label: null })) })
     const label = await garantirEtiqueta(d, atual)
@@ -137,7 +241,22 @@ describe("garantirEtiqueta — segurança contra pagar em dobro", () => {
     expect(d.salvar).toHaveBeenCalledTimes(3)
   })
 
-  it("regra 2d: status desconhecido/inesperado na SuperFrete — não paga nem cria, avisa o operador", async () => {
+  it("regra B: 'canceled' só na 2ª consulta (depois do 'pending' inicial) — também cai na regra 4", async () => {
+    const atual: EstadoDoFrete = { transportadora: "superfrete", status: "pendente", superfrete_id: "ord_1", em: "2026-09-19T10:00:00.000Z" }
+    let chamada = 0
+    const d = deps({
+      consultar: vi.fn(async () => {
+        chamada++
+        return chamada === 1 ? { status: "pending", label: null } : { status: "canceled", label: null }
+      }),
+    })
+    const label = await garantirEtiqueta(d, atual)
+    expect(label).toEqual(LABEL)
+    expect(d.criar).toHaveBeenCalledTimes(1)
+    expect(d.pagar).toHaveBeenCalledWith("ord_1")
+  })
+
+  it("regra B: status desconhecido/inesperado na 1ª consulta — não paga nem cria, avisa o operador", async () => {
     const atual: EstadoDoFrete = { transportadora: "superfrete", status: "pendente", superfrete_id: "ord_1", em: "2026-09-19T10:00:00.000Z" }
     const d = deps({ consultar: vi.fn(async () => ({ status: "on_hold", label: null })) })
     await expect(garantirEtiqueta(d, atual)).rejects.toThrow(
@@ -146,6 +265,20 @@ describe("garantirEtiqueta — segurança contra pagar em dobro", () => {
     expect(d.pagar).not.toHaveBeenCalled()
     expect(d.criar).not.toHaveBeenCalled()
     expect(d.salvar).not.toHaveBeenCalled()
+  })
+
+  it("regra B: status desconhecido só depois do 'pending' inicial (na 2ª consulta) — também avisa o operador", async () => {
+    const atual: EstadoDoFrete = { transportadora: "superfrete", status: "pendente", superfrete_id: "ord_1", em: "2026-09-19T10:00:00.000Z" }
+    let chamada = 0
+    const d = deps({
+      consultar: vi.fn(async () => {
+        chamada++
+        return chamada === 1 ? { status: "pending", label: null } : { status: "on_hold", label: null }
+      }),
+    })
+    await expect(garantirEtiqueta(d, atual)).rejects.toThrow('está com status "on_hold"')
+    expect(d.pagar).not.toHaveBeenCalled()
+    expect(d.criar).not.toHaveBeenCalled()
   })
 
   it("regra 3a: compra 'iniciando' há menos de 2 minutos — bloqueia, ZERO chamadas (corrige o achado 3: duplo clique)", async () => {
@@ -169,7 +302,7 @@ describe("garantirEtiqueta — segurança contra pagar em dobro", () => {
     expect(d.salvar).toHaveBeenCalledTimes(3)
   })
 
-  it("regra 2: se `consultar` falhar (ex.: 404 na SuperFrete), não tenta pagar nem criar — erro propaga", async () => {
+  it("regra B: se `consultar` falhar na 1ª consulta (ex.: 404 na SuperFrete), não tenta pagar nem criar — erro propaga", async () => {
     const atual: EstadoDoFrete = { transportadora: "superfrete", status: "pendente", superfrete_id: "ord_1", em: "2026-09-19T10:00:00.000Z" }
     const d = deps({
       consultar: vi.fn(async () => {
@@ -182,23 +315,9 @@ describe("garantirEtiqueta — segurança contra pagar em dobro", () => {
     expect(d.salvar).not.toHaveBeenCalled()
   })
 
-  it("consequência de nunca cair pro id como rastreio: 'paga' sem tracking_number NÃO cai na regra 1 — a próxima chamada consulta (regra 2) antes de reusar", async () => {
-    const semRastreioAinda: CarrierLabel = { tracking_number: "", tracking_url: "", label_url: "https://sandbox.superfrete.com/etiqueta.pdf", carrier_order_id: "ord_1" }
-    const d1 = deps({ pagar: vi.fn(async () => semRastreioAinda) })
-    const label1 = await garantirEtiqueta(d1, null)
-    expect(label1).toEqual(semRastreioAinda)
-    const estadoSalvo = (d1.salvar as ReturnType<typeof vi.fn>).mock.calls.at(-1)?.[0] as EstadoDoFrete
-    expect(estadoSalvo.status).toBe("paga")
-    expect(estadoSalvo.tracking_number).toBe("")
+  // ---- Regra 4 (compra do zero) ---------------------------------------------------------------
 
-    const d2 = deps({ consultar: vi.fn(async () => ({ status: "released", label: LABEL })) })
-    const label2 = await garantirEtiqueta(d2, estadoSalvo)
-    expect(label2).toEqual(LABEL)
-    expect(d2.consultar).toHaveBeenCalledWith("ord_1") // regra 2, não regra 1 (que devolveria sem chamar nada)
-    expect(d2.criar).not.toHaveBeenCalled()
-  })
-
-  it("regra 4: compra do zero — iniciando → pendente → paga, nessa ordem", async () => {
+  it("regra 4: compra do zero — iniciando → pendente → paga, nessa ordem (etiqueta já vem com rastreio: sem busca extra)", async () => {
     const ordem: string[] = []
     const d = deps({
       criar: vi.fn(async () => {
@@ -216,6 +335,7 @@ describe("garantirEtiqueta — segurança contra pagar em dobro", () => {
     const label = await garantirEtiqueta(d, null)
     expect(label).toEqual(LABEL)
     expect(ordem).toEqual(["salvar:iniciando", "criar", "salvar:pendente", "pagar:ord_1", "salvar:paga"])
+    expect(d.esperar).not.toHaveBeenCalled() // já tinha rastreio, não precisou procurar
     expect(d.salvar).toHaveBeenNthCalledWith(1, { transportadora: "superfrete", status: "iniciando", em: AGORA })
     expect(d.salvar).toHaveBeenNthCalledWith(2, { transportadora: "superfrete", status: "pendente", superfrete_id: "ord_1", em: AGORA })
     expect(d.salvar).toHaveBeenNthCalledWith(3, {
@@ -227,6 +347,47 @@ describe("garantirEtiqueta — segurança contra pagar em dobro", () => {
       label_url: LABEL.label_url,
       em: AGORA,
     })
+  })
+
+  it("regra 4, `pagar` devolve SEM rastreio (achado 3, API real): grava 'paga' (sem rastreio) ANTES de procurar — nunca fica só 'pendente' esperando", async () => {
+    const ordem: string[] = []
+    const d = deps({
+      pagar: vi.fn(async () => SEM_RASTREIO),
+      esperar: vi.fn(async (ms: number) => {
+        ordem.push(`esperar:${ms}`)
+      }),
+      consultar: vi.fn(async () => {
+        ordem.push("consultar")
+        return { status: "released", label: LABEL }
+      }),
+      salvar: vi.fn(async (estado: EstadoDoFrete) => {
+        ordem.push(`salvar:${estado.status}:${estado.tracking_number ? "com-rastreio" : "sem-rastreio"}`)
+      }),
+    })
+    const label = await garantirEtiqueta(d, null)
+    expect(label).toEqual(LABEL)
+    expect(ordem).toEqual([
+      "salvar:iniciando:sem-rastreio",
+      "salvar:pendente:sem-rastreio",
+      "salvar:paga:sem-rastreio", // grava PAGO mesmo sem rastreio, ANTES de procurar (item C)
+      "esperar:4000",
+      "consultar",
+      "salvar:paga:com-rastreio", // achou rastreio, grava de novo
+    ])
+    expect(d.criar).toHaveBeenCalledTimes(1)
+    expect(d.pagar).toHaveBeenCalledTimes(1)
+  })
+
+  it("regra 4, `pagar` devolve sem rastreio e a SuperFrete nunca acha em 3 tentativas: devolve com tracking_number vazio e o PDF, sem lançar", async () => {
+    const d = deps({
+      pagar: vi.fn(async () => SEM_RASTREIO),
+      consultar: vi.fn(async () => ({ status: "pending", label: null })),
+    })
+    const label = await garantirEtiqueta(d, null)
+    expect(label).toEqual(SEM_RASTREIO)
+    expect(d.consultar).toHaveBeenCalledTimes(3)
+    expect(d.esperar).toHaveBeenCalledTimes(3)
+    expect(d.esperar).toHaveBeenCalledWith(4000)
   })
 
   it("regra 4, `criar` falha: grava 'iniciando' com data zerada para NÃO travar a próxima tentativa por 2 minutos", async () => {
@@ -261,7 +422,8 @@ describe("garantirEtiqueta — segurança contra pagar em dobro", () => {
     expect(d1.salvar).toHaveBeenCalledTimes(2)
     expect(d1.salvar).toHaveBeenNthCalledWith(2, { transportadora: "superfrete", status: "pendente", superfrete_id: "ord_1", em: AGORA })
 
-    // retentativa: já existe estado "pendente" com o id — não cria outro frete, só consulta e paga o mesmo.
+    // retentativa: já existe estado "pendente" com o id — não cria outro frete; como a consulta some
+    // continua "pending" nas duas checagens (regra B), só então paga, com o mesmo id.
     const estadoPendente: EstadoDoFrete = { transportadora: "superfrete", status: "pendente", superfrete_id: "ord_1", em: AGORA }
     const d2 = deps({ consultar: vi.fn(async () => ({ status: "pending", label: null })) })
     const label = await garantirEtiqueta(d2, estadoPendente)
@@ -299,7 +461,7 @@ describe("garantirEtiqueta — segurança contra pagar em dobro", () => {
     expect(d1.pagar).toHaveBeenCalledTimes(1)
 
     // retentativa: o estado ficou "pendente" (o salvar de "paga" falhou, nunca foi persistido) —
-    // a SuperFrete já mostra a etiqueta liberada, então a regra 2a reaproveita sem pagar de novo.
+    // a SuperFrete já mostra a etiqueta liberada, então a regra B reaproveita sem pagar de novo.
     const estadoPendente: EstadoDoFrete = { transportadora: "superfrete", status: "pendente", superfrete_id: "ord_1", em: AGORA }
     const d2 = deps({ consultar: vi.fn(async () => ({ status: "released", label: LABEL })) })
     const label = await garantirEtiqueta(d2, estadoPendente)

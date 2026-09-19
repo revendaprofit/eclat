@@ -37,6 +37,12 @@ import { sendWhatsappText } from "@/lib/evolution"
 // o mesmo pedido ao mesmo tempo poderiam emitir duas notas; aceitável hoje porque o Cockpit roda numa
 // instância só (arquitetura atual — sinalizar se isso mudar).
 
+// Revisão de 2026-09-19 (API real): a busca de rastreio pode esperar até ~8s (regra B) + até 3×4s
+// (regra C) além do tempo normal das chamadas à SuperFrete e ao Medusa — um despacho com etiqueta
+// pode passar de 20s. Em runtime serverless (Vercel), o limite padrão de 10-15s cortaria a resposta
+// no meio da compra; 60s dá folga confortável.
+export const maxDuration = 60
+
 function normalizaWhatsapp(phone: string): string {
   const d = phone.replace(/\D/g, "")
   if (d.startsWith("55")) return d
