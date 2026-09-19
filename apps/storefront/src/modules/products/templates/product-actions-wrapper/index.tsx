@@ -12,11 +12,13 @@ export default async function ProductActionsWrapper({
   region,
   colorMap,
   measureTable,
+  semMedidas,
 }: {
   id: string
   region: HttpTypes.StoreRegion
   colorMap: ColorMap
   measureTable?: MeasureTable | null
+  semMedidas?: boolean
 }) {
   const product = await listProducts({
     queryParams: { id: [id] },
@@ -27,5 +29,5 @@ export default async function ProductActionsWrapper({
     return null
   }
 
-  return <ProductActions product={product} region={region} colorMap={colorMap} measureTable={measureTable} />
+  return <ProductActions product={product} region={region} colorMap={colorMap} measureTable={measureTable} semMedidas={semMedidas} />
 }

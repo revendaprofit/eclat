@@ -1110,3 +1110,12 @@ sem push (push é sempre o dono quem faz).
 5. Obter a tabela do contador (perfis tributários/NCM pendentes — risco 3 da spec).
 6. Executar o roteiro de homologação de `architecture/fiscal.md` e anotar o resultado aqui.
 7. `git push`.
+
+## Acessórios na vitrine (2026-09-19)
+Pedido da sócia: aba Acessórios com as subcategorias Meias e Óculos de sol. A árvore já existia em produção (`acessorios` → `oculos`, `meias`), vazia; a aba aparece sozinha com o primeiro produto publicado. O que entrou em código (branch `feat/acessorios-vitrine`, worktree `../eclat-wt-acessorios`):
+- PDP de acessório sem tabela de medidas deixa de mostrar a tabela fixa Busto/Cintura/Quadril e o link "Guia de medidas" (`hidesMeasures`).
+- Feed Google/Meta com a categoria certa para óculos e meias (antes cairiam em Activewear).
+- Sinônimos de busca: `meia`, `óculos de sol`, `óculos escuros`.
+- Testes: storefront 309/309 (28 arquivos); `tsc --noEmit` sem erro.
+
+**Pendências:** renomear "Óculos" para "Óculos de sol" no Cockpit (handle fica `oculos`); cadastrar os produtos (opção `Cor` obrigatória; `Tamanho` opcional — meias 34-38/39-43, óculos sem tamanho); decidir o `gender` do feed para óculos (hoje todo item sai `female`); `git push` e deploy da vitrine.

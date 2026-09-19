@@ -25,7 +25,20 @@ const esc = (s: unknown) =>
 // Categoria da taxonomia do Google (obrigatória para vestuário no Merchant Center,
 // junto com gender/age_group). Caminho completo em inglês, como o Google aceita.
 const GPC_ACTIVEWEAR = "Apparel & Accessories > Clothing > Activewear"
-function googleCategory(p: { title?: string | null }, type?: string): string {
+// Acessórios não são Activewear: vão pelo handle da categoria (flat no Medusa), antes do casamento por nome.
+const GPC_POR_HANDLE: Record<string, string> = {
+  oculos: "Apparel & Accessories > Clothing Accessories > Sunglasses",
+  meias: "Apparel & Accessories > Clothing > Underwear & Socks > Socks",
+  acessorios: "Apparel & Accessories > Clothing Accessories",
+}
+function googleCategory(
+  p: { title?: string | null; categories?: { handle?: string | null }[] | null },
+  type?: string
+): string {
+  const handles = (p?.categories ?? []).map((c) => c?.handle ?? "")
+  for (const h of ["oculos", "meias", "acessorios"]) {
+    if (handles.includes(h)) return GPC_POR_HANDLE[h]
+  }
   const t = `${type ?? ""} ${p?.title ?? ""}`.toLowerCase()
   if (/\btop\b|sutiã|bra/.test(t)) return `${GPC_ACTIVEWEAR} > Sports Bras`
   if (/short|bermuda/.test(t)) return `${GPC_ACTIVEWEAR} > Active Shorts`

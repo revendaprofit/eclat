@@ -16,6 +16,11 @@ describe("synonymCategoryHandle", () => {
     expect(synonymCategoryHandle("cropped")).toBe("tops")
     expect(synonymCategoryHandle("macacão")).toBe("macaquinhos")
   })
+  it("acessórios: singular de meias e os nomes populares de óculos", () => {
+    expect(synonymCategoryHandle("meia")).toBe("meias")
+    expect(synonymCategoryHandle("Óculos de Sol")).toBe("oculos")
+    expect(synonymCategoryHandle("óculos escuros")).toBe("oculos")
+  })
   it("frase com mais palavras, termo vazio ou sem sinônimo devolve null", () => {
     expect(synonymCategoryHandle("calça preta")).toBeNull()
     expect(synonymCategoryHandle("")).toBeNull()
