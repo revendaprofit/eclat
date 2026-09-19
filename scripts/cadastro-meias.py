@@ -49,6 +49,12 @@ def descricao():
         "Calcanhar e ponta em cor de contraste e ÉCLAT tecido na lateral. Unissex. Vendida por par."
     )
 
+def informacoes():
+    """Aba "Informações do produto" da PDP (metadata.informacoes; parágrafos separados por linha em branco)."""
+    return "Composição: %s.
+
+Cano médio. Unissex. Tamanhos: %s (numeração do calçado). Vendida por par." % (COMPOSICAO, " e ".join(TAMANHOS))
+
 def env_cockpit():
     env = {}
     # num worktree o .env.local não existe: aponte ECLAT_ENV_FILE para o do clone principal
@@ -140,6 +146,9 @@ def main():
     print("já existe em produção: %s" % ("sim (%s, %s)" % (existente[0]["id"], existente[0]["status"]) if existente else "não"))
     print("descrição: %s" % descricao())
     print("composição: %s | peso: %s g" % (COMPOSICAO or "PENDENTE", PESO_G or "PENDENTE"))
+    print("aba Informações do produto: %s" % informacoes().replace("
+
+", " | "))
     print("variantes (%d), %d pares cada = %d pares:" % (len(variants), ESTOQUE, len(variants) * ESTOQUE))
     for v in variants: print("  %-22s %s" % (v["sku"], v["title"]))
 
@@ -170,7 +179,7 @@ def main():
     else:
         prod = api.post("/admin/products", {
             "title": TITULO, "handle": HANDLE, "status": "published", "description": descricao(),
-            "weight": PESO_G, "metadata": {"composicao": COMPOSICAO},
+            "weight": PESO_G, "metadata": {"composicao": COMPOSICAO, "informacoes": informacoes()},
             "options": [{"title": "Cor", "values": [c["nome"] for c in CORES]}, {"title": "Tamanho", "values": TAMANHOS}],
             "variants": variants, "categories": [{"id": cats[0]["id"]}],
             "sales_channels": [{"id": sc["id"]}], "shipping_profile_id": sp["id"],
