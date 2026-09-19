@@ -31,12 +31,17 @@ const SERVICOS = [1, 2, 17] as const
 
 // Telefone do destinatário: a doc pede 11 (ou 10) dígitos NACIONAIS, sem DDI e sem formatação —
 // diferente do que o texto original da task supunha (que prefixava "55"). Fora desse formato,
-// manda vazio em vez de inventar um número.
+// manda vazio em vez de inventar um número. Celular com DDI tem 13 dígitos (55 + 11); fixo com
+// DDI tem 12 (55 + 10) — os dois perdem o "55" antes de validar o tamanho final.
 function telefoneNacional(raw: unknown): string {
   let d = digitos(raw)
-  if (d.length === 13 && d.startsWith("55")) d = d.slice(2)
+  if ((d.length === 12 || d.length === 13) && d.startsWith("55")) d = d.slice(2)
   return d.length === 10 || d.length === 11 ? d : ""
 }
+
+// Sigla de estado válida para a SuperFrete: exatamente 2 letras. Falha ANTES de qualquer
+// chamada à API — melhor um erro claro pro operador do que um 400 da SuperFrete sem contexto.
+const UF_VALIDA = /^[A-Z]{2}$/
 
 export function servicoDoPedido(dados: Record<string, unknown> | null): 1 | 2 | 17 {
   const s = Number(dados?.servico)
@@ -85,10 +90,16 @@ export function montarCorpoDoCart(pedido: PedidoParaEtiqueta, remetente: Remeten
   if (documento.length !== 11 && documento.length !== 14) {
     throw new Error("Pedido sem CPF da cliente: a SuperFrete exige o documento do destinatário. Preencha os dados fiscais do pedido ou use o rastreio manual.")
   }
+  const uf = (a.province ?? "").trim().toUpperCase().replace(/^BR-/, "")
+  if (!UF_VALIDA.test(uf)) {
+    throw new Error(`UF do endereço inválida ("${uf}"): corrija o endereço do pedido (sigla de 2 letras) antes de gerar a etiqueta.`)
+  }
   const chave = digitos(chaveNfe)
   const comNota = chave.length === 44
   const pecas = pedido.itens.reduce((n, i) => n + i.quantidade, 0)
 
+  // Só o REMETENTE precisa de nome e sobrenome (exigência da doc oficial); o destinatário não —
+  // o checkout da vitrine já obriga sobrenome, mas não vale a pena travar a etiqueta por isso aqui.
   const destinatario = pessoaCortada({
     name: [a.first_name, a.last_name].filter(Boolean).join(" ") || "Cliente",
     document: documento,
@@ -99,7 +110,7 @@ export function montarCorpoDoCart(pedido: PedidoParaEtiqueta, remetente: Remeten
     complement: a.address_2 ?? "",
     district: pedido.bairro || "NA",
     city: a.city ?? "",
-    state_abbr: (a.province ?? "").trim().toUpperCase().replace(/^BR-/, ""),
+    state_abbr: uf,
     postal_code: cep,
   })
 
@@ -130,8 +141,26 @@ export function remetenteDoAmbiente(env: NodeJS.ProcessEnv = process.env): Remet
     if (!v) throw new Error(`Etiqueta SuperFrete: defina ${nome} no ambiente do Cockpit (ver architecture/envios.md).`)
     return v
   }
+
+  const name = obrigatoria("SUPERFRETE_FROM_NAME")
+  // A doc oficial exige nome E sobrenome no remetente (não exige no destinatário) — sem isso a
+  // SuperFrete recusa a etiqueta na hora de comprar, já com o pagamento debitado.
+  if (name.split(/\s+/).filter(Boolean).length < 2) {
+    throw new Error("Etiqueta SuperFrete: SUPERFRETE_FROM_NAME precisa ter nome e sobrenome (a SuperFrete recusa remetente com uma palavra só).")
+  }
+
+  const postalCode = digitos(obrigatoria("SUPERFRETE_FROM_POSTAL_CODE"))
+  if (postalCode.length !== 8) {
+    throw new Error("Etiqueta SuperFrete: SUPERFRETE_FROM_POSTAL_CODE precisa ter 8 dígitos (CEP inválido).")
+  }
+
+  const stateAbbr = obrigatoria("SUPERFRETE_FROM_STATE").toUpperCase()
+  if (!UF_VALIDA.test(stateAbbr)) {
+    throw new Error(`Etiqueta SuperFrete: SUPERFRETE_FROM_STATE precisa ser a sigla de 2 letras do estado (valor lido: "${stateAbbr}").`)
+  }
+
   return pessoaCortada({
-    name: obrigatoria("SUPERFRETE_FROM_NAME"),
+    name,
     document: digitos(obrigatoria("SUPERFRETE_FROM_DOCUMENT")),
     // Opcional: a doc do POST /api/v0/cart não lista `from.phone`.
     phone: env.SUPERFRETE_FROM_PHONE ? digitos(env.SUPERFRETE_FROM_PHONE) : "",
@@ -140,7 +169,7 @@ export function remetenteDoAmbiente(env: NodeJS.ProcessEnv = process.env): Remet
     complement: env.SUPERFRETE_FROM_COMPLEMENT?.trim() ?? "",
     district: obrigatoria("SUPERFRETE_FROM_DISTRICT"),
     city: obrigatoria("SUPERFRETE_FROM_CITY"),
-    state_abbr: obrigatoria("SUPERFRETE_FROM_STATE").toUpperCase(),
-    postal_code: digitos(obrigatoria("SUPERFRETE_FROM_POSTAL_CODE")),
+    state_abbr: stateAbbr,
+    postal_code: postalCode,
   })
 }

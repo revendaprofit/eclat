@@ -1,5 +1,26 @@
 import { describe, expect, it } from "vitest"
-import { montarCorpoDoCart, pacoteDoPedido, remetenteDoAmbiente, servicoDoPedido, type PedidoParaEtiqueta } from "./superfrete-etiqueta"
+import { montarCorpoDoCart, pacoteDoPedido, remetenteDoAmbiente, servicoDoPedido, type PedidoParaEtiqueta, type Remetente } from "./superfrete-etiqueta"
+
+// Forma exata do corpo devolvido por montarCorpoDoCart — usado para tipar os testes sem `any`
+// (montarCorpoDoCart devolve Record<string, unknown> porque é o que vai literalmente no POST,
+// mas nos testes queremos acessar `to.phone`, `options.tags` etc. com tipo).
+type CorpoDoCart = {
+  from: Remetente
+  to: {
+    name: string; document: string; phone: string; email: string | null
+    address: string; number: string; complement: string; district: string
+    city: string; state_abbr: string; postal_code: string
+  }
+  service: number
+  volumes: { width: number; height: number; length: number; weight: number }
+  products: { name: string; quantity: number; unitary_value: number }[]
+  options: {
+    insurance_value: number; receipt: boolean; own_hand: boolean; non_commercial: boolean
+    invoice?: { number: string }
+    tags?: { tag: string }[]
+  }
+  platform: string
+}
 
 const REMETENTE = {
   name: "Loja Teste", document: "11222333000181", phone: "31999990000", address: "Rua Exemplo", number: "100",
@@ -57,37 +78,41 @@ describe("corpo do POST /api/v0/cart", () => {
 
   it("com a chave da NFe, vai como nota e não como declaração de conteúdo", () => {
     const chave = "3".repeat(44)
-    expect((montarCorpoDoCart(pedido(), REMETENTE, chave) as any).options).toEqual({
+    expect((montarCorpoDoCart(pedido(), REMETENTE, chave) as CorpoDoCart).options).toEqual({
       insurance_value: 0, receipt: false, own_hand: false, non_commercial: false, invoice: { number: chave }, tags: [{ tag: "1042" }],
     })
   })
 
   it("chave malformada é ignorada (vira declaração de conteúdo)", () => {
-    expect((montarCorpoDoCart(pedido(), REMETENTE, "123") as any).options.non_commercial).toBe(true)
+    expect((montarCorpoDoCart(pedido(), REMETENTE, "123") as CorpoDoCart).options.non_commercial).toBe(true)
   })
 
   it("sem display_id, não manda options.tags", () => {
-    expect((montarCorpoDoCart(pedido({ display_id: null }), REMETENTE, null) as any).options).not.toHaveProperty("tags")
+    expect((montarCorpoDoCart(pedido({ display_id: null }), REMETENTE, null) as CorpoDoCart).options).not.toHaveProperty("tags")
   })
 
   it("sem número, manda vazio — não 'S/N' (doc da SuperFrete)", () => {
-    expect((montarCorpoDoCart(pedido({ numero: "" }), REMETENTE, null) as any).to.number).toBe("")
+    expect((montarCorpoDoCart(pedido({ numero: "" }), REMETENTE, null) as CorpoDoCart).to.number).toBe("")
   })
 
   it("sem e-mail, manda null (não string vazia)", () => {
-    expect((montarCorpoDoCart(pedido({ email: null }), REMETENTE, null) as any).to.email).toBeNull()
+    expect((montarCorpoDoCart(pedido({ email: null }), REMETENTE, null) as CorpoDoCart).to.email).toBeNull()
   })
 
-  it("telefone fora do padrão nacional (nem 10 nem 11 dígitos) vira vazio", () => {
-    const semTelefoneValido = pedido({ endereco: { ...pedido().endereco!, phone: "123" } })
-    expect((montarCorpoDoCart(semTelefoneValido, REMETENTE, null) as any).to.phone).toBe("")
+  it("destinatário sem sobrenome não precisa (só o remetente exige nome e sobrenome)", () => {
+    const semSobrenome = pedido({ endereco: { ...pedido().endereco!, last_name: null } })
+    expect((montarCorpoDoCart(semSobrenome, REMETENTE, null) as CorpoDoCart).to.name).toBe("Ana")
+  })
+
+  it("CNPJ do destinatário (pessoa jurídica) também é aceito", () => {
+    expect((montarCorpoDoCart(pedido({ cpf: "11222333000181" }), REMETENTE, null) as CorpoDoCart).to.document).toBe("11222333000181")
   })
 
   it("corta endereço e complemento nos limites da doc (nunca falha por campo comprido)", () => {
     const enderecoLongo = pedido({
       endereco: { ...pedido().endereco!, address_1: "A".repeat(70), address_2: "B".repeat(30) },
     })
-    const corpo = montarCorpoDoCart(enderecoLongo, REMETENTE, null) as any
+    const corpo = montarCorpoDoCart(enderecoLongo, REMETENTE, null) as CorpoDoCart
     expect(corpo.to.address).toBe("A".repeat(50))
     expect(corpo.to.complement).toBe("B".repeat(20))
   })
@@ -99,14 +124,43 @@ describe("corpo do POST /api/v0/cart", () => {
   })
 })
 
+describe("telefone do destinatário (nacional, sem DDI)", () => {
+  it.each([
+    ["+55 31 98888-7777", "31988887777"], // 13 dígitos com formatação — já coberto no teste principal, explícito aqui
+    ["5531988887777", "31988887777"], // 13 dígitos, celular com DDI
+    ["553132224444", "3132224444"], // 12 dígitos, fixo com DDI
+    ["31988887777", "31988887777"], // 11 dígitos, já nacional — inalterado
+    ["3132224444", "3132224444"], // 10 dígitos, já nacional — inalterado
+    ["123", ""], // nem 10 nem 11 dígitos — manda vazio, nunca inventa número
+  ])("%s -> %s", (bruto, esperado) => {
+    const comTelefone = pedido({ endereco: { ...pedido().endereco!, phone: bruto } })
+    expect((montarCorpoDoCart(comTelefone, REMETENTE, null) as CorpoDoCart).to.phone).toBe(esperado)
+  })
+})
+
+describe("UF do destinatário", () => {
+  it("aceita sigla com prefixo BR- e normaliza para maiúsculas", () => {
+    const corpo = montarCorpoDoCart(pedido({ endereco: { ...pedido().endereco!, province: "br-mg" } }), REMETENTE, null) as CorpoDoCart
+    expect(corpo.to.state_abbr).toBe("MG")
+  })
+
+  it("UF por extenso é rejeitada antes de qualquer chamada à API", () => {
+    expect(() => montarCorpoDoCart(pedido({ endereco: { ...pedido().endereco!, province: "Minas Gerais" } }), REMETENTE, null)).toThrow("UF")
+  })
+})
+
 describe("remetente do ambiente", () => {
+  const ENV_OBRIGATORIO = {
+    SUPERFRETE_FROM_NAME: "Loja Teste", SUPERFRETE_FROM_DOCUMENT: "11.222.333/0001-81",
+    SUPERFRETE_FROM_ADDRESS: "Rua Exemplo", SUPERFRETE_FROM_NUMBER: "100", SUPERFRETE_FROM_DISTRICT: "Centro",
+    SUPERFRETE_FROM_CITY: "Cidade Teste", SUPERFRETE_FROM_STATE: "mg", SUPERFRETE_FROM_POSTAL_CODE: "01001-000",
+  }
+  const envValido = (o: Partial<Record<keyof typeof ENV_OBRIGATORIO, string>> = {}) =>
+    ({ ...ENV_OBRIGATORIO, ...o } as unknown as NodeJS.ProcessEnv)
+
   it("lê SUPERFRETE_FROM_* e limpa documento, telefone e CEP", () => {
     expect(
-      remetenteDoAmbiente({
-        SUPERFRETE_FROM_NAME: "Loja Teste", SUPERFRETE_FROM_DOCUMENT: "11.222.333/0001-81", SUPERFRETE_FROM_PHONE: "(31) 99999-0000",
-        SUPERFRETE_FROM_ADDRESS: "Rua Exemplo", SUPERFRETE_FROM_NUMBER: "100", SUPERFRETE_FROM_DISTRICT: "Centro",
-        SUPERFRETE_FROM_CITY: "Cidade Teste", SUPERFRETE_FROM_STATE: "mg", SUPERFRETE_FROM_POSTAL_CODE: "01001-000",
-      } as unknown as NodeJS.ProcessEnv)
+      remetenteDoAmbiente({ ...ENV_OBRIGATORIO, SUPERFRETE_FROM_PHONE: "(31) 99999-0000" } as unknown as NodeJS.ProcessEnv)
     ).toEqual(REMETENTE)
   })
 
@@ -115,12 +169,18 @@ describe("remetente do ambiente", () => {
   })
 
   it("SUPERFRETE_FROM_PHONE é opcional (a doc não lista from.phone)", () => {
-    expect(
-      remetenteDoAmbiente({
-        SUPERFRETE_FROM_NAME: "Loja Teste", SUPERFRETE_FROM_DOCUMENT: "11.222.333/0001-81",
-        SUPERFRETE_FROM_ADDRESS: "Rua Exemplo", SUPERFRETE_FROM_NUMBER: "100", SUPERFRETE_FROM_DISTRICT: "Centro",
-        SUPERFRETE_FROM_CITY: "Cidade Teste", SUPERFRETE_FROM_STATE: "mg", SUPERFRETE_FROM_POSTAL_CODE: "01001-000",
-      } as unknown as NodeJS.ProcessEnv)
-    ).toEqual({ ...REMETENTE, phone: "" })
+    expect(remetenteDoAmbiente(envValido())).toEqual({ ...REMETENTE, phone: "" })
+  })
+
+  it("SUPERFRETE_FROM_NAME precisa ter nome e sobrenome (a SuperFrete recusa remetente de uma palavra só)", () => {
+    expect(() => remetenteDoAmbiente(envValido({ SUPERFRETE_FROM_NAME: "Loja" }))).toThrow("SUPERFRETE_FROM_NAME")
+  })
+
+  it("SUPERFRETE_FROM_POSTAL_CODE precisa ter 8 dígitos", () => {
+    expect(() => remetenteDoAmbiente(envValido({ SUPERFRETE_FROM_POSTAL_CODE: "123" }))).toThrow("SUPERFRETE_FROM_POSTAL_CODE")
+  })
+
+  it("SUPERFRETE_FROM_STATE precisa ser a sigla de 2 letras", () => {
+    expect(() => remetenteDoAmbiente(envValido({ SUPERFRETE_FROM_STATE: "Minas Gerais" }))).toThrow("SUPERFRETE_FROM_STATE")
   })
 })
