@@ -106,6 +106,7 @@ const produto = {
     sku: `ECL-TESTE-${t}`,
     manage_inventory: true,
     allow_backorder: false,
+    weight: 200, // gramas, na VARIANTE: é dela que o cálculo de frete (SuperFrete) lê o peso
     options: { Cor: COR, Tamanho: t },
     prices: [{ currency_code: "brl", amount: PRECO }],
   })),

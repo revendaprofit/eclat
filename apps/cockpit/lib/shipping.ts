@@ -1,129 +1,147 @@
-// Integração com transportadora — PREPARADA (Melhor Envio: agrega Correios + transportadoras).
-// Sem credenciais, o cockpit opera no modo MANUAL (operador digita o rastreio).
-// Para ativar, definir no .env.local (ver architecture/envios.md):
-//   MELHOR_ENVIO_TOKEN=...            (Bearer token da conta)
-//   MELHOR_ENVIO_SANDBOX=true|false   (default true)
-//   MELHOR_ENVIO_SERVICE=1            (id do serviço: 1=Correios PAC, 2=SEDEX, etc.)
-//   MELHOR_ENVIO_FROM_*              (origem: postal_code, address, number, city, state, name, phone, document)
+// Integração com transportadora — SuperFrete (spec 2026-09-18-frete-superfrete-design.md §4.7).
+// Sem SUPERFRETE_TOKEN, o Cockpit opera no modo MANUAL (operador digita o rastreio).
+// Variáveis: ver architecture/envios.md.
 //
-// Fluxo Melhor Envio p/ gerar etiqueta:
-//   1) POST /api/v2/me/cart            → adiciona o frete ao carrinho (from/to/volumes/service)
-//   2) POST /api/v2/me/shipment/checkout {orders:[id]}  → paga com o saldo
-//   3) POST /api/v2/me/shipment/generate {orders:[id]}  → emite a etiqueta
-//   4) POST /api/v2/me/shipment/print    {orders:[id]}  → URL do PDF
-//      + o item já traz o tracking (código dos Correios/transportadora)
+// A compra da etiqueta é DELIBERADAMENTE três chamadas pequenas, não uma função só — a orquestração
+// que decide QUANDO chamar cada uma (e nunca pagar em dobro numa retentativa) mora em
+// lib/etiqueta-segura.ts (garantirEtiqueta), que injeta estas três funções como dependências:
+//   carrierCriarFrete    → POST /api/v0/cart              cria o frete (não gasta saldo)
+//   carrierPagarFrete    → POST /api/v0/checkout           paga com o saldo da carteira (gasta saldo)
+//   carrierConsultarFrete → GET /api/v0/order/info/{id}    confere o status ANTES de decidir pagar de novo
+import { montarCorpoDoCart, remetenteDoAmbiente, type PedidoParaEtiqueta } from "./superfrete-etiqueta"
 
-const TOKEN = process.env.MELHOR_ENVIO_TOKEN
-const SANDBOX = (process.env.MELHOR_ENVIO_SANDBOX ?? "true") !== "false"
-const SERVICE = process.env.MELHOR_ENVIO_SERVICE || "1"
-const BASE = SANDBOX
-  ? "https://sandbox.melhorenvio.com.br"
-  : "https://melhorenvio.com.br"
-
-export const CARRIER_NAME = "Melhor Envio"
-export const carrierConfigured = () => Boolean(TOKEN)
+export const CARRIER_NAME = "SuperFrete"
+export const carrierConfigured = () => Boolean(process.env.SUPERFRETE_TOKEN)
 
 export type CarrierLabel = {
   tracking_number: string
   tracking_url: string
   label_url: string
-}
-
-type Destino = {
-  nome: string
-  telefone: string | null
-  endereco: string | null
-  cidade: string | null
-  estado: string | null
-  cep: string | null
+  // id do frete devolvido pelo POST /api/v0/cart — precisa ficar gravado no pedido para permitir
+  // cancelar a etiqueta depois (POST /api/v0/order/cancel) e para conferir o status antes de comprar
+  // de novo numa retentativa (ver lib/etiqueta-segura.ts).
+  carrier_order_id: string
 }
 
 class CarrierNotConfigured extends Error {
   constructor() {
-    super(
-      "Integração com transportadora ainda não configurada. Defina MELHOR_ENVIO_TOKEN no .env.local (ver architecture/envios.md). Use o rastreio manual por enquanto."
-    )
+    super("Integração com a SuperFrete ainda não configurada. Defina SUPERFRETE_TOKEN no ambiente do Cockpit (ver architecture/envios.md). Use o rastreio manual por enquanto.")
     this.name = "CarrierNotConfigured"
   }
 }
 
-async function me(path: string, init: RequestInit = {}) {
-  const r = await fetch(`${BASE}${path}`, {
-    ...init,
-    headers: {
-      Authorization: `Bearer ${TOKEN}`,
-      Accept: "application/json",
-      "Content-Type": "application/json",
-      "User-Agent": "use.ECLAT Cockpit (leobergconsultoria@gmail.com)",
-      ...(init.headers || {}),
-    },
-  })
-  if (!r.ok) throw new Error(`Melhor Envio ${path} → HTTP ${r.status}: ${await r.text()}`)
-  return r.json()
+const base = () => (process.env.SUPERFRETE_SANDBOX === "true" ? "https://sandbox.superfrete.com" : "https://api.superfrete.com")
+
+// Nenhuma chamada à SuperFrete pode ficar pendurada: um hang no /checkout deixaria "foi cobrado ou
+// não?" em aberto (achado 2 da revisão), o que alimentava o risco de pagar em dobro numa retentativa
+// (achado 1). 20s é generoso pro pior caso e curto o bastante pro operador não travar no despacho.
+const TIMEOUT_MS = 20_000
+const MSG_TIMEOUT =
+  "A SuperFrete não respondeu a tempo. Nada foi cobrado em dobro: clique em Despachar de novo que o sistema confere a etiqueta antes de comprar."
+
+function headersPadrao(): HeadersInit {
+  return {
+    Authorization: `Bearer ${process.env.SUPERFRETE_TOKEN}`,
+    "User-Agent": `use.ECLAT Cockpit (${process.env.SUPERFRETE_CONTACT_EMAIL ?? ""})`,
+    Accept: "application/json",
+    "Content-Type": "application/json",
+  }
 }
 
-// Gera a etiqueta para um pedido e devolve o rastreio + URL do PDF.
-// Lança CarrierNotConfigured se faltar credencial (a UI cai no modo manual).
-export async function carrierCreateLabel(input: {
-  destino: Destino
-  // peso/dimensões padrão da peça (configuráveis depois por produto)
-  peso_kg?: number
-}): Promise<CarrierLabel> {
-  if (!carrierConfigured()) throw new CarrierNotConfigured()
-
-  const from = {
-    postal_code: process.env.MELHOR_ENVIO_FROM_POSTAL_CODE,
-    address: process.env.MELHOR_ENVIO_FROM_ADDRESS,
-    number: process.env.MELHOR_ENVIO_FROM_NUMBER,
-    city: process.env.MELHOR_ENVIO_FROM_CITY,
-    state_abbr: process.env.MELHOR_ENVIO_FROM_STATE,
-    name: process.env.MELHOR_ENVIO_FROM_NAME,
-    phone: process.env.MELHOR_ENVIO_FROM_PHONE,
-    document: process.env.MELHOR_ENVIO_FROM_DOCUMENT,
+// Formato mínimo das respostas de /api/v0/cart, /api/v0/checkout e /api/v0/order/info/{id} que a
+// etiqueta usa.
+type RespostaSuperFrete = {
+  id?: string
+  status?: string
+  tracking?: string
+  print?: { url?: string }
+  purchase?: {
+    orders?: { id?: string; tracking?: string; print?: { url?: string } }[]
   }
-  if (!from.postal_code)
-    throw new Error("Defina o endereço de origem (MELHOR_ENVIO_FROM_*) no .env.local.")
+}
 
-  const cep = (input.destino.cep || "").replace(/\D/g, "")
-  // 1) carrinho
-  const cart = await me("/api/v2/me/cart", {
-    method: "POST",
-    body: JSON.stringify({
-      service: Number(SERVICE),
-      from,
-      to: {
-        name: input.destino.nome,
-        phone: input.destino.telefone || undefined,
-        address: input.destino.endereco || undefined,
-        city: input.destino.cidade || undefined,
-        state_abbr: input.destino.estado || undefined,
-        postal_code: cep,
-      },
-      volumes: [{ weight: input.peso_kg ?? 0.3, width: 16, height: 6, length: 22 }],
-      options: { receipt: false, own_hand: false },
-    }),
-  })
-  const orderId = cart.id as string
+async function requisitar(path: string, init: RequestInit): Promise<RespostaSuperFrete> {
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS)
+  // O timer fica de pé até a LEITURA DO CORPO terminar (r.text()/r.json() aqui dentro do try), não só
+  // até o fetch() devolver os cabeçalhos: um corpo grande ou lento também pode pendurar, e nesse caso
+  // a resposta "foi cobrado?" fica tão em aberto quanto no timeout do próprio fetch(). O `finally` que
+  // limpa o timer envolve a função inteira, e o `catch` que traduz AbortError pra MSG_TIMEOUT também —
+  // um abort no meio da leitura do corpo cai no mesmo lugar que um abort no fetch().
+  try {
+    const r = await fetch(`${base()}${path}`, { ...init, signal: controller.signal })
+    if (!r.ok) {
+      const texto = (await r.text()).slice(0, 300)
+      // "saldo insuficiente" é o texto oficial da SuperFrete pra carteira sem saldo; qualquer outro
+      // erro que só cite "saldo" de passagem (ex.: "saldo devedor de tributos") não pode ser
+      // confundido com isso — vira o erro genérico abaixo, com o texto original visível pro operador.
+      if (r.status === 402 || /saldo\s+insuficiente/i.test(texto)) {
+        throw new Error("Sem saldo na SuperFrete. Recarregue a carteira e tente de novo.")
+      }
+      throw new Error(`SuperFrete ${path} → HTTP ${r.status}: ${texto}`)
+    }
+    return await r.json()
+  } catch (e) {
+    if ((e as { name?: string })?.name === "AbortError") throw new Error(MSG_TIMEOUT)
+    throw e
+  } finally {
+    clearTimeout(timer)
+  }
+}
 
-  // 2) checkout (paga com saldo) · 3) generate (emite)
-  await me("/api/v2/me/shipment/checkout", {
-    method: "POST",
-    body: JSON.stringify({ orders: [orderId] }),
-  })
-  await me("/api/v2/me/shipment/generate", {
-    method: "POST",
-    body: JSON.stringify({ orders: [orderId] }),
-  })
+const post = (path: string, corpo: unknown) => requisitar(path, { method: "POST", headers: headersPadrao(), body: JSON.stringify(corpo) })
+const get = (path: string) => requisitar(path, { method: "GET", headers: headersPadrao() })
 
-  // 4) URL do PDF + rastreio
-  const print = await me("/api/v2/me/shipment/print", {
-    method: "POST",
-    body: JSON.stringify({ orders: [orderId], mode: "public" }),
-  })
-  const tracking = cart.tracking || cart.self_tracking || ""
+// Cria o frete (POST /api/v0/cart) e devolve o id — NÃO gasta saldo. Lança CarrierNotConfigured se
+// faltar credencial (a UI cai no modo manual).
+export async function carrierCriarFrete(pedido: PedidoParaEtiqueta, chaveNfe: string | null): Promise<string> {
+  if (!carrierConfigured()) throw new CarrierNotConfigured()
+  // Monta (e valida CPF/CEP/endereço/UF) ANTES de qualquer chamada: erro de dado não gasta saldo.
+  const corpo = montarCorpoDoCart(pedido, remetenteDoAmbiente(), chaveNfe)
+  const frete = await post("/api/v0/cart", corpo)
+  const id = String(frete?.id ?? "")
+  if (!id) throw new Error("SuperFrete não devolveu o id do frete criado.")
+  return id
+}
+
+// Paga o frete já criado (POST /api/v0/checkout) — GASTA SALDO. Só chamar uma vez por frete; quem
+// garante isso é lib/etiqueta-segura.ts, nunca a rota direto.
+export async function carrierPagarFrete(id: string): Promise<CarrierLabel> {
+  if (!carrierConfigured()) throw new CarrierNotConfigured()
+  const compra = await post("/api/v0/checkout", { orders: [id] })
+  const emitida = compra?.purchase?.orders?.find((o) => o.id === id) ?? compra?.purchase?.orders?.[0]
+  // Rastreio real ou vazio — NUNCA o id do frete: o id não rastreia nada nos Correios/transportadora,
+  // e um `carrier_order_id` já carrega o id pra quem precisar dele (cancelamento, consulta).
+  const rastreio = String(emitida?.tracking ?? "")
   return {
-    tracking_number: String(tracking || orderId),
-    tracking_url: tracking ? `https://www.melhorrastreio.com.br/rastreio/${tracking}` : "",
-    label_url: (print?.url as string) || "",
+    tracking_number: rastreio,
+    tracking_url: rastreio ? `https://rastreamento.correios.com.br/app/index.php?objetos=${rastreio}` : "",
+    label_url: String(emitida?.print?.url ?? ""),
+    carrier_order_id: id,
+  }
+}
+
+// Status finais em que a doc da SuperFrete garante rastreio + PDF prontos (tracking só preenche
+// depois do pagamento). "pending" = criado e não pago; "canceled" = liberou o saldo de volta.
+const STATUS_COM_ETIQUETA = new Set(["released", "posted", "delivered"])
+
+// Consulta o estado de um frete já criado (GET /api/v0/order/info/{id}) — NÃO gasta saldo. Usada
+// para decidir, antes de comprar de novo, se o frete já foi pago (não paga de novo) ou nunca chegou
+// a ser pago (pode pagar com segurança).
+export async function carrierConsultarFrete(id: string): Promise<{ status: string; label: CarrierLabel | null }> {
+  if (!carrierConfigured()) throw new CarrierNotConfigured()
+  const info = await get(`/api/v0/order/info/${id}`)
+  const status = String(info?.status ?? "")
+  if (!STATUS_COM_ETIQUETA.has(status)) return { status, label: null }
+  // Idem carrierPagarFrete: rastreio real ou vazio, nunca o id do frete.
+  const rastreio = String(info?.tracking ?? "")
+  return {
+    status,
+    label: {
+      tracking_number: rastreio,
+      tracking_url: rastreio ? `https://rastreamento.correios.com.br/app/index.php?objetos=${rastreio}` : "",
+      label_url: String(info?.print?.url ?? ""),
+      carrier_order_id: id,
+    },
   }
 }
