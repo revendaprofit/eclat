@@ -51,9 +51,7 @@ def descricao():
 
 def informacoes():
     """Aba "Informações do produto" da PDP (metadata.informacoes; parágrafos separados por linha em branco)."""
-    return "Composição: %s.
-
-Cano médio. Unissex. Tamanhos: %s (numeração do calçado). Vendida por par." % (COMPOSICAO, " e ".join(TAMANHOS))
+    return "Composição: %s.\n\nCano médio. Unissex. Tamanhos: %s (numeração do calçado). Vendida por par." % (COMPOSICAO, " e ".join(TAMANHOS))
 
 def env_cockpit():
     env = {}
@@ -146,9 +144,7 @@ def main():
     print("já existe em produção: %s" % ("sim (%s, %s)" % (existente[0]["id"], existente[0]["status"]) if existente else "não"))
     print("descrição: %s" % descricao())
     print("composição: %s | peso: %s g" % (COMPOSICAO or "PENDENTE", PESO_G or "PENDENTE"))
-    print("aba Informações do produto: %s" % informacoes().replace("
-
-", " | "))
+    print("aba Informações do produto: %s" % informacoes().replace("\n\n", " | "))
     print("variantes (%d), %d pares cada = %d pares:" % (len(variants), ESTOQUE, len(variants) * ESTOQUE))
     for v in variants: print("  %-22s %s" % (v["sku"], v["title"]))
 
