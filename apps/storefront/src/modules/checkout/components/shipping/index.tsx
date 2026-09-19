@@ -1,7 +1,9 @@
 "use client"
 import { Radio, RadioGroup } from "@headlessui/react"
 import { setShippingMethod } from "@lib/data/cart"
+import { getPrazosDeFrete } from "@lib/data/frete"
 import { calculatePriceForShippingOption } from "@lib/data/fulfillment"
+import { servicoDaOpcao, textoPrazo, type Prazos } from "@lib/util/frete"
 import { convertToLocale } from "@lib/util/money"
 import { CheckCircleSolid, Loader } from "@medusajs/icons"
 import { HttpTypes } from "@medusajs/types"
@@ -58,6 +60,7 @@ const Shipping: React.FC<ShippingProps> = ({
   const [calculatedPricesMap, setCalculatedPricesMap] = useState<
     Record<string, number>
   >({})
+  const [prazos, setPrazos] = useState<Prazos>({})
   const [error, setError] = useState<string | null>(null)
   const [shippingMethodId, setShippingMethodId] = useState<string | null>(
     cart.shipping_methods?.at(-1)?.shipping_option_id || null
@@ -81,13 +84,16 @@ const Shipping: React.FC<ShippingProps> = ({
 
   useEffect(() => {
     setIsLoadingPrices(true)
+    getPrazosDeFrete(cart.id).then(setPrazos)
 
     if (_shippingMethods?.length) {
       const promises = _shippingMethods
         .filter((sm) => sm.price_type === "calculated")
         .map((sm) => calculatePriceForShippingOption(sm.id, cart.id))
 
-      if (promises.length) {
+      if (!promises.length) {
+        setIsLoadingPrices(false)
+      } else {
         Promise.allSettled(promises).then((res) => {
           const pricesMap: Record<string, number> = {}
           res
@@ -150,6 +156,12 @@ const Shipping: React.FC<ShippingProps> = ({
   useEffect(() => {
     setError(null)
   }, [isOpen])
+
+  // Opção calculada que o backend recusou (Mini Envios fora do limite, serviço sem cotação) não
+  // aparece — spec §4.2. Enquanto os preços carregam, todas aparecem com o loader.
+  const opcoesDeEnvio = _shippingMethods?.filter(
+    (o) => o.price_type !== "calculated" || isLoadingPrices || typeof calculatedPricesMap[o.id] === "number"
+  )
 
   return (
     <div className="bg-white">
@@ -243,7 +255,7 @@ const Shipping: React.FC<ShippingProps> = ({
                     }
                   }}
                 >
-                  {_shippingMethods?.map((option) => {
+                  {opcoesDeEnvio?.map((option) => {
                     const isDisabled =
                       option.price_type === "calculated" &&
                       !isLoadingPrices &&
@@ -269,8 +281,17 @@ const Shipping: React.FC<ShippingProps> = ({
                           <MedusaRadio
                             checked={option.id === shippingMethodId}
                           />
-                          <span className="text-base-regular">
-                            {option.name}
+                          <span className="flex flex-col">
+                            <span className="text-base-regular">{option.name}</span>
+                            {(() => {
+                              const servico = servicoDaOpcao(option as { type?: { code?: string | null } | null })
+                              const prazo = servico ? textoPrazo(prazos[servico]) : null
+                              return prazo ? (
+                                <span className="text-small-regular text-ui-fg-muted" data-testid="delivery-option-prazo">
+                                  {prazo}
+                                </span>
+                              ) : null
+                            })()}
                           </span>
                         </div>
                         <span className="justify-self-end text-ui-fg-base">
@@ -279,11 +300,15 @@ const Shipping: React.FC<ShippingProps> = ({
                               amount: option.amount!,
                               currency_code: cart?.currency_code,
                             })
-                          ) : calculatedPricesMap[option.id] ? (
-                            convertToLocale({
-                              amount: calculatedPricesMap[option.id],
-                              currency_code: cart?.currency_code,
-                            })
+                          ) : typeof calculatedPricesMap[option.id] === "number" ? (
+                            calculatedPricesMap[option.id] === 0 ? (
+                              <span className="font-medium" data-testid="delivery-option-gratis">Grátis</span>
+                            ) : (
+                              convertToLocale({
+                                amount: calculatedPricesMap[option.id],
+                                currency_code: cart?.currency_code,
+                              })
+                            )
                           ) : isLoadingPrices ? (
                             <Loader />
                           ) : (
@@ -393,10 +418,12 @@ const Shipping: React.FC<ShippingProps> = ({
                 </Text>
                 <Text className="txt-medium text-ui-fg-subtle">
                   {cart.shipping_methods!.at(-1)!.name}{" "}
-                  {convertToLocale({
-                    amount: cart.shipping_methods!.at(-1)!.amount!,
-                    currency_code: cart?.currency_code,
-                  })}
+                  {cart.shipping_methods!.at(-1)!.amount === 0
+                    ? "Grátis"
+                    : convertToLocale({
+                        amount: cart.shipping_methods!.at(-1)!.amount!,
+                        currency_code: cart?.currency_code,
+                      })}
                 </Text>
               </div>
             )}
