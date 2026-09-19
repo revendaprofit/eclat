@@ -146,14 +146,16 @@ export default class SuperfreteProviderService extends AbstractFulfillmentProvid
 
   /** Cotações válidas para o pacote, ou `null` se a SuperFrete não respondeu (já logado). */
   private async cotar_(cep: string, pacote: Pacote): Promise<Cotacao[] | null> {
+    let cotacoes: Cotacao[]
     try {
-      const cotacoes = await (this.opcoes_.cotador ?? obterCotador()).cotar(cep, pacote)
-      return cotacoes.filter((c) => c.servico !== "mini" || cabeNoMiniEnvios(pacote))
+      // Só a ida à SuperFrete fica no try: erro de programação no resto não pode se passar por "API fora do ar".
+      cotacoes = await (this.opcoes_.cotador ?? obterCotador()).cotar(cep, pacote)
     } catch (e) {
       // Nunca logar token nem CPF: a mensagem do cliente HTTP já vem sem eles.
       this.logger_.error(`[superfrete] cotação falhou, usando valor de reserva: ${(e as Error).message}`)
       return null
     }
+    return cotacoes.filter((c) => c.servico !== "mini" || cabeNoMiniEnvios(pacote))
   }
 
   private async precosNormais_(cep: string, pacote: Pacote, parametros: Parametros): Promise<Precos> {
