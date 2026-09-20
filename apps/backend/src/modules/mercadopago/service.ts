@@ -115,7 +115,11 @@ export default class MercadoPagoProviderService extends AbstractPaymentProvider<
     }
     // Erro sem order associada (ex.: payload inválido, MP fora do ar) — não é uma recusa de
     // negócio, é falha técnica. Propaga pro Medusa tratar como erro genérico.
-    this.logger_.error(`mercadopago: falha ao criar order pra sessão ${sessionId}`, erro as Error)
+    // O corpo do erro é o que diz o que está errado no payload (ex.: "additionalProperties
+    // 'country' not allowed"). Sem ele, o log só mostra "respondeu 400" e a investigação vira
+    // adivinhação — foi o que atrasou a correção de 2026-09-19.
+    const detalhe = erro instanceof ErroMercadoPago ? ` — ${JSON.stringify(erro.corpo).slice(0, 500)}` : ""
+    this.logger_.error(`mercadopago: falha ao criar order pra sessão ${sessionId}${detalhe}`, erro as Error)
     throw erro
   }
 
