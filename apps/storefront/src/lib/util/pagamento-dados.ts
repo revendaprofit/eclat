@@ -48,8 +48,13 @@ function montarEndereco(endereco: HttpTypes.StoreCartAddress | null | undefined)
   return Object.fromEntries(Object.entries(campos).filter(([, v]) => v !== undefined)) as EnderecoDoPagador
 }
 
-function montarItens(itens: HttpTypes.StoreCart["items"]): ItemDoPagamento[] | undefined {
-  const lista = (itens ?? [])
+/**
+ * Itens no formato que a Orders API aceita. O Mercado Pago recusa a cobrança inteira quando a
+ * soma dos itens não bate com o total (400 `order_items_total_amount_mismatch`, sondado em
+ * produção em 2026-09-19) — por isso frete vira um item e desconto vira um item negativo.
+ */
+function montarItens(cart: HttpTypes.StoreCart): ItemDoPagamento[] | undefined {
+  const lista = (cart?.items ?? [])
     .map((i) => {
       const titulo = texto(i.title)
       const quantidade = Number(i.quantity)
@@ -61,7 +66,12 @@ function montarItens(itens: HttpTypes.StoreCart["items"]): ItemDoPagamento[] | u
       return { ...item, ...(sku ? { sku } : {}), ...(descricao ? { descricao } : {}) }
     })
     .filter((i): i is ItemDoPagamento => i !== undefined)
-  return lista.length ? lista : undefined
+  if (!lista.length || lista.length !== (cart?.items?.length ?? 0)) return undefined
+  const frete = Number(cart?.shipping_total ?? 0)
+  if (frete > 0) lista.push({ titulo: "Frete", quantidade: 1, preco_unitario: frete })
+  const desconto = Number(cart?.discount_total ?? 0)
+  if (desconto > 0) lista.push({ titulo: "Desconto", quantidade: 1, preco_unitario: -desconto })
+  return lista
 }
 
 export function dadosDoPagador(cart: HttpTypes.StoreCart): DadosDoPagador {
@@ -71,7 +81,7 @@ export function dadosDoPagador(cart: HttpTypes.StoreCart): DadosDoPagador {
     sobrenome: texto(entrega?.last_name) ?? texto(cobranca?.last_name),
     telefone: texto(entrega?.phone) ?? texto(cobranca?.phone),
     endereco: montarEndereco(entrega) ?? montarEndereco(cobranca),
-    itens: montarItens(cart?.items),
+    itens: montarItens(cart),
   }
   return Object.fromEntries(Object.entries(dados).filter(([, v]) => v !== undefined)) as DadosDoPagador
 }

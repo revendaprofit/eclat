@@ -203,7 +203,11 @@ describe("MercadoPagoProviderService", () => {
           telefone: "31991032698",
           device_id: "arm_xyz123",
           endereco: { rua: "Rua Norte", numero: "180", bairro: "Centro", cidade: "Betim", estado: "MG", cep: "32604182" },
-          itens: [{ titulo: "Macaquinho Solaris", quantidade: 2, preco_unitario: 259, sku: "ECL-MS-TEL-M" }],
+          // a soma tem de bater com o total (199,90): produto + frete
+          itens: [
+            { titulo: "Macaquinho Solaris", quantidade: 1, preco_unitario: 185, sku: "ECL-MS-TEL-M" },
+            { titulo: "Frete (SEDEX)", quantidade: 1, preco_unitario: 14.9 },
+          ],
         },
         context: {},
       })
@@ -217,11 +221,33 @@ describe("MercadoPagoProviderService", () => {
         last_name: "Silva",
         identification: { type: "CPF", number: "12345678909" },
         phone: { area_code: "31", number: "991032698" },
-        address: { street_name: "Rua Norte", street_number: "180", neighborhood: "Centro", city: "Betim", state: "MG", zip_code: "32604182", country: "BR" },
+        // `country` e `unit_measure` NÃO existem na Orders API: mandá-los dá 400 (sondado em produção)
+        address: { street_name: "Rua Norte", street_number: "180", neighborhood: "Centro", city: "Betim", state: "MG", zip_code: "32604182" },
       })
       expect(corpo.items).toEqual([
-        { title: "Macaquinho Solaris", quantity: 2, unit_price: "259.00", external_code: "ECL-MS-TEL-M", type: "product", unit_measure: "unit" },
+        { title: "Macaquinho Solaris", quantity: 1, unit_price: "185.00", external_code: "ECL-MS-TEL-M", type: "product" },
+        { title: "Frete (SEDEX)", quantity: 1, unit_price: "14.90", type: "product" },
       ])
+    })
+
+    it("itens que não somam o total ficam de fora (a API recusa a order inteira)", async () => {
+      const spy = mockFetchSequencial({ status: 201, corpo: orderPix })
+      const { servico } = criarServico()
+
+      await servico.initiatePayment({
+        amount: 199.9,
+        currency_code: "brl",
+        data: {
+          session_id: "payses_1",
+          metodo: "pix",
+          cpf: "12345678909",
+          email: "c@e.com",
+          itens: [{ titulo: "Macaquinho Solaris", quantidade: 1, preco_unitario: 259 }],
+        },
+        context: {},
+      })
+
+      expect(JSON.parse(spy.mock.calls[0][1].body).items).toBeUndefined()
     })
 
     it("sem os dados extras, o pagador continua com o mínimo e nenhum campo vazio é inventado", async () => {

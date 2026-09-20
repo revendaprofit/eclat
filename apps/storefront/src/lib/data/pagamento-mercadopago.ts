@@ -17,7 +17,7 @@ import { getAuthHeaders, getCacheTag, removeCartId } from "./cookies"
 import { listCartPaymentMethods } from "./payment"
 
 const CAMPOS_DO_CARRINHO =
-  "id,email,total,metadata,region_id,*items,*billing_address,*shipping_address,*payment_collection.payment_sessions"
+  "id,email,total,shipping_total,discount_total,metadata,region_id,*items,*billing_address,*shipping_address,*payment_collection.payment_sessions"
 
 const ERRO_GENERICO =
   "Não conseguimos iniciar o pagamento agora. Tenta de novo em instantes ou escolhe outra forma de pagamento."

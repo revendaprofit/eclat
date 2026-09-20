@@ -271,7 +271,7 @@ export default class MercadoPagoProviderService extends AbstractPaymentProvider<
             installments: Math.min(Number(args.data?.parcelas ?? 1), this.opcoes_.maxParcelas ?? 4),
           }
 
-    const itens = itensDaOrder(args.data?.itens)
+    const itens = itensDaOrder(args.data?.itens, valor)
 
     return {
       type: "online",
@@ -415,7 +415,6 @@ function enderecoDoPagador(bruto: unknown): Record<string, string> | undefined {
     state: txt(e.estado),
     zip_code: cep,
     complement: txt(e.complemento),
-    country: "BR",
   }
   return Object.fromEntries(Object.entries(campos).filter(([, v]) => v !== undefined)) as Record<string, string>
 }
@@ -426,8 +425,11 @@ type ItemDaVitrine = { titulo?: string; quantidade?: number; preco_unitario?: nu
  * Itens do carrinho no formato da Orders API (o antifraude usa o que está sendo comprado).
  * `preco_unitario` chega em reais decimais, como o resto do provider; vira string com 2 casas.
  */
-function itensDaOrder(bruto: unknown): Record<string, unknown>[] | undefined {
-  // (o filtro abaixo tira os itens inválidos; o retorno já é serializável como JSON)
+function itensDaOrder(bruto: unknown, totalEsperado: string): Record<string, unknown>[] | undefined {
+  // Regras da Orders API sondadas em produção (2026-09-19): `unit_measure` e `country` são
+  // recusados (400 unsupported_properties) e a SOMA dos itens precisa bater com `total_amount`
+  // (400 order_items_total_amount_mismatch). Item é opcional: na dúvida, manda sem — nunca
+  // derruba o pagamento por causa de um dado que só ajuda o antifraude.
   if (!Array.isArray(bruto) || bruto.length === 0) return undefined
   const itens = bruto
     .map((i) => {
@@ -443,11 +445,12 @@ function itensDaOrder(bruto: unknown): Record<string, unknown>[] | undefined {
         ...(typeof item.sku === "string" && item.sku.trim() ? { external_code: item.sku.trim() } : {}),
         ...(typeof item.descricao === "string" && item.descricao.trim() ? { description: item.descricao.trim().slice(0, 256) } : {}),
         type: "product",
-        unit_measure: "unit",
       }
     })
     .filter((i): i is NonNullable<typeof i> => i !== undefined)
-  return itens.length ? itens : undefined
+  if (!itens.length || itens.length !== bruto.length) return undefined
+  const soma = itens.reduce((t, i) => t + Number(i.unit_price) * Number(i.quantity), 0)
+  return soma.toFixed(2) === Number(totalEsperado).toFixed(2) ? itens : undefined
 }
 
 function dadosDoCartaoInformados(data: Record<string, unknown> | undefined): Record<string, unknown> {
