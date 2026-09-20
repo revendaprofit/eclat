@@ -32,7 +32,11 @@ export async function montarItensDoPedido(
     entity: "order",
     filters: { id: orderId },
     fields: [
-      "id", "email", "currency_code", "shipping_total",
+      // `metadata` do PEDIDO é obrigatório aqui: é onde o checkout grava o CPF da cliente
+      // (`order.metadata.cpf`). Sem esse caminho no fields ele volta undefined, a busca de CPF
+      // cai no vazio e a emissão morre com "pedido está sem CPF" mesmo com o CPF gravado —
+      // foi o que travou o despacho do pedido #21 em 20/09.
+      "id", "email", "currency_code", "shipping_total", "metadata",
       "items.id", "items.title", "items.variant_title", "items.quantity", "items.unit_price",
       "items.discount_total", "items.item_total",
       "items.variant_sku", "items.variant_id", "items.product_id",

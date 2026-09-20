@@ -178,6 +178,22 @@ describe("montarItensDoPedido", () => {
     await expect(montarItensDoPedido(scope, "order_x")).rejects.toThrow(/não encontrado/i)
   })
 
+  it("pede o metadata do pedido — é onde o checkout grava o CPF", async () => {
+    const { scope, graph } = scopeCom(pedidoBase())
+    await montarItensDoPedido(scope, "order_1")
+    expect(graph.mock.calls[0][0].fields).toContain("metadata")
+  })
+
+  it("CPF só no metadata do pedido (sem CPF no endereço) ainda emite", async () => {
+    const pedido = pedidoBase()
+    delete pedido.shipping_address.metadata.cpf
+    delete pedido.billing_address?.metadata?.cpf
+    pedido.metadata = { cpf: "00363013610" }
+    const { scope } = scopeCom(pedido)
+    const { destinatario } = await montarItensDoPedido(scope, "order_1")
+    expect(destinatario.cpf).toBe("00363013610")
+  })
+
   it("converte shipping_total (decimal) para frete_centavos (inteiro)", async () => {
     const pedido = pedidoBase()
     pedido.shipping_total = 19.9
