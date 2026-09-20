@@ -45,7 +45,20 @@ export type OpcoesMercadoPago = {
   /** Validade do código Pix em minutos (spec §6: 30). Vira `expiration_time: "PT{n}M"`. */
   pixExpiraMin?: number
   descricaoFatura?: string
+  /**
+   * Endereço público do backend (`MEDUSA_BACKEND_URL`). Daqui sai o `config.online.callback_url`
+   * de cada order: o Mercado Pago avisa essa URL quando o pagamento muda de status. Avisar por
+   * order (e não só pelo painel) é item obrigatório da avaliação de qualidade da integração —
+   * e é o que sustenta a confiança da loja para o antifraude. Sem a opção, o campo não vai.
+   */
+  urlDoBackend?: string
 }
+
+/** Rota que o Medusa publica sozinho para os avisos deste provider. */
+const CAMINHO_DO_WEBHOOK = "/hooks/payment/mercadopago_mercadopago"
+
+/** Limite do que o Mercado Pago imprime na fatura do cartão. */
+const LIMITE_DESCRICAO_FATURA = 22
 
 type InjectedDependencies = {
   logger: Logger
@@ -283,6 +296,7 @@ export default class MercadoPagoProviderService extends AbstractPaymentProvider<
       external_reference: args.sessionId,
       total_amount: valor,
       description: this.opcoes_.descricaoFatura ?? "USEECLAT",
+      ...this.montarConfig(),
       payer: this.montarPayer(args.context, args.data),
       ...(itens ? { items: itens } : {}),
       transactions: {
@@ -305,6 +319,25 @@ export default class MercadoPagoProviderService extends AbstractPaymentProvider<
    * recusadas em série com `cc_rejected_high_risk`. Campo ausente NUNCA vira string vazia — o
    * Mercado Pago trata "" como dado ruim; melhor omitir.
    */
+  /**
+   * O bloco `config` da order: nome na fatura do cartão e endereço de aviso do pagamento.
+   *
+   * O `statement_descriptor` é o que a cliente lê na fatura do cartão. Sem ele aparece o nome
+   * genérico da conta Mercado Pago — uma cobrança que a pessoa não reconhece vira contestação,
+   * e é exatamente esse tipo de sinal que faz o aviso de "possível golpe" aparecer. O
+   * `callback_url` é o aviso por order, item obrigatório da avaliação de qualidade da
+   * integração; confirmado contra a API de produção em 2026-09-20 (os dois aceitos, devolvidos
+   * de volta na resposta). Campo sem valor nunca é inventado: `config` só vai se tiver conteúdo.
+   */
+  private montarConfig(): { config?: Record<string, unknown> } {
+    const descricao = (this.opcoes_.descricaoFatura ?? "USEECLAT").trim().slice(0, LIMITE_DESCRICAO_FATURA)
+    const base = (this.opcoes_.urlDoBackend ?? "").trim().replace(/\/+$/, "")
+    const config: Record<string, unknown> = {}
+    if (descricao) config.statement_descriptor = descricao
+    if (base) config.online = { callback_url: `${base}${CAMINHO_DO_WEBHOOK}` }
+    return Object.keys(config).length ? { config } : {}
+  }
+
   private montarPayer(context: PaymentProviderContext | undefined, data: Record<string, unknown> | undefined) {
     const cliente = context?.customer
     const cpf = data?.cpf as string | undefined

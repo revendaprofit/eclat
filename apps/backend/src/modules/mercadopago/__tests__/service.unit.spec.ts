@@ -5,7 +5,9 @@ function criarLoggerFalso() {
   return { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() }
 }
 
-function criarServico(opcoes: Partial<{ webhookSecret: string; maxParcelas: number }> = {}) {
+function criarServico(
+  opcoes: Partial<{ webhookSecret: string; maxParcelas: number; descricaoFatura: string; urlDoBackend: string }> = {}
+) {
   const logger = criarLoggerFalso()
   const servico = new MercadoPagoProviderService(
     // @ts-expect-error — em teste não montamos o container completo do Medusa, só o `logger`
@@ -323,6 +325,56 @@ describe("MercadoPagoProviderService", () => {
         context: {},
       })
       expect(JSON.parse(spy2.mock.calls[0][1].body).payer.phone).toBeUndefined()
+    })
+
+    it("manda o nome da fatura e o aviso de mudança de status (config da order)", async () => {
+      mockFetchSequencial({ status: 201, corpo: orderPix })
+      const { servico } = criarServico({ urlDoBackend: "https://backend.exemplo/" })
+
+      await servico.initiatePayment({
+        amount: 199.9,
+        currency_code: "brl",
+        data: { session_id: "payses_1", metodo: "pix", cpf: "12345678909" },
+        context: { customer: { id: "cus_1", email: "cliente@teste.com" } },
+      })
+
+      const corpo = JSON.parse((global.fetch as jest.Mock).mock.calls[0][1].body)
+      // A barra sobrando na opção não pode virar "//hooks" na URL de aviso.
+      expect(corpo.config).toEqual({
+        statement_descriptor: "USEECLAT",
+        online: { callback_url: "https://backend.exemplo/hooks/payment/mercadopago_mercadopago" },
+      })
+    })
+
+    it("sem endereço público configurado, manda só o nome da fatura — nunca uma URL inventada", async () => {
+      mockFetchSequencial({ status: 201, corpo: orderPix })
+      const { servico } = criarServico()
+
+      await servico.initiatePayment({
+        amount: 199.9,
+        currency_code: "brl",
+        data: { session_id: "payses_1", metodo: "pix", cpf: "12345678909" },
+        context: { customer: { id: "cus_1", email: "cliente@teste.com" } },
+      })
+
+      const corpo = JSON.parse((global.fetch as jest.Mock).mock.calls[0][1].body)
+      expect(corpo.config).toEqual({ statement_descriptor: "USEECLAT" })
+    })
+
+    it("nome de fatura comprido é cortado no limite que o Mercado Pago imprime", async () => {
+      mockFetchSequencial({ status: 201, corpo: orderPix })
+      const { servico } = criarServico({ descricaoFatura: "USEECLAT MODA E ATHLEISURE LTDA" })
+
+      await servico.initiatePayment({
+        amount: 199.9,
+        currency_code: "brl",
+        data: { session_id: "payses_1", metodo: "pix", cpf: "12345678909" },
+        context: { customer: { id: "cus_1", email: "cliente@teste.com" } },
+      })
+
+      const corpo = JSON.parse((global.fetch as jest.Mock).mock.calls[0][1].body)
+      expect(corpo.config.statement_descriptor).toBe("USEECLAT MODA E ATHLEI")
+      expect(corpo.config.statement_descriptor).toHaveLength(22)
     })
 
     it("respeita o teto de parcelas configurado (maxParcelas)", async () => {

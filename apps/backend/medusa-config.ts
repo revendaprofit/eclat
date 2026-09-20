@@ -24,6 +24,7 @@ const modulosDePagamento = process.env.MERCADOPAGO_ACCESS_TOKEN
                   ? Number(process.env.MERCADOPAGO_PIX_EXPIRA_MIN)
                   : 30,
                 descricaoFatura: 'USEECLAT',
+                urlDoBackend: process.env.MEDUSA_BACKEND_URL,
               },
             },
           ],
