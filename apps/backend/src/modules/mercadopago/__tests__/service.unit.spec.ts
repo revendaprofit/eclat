@@ -181,6 +181,89 @@ describe("MercadoPagoProviderService", () => {
       expect(ruim.data?.final_cartao).toBeUndefined()
     })
 
+    // Achado de 2026-09-19 em produção: três cartões recusados com `cc_rejected_high_risk`. No painel do
+    // Mercado Pago as cobranças de cartão chegavam SEM pagador (e-mail/CPF/nome nulos) e com
+    // `security:none` (sem o identificador do aparelho). Quanto menos dado, maior a nota de risco.
+    it("Cartão: manda pagador completo, itens e o identificador do aparelho no header", async () => {
+      const spy = mockFetchSequencial({ status: 201, corpo: orderCartaoAprovada }, { status: 200, corpo: { results: [] } })
+      const { servico } = criarServico()
+
+      await servico.initiatePayment({
+        amount: 199.9,
+        currency_code: "brl",
+        data: {
+          session_id: "payses_2",
+          metodo: "cartao",
+          cpf: "12345678909",
+          token: "tok_1",
+          bandeira: "master",
+          email: "cliente@exemplo.com",
+          nomeTitular: "Maria",
+          sobrenome: "Silva",
+          telefone: "31991032698",
+          device_id: "arm_xyz123",
+          endereco: { rua: "Rua Norte", numero: "180", bairro: "Centro", cidade: "Betim", estado: "MG", cep: "32604182" },
+          itens: [{ titulo: "Macaquinho Solaris", quantidade: 2, preco_unitario: 259, sku: "ECL-MS-TEL-M" }],
+        },
+        context: {},
+      })
+
+      const [, opcoes] = spy.mock.calls[0]
+      const corpo = JSON.parse(opcoes.body)
+      expect(opcoes.headers["x-meli-session-id"]).toBe("arm_xyz123")
+      expect(corpo.payer).toEqual({
+        email: "cliente@exemplo.com",
+        first_name: "Maria",
+        last_name: "Silva",
+        identification: { type: "CPF", number: "12345678909" },
+        phone: { area_code: "31", number: "991032698" },
+        address: { street_name: "Rua Norte", street_number: "180", neighborhood: "Centro", city: "Betim", state: "MG", zip_code: "32604182", country: "BR" },
+      })
+      expect(corpo.items).toEqual([
+        { title: "Macaquinho Solaris", quantity: 2, unit_price: "259.00", external_code: "ECL-MS-TEL-M", type: "product", unit_measure: "unit" },
+      ])
+    })
+
+    it("sem os dados extras, o pagador continua com o mínimo e nenhum campo vazio é inventado", async () => {
+      const spy = mockFetchSequencial({ status: 201, corpo: orderPix })
+      const { servico } = criarServico()
+
+      await servico.initiatePayment({
+        amount: 199.9,
+        currency_code: "brl",
+        data: { session_id: "payses_1", metodo: "pix", cpf: "12345678909", email: "cliente@exemplo.com" },
+        context: {},
+      })
+
+      const [, opcoes] = spy.mock.calls[0]
+      const corpo = JSON.parse(opcoes.body)
+      expect(corpo.payer).toEqual({ email: "cliente@exemplo.com", first_name: "Comprador", identification: { type: "CPF", number: "12345678909" } })
+      expect(corpo.items).toBeUndefined()
+      expect(opcoes.headers["x-meli-session-id"]).toBeUndefined()
+    })
+
+    it("telefone só vira area_code + number quando tem DDD; lixo é descartado", async () => {
+      const spy = mockFetchSequencial({ status: 201, corpo: orderPix })
+      const { servico } = criarServico()
+
+      await servico.initiatePayment({
+        amount: 199.9,
+        currency_code: "brl",
+        data: { session_id: "payses_1", metodo: "pix", cpf: "12345678909", email: "c@e.com", telefone: "+55 (31) 9 9103-2698" },
+        context: {},
+      })
+      expect(JSON.parse(spy.mock.calls[0][1].body).payer.phone).toEqual({ area_code: "31", number: "991032698" })
+
+      const spy2 = mockFetchSequencial({ status: 201, corpo: orderPix })
+      await servico.initiatePayment({
+        amount: 199.9,
+        currency_code: "brl",
+        data: { session_id: "payses_1", metodo: "pix", cpf: "12345678909", email: "c@e.com", telefone: "123" },
+        context: {},
+      })
+      expect(JSON.parse(spy2.mock.calls[0][1].body).payer.phone).toBeUndefined()
+    })
+
     it("respeita o teto de parcelas configurado (maxParcelas)", async () => {
       const spy = mockFetchSequencial({ status: 201, corpo: orderCartaoAprovada }, { status: 200, corpo: { results: [] } })
       const { servico } = criarServico({ maxParcelas: 4 })

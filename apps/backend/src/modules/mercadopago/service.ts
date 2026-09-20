@@ -86,7 +86,7 @@ export default class MercadoPagoProviderService extends AbstractPaymentProvider<
     const payload = this.montarPayload({ metodo, amount: input.amount, sessionId, context: input.context, data: input.data })
 
     try {
-      const order = await this.cliente_.criarOrder(payload, sessionId)
+      const order = await this.cliente_.criarOrder(payload, sessionId, deviceId(input.data))
       return {
         id: order.id,
         status: paraStatusDaSessao(order),
@@ -206,7 +206,7 @@ export default class MercadoPagoProviderService extends AbstractPaymentProvider<
     // estoque nem virou pedido).
     const payload = this.montarPayload({ metodo, amount: input.amount, sessionId, context: input.context, data: input.data })
     try {
-      const order = await this.cliente_.criarOrder(payload, `${sessionId}-v${Date.now()}`)
+      const order = await this.cliente_.criarOrder(payload, `${sessionId}-v${Date.now()}`, deviceId(input.data))
       return { status: paraStatusDaSessao(order), data: await this.montarDadosDaSessao(order) }
     } catch (erro) {
       const resultado = await this.tratarFalhaDeCriacao(erro, sessionId)
@@ -271,6 +271,8 @@ export default class MercadoPagoProviderService extends AbstractPaymentProvider<
             installments: Math.min(Number(args.data?.parcelas ?? 1), this.opcoes_.maxParcelas ?? 4),
           }
 
+    const itens = itensDaOrder(args.data?.itens)
+
     return {
       type: "online",
       processing_mode: "automatic",
@@ -278,6 +280,7 @@ export default class MercadoPagoProviderService extends AbstractPaymentProvider<
       total_amount: valor,
       description: this.opcoes_.descricaoFatura ?? "USEECLAT",
       payer: this.montarPayer(args.context, args.data),
+      ...(itens ? { items: itens } : {}),
       transactions: {
         payments: [
           {
@@ -292,16 +295,32 @@ export default class MercadoPagoProviderService extends AbstractPaymentProvider<
     }
   }
 
+  /**
+   * Pagador o mais completo que a vitrine conseguir mandar. O antifraude do Mercado Pago pontua
+   * cada campo: em 2026-09-19, cobranças de cartão saíam daqui só com e-mail/nome/CPF e eram
+   * recusadas em série com `cc_rejected_high_risk`. Campo ausente NUNCA vira string vazia — o
+   * Mercado Pago trata "" como dado ruim; melhor omitir.
+   */
   private montarPayer(context: PaymentProviderContext | undefined, data: Record<string, unknown> | undefined) {
     const cliente = context?.customer
     const cpf = data?.cpf as string | undefined
     if (!cpf) {
       throw new MedusaError(MedusaError.Types.INVALID_DATA, "mercadopago: falta o CPF do pagador (data.cpf)")
     }
+    const texto = (v: unknown): string | undefined => {
+      const s = typeof v === "string" ? v.trim() : ""
+      return s ? s : undefined
+    }
+    const sobrenome = texto(data?.sobrenome) ?? texto(cliente?.last_name)
+    const telefone = telefoneBrasileiro(texto(data?.telefone) ?? texto(cliente?.phone))
+    const endereco = enderecoDoPagador(data?.endereco)
     return {
-      email: cliente?.email ?? (data?.email as string | undefined) ?? "",
-      first_name: (data?.nomeTitular as string | undefined) ?? cliente?.first_name ?? "Comprador",
+      email: texto(cliente?.email) ?? texto(data?.email) ?? "",
+      first_name: texto(data?.nomeTitular) ?? texto(cliente?.first_name) ?? "Comprador",
+      ...(sobrenome ? { last_name: sobrenome } : {}),
       identification: { type: "CPF", number: cpf },
+      ...(telefone ? { phone: telefone } : {}),
+      ...(endereco ? { address: endereco } : {}),
     }
   }
 
@@ -359,6 +378,78 @@ export default class MercadoPagoProviderService extends AbstractPaymentProvider<
  * Os 4 últimos dígitos só existem no navegador (vêm do Brick junto com o token) — a Orders API
  * não os devolve. São o único dado do cartão que guardamos (spec §9), e só para exibição.
  */
+/** `X-Meli-Session-Id`: o código do aparelho que a vitrine captura do SDK do Mercado Pago. */
+function deviceId(data: Record<string, unknown> | undefined): string | undefined {
+  const v = data?.device_id
+  return typeof v === "string" && v.trim() ? v.trim() : undefined
+}
+
+/**
+ * Telefone brasileiro em `{ area_code, number }`. Aceita o que a cliente digitou (com +55,
+ * parênteses e traços) e descarta o que não tiver DDD + 8 ou 9 dígitos — melhor omitir do que
+ * mandar telefone quebrado para o antifraude.
+ */
+function telefoneBrasileiro(bruto: string | undefined): { area_code: string; number: string } | undefined {
+  if (!bruto) return undefined
+  let digitos = bruto.replace(/\D/g, "")
+  if (digitos.length > 11 && digitos.startsWith("55")) digitos = digitos.slice(2)
+  if (digitos.length < 10 || digitos.length > 11) return undefined
+  return { area_code: digitos.slice(0, 2), number: digitos.slice(2) }
+}
+
+type EnderecoDaVitrine = { rua?: string; numero?: string; complemento?: string; bairro?: string; cidade?: string; estado?: string; cep?: string }
+
+/** Endereço do pagador no formato da Orders API. Sem rua ou sem CEP, não mandamos nada. */
+function enderecoDoPagador(bruto: unknown): Record<string, string> | undefined {
+  if (!bruto || typeof bruto !== "object") return undefined
+  const e = bruto as EnderecoDaVitrine
+  const txt = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : undefined)
+  const rua = txt(e.rua)
+  const cep = txt(e.cep)?.replace(/\D/g, "")
+  if (!rua || !cep) return undefined
+  const campos: Record<string, string | undefined> = {
+    street_name: rua,
+    street_number: txt(e.numero),
+    neighborhood: txt(e.bairro),
+    city: txt(e.cidade),
+    state: txt(e.estado),
+    zip_code: cep,
+    complement: txt(e.complemento),
+    country: "BR",
+  }
+  return Object.fromEntries(Object.entries(campos).filter(([, v]) => v !== undefined)) as Record<string, string>
+}
+
+type ItemDaVitrine = { titulo?: string; quantidade?: number; preco_unitario?: number; sku?: string; descricao?: string }
+
+/**
+ * Itens do carrinho no formato da Orders API (o antifraude usa o que está sendo comprado).
+ * `preco_unitario` chega em reais decimais, como o resto do provider; vira string com 2 casas.
+ */
+function itensDaOrder(bruto: unknown): Record<string, unknown>[] | undefined {
+  // (o filtro abaixo tira os itens inválidos; o retorno já é serializável como JSON)
+  if (!Array.isArray(bruto) || bruto.length === 0) return undefined
+  const itens = bruto
+    .map((i) => {
+      const item = i as ItemDaVitrine
+      const titulo = typeof item?.titulo === "string" ? item.titulo.trim() : ""
+      const quantidade = Number(item?.quantidade)
+      const preco = Number(item?.preco_unitario)
+      if (!titulo || !Number.isFinite(quantidade) || quantidade <= 0 || !Number.isFinite(preco)) return undefined
+      return {
+        title: titulo.slice(0, 256),
+        quantity: Math.trunc(quantidade),
+        unit_price: preco.toFixed(2),
+        ...(typeof item.sku === "string" && item.sku.trim() ? { external_code: item.sku.trim() } : {}),
+        ...(typeof item.descricao === "string" && item.descricao.trim() ? { description: item.descricao.trim().slice(0, 256) } : {}),
+        type: "product",
+        unit_measure: "unit",
+      }
+    })
+    .filter((i): i is NonNullable<typeof i> => i !== undefined)
+  return itens.length ? itens : undefined
+}
+
 function dadosDoCartaoInformados(data: Record<string, unknown> | undefined): Record<string, unknown> {
   const final = data?.final_cartao
   return typeof final === "string" && /^\d{4}$/.test(final) ? { final_cartao: final } : {}
