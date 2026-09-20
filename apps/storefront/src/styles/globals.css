@@ -285,3 +285,23 @@
     animation: none !important;
   }
 }
+
+/* === Menu do celular: fio terracota que nasce da esquerda, em cascata === */
+@keyframes eclat-fio-cresce {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+.menu-fio {
+  transform: scaleX(0);
+  animation: eclat-fio-cresce 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+@media (prefers-reduced-motion: reduce) {
+  .menu-fio {
+    animation: none !important;
+    transform: none !important;
+  }
+}
