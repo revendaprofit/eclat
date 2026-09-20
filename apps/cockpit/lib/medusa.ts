@@ -716,7 +716,7 @@ export const ORDER_DETAIL_FIELDS =
   "items.id,items.title,items.variant_id,items.variant_sku,items.variant_title,items.quantity,items.detail.quantity,items.unit_price,items.total,items.metadata,items.adjustments.code,items.adjustments.amount," +
   "shipping_address.first_name,shipping_address.last_name,shipping_address.address_1,shipping_address.address_2,shipping_address.city,shipping_address.province,shipping_address.postal_code,shipping_address.country_code,shipping_address.phone,shipping_address.metadata," +
   "billing_address.metadata," +
-  "shipping_methods.name,shipping_methods.total,shipping_methods.data," +
+  "shipping_methods.name,shipping_methods.amount,shipping_methods.total,shipping_methods.data," +
   "fulfillments.id,fulfillments.shipped_at,fulfillments.delivered_at,fulfillments.canceled_at,fulfillments.labels.tracking_number,fulfillments.labels.tracking_url,fulfillments.labels.label_url," +
   CAMPOS_DE_PAGAMENTO
 

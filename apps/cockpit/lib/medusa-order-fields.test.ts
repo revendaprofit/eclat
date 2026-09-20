@@ -38,8 +38,17 @@ describe("campos de pagamento (Parte 4)", () => {
 // Etiqueta SuperFrete (spec 2026-09-18-frete-superfrete-design.md §4.8): o serviço e o pacote cotados
 // vivem em shipping_methods.data. Sem esse caminho no `fields`, toda etiqueta sairia como PAC com o
 // pacote da tabela — e custaria diferente do frete cobrado, em silêncio.
+//
+// `shipping_methods.amount` é o valor gravado do frete. Pedir a relação SEM ele faz o Medusa
+// 2.15.5 calcular o frete como zero — e o zero contamina o pedido inteiro: em 20/09 o pedido #21
+// aparecia na gaveta com "SEDEX · R$ 0,00" e total R$ 299,00, quando a cliente pagou R$ 313,90
+// (frete R$ 14,90). Conferido contra a produção: com `amount` no fields, total e frete voltam
+// certos; sem ele, `shipping_methods.total` e `shipping_total` vêm 0.
 describe("campos da etiqueta (frete)", () => {
-  it.each(["shipping_methods.data", "shipping_address.address_2"])("ORDER_DETAIL_FIELDS inclui %s", (caminho) => {
-    expect(ORDER_DETAIL_FIELDS.split(",")).toContain(caminho)
-  })
+  it.each(["shipping_methods.data", "shipping_methods.amount", "shipping_address.address_2"])(
+    "ORDER_DETAIL_FIELDS inclui %s",
+    (caminho) => {
+      expect(ORDER_DETAIL_FIELDS.split(",")).toContain(caminho)
+    }
+  )
 })
