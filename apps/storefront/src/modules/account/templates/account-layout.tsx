@@ -23,15 +23,16 @@ const AccountLayout: React.FC<AccountLayoutProps> = ({
         </div>
         <div className="flex flex-col small:flex-row items-end justify-between small:border-t border-gray-200 py-12 gap-8">
           <div>
-            <h3 className="text-xl-semi mb-4">Got questions?</h3>
+            <h3 className="text-xl-semi mb-4">Alguma dúvida?</h3>
             <span className="txt-medium">
-              You can find frequently asked questions and answers on our
-              customer service page.
+              As respostas sobre prazos, trocas e devoluções estão na página de
+              trocas e devoluções.
             </span>
           </div>
           <div>
-            <UnderlineLink href="/customer-service">
-              Customer Service
+            {/* o link antigo apontava para /customer-service, que não existe nesta loja */}
+            <UnderlineLink href="/trocas-e-devolucoes">
+              Trocas e devoluções
             </UnderlineLink>
           </div>
         </div>
