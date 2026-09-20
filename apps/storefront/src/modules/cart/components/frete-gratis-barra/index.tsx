@@ -29,14 +29,14 @@ const FreteGratisBarra = ({ cart, regras }: { cart: HttpTypes.StoreCart; regras:
         )}
       </span>
       <div
-        className="h-1.5 w-full rounded-full bg-ui-bg-subtle overflow-hidden"
+        className="h-1.5 w-full rounded-full bg-eclat-blush overflow-hidden"
         role="progressbar"
         aria-label="Progresso para o frete grátis"
         aria-valuenow={p.percentual}
         aria-valuemin={0}
         aria-valuemax={100}
       >
-        <div className="h-full rounded-full bg-ui-fg-base transition-all" style={{ width: `${p.percentual}%` }} />
+        <div className="h-full rounded-full bg-eclat-terracota transition-all" style={{ width: `${p.percentual}%` }} />
       </div>
       {!uf && !p.atingiu && (
         <span className="text-xsmall-regular text-ui-fg-muted">

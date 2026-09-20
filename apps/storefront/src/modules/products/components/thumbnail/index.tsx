@@ -7,7 +7,7 @@ import PlaceholderImage from "@modules/common/icons/placeholder-image"
 type ThumbnailProps = {
   thumbnail?: string | null
   images?: { url?: string }[] | null
-  size?: "small" | "medium" | "large" | "full" | "square"
+  size?: "small" | "medium" | "large" | "full" | "square" | "portrait"
   isFeatured?: boolean
   className?: string
   alt?: string
@@ -32,7 +32,9 @@ const Thumbnail: React.FC<ThumbnailProps> = ({
         className,
         {
           "aspect-[11/14]": isFeatured,
-          "aspect-[9/16]": !isFeatured && size !== "square",
+          "aspect-[9/16]": !isFeatured && size !== "square" && size !== "portrait",
+          // Retrato 3:4 para a sacola: as fotos do catálogo são 2:3, o quadrado cortava a peça
+          "aspect-[3/4] w-full": size === "portrait",
           "aspect-[1/1]": size === "square",
           "w-[180px]": size === "small",
           "w-[290px]": size === "medium",
