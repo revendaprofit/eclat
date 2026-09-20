@@ -1,7 +1,7 @@
 // Cria um cupom percentual na loja (Medusa Admin API). Sem --aplicar, só MOSTRA o que faria.
 //
-//   node scripts/cupom.mjs --codigo ERIKA20 --percentual 20 --por-cliente 1
-//   node scripts/cupom.mjs --codigo ERIKA20 --percentual 20 --por-cliente 1 --aplicar
+//   node scripts/cupom.mjs --codigo ERIKA20 --percentual 20 --usos 1
+//   node scripts/cupom.mjs --codigo ERIKA20 --percentual 20 --usos 1 --aplicar
 //
 // Regras que valem sozinhas, sem nada aqui:
 // - o cupom alcança só as PEÇAS (nunca o frete): `target_type: "items"`;
@@ -18,10 +18,12 @@ const valorDe = (nome, padrao = null) => {
 const APLICAR = args.includes("--aplicar")
 const CODIGO = (valorDe("codigo") || "").trim().toUpperCase()
 const PERCENTUAL = Number(valorDe("percentual"))
-const POR_CLIENTE = Number(valorDe("por-cliente", "1"))
+// USOS = quantas vezes o cupom pode ser usado NO TOTAL, por qualquer pessoa (decisão do dono,
+// 2026-09-20: nada de cupom preso a cliente). Esgotado o limite, o Medusa recusa o código.
+const USOS = Number(valorDe("usos", "1"))
 
 if (!CODIGO || !Number.isFinite(PERCENTUAL) || PERCENTUAL <= 0 || PERCENTUAL > 100) {
-  console.error("✗ use: --codigo ERIKA20 --percentual 20 [--por-cliente 1] [--aplicar]")
+  console.error("✗ use: --codigo ERIKA20 --percentual 20 [--usos 1] [--aplicar]")
   process.exit(1)
 }
 
@@ -56,8 +58,10 @@ if (existente) {
 const campanha = {
   name: `Cupom ${CODIGO}`,
   campaign_identifier: `cupom-${CODIGO.toLowerCase()}`,
-  // "1 vez por cliente": o Medusa conta o uso por atributo do pedido (mesmo desenho do Clube).
-  budget: { type: "use_by_attribute", attribute: "customer_id", limit: POR_CLIENTE },
+  // Uso ÚNICO (ou N usos) no total: o limite é da campanha, não do cliente. Assim o cupom vale
+  // já na sacola — o limite por cliente (`use_by_attribute`) exigiria saber quem é a cliente, e
+  // na sacola ainda não há e-mail nem login (achado de 2026-09-20 em produção).
+  budget: { type: "usage", limit: USOS },
 }
 const promocao = {
   code: CODIGO,
@@ -73,7 +77,7 @@ const promocao = {
   },
 }
 
-console.log(`${APLICAR ? "→" : "(simulação)"} cupom ${CODIGO}: ${PERCENTUAL}% nas peças, ${POR_CLIENTE}x por cliente`)
+console.log(`${APLICAR ? "→" : "(simulação)"} cupom ${CODIGO}: ${PERCENTUAL}% nas peças, ${USOS} uso(s) no total`)
 if (!APLICAR) {
   console.log("  campanha:", JSON.stringify(campanha))
   console.log("  promoção:", JSON.stringify(promocao))
@@ -84,7 +88,7 @@ if (!APLICAR) {
 const { campaign } = await j(
   await fetch(`${URL}/admin/campaigns`, { method: "POST", headers: h, body: JSON.stringify(campanha) })
 )
-console.log(`  ✓ campanha ${campaign.id} (limite ${POR_CLIENTE} por cliente)`)
+console.log(`  ✓ campanha ${campaign.id} (limite ${USOS} uso(s) no total)`)
 
 const { promotion } = await j(
   await fetch(`${URL}/admin/promotions`, {

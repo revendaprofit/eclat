@@ -8,12 +8,8 @@ export function mensagemDeErroDoCupom(erro: unknown, codigo?: string): string {
   const bruto = (erro instanceof Error ? erro.message : String(erro ?? "")).toLowerCase()
   const cupom = (codigo ?? "").trim()
 
-  // Cupom com limite por cliente: o Medusa só sabe quem é a cliente depois do e-mail (ou login).
-  if (bruto.includes("customer_id") && bruto.includes("budget")) {
-    return "Este cupom é limitado a um uso por cliente. Entre na sua conta, ou informe seu e-mail no checkout, e aplique o cupom lá."
-  }
-  // Limite da campanha já esgotado.
-  if (bruto.includes("budget") && (bruto.includes("exceed") || bruto.includes("limit"))) {
+  // Limite da campanha esgotado — com cupom de uso único, é o caso mais comum.
+  if (bruto.includes("budget") || bruto.includes("exceed") || bruto.includes("limit")) {
     return cupom ? `O cupom ${cupom} já foi usado.` : "Este cupom já foi usado."
   }
   // Código inexistente, desativado ou fora da validade.
