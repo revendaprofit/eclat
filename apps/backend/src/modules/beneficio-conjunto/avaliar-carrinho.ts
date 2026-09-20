@@ -83,10 +83,37 @@ function escalar(it: ItemCtx, n: number, q: number): ItemCtx {
 // `conjunto_id` por item_id mentiria para qualquer consumidor que confiasse nele. Quem precisar
 // saber que conjunto formou cada unidade (vitrine) usa `/store/conjuntos/oportunidades` (Task 7),
 // que devolve `ConjuntoFormado[]` já com os `item_id`s corretos por conjunto.
-export function marcarContexto(items: ItemCtx[], resultado: ResultadoMontagem): ItemCtx[] {
+export type CupomPercentual = { code: string; percentual: number }
+
+/**
+ * Desconto do cupom numa unidade, em centavos. Só cupom PERCENTUAL entra na comparação: o de valor
+ * fixo é repartido pelo motor entre as unidades elegíveis (`allocation: across`), então "quanto ele
+ * daria nesta peça" depende de quais peças sobram — conta circular. Cupom fixo segue como antes
+ * (alcança só as peças fora de conjunto).
+ */
+export function descontoDoCupomNaUnidade(precoUnitario: number, cupons: CupomPercentual[]): number {
+  let melhor = 0
+  for (const c of cupons) {
+    if (!(c.percentual > 0)) continue
+    melhor = Math.max(melhor, Math.round((precoUnitario * c.percentual) / 100))
+  }
+  return melhor
+}
+
+export function marcarContexto(items: ItemCtx[], resultado: ResultadoMontagem, cupons: CupomPercentual[] = []): ItemCtx[] {
   const porItem = new Map<string, Map<string, number>>() // item_id → marca → unidades
   for (const c of resultado.conjuntos) for (const u of c.unidades) {
-    const marca = u.desconto_unitario > 0 ? c.regra_id : MARCA_EM_CONJUNTO
+    // Decisão do dono (2026-09-20): conjunto e cupom NUNCA somam na mesma peça — por peça vale o
+    // MAIOR desconto. Se o cupom daria mais que o conjunto nesta unidade, ela sai como "nenhum"
+    // e o cupom a alcança; o conjunto deixa de descontá-la. Empate fica com o conjunto (ele é
+    // automático: a cliente vê o preço sem depender de digitar código).
+    const cupomNaUnidade = descontoDoCupomNaUnidade(u.preco_unitario, cupons)
+    const marca =
+      cupomNaUnidade > u.desconto_unitario
+        ? MARCA_LIVRE
+        : u.desconto_unitario > 0
+        ? c.regra_id
+        : MARCA_EM_CONJUNTO
     const m = porItem.get(u.item_id) ?? new Map<string, number>()
     m.set(marca, (m.get(marca) ?? 0) + 1)
     porItem.set(u.item_id, m)
