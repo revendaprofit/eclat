@@ -11,6 +11,7 @@ import ErrorMessage from "@modules/checkout/components/error-message"
 import Divider from "@modules/common/components/divider"
 import MedusaRadio from "@modules/common/components/radio"
 import { Button, clx, Heading, Text } from "@modules/common/components/ui"
+import { ehEntregaPorApp, TEXTO_ENTREGA_APP } from "@lib/util/entrega-app"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { useEffect, useState } from "react"
 
@@ -62,6 +63,9 @@ const Shipping: React.FC<ShippingProps> = ({
   >({})
   const [prazos, setPrazos] = useState<Prazos>({})
   const [error, setError] = useState<string | null>(null)
+  // Entrega por aplicativo: a cliente precisa aceitar que a contratação do carro é dela. Sem o
+  // aceite o backend recusa gravar o método (é ele quem manda; aqui é só a interface).
+  const [aceiteApp, setAceiteApp] = useState(false)
   const [shippingMethodId, setShippingMethodId] = useState<string | null>(
     cart.shipping_methods?.at(-1)?.shipping_option_id || null
   )
@@ -125,7 +129,8 @@ const Shipping: React.FC<ShippingProps> = ({
 
   const handleSetShippingMethod = async (
     id: string,
-    variant: "shipping" | "pickup"
+    variant: "shipping" | "pickup",
+    data?: Record<string, unknown>
   ) => {
     setError(null)
 
@@ -142,7 +147,7 @@ const Shipping: React.FC<ShippingProps> = ({
       return id
     })
 
-    await setShippingMethod({ cartId: cart.id, shippingMethodId: id })
+    await setShippingMethod({ cartId: cart.id, shippingMethodId: id, data })
       .catch((err) => {
         setShippingMethodId(currentId)
 
@@ -250,16 +255,21 @@ const Shipping: React.FC<ShippingProps> = ({
                 <RadioGroup
                   value={shippingMethodId}
                   onChange={(v) => {
-                    if (v) {
-                      return handleSetShippingMethod(v, "shipping")
+                    if (!v) return
+                    const escolhida = opcoesDeEnvio?.find((o) => o.id === v)
+                    if (ehEntregaPorApp(escolhida)) {
+                      return handleSetShippingMethod(v, "shipping", { aceite: true })
                     }
+                    return handleSetShippingMethod(v, "shipping")
                   }}
                 >
                   {opcoesDeEnvio?.map((option) => {
-                    const isDisabled =
+                    const semPreco =
                       option.price_type === "calculated" &&
                       !isLoadingPrices &&
                       typeof calculatedPricesMap[option.id] !== "number"
+                    const entregaPorApp = ehEntregaPorApp(option)
+                    const isDisabled = semPreco || (entregaPorApp && !aceiteApp)
 
                     return (
                       <Radio
@@ -292,6 +302,28 @@ const Shipping: React.FC<ShippingProps> = ({
                                 </span>
                               ) : null
                             })()}
+                            {entregaPorApp && (
+                              <span className="flex flex-col gap-y-2 max-w-md">
+                                <span className="text-small-regular text-ui-fg-muted" data-testid="entrega-app-aviso">
+                                  {TEXTO_ENTREGA_APP}
+                                </span>
+                                {/* a caixa fica fora do rádio (label próprio) para o clique não
+                                    selecionar a opção antes do aceite */}
+                                <label
+                                  className="flex items-start gap-x-2 text-small-regular text-ui-fg-base cursor-pointer"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={aceiteApp}
+                                    onChange={(e) => setAceiteApp(e.target.checked)}
+                                    data-testid="entrega-app-aceite"
+                                    className="mt-1 accent-eclat-terracota"
+                                  />
+                                  <span>Estou de acordo: eu chamo e pago o transporte.</span>
+                                </label>
+                              </span>
+                            )}
                           </span>
                         </div>
                         <span className="justify-self-end text-ui-fg-base">

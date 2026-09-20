@@ -1,8 +1,8 @@
 import repeat from "@lib/util/repeat"
 import { HttpTypes } from "@medusajs/types"
-import { Heading, Table } from "@modules/common/components/ui"
+import { Table } from "@modules/common/components/ui"
 
-import Item from "@modules/cart/components/item"
+import ItemCard from "@modules/cart/components/item-card"
 import SkeletonLineItem from "@modules/skeletons/components/skeleton-line-item"
 
 type ItemsTemplateProps = {
@@ -10,48 +10,37 @@ type ItemsTemplateProps = {
   etiquetas?: Record<string, string>
 }
 
+// Lista de peças da sacola em cartões (redesenho 2026-09; era uma tabela que cortava no celular).
 const ItemsTemplate = ({ cart, etiquetas }: ItemsTemplateProps) => {
   const items = cart?.items
+  const pecas = (items ?? []).reduce((s, i) => s + i.quantity, 0)
   return (
     <div>
-      <div className="pb-3 flex items-center">
-        <Heading className="text-[2rem] leading-[2.75rem]">Sacola</Heading>
-      </div>
-      <Table>
-        <Table.Header className="border-t-0">
-          <Table.Row className="text-ui-fg-subtle txt-medium-plus">
-            <Table.HeaderCell className="!pl-0">Produto</Table.HeaderCell>
-            <Table.HeaderCell></Table.HeaderCell>
-            <Table.HeaderCell>Quantidade</Table.HeaderCell>
-            <Table.HeaderCell className="hidden small:table-cell">
-              Preço
-            </Table.HeaderCell>
-            <Table.HeaderCell className="!pr-0 text-right">
-              Total
-            </Table.HeaderCell>
-          </Table.Row>
-        </Table.Header>
-        <Table.Body>
-          {items
-            ? items
-                .sort((a, b) => {
-                  return (a.created_at ?? "") > (b.created_at ?? "") ? -1 : 1
-                })
-                .map((item) => {
-                  return (
-                    <Item
-                      key={item.id}
-                      item={item}
-                      currencyCode={cart?.currency_code}
-                      etiqueta={etiquetas?.[item.id]}
-                    />
-                  )
-                })
-            : repeat(5).map((i) => {
-                return <SkeletonLineItem key={i} />
-              })}
-        </Table.Body>
-      </Table>
+      <header className="flex items-baseline justify-between border-b border-eclat-grafite/80 pb-3">
+        <h1 className="font-serif text-4xl small:text-5xl leading-none text-eclat-grafite">Sacola</h1>
+        {items && (
+          <span className="text-sm text-eclat-grafite/60" data-testid="cart-count">
+            {pecas} {pecas === 1 ? "peça" : "peças"}
+          </span>
+        )}
+      </header>
+      {items ? (
+        <ul className="flex flex-col" data-testid="cart-items">
+          {[...items]
+            .sort((a, b) => ((a.created_at ?? "") > (b.created_at ?? "") ? -1 : 1))
+            .map((item) => (
+              <ItemCard key={item.id} item={item} currencyCode={cart?.currency_code ?? "brl"} etiqueta={etiquetas?.[item.id]} />
+            ))}
+        </ul>
+      ) : (
+        <Table>
+          <Table.Body>
+            {repeat(3).map((i) => (
+              <SkeletonLineItem key={i} />
+            ))}
+          </Table.Body>
+        </Table>
+      )}
     </div>
   )
 }

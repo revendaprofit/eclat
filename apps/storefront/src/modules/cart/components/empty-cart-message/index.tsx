@@ -1,23 +1,15 @@
-import { Heading, Text } from "@modules/common/components/ui"
-
-import InteractiveLink from "@modules/common/components/interactive-link"
+import LocalizedClientLink from "@modules/common/components/localized-client-link"
+import { Button } from "@modules/common/components/ui"
 
 const EmptyCartMessage = () => {
   return (
-    <div className="py-48 px-2 flex flex-col justify-center items-start" data-testid="empty-cart-message">
-      <Heading
-        level="h1"
-        className="flex flex-row text-3xl-regular gap-x-2 items-baseline"
-      >
-        Sacola
-      </Heading>
-      <Text className="text-base-regular mt-4 mb-6 max-w-[32rem]">
-        Sua sacola está vazia. Use o link abaixo para começar a explorar as
-        peças da Éclat.
-      </Text>
-      <div>
-        <InteractiveLink href="/store">Explorar peças</InteractiveLink>
-      </div>
+    <div className="py-24 small:py-36 flex flex-col items-center text-center" data-testid="empty-cart-message">
+      <span className="text-[10px] uppercase tracking-[0.3em] text-eclat-terracota">Sacola</span>
+      <h1 className="mt-3 font-serif text-4xl small:text-5xl text-eclat-grafite">Ainda vazia</h1>
+      <p className="mt-4 max-w-sm text-eclat-grafite/70">Escolha suas peças e elas ficam guardadas aqui até você finalizar.</p>
+      <LocalizedClientLink href="/store" className="mt-8">
+        <Button className="h-12 px-8 uppercase tracking-[0.18em] text-xs">Ver as peças</Button>
+      </LocalizedClientLink>
     </div>
   )
 }

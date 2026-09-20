@@ -5,6 +5,7 @@ import medusaError from "@lib/util/medusa-error"
 import { cpfValido, normalizarCpf } from "@lib/util/cpf"
 import { montarMetadataFiscal } from "@lib/util/endereco-fiscal"
 import { HttpTypes } from "@medusajs/types"
+import { mensagemDeErroDoCupom } from "@lib/util/erro-cupom"
 import { revalidateTag } from "next/cache"
 import { redirect } from "next/navigation"
 import {
@@ -231,16 +232,19 @@ export async function deleteLineItem(lineId: string) {
 export async function setShippingMethod({
   cartId,
   shippingMethodId,
+  data,
 }: {
   cartId: string
   shippingMethodId: string
+  /** Dados da opção (ex.: `{ aceite: true }` da entrega por aplicativo). O backend valida. */
+  data?: Record<string, unknown>
 }) {
   const headers = {
     ...(await getAuthHeaders()),
   }
 
   return sdk.store.cart
-    .addShippingMethod(cartId, { option_id: shippingMethodId }, {}, headers)
+    .addShippingMethod(cartId, { option_id: shippingMethodId, ...(data ? { data } : {}) }, {}, headers)
     .then(async () => {
       const cartCacheTag = await getCacheTag("carts")
       revalidateTag(cartCacheTag)
@@ -266,27 +270,41 @@ export async function initiatePaymentSession(
     .catch(medusaError)
 }
 
-export async function applyPromotions(codes: string[]) {
+/**
+ * Aplica (ou substitui) os cupons do carrinho. NUNCA estoura: um erro dentro de uma ação de
+ * servidor vira aquela tela "An error occurred in the Server Components render…" no navegador
+ * (achado de 2026-09-20 em produção). Devolve o resultado para a tela mostrar a mensagem certa.
+ */
+export async function applyPromotions(
+  codes: string[]
+): Promise<{ ok: true } | { ok: false; mensagem: string }> {
   const cartId = await getCartId()
 
   if (!cartId) {
-    throw new Error("No existing cart found")
+    return { ok: false, mensagem: "Sua sacola expirou. Atualize a página e tente de novo." }
   }
 
   const headers = {
     ...(await getAuthHeaders()),
   }
 
-  return sdk.store.cart
-    .update(cartId, { promo_codes: codes }, {}, headers)
-    .then(async () => {
-      const cartCacheTag = await getCacheTag("carts")
-      revalidateTag(cartCacheTag)
+  try {
+    await sdk.store.cart.update(cartId, { promo_codes: codes }, {}, headers)
+    const cartCacheTag = await getCacheTag("carts")
+    revalidateTag(cartCacheTag)
 
-      const fulfillmentCacheTag = await getCacheTag("fulfillment")
-      revalidateTag(fulfillmentCacheTag)
-    })
-    .catch(medusaError)
+    const fulfillmentCacheTag = await getCacheTag("fulfillment")
+    revalidateTag(fulfillmentCacheTag)
+    return { ok: true }
+  } catch (e) {
+    return { ok: false, mensagem: mensagemDeErroDoCupom(medusaErroTexto(e), codes[codes.length - 1]) }
+  }
+}
+
+/** Texto do erro do Medusa sem propagar o objeto inteiro (o SDK embrulha a resposta). */
+function medusaErroTexto(e: unknown): Error {
+  const qualquer = e as { message?: string; response?: { data?: { message?: string } } }
+  return new Error(qualquer?.response?.data?.message ?? qualquer?.message ?? String(e))
 }
 
 export async function applyGiftCard(_code: string) {
@@ -337,11 +355,8 @@ export async function submitPromotionForm(
   formData: FormData
 ) {
   const code = formData.get("code") as string
-  try {
-    await applyPromotions([code])
-  } catch (e) {
-    return e instanceof Error ? e.message : String(e)
-  }
+  const r = await applyPromotions([code])
+  return r.ok ? undefined : r.mensagem
 }
 
 // TODO: Pass a POJO instead of a form entity here

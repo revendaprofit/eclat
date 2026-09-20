@@ -1,27 +1,48 @@
 "use client"
 
 import { Popover, PopoverPanel, Transition } from "@headlessui/react"
-import Image from "next/image"
 import useToggleState from "@lib/hooks/use-toggle-state"
-import { ArrowRightMini, XMark } from "@medusajs/icons"
+import { ArrowRightMini } from "@medusajs/icons"
 import { HttpTypes } from "@medusajs/types"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
-import { Text, clx } from "@modules/common/components/ui"
+import { clx } from "@modules/common/components/ui"
 import { Fragment } from "react"
 import CountrySelect from "../country-select"
 import LanguageSelect from "../language-select"
 import { Locale } from "@lib/data/locales"
 import type { NavData } from "@lib/util/navigation"
 
+// Menu do celular. Antes era o painel escuro translúcido do starter do Medusa, com um quadrado
+// cinza e a inicial da categoria no lugar da foto que não existe (pedido do dono, 2026-09-20:
+// "continua sem design e feio"). Agora é a mesma linguagem do resto do site: papel quente,
+// nomes em serifa e um fio terracota que nasce da esquerda quando o menu abre — um fio por
+// linha, em cascata. É o único movimento; quem pede menos animação recebe o fio já inteiro.
 
-type SideMenuProps = {
+const GRUPO = "font-sans text-[10px] uppercase tracking-[0.28em] text-eclat-terracota"
+const ITEM_RAIZ = "font-serif text-[22px] leading-tight text-eclat-grafite"
+const ITEM_FILHO = "font-sans text-[15px] leading-7 text-eclat-grafite/70 hover:text-eclat-terracota"
+const FOCO = "focus:outline-none focus-visible:ring-2 focus-visible:ring-eclat-terracota focus-visible:ring-offset-2 focus-visible:ring-offset-eclat-luz"
+
+/** Fio terracota que cresce da esquerda; `ordem` dá a cascata (40 ms entre as linhas). */
+const Fio = ({ ordem }: { ordem: number }) => (
+  <span
+    aria-hidden
+    className="menu-fio block h-px w-full origin-left bg-eclat-terracota/30"
+    style={{ animationDelay: `${120 + ordem * 40}ms` }}
+  />
+)
+
+const SideMenu = ({
+  regions,
+  locales,
+  currentLocale,
+  nav,
+}: {
   regions: HttpTypes.StoreRegion[] | null
   locales: Locale[] | null
   currentLocale: string | null
   nav: NavData
-}
-
-const SideMenu = ({ regions, locales, currentLocale, nav }: SideMenuProps) => {
+}) => {
   const countryToggleState = useToggleState()
   const languageToggleState = useToggleState()
 
@@ -35,7 +56,10 @@ const SideMenu = ({ regions, locales, currentLocale, nav }: SideMenuProps) => {
                 <Popover.Button
                   data-testid="nav-menu-button"
                   aria-label="Abrir menu"
-                  className="relative h-full flex items-center text-eclat-terracota transition-all ease-out duration-200 focus:outline-none hover:text-eclat-terracota-escuro"
+                  className={clx(
+                    "relative h-full flex items-center text-eclat-terracota transition-colors hover:text-eclat-terracota-escuro",
+                    FOCO
+                  )}
                 >
                   <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
                     <line x1="3" y1="7" x2="21" y2="7" />
@@ -47,7 +71,7 @@ const SideMenu = ({ regions, locales, currentLocale, nav }: SideMenuProps) => {
 
               {open && (
                 <div
-                  className="fixed inset-0 z-[50] bg-black/0 pointer-events-auto"
+                  className="fixed inset-0 z-[50] bg-eclat-grafite/45 backdrop-blur-[2px]"
                   onClick={close}
                   data-testid="side-menu-backdrop"
                 />
@@ -56,117 +80,156 @@ const SideMenu = ({ regions, locales, currentLocale, nav }: SideMenuProps) => {
               <Transition
                 show={open}
                 as={Fragment}
-                enter="transition ease-out duration-150"
-                enterFrom="opacity-0"
-                enterTo="opacity-100 backdrop-blur-2xl"
+                enter="transition ease-out duration-200"
+                enterFrom="opacity-0 -translate-x-4"
+                enterTo="opacity-100 translate-x-0"
                 leave="transition ease-in duration-150"
-                leaveFrom="opacity-100 backdrop-blur-2xl"
-                leaveTo="opacity-0"
+                leaveFrom="opacity-100 translate-x-0"
+                leaveTo="opacity-0 -translate-x-4"
               >
-                <PopoverPanel className="flex flex-col absolute w-full pr-4 sm:pr-0 sm:w-1/3 2xl:w-1/4 sm:min-w-min h-[calc(100vh-1rem)] z-[51] inset-x-0 text-sm text-ui-fg-on-color m-2 backdrop-blur-2xl">
+                <PopoverPanel className="fixed left-0 top-0 z-[51] h-[100dvh] w-[88%] max-w-[400px] motion-reduce:transform-none">
                   <div
                     data-testid="nav-menu-popup"
-                    className="flex flex-col h-full bg-[rgba(3,7,18,0.5)] rounded-rounded justify-between p-6"
+                    className="flex h-full flex-col bg-eclat-luz shadow-[0_0_60px_rgba(43,42,40,0.25)]"
                   >
-                    <div className="flex justify-end" id="xmark">
-                      <button data-testid="close-menu-button" onClick={close}>
-                        <XMark />
+                    {/* topo: marca + fechar escrito (rótulo diz o que o botão faz) */}
+                    <div className="flex items-center justify-between border-b border-eclat-pedra/40 px-6 py-4">
+                      <LocalizedClientLink href="/" onClick={close} className={clx("flex items-center gap-2", FOCO)} aria-label="use.ÉCLAT, início">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src="/brand/mark.png" alt="" aria-hidden className="h-7 w-auto" />
+                        <span className="font-serif text-xl tracking-wide text-eclat-terracota">ÉCLAT</span>
+                      </LocalizedClientLink>
+                      <button
+                        data-testid="close-menu-button"
+                        onClick={close}
+                        className={clx("font-sans text-[11px] uppercase tracking-[0.2em] text-eclat-grafite/60 hover:text-eclat-terracota", FOCO)}
+                      >
+                        Fechar
                       </button>
                     </div>
-                    <ul className="flex flex-col gap-3 items-stretch justify-start overflow-y-auto" data-testid="mobile-nav">
-                      <li>
-                        <LocalizedClientLink href="/" className="text-2xl leading-10 hover:text-ui-fg-disabled" onClick={close} data-testid="início-link">Início</LocalizedClientLink>
-                      </li>
-                      {nav.roots.map((r) => {
-                        const Thumb = (
-                          <span className="w-12 h-12 rounded-md overflow-hidden bg-white/10 shrink-0 flex items-center justify-center font-serif text-lg">
-                            {r.image_url ? <Image src={r.image_url} alt="" width={48} height={48} className="w-12 h-12 object-cover" /> : r.name.charAt(0)}
-                          </span>
-                        )
-                        if (r.children.length === 0) {
-                          return (
-                            <li key={r.id}>
-                              <LocalizedClientLink href={`/categories/${r.handle}`} onClick={close} className="flex items-center gap-3 text-xl leading-tight hover:text-ui-fg-disabled" data-testid={`mobile-cat-${r.handle}`}>
-                                {Thumb}<span>{r.name}</span>
-                              </LocalizedClientLink>
-                            </li>
-                          )
-                        }
-                        return (
+
+                    <nav className="flex-1 overflow-y-auto px-6 py-6" aria-label="Menu principal">
+                      <p className={GRUPO}>Peças</p>
+                      <ul className="mt-3 flex flex-col" data-testid="mobile-nav">
+                        {nav.roots.map((r, i) => (
                           <li key={r.id}>
-                            <details className="group/acc">
-                              <summary className="flex items-center gap-3 text-xl leading-tight cursor-pointer list-none [&::-webkit-details-marker]:hidden hover:text-ui-fg-disabled" data-testid={`mobile-cat-${r.handle}`}>
-                                {Thumb}<span className="flex-1">{r.name}</span><ArrowRightMini className="transition-transform group-open/acc:rotate-90" />
-                              </summary>
-                              <ul className="flex flex-col gap-1 mt-2 ml-[60px]">
-                                {r.children.map((ch) => (
-                                  <li key={ch.id}><LocalizedClientLink href={`/categories/${ch.handle}`} onClick={close} className="text-base leading-7 text-ui-fg-on-color/80 hover:text-ui-fg-on-color">{ch.name}</LocalizedClientLink></li>
-                                ))}
-                                <li><LocalizedClientLink href={`/categories/${r.handle}`} onClick={close} className="text-sm underline underline-offset-4">Ver tudo de {r.name}</LocalizedClientLink></li>
-                              </ul>
-                            </details>
+                            {r.children.length === 0 ? (
+                              <LocalizedClientLink
+                                href={`/categories/${r.handle}`}
+                                onClick={close}
+                                className={clx("flex items-center py-3.5 hover:text-eclat-terracota", ITEM_RAIZ, FOCO)}
+                                data-testid={`mobile-cat-${r.handle}`}
+                              >
+                                {r.name}
+                              </LocalizedClientLink>
+                            ) : (
+                              <details className="group/acc">
+                                <summary
+                                  className={clx(
+                                    "flex cursor-pointer list-none items-center py-3.5 hover:text-eclat-terracota [&::-webkit-details-marker]:hidden",
+                                    ITEM_RAIZ,
+                                    FOCO
+                                  )}
+                                  data-testid={`mobile-cat-${r.handle}`}
+                                >
+                                  <span className="flex-1">{r.name}</span>
+                                  <ArrowRightMini className="text-eclat-terracota transition-transform group-open/acc:rotate-90 motion-reduce:transition-none" />
+                                </summary>
+                                <ul className="mb-2 flex flex-col gap-1 rounded-base bg-eclat-areia/40 px-4 py-3">
+                                  {r.children.map((ch) => (
+                                    <li key={ch.id}>
+                                      <LocalizedClientLink href={`/categories/${ch.handle}`} onClick={close} className={clx(ITEM_FILHO, FOCO)}>
+                                        {ch.name}
+                                      </LocalizedClientLink>
+                                    </li>
+                                  ))}
+                                  <li>
+                                    <LocalizedClientLink
+                                      href={`/categories/${r.handle}`}
+                                      onClick={close}
+                                      className={clx("font-sans text-[13px] uppercase tracking-[0.14em] text-eclat-terracota", FOCO)}
+                                    >
+                                      Ver tudo de {r.name}
+                                    </LocalizedClientLink>
+                                  </li>
+                                </ul>
+                              </details>
+                            )}
+                            <Fio ordem={i} />
                           </li>
-                        )
-                      })}
-                      {nav.collections.length > 0 && (
+                        ))}
                         <li>
-                          <details className="group/acc">
-                            <summary className="flex items-center gap-3 text-xl leading-tight cursor-pointer list-none [&::-webkit-details-marker]:hidden hover:text-ui-fg-disabled" data-testid="mobile-colecoes">
-                              <span className="w-12 h-12 rounded-md bg-white/10 flex items-center justify-center font-serif text-lg">C</span><span className="flex-1">Coleções</span><ArrowRightMini className="transition-transform group-open/acc:rotate-90" />
-                            </summary>
-                            <ul className="flex flex-col gap-1 mt-2 ml-[60px]">
-                              {nav.collections.map((c) => (
-                                <li key={c.id}><LocalizedClientLink href={`/collections/${c.handle}`} onClick={close} className="text-base leading-7 text-ui-fg-on-color/80 hover:text-ui-fg-on-color">{c.title}</LocalizedClientLink></li>
-                              ))}
-                            </ul>
-                          </details>
+                          <LocalizedClientLink
+                            href="/store"
+                            onClick={close}
+                            className={clx("flex items-center py-3.5 hover:text-eclat-terracota", ITEM_RAIZ, FOCO)}
+                            data-testid="loja-link"
+                          >
+                            Toda a loja
+                          </LocalizedClientLink>
+                          <Fio ordem={nav.roots.length} />
                         </li>
+                      </ul>
+
+                      {nav.collections.length > 0 && (
+                        <>
+                          <p className={clx(GRUPO, "mt-8")}>Coleções</p>
+                          <ul className="mt-3 flex flex-col">
+                            {nav.collections.map((c, i) => (
+                              <li key={c.id}>
+                                <LocalizedClientLink
+                                  href={`/collections/${c.handle}`}
+                                  onClick={close}
+                                  className={clx("flex items-center py-3.5 hover:text-eclat-terracota", ITEM_RAIZ, FOCO)}
+                                  data-testid={`mobile-col-${c.handle}`}
+                                >
+                                  {c.title}
+                                </LocalizedClientLink>
+                                <Fio ordem={nav.roots.length + 1 + i} />
+                              </li>
+                            ))}
+                          </ul>
+                        </>
                       )}
-                      <li><LocalizedClientLink href="/store" className="text-2xl leading-10 hover:text-ui-fg-disabled" onClick={close} data-testid="loja-link">Toda a loja</LocalizedClientLink></li>
-                      <li><LocalizedClientLink href="/account" className="text-2xl leading-10 hover:text-ui-fg-disabled" onClick={close} data-testid="conta-link">Conta</LocalizedClientLink></li>
-                    </ul>
-                    <div className="flex flex-col gap-y-6">
+
+                      <p className={clx(GRUPO, "mt-8")}>Sua conta</p>
+                      <ul className="mt-3 flex flex-col">
+                        <li>
+                          <LocalizedClientLink
+                            href="/account"
+                            onClick={close}
+                            className={clx("flex items-center py-3.5 hover:text-eclat-terracota", ITEM_RAIZ, FOCO)}
+                            data-testid="conta-link"
+                          >
+                            Minha conta
+                          </LocalizedClientLink>
+                          <Fio ordem={nav.roots.length + nav.collections.length + 2} />
+                        </li>
+                      </ul>
+                    </nav>
+
+                    <div className="border-t border-eclat-pedra/40 px-6 py-4 text-eclat-grafite/60">
                       {!!locales?.length && (
                         <div
-                          className="flex justify-between"
+                          className="flex items-center justify-between py-1"
                           onMouseEnter={languageToggleState.open}
                           onMouseLeave={languageToggleState.close}
                         >
-                          <LanguageSelect
-                            toggleState={languageToggleState}
-                            locales={locales}
-                            currentLocale={currentLocale}
-                          />
-                          <ArrowRightMini
-                            className={clx(
-                              "transition-transform duration-150",
-                              languageToggleState.state ? "-rotate-90" : ""
-                            )}
-                          />
+                          <LanguageSelect toggleState={languageToggleState} locales={locales} currentLocale={currentLocale} />
+                          <ArrowRightMini className={clx("transition-transform duration-150", languageToggleState.state ? "-rotate-90" : "")} />
                         </div>
                       )}
                       <div
-                        className="flex justify-between"
+                        className="flex items-center justify-between py-1"
                         onMouseEnter={countryToggleState.open}
                         onMouseLeave={countryToggleState.close}
                       >
-                        {regions && (
-                          <CountrySelect
-                            toggleState={countryToggleState}
-                            regions={regions}
-                          />
-                        )}
-                        <ArrowRightMini
-                          className={clx(
-                            "transition-transform duration-150",
-                            countryToggleState.state ? "-rotate-90" : ""
-                          )}
-                        />
+                        {regions && <CountrySelect toggleState={countryToggleState} regions={regions} />}
+                        <ArrowRightMini className={clx("transition-transform duration-150", countryToggleState.state ? "-rotate-90" : "")} />
                       </div>
-                      <Text className="flex justify-between txt-compact-small">
-                        © {new Date().getFullYear()} use.ÉCLAT. Todos os
-                        direitos reservados.
-                      </Text>
+                      <p className="mt-3 font-sans text-[11px] leading-5">
+                        © {new Date().getFullYear()} use.ÉCLAT. Todos os direitos reservados.
+                      </p>
                     </div>
                   </div>
                 </PopoverPanel>
