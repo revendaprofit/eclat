@@ -32,7 +32,12 @@ const nextConfig = {
     ignoreBuildErrors: false,
   },
   images: {
-    // Otimização do Next ATIVA (resize + WebP/AVIF na Vercel) — crítico p/ LCP.
+    // Redimensionamento pelo Supabase (src/lib/util/image-loader.ts), não pelo otimizador da Vercel:
+    // a cota da Vercel estourou em 2026-09-20 e imagem nova passou a responder 402.
+    // Para voltar ao otimizador da Vercel sem mexer em código: IMAGENS_OTIMIZADOR=vercel no ambiente.
+    ...(process.env.IMAGENS_OTIMIZADOR === "vercel"
+      ? {}
+      : { loader: "custom", loaderFile: "./src/lib/util/image-loader.ts" }),
     formats: ["image/avif", "image/webp"],
     // 80 = quality dos cards/PDP (product-card, image-gallery); 50/75 = defaults do Next mantidos
     // como fallback para outros usos de <Image>. Sem isso o Next avisa em build/dev.
