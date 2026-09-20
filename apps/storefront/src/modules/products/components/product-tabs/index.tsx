@@ -14,11 +14,13 @@ type ProductTabsProps = {
   product: HttpTypes.StoreProduct
   // tabela de medidas da categoria (null = tabela padrão do SizeGuide)
   measureTable?: MeasureTable | null
+  // acessório sem tabela própria (hidesMeasures): a aba de medidas não aparece
+  semMedidas?: boolean
 }
 
 const ABA_MEDIDAS = "medidas"
 
-const ProductTabs = ({ product, measureTable = null }: ProductTabsProps) => {
+const ProductTabs = ({ product, measureTable = null, semMedidas = false }: ProductTabsProps) => {
   // "Informações do produto" só existe quando a ficha técnica tem o texto livre (chave `informacoes`,
   // Cockpit → Produto → "Ficha técnica (metadata)"). Sem texto, a aba não aparece (pedido do dono, 13/09).
   // "Medidas e Tamanhos Recomendados" (13/09): a tabela de medidas saiu do corpo da página e virou aba;
@@ -28,7 +30,9 @@ const ProductTabs = ({ product, measureTable = null }: ProductTabsProps) => {
     ...(paragrafosDe(product).length > 0
       ? [{ value: "informacoes", label: "Informações do produto", component: <ProductInfoTab product={product} /> }]
       : []),
-    { value: ABA_MEDIDAS, label: "Medidas e Tamanhos Recomendados", component: <SizeGuide table={measureTable} semTitulo /> },
+    ...(semMedidas
+      ? []
+      : [{ value: ABA_MEDIDAS, label: "Medidas e Tamanhos Recomendados", component: <SizeGuide table={measureTable} semTitulo /> }]),
     { value: "envio", label: "Envio e trocas", component: <ShippingInfoTab /> },
   ]
 

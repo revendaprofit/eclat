@@ -28,9 +28,11 @@ type ProductActionsProps = {
   disabled?: boolean
   // tabela de medidas da categoria do produto (null = sem recomendação, ex.: acessórios)
   measureTable?: MeasureTable | null
+  // acessório sem tabela de medidas: some o link "Guia de medidas" (a aba não existe na PDP)
+  semMedidas?: boolean
 }
 
-export default function ProductActions({ product, colorMap, disabled, measureTable }: ProductActionsProps) {
+export default function ProductActions({ product, colorMap, disabled, measureTable, semMedidas }: ProductActionsProps) {
   const { selection, setValue, selectedVariant, isComplete } = useProductSelection()
   const [isAdding, setIsAdding] = useState(false)
   const [notifyFor, setNotifyFor] = useState<{ variantId: string; label: string } | null>(null)
@@ -71,6 +73,7 @@ export default function ProductActions({ product, colorMap, disabled, measureTab
               disabled={!!disabled || isAdding}
               onNotify={(variantId, label) => setNotifyFor({ variantId, label })}
               measureTable={measureTable}
+              showGuide={!semMedidas}
             />
           )}
           {outrasOpcoes.map((option) => (
@@ -104,6 +107,7 @@ export default function ProductActions({ product, colorMap, disabled, measureTab
         colorMap={colorMap}
         onNotify={(variantId, label) => setNotifyFor({ variantId, label })}
         measureTable={measureTable}
+        semMedidas={semMedidas}
       />
     </div>
   )

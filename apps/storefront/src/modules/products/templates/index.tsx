@@ -29,7 +29,7 @@ import CompleteSet from "@modules/products/components/complete-set"
 import { BreadcrumbJsonLd } from "@modules/seo/jsonld"
 import { getDeepestCategoryChain } from "@lib/data/category-path"
 import { getMeasureMap } from "@lib/data/measurements"
-import { pickMeasurements } from "@lib/util/measurements"
+import { hidesMeasures, pickMeasurements } from "@lib/util/measurements"
 import { parseProductVideos, parseYoutubeId } from "@lib/util/product-video"
 
 type ProductTemplateProps = {
@@ -70,6 +70,8 @@ const ProductTemplate = async ({
   const measureMap = await getMeasureMap()
   const categoryPath = chain.length ? chain.map((c) => c.handle).join("/") : null
   const measureTable = categoryPath ? pickMeasurements(measureMap, categoryPath) : null
+  // acessório sem tabela própria: PDP sem aba de medidas e sem link "Guia de medidas"
+  const semMedidas = hidesMeasures(categoryPath, measureTable)
   const prevenda = await getPrevenda()
 
   const productUrl = `${getBaseURL()}/${countryCode}/products/${product.handle}`
@@ -124,7 +126,7 @@ const ProductTemplate = async ({
             </div>
             <div className="order-4 flex flex-col w-full py-8 gap-y-6 small:py-6 small:col-start-1 small:row-start-2">
               <ProductDescription product={product} />
-              <ProductTabs product={product} measureTable={measureTable} />
+              <ProductTabs product={product} measureTable={measureTable} semMedidas={semMedidas} />
             </div>
             <div className="order-3 flex flex-col w-full py-8 gap-y-12 small:py-0 small:col-start-3 small:row-start-1 small:row-span-2 small:self-start small:sticky small:top-48">
               <ProductOnboardingCta />
@@ -136,6 +138,7 @@ const ProductTemplate = async ({
                     region={region}
                     colorMap={colorMap}
                     measureTable={measureTable}
+                    semMedidas={semMedidas}
                   />
                 }
               >
@@ -144,6 +147,7 @@ const ProductTemplate = async ({
                   region={region}
                   colorMap={colorMap}
                   measureTable={measureTable}
+                  semMedidas={semMedidas}
                 />
               </Suspense>
               <PrevendaNota />
