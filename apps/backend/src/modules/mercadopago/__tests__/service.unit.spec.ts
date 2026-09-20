@@ -137,7 +137,7 @@ describe("MercadoPagoProviderService", () => {
         amount: 199.9,
         currency_code: "brl",
         data: { session_id: "payses_2", metodo: "cartao", cpf: "12345678909", token: "tok_1", bandeira: "master", parcelas: 1 },
-        context: {},
+        context: { customer: { id: "cus_1", email: "cliente@teste.com" } },
       })
 
       expect(resultado.status).toBe("captured")
@@ -160,7 +160,7 @@ describe("MercadoPagoProviderService", () => {
         amount: 199.9,
         currency_code: "brl",
         data: { session_id: "payses_3", metodo: "cartao", cpf: "12345678909", token: "tok_2", bandeira: "master" },
-        context: {},
+        context: { customer: { id: "cus_1", email: "cliente@teste.com" } },
       })
 
       expect(resultado.status).toBe("error")
@@ -174,12 +174,12 @@ describe("MercadoPagoProviderService", () => {
       const { servico } = criarServico()
       const base = { session_id: "payses_2", metodo: "cartao", cpf: "12345678909", token: "tok_1", bandeira: "master" }
 
-      const ok = await servico.initiatePayment({ amount: 199.9, currency_code: "brl", data: { ...base, final_cartao: "3311" }, context: {} })
+      const ok = await servico.initiatePayment({ amount: 199.9, currency_code: "brl", data: { ...base, final_cartao: "3311" }, context: { customer: { id: "cus_1", email: "cliente@teste.com" } } })
       expect(ok.data?.final_cartao).toBe("3311")
       expect(ok.data?.token).toBeUndefined() // o token nunca volta nos dados do provider
 
       mockFetchSequencial({ status: 201, corpo: orderCartaoAprovada }, { status: 200, corpo: { results: [] } })
-      const ruim = await servico.initiatePayment({ amount: 199.9, currency_code: "brl", data: { ...base, final_cartao: "5480832801033311" }, context: {} })
+      const ruim = await servico.initiatePayment({ amount: 199.9, currency_code: "brl", data: { ...base, final_cartao: "5480832801033311" }, context: { customer: { id: "cus_1", email: "cliente@teste.com" } } })
       expect(ruim.data?.final_cartao).toBeUndefined()
     })
 
@@ -327,6 +327,21 @@ describe("MercadoPagoProviderService", () => {
       expect(JSON.parse(spy2.mock.calls[0][1].body).payer.phone).toBeUndefined()
     })
 
+    it("Pix: sem e-mail, lança dizendo o que falta em vez de mandar payer vazio", async () => {
+      const espiao = mockFetchSequencial({ status: 201, corpo: orderPix })
+      const { servico } = criarServico()
+
+      await expect(
+        servico.initiatePayment({
+          amount: 199.9,
+          currency_code: "brl",
+          data: { session_id: "payses_1", metodo: "pix", cpf: "12345678909" },
+          context: {},
+        })
+      ).rejects.toThrow(/e-mail do pagador/)
+      expect(espiao).not.toHaveBeenCalled() // nem chega a bater na API
+    })
+
     it("manda o nome da fatura e o aviso de mudança de status (config da order)", async () => {
       mockFetchSequencial({ status: 201, corpo: orderPix })
       const { servico } = criarServico({ urlDoBackend: "https://backend.exemplo/" })
@@ -385,7 +400,7 @@ describe("MercadoPagoProviderService", () => {
         amount: 199.9,
         currency_code: "brl",
         data: { session_id: "payses_2", metodo: "cartao", cpf: "12345678909", token: "tok_1", bandeira: "master", parcelas: 12 },
-        context: {},
+        context: { customer: { id: "cus_1", email: "cliente@teste.com" } },
       })
 
       const corpoEnviado = JSON.parse(spy.mock.calls[0][1].body)
@@ -444,7 +459,7 @@ describe("MercadoPagoProviderService", () => {
         amount: 249.9,
         currency_code: "brl",
         data: { session_id: "payses_1", metodo: "pix", cpf: "12345678909", valor_total: "199.90", mp_order_id: "ORDTST_PIX_1" },
-        context: {},
+        context: { customer: { id: "cus_1", email: "cliente@teste.com" } },
       })
 
       expect(resultado.data?.mp_order_id).toBe("ORDTST_PIX_2")

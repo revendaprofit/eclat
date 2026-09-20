@@ -351,8 +351,14 @@ export default class MercadoPagoProviderService extends AbstractPaymentProvider<
     const sobrenome = texto(data?.sobrenome) ?? texto(cliente?.last_name)
     const telefone = telefoneBrasileiro(texto(data?.telefone) ?? texto(cliente?.phone))
     const endereco = enderecoDoPagador(data?.endereco)
+    // Sem e-mail o Mercado Pago recusa a order inteira (400 em `$.payer.email`) e a cliente vê
+    // um erro genérico. Melhor falhar aqui, dizendo o que falta, do que mandar string vazia.
+    const email = texto(cliente?.email) ?? texto(data?.email)
+    if (!email) {
+      throw new MedusaError(MedusaError.Types.INVALID_DATA, "mercadopago: falta o e-mail do pagador")
+    }
     return {
-      email: texto(cliente?.email) ?? texto(data?.email) ?? "",
+      email,
       first_name: texto(data?.nomeTitular) ?? texto(cliente?.first_name) ?? "Comprador",
       ...(sobrenome ? { last_name: sobrenome } : {}),
       identification: { type: "CPF", number: cpf },
