@@ -9,6 +9,7 @@ const ITEMS = [
   { href: "/conversas", label: "Conversas" },
   { href: "/clientes", label: "Clientes" },
   { href: "/pedidos", label: "Pedidos" },
+  { href: "/carrinhos", label: "Carrinhos abandonados" },
   { href: "/leads", label: "Leads" },
   { href: "/produtos", label: "Produtos & Estoque" },
   { href: "/conjuntos", label: "Conjuntos (benefício)" },
