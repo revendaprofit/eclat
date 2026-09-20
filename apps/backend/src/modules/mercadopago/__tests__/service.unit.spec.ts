@@ -230,6 +230,41 @@ describe("MercadoPagoProviderService", () => {
       ])
     })
 
+    // Produção, 2026-09-20: complemento de 23 caracteres derrubou a cobrança inteira com
+    // "'$.payer.address.complement' - length must be <= 20". A cliente só via "não conseguimos
+    // iniciar o pagamento".
+    it("campos longos do endereço são cortados no limite da Orders API", async () => {
+      const spy = mockFetchSequencial({ status: 201, corpo: orderPix })
+      const { servico } = criarServico()
+
+      await servico.initiatePayment({
+        amount: 199.9,
+        currency_code: "brl",
+        data: {
+          session_id: "payses_1",
+          metodo: "pix",
+          cpf: "12345678909",
+          email: "c@e.com",
+          endereco: {
+            rua: "Rua com um nome realmente muito comprido para caber no limite da API do Mercado Pago",
+            numero: "1234567890123456789012345",
+            complemento: "Apartamento 302 bloco B fundos",
+            bairro: "Bairro",
+            cidade: "Betim",
+            estado: "MG",
+            cep: "32604182",
+          },
+        },
+        context: {},
+      })
+
+      const endereco = JSON.parse(spy.mock.calls[0][1].body).payer.address
+      expect(endereco.complement).toBe("Apartamento 302 bloc") // 20
+      expect(endereco.street_name).toHaveLength(50)
+      expect(endereco.street_number).toHaveLength(20)
+      expect(endereco.zip_code).toBe("32604182")
+    })
+
     it("itens que não somam o total ficam de fora (a API recusa a order inteira)", async () => {
       const spy = mockFetchSequencial({ status: 201, corpo: orderPix })
       const { servico } = criarServico()

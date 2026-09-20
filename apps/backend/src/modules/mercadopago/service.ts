@@ -403,22 +403,36 @@ function telefoneBrasileiro(bruto: string | undefined): { area_code: string; num
 
 type EnderecoDaVitrine = { rua?: string; numero?: string; complemento?: string; bairro?: string; cidade?: string; estado?: string; cep?: string }
 
+// Limites de tamanho da Orders API. Passar deles derruba a cobrança inteira com HTTP 400
+// (`property_value`) — aconteceu em produção em 2026-09-20 com um complemento de 23 caracteres,
+// e a cliente só via "não conseguimos iniciar o pagamento". Cortar é melhor que recusar a venda:
+// endereço de cobrança é dado de antifraude, não o endereço de entrega (esse vai inteiro na etiqueta).
+const LIMITES_ENDERECO = {
+  street_name: 50,
+  street_number: 20,
+  neighborhood: 50,
+  city: 50,
+  state: 50,
+  complement: 20,
+} as const
+
 /** Endereço do pagador no formato da Orders API. Sem rua ou sem CEP, não mandamos nada. */
 function enderecoDoPagador(bruto: unknown): Record<string, string> | undefined {
   if (!bruto || typeof bruto !== "object") return undefined
   const e = bruto as EnderecoDaVitrine
   const txt = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : undefined)
-  const rua = txt(e.rua)
+  const cortar = (v: unknown, campo: keyof typeof LIMITES_ENDERECO) => txt(v)?.slice(0, LIMITES_ENDERECO[campo])
+  const rua = cortar(e.rua, "street_name")
   const cep = txt(e.cep)?.replace(/\D/g, "")
   if (!rua || !cep) return undefined
   const campos: Record<string, string | undefined> = {
     street_name: rua,
-    street_number: txt(e.numero),
-    neighborhood: txt(e.bairro),
-    city: txt(e.cidade),
-    state: txt(e.estado),
+    street_number: cortar(e.numero, "street_number"),
+    neighborhood: cortar(e.bairro, "neighborhood"),
+    city: cortar(e.cidade, "city"),
+    state: cortar(e.estado, "state"),
     zip_code: cep,
-    complement: txt(e.complemento),
+    complement: cortar(e.complemento, "complement"),
   }
   return Object.fromEntries(Object.entries(campos).filter(([, v]) => v !== undefined)) as Record<string, string>
 }
