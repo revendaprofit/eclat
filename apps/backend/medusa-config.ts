@@ -69,6 +69,8 @@ const modulosDeFrete = process.env.SUPERFRETE_TOKEN
           providers: [
             { resolve: '@medusajs/medusa/fulfillment-manual', id: 'manual' },
             { resolve: './src/modules/superfrete', id: 'superfrete' },
+            // Entrega por aplicativo (a cliente chama o carro): sem token, sem transportadora.
+            { resolve: './src/modules/entrega-app', id: 'entrega-app' },
           ],
         },
       },

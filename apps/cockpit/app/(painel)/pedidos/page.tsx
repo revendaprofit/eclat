@@ -8,6 +8,7 @@ import { FiscalDoPedido, type DocumentoFiscal } from "@/components/fiscal-do-ped
 import { NfdDoPedido } from "@/components/nfd-do-pedido"
 import { DadosFiscaisDoPedido } from "@/components/dados-fiscais-do-pedido"
 import { resumoDoPagamento, type PagamentoDoPedido } from "@/lib/pagamento"
+import { aceiteDaEntregaApp, ehEntregaPorApp } from "@/lib/entrega-app"
 
 type Order = {
   id: string
@@ -59,7 +60,7 @@ type OrderDetail = Order & {
   // funciona, mas se alguém montar este objeto a partir de um mapeamento amanhã, o
   // CPF de cobrança some sem erro de compilação e sem teste (achado da re-revisão).
   billing_address?: { metadata?: Record<string, unknown> | null } | null
-  shipping_methods: { name: string; total: number }[]
+  shipping_methods: { name: string; total: number; data?: Record<string, unknown> | null; shipping_option?: { provider_id?: string | null } | null }[]
   // Pagamentos (Parte 4): método, parcelas e tarifa real vêm de payment.data (lib/pagamento.ts).
   payment_collections?: { payments?: PagamentoDoPedido[] | null }[] | null
   fulfillments: {
@@ -506,6 +507,23 @@ export default function PedidosPage() {
                 {det.fulfillment_status === "not_fulfilled" ? (
                   <section className="border border-eclat-dourado/40 rounded-lg p-4 bg-white/60 flex flex-col gap-3">
                     <h4 className="text-sm font-medium text-eclat-grafite">Despachar pedido</h4>
+                    {ehEntregaPorApp(det) && (
+                      <div className="border border-eclat-terracota/40 bg-eclat-blush-claro/60 rounded-md p-3 text-sm text-eclat-grafite flex flex-col gap-1">
+                        <strong className="text-xs uppercase tracking-wider text-eclat-terracota">
+                          Entrega por aplicativo
+                        </strong>
+                        <span>
+                          A cliente chama e paga o carro. Combine endereço e horário pelo WhatsApp e entregue a
+                          sacola ao motorista. <strong>Não compre etiqueta</strong> deste pedido: despache sem
+                          rastreio quando entregar.
+                        </span>
+                        {aceiteDaEntregaApp(det) && (
+                          <span className="text-xs text-eclat-grafite/60">
+                            Aceite da cliente registrado em {aceiteDaEntregaApp(det)}.
+                          </span>
+                        )}
+                      </div>
+                    )}
                     <ConferenciaPedido
                       itens={itensConferencia}
                       leituras={leituras}
@@ -550,8 +568,12 @@ export default function PedidosPage() {
                       </button>
                       <button
                         onClick={() => despachar(true)}
-                        disabled={despachando || !podeDespachar}
-                        title="Gera a etiqueta na transportadora (requer credenciais configuradas)"
+                        disabled={despachando || !podeDespachar || ehEntregaPorApp(det)}
+                        title={
+                          ehEntregaPorApp(det)
+                            ? "Entrega por aplicativo não tem etiqueta: a cliente contrata o transporte"
+                            : "Gera a etiqueta na transportadora (requer credenciais configuradas)"
+                        }
                         className="border border-eclat-grafite/40 text-xs uppercase tracking-widest px-4 py-2.5 rounded-md hover:bg-eclat-areia/40 disabled:opacity-50"
                       >
                         Gerar etiqueta (SuperFrete)
