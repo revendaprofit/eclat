@@ -87,6 +87,10 @@ export default defineMiddlewares({
     // o loader do bodyParser só lê `methods`; com `method` isto funcionava por acidente, caindo
     // no default "todos os verbos" (achado I2 da revisão final de 2026-09-17).
     { methods: ["POST"], matcher: "/webhooks/brasilnfe", bodyParser: { preserveRawBody: true } },
+    // Webhook de status da SuperFrete: mesma razão — o X-ME-Signature é HMAC-SHA256 dos BYTES
+    // recebidos, e o JSON reserializado não reproduz a assinatura. `methods` no plural, pelo
+    // mesmo motivo explicado acima.
+    { methods: ["POST"], matcher: "/webhooks/superfrete", bodyParser: { preserveRawBody: true } },
     // Pedido mínimo: recusa a cobrança antes de existir Pix ou cartão (ver o próprio middleware).
     { method: "POST", matcher: "/store/payment-collections", middlewares: [exigirPedidoMinimo] },
     { method: "POST", matcher: "/admin/conjuntos/regras", middlewares: [validateAndTransformBody(CriarRegraSchema)] },
