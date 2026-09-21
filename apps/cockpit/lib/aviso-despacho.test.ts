@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { avisoAoDespacharComEtiqueta, lerAvisoDespacho, textoDoAviso } from "./aviso-despacho"
+import { avisoAoDespacharComEtiqueta, avisoPeloBackend, lerAvisoDespacho, textoDoAviso } from "./aviso-despacho"
 
 const AGORA = "2026-09-21T15:07:00.000Z"
 
@@ -95,5 +95,26 @@ describe("textoDoAviso", () => {
     expect(textoDoAviso({ status: "expirado", em: AGORA })).toBe(
       "O código de rastreio não apareceu em 24 h. Avise a cliente à mão."
     )
+  })
+})
+
+describe("avisoPeloBackend (interruptor SUPERFRETE_AVISO_PELO_BACKEND)", () => {
+  it("ausente → false (padrão: o Cockpit avisa na hora, como antes)", () => {
+    expect(avisoPeloBackend({})).toBe(false)
+    expect(avisoPeloBackend({ SUPERFRETE_AVISO_PELO_BACKEND: undefined })).toBe(false)
+    expect(avisoPeloBackend({ SUPERFRETE_AVISO_PELO_BACKEND: "" })).toBe(false)
+  })
+
+  it("qualquer coisa que não seja true → false", () => {
+    expect(avisoPeloBackend({ SUPERFRETE_AVISO_PELO_BACKEND: "false" })).toBe(false)
+    expect(avisoPeloBackend({ SUPERFRETE_AVISO_PELO_BACKEND: "1" })).toBe(false)
+    expect(avisoPeloBackend({ SUPERFRETE_AVISO_PELO_BACKEND: "sim" })).toBe(false)
+    expect(avisoPeloBackend({ SUPERFRETE_AVISO_PELO_BACKEND: "truee" })).toBe(false)
+  })
+
+  it("true → true, tolerando espaço e maiúscula (um espaço colado no Vercel não pode desligar em silêncio)", () => {
+    expect(avisoPeloBackend({ SUPERFRETE_AVISO_PELO_BACKEND: "true" })).toBe(true)
+    expect(avisoPeloBackend({ SUPERFRETE_AVISO_PELO_BACKEND: " true " })).toBe(true)
+    expect(avisoPeloBackend({ SUPERFRETE_AVISO_PELO_BACKEND: "TRUE" })).toBe(true)
   })
 })

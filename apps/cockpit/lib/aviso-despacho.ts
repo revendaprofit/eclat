@@ -4,10 +4,23 @@
 // Por que existe: na primeira etiqueta real (pedido #21) o código de rastreio levou ~24 s para
 // existir, e o WhatsApp saiu sem ele. Regra do dono: a mensagem de despacho ESPERA o código.
 // Quem manda essa mensagem é UM remetente só — o backend (webhook `order.generated` + verificação a
-// cada 5 min). O Cockpit não manda mais esse WhatsApp: ele grava o estado em
-// `metadata.frete.aviso_despacho`, pede ao backend que tente na hora e mostra o estado na tela.
+// cada 5 min). Com o interruptor `avisoPeloBackend` ligado, o Cockpit não manda esse WhatsApp: ele
+// grava o estado em `metadata.frete.aviso_despacho`, pede ao backend que tente na hora e mostra o
+// estado na tela. Desligado (padrão), o Cockpit avisa na hora como antes.
 //
 // O despacho MANUAL (código digitado ou sem código) não passa por aqui: continua avisando na hora.
+
+/**
+ * Interruptor `SUPERFRETE_AVISO_PELO_BACKEND` (ambiente do Cockpit). Desligado — o PADRÃO — o
+ * Cockpit avisa a cliente na hora também no despacho com etiqueta, como antes desta mudança; ligado,
+ * o aviso passa para o backend. Existe porque o Cockpit vai ao ar sozinho no push (Vercel) e o
+ * backend só com `railway up`: sem o interruptor, "Cockpit novo + backend velho" deixaria todo aviso
+ * pendente para sempre. Só liga com o texto `true` (espaço e maiúscula tolerados, para um espaço
+ * colado no painel do Vercel não desligar em silêncio); qualquer outra coisa desliga.
+ */
+export function avisoPeloBackend(env: Record<string, string | undefined> = process.env): boolean {
+  return (env.SUPERFRETE_AVISO_PELO_BACKEND ?? "").trim().toLowerCase() === "true"
+}
 
 export type StatusAviso = "pendente" | "enviado" | "dispensado" | "sem_telefone" | "expirado"
 export type AvisoDespacho = { status: StatusAviso; desde?: string; em?: string; por?: string }

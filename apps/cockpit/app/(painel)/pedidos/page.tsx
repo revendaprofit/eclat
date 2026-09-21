@@ -107,11 +107,10 @@ const brlCent = (cent: number) => brl(cent / 100)
 const dataHora = (iso: string) =>
   new Date(iso).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })
 
-// Tom do selo do aviso de despacho (etiqueta SuperFrete). "expirado" e "sem_telefone" não são
-// selo: viram Aviso de atenção, porque pedem ação do operador (avisar a cliente à mão) — e a frase
-// é longa demais para o Selo, que não quebra linha.
-const TOM_AVISO_DESPACHO: Record<Exclude<StatusAviso, "expirado" | "sem_telefone">, TomDoSelo> = {
-  pendente: "andamento",
+// Tom do selo do aviso de despacho (etiqueta SuperFrete). "pendente", "expirado" e "sem_telefone"
+// não são selo: viram Aviso de atenção — as frases são longas demais para o Selo, que não quebra
+// linha (estouraria no celular), e dois deles pedem ação do operador (avisar a cliente à mão).
+const TOM_AVISO_DESPACHO: Record<Exclude<StatusAviso, "pendente" | "expirado" | "sem_telefone">, TomDoSelo> = {
   enviado: "ok",
   dispensado: "neutro",
 }
@@ -245,9 +244,11 @@ export default function PedidosPage() {
       let msg = `✓ Pedido #${det.display_id} despachado${d.conferencia === "divergente" ? " (conferência com divergência registrada)" : " com as peças conferidas"}.`
       if (d.aviso_fiscal) msg += `\n⚠️ ${d.aviso_fiscal}`
       if (d.tracking_number) msg += `\nRastreio: ${d.tracking_number}`
-      if (useCarrier) {
-        // Etiqueta SuperFrete: o WhatsApp não sai daqui — espera o código de rastreio e quem manda é
-        // o backend. A mensagem conta o estado do aviso, não "WhatsApp enviado".
+      if (d.aviso_despacho || d.aviso_despacho_erro) {
+        // Etiqueta SuperFrete com o aviso pelo backend (interruptor SUPERFRETE_AVISO_PELO_BACKEND
+        // ligado): o WhatsApp não sai do Cockpit — espera o código de rastreio. A mensagem conta o
+        // estado do aviso, não "WhatsApp enviado". Com o interruptor desligado a rota não devolve
+        // esses campos e vale o `whatsapp`, como no despacho manual.
         const avisoTxt = d.aviso_despacho_erro || textoDoAviso((d.aviso_despacho as AvisoDespacho | null) ?? null)
         if (avisoTxt) msg += `\n${avisoTxt}`
       } else if (d.whatsapp)
@@ -638,8 +639,8 @@ export default function PedidosPage() {
                       </button>
                     </div>
                     <p className="text-meta text-eclat-texto-3">
-                      Despachar: o aviso pelo WhatsApp sai na hora, com o código digitado (sem código → despacha sem rastreio).
-                      Gerar etiqueta: o aviso sai sozinho quando a SuperFrete gerar o código de rastreio. A etiqueta automática precisa das credenciais da transportadora (modo manual funciona já).
+                      Com o aviso ligado e telefone no pedido: em Despachar, a cliente recebe o WhatsApp na hora, com o código digitado (sem código → despacha sem rastreio);
+                      em Gerar etiqueta, o aviso leva o código de rastreio quando a SuperFrete já o tiver gerado. A etiqueta automática precisa das credenciais da transportadora (modo manual funciona já).
                     </p>
                   </section>
                 ) : (
@@ -674,7 +675,7 @@ export default function PedidosPage() {
                         const aviso = lerAvisoDespacho(det.metadata)
                         const texto = textoDoAviso(aviso)
                         if (!aviso || !texto) return null
-                        return aviso.status === "expirado" || aviso.status === "sem_telefone" ? (
+                        return aviso.status === "pendente" || aviso.status === "expirado" || aviso.status === "sem_telefone" ? (
                           <Aviso tom="atencao">{texto}</Aviso>
                         ) : (
                           <span data-testid="aviso-despacho">

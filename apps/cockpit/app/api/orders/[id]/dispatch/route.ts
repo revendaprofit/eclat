@@ -11,7 +11,7 @@ import {
   carrierConsultarFrete,
   MSG_CARRIER_NAO_CONFIGURADO,
 } from "@/lib/shipping"
-import { avisoAoDespacharComEtiqueta, lerAvisoDespacho, type AvisoDespacho } from "@/lib/aviso-despacho"
+import { avisoAoDespacharComEtiqueta, avisoPeloBackend, lerAvisoDespacho, type AvisoDespacho } from "@/lib/aviso-despacho"
 import { garantirEtiqueta, lerEstadoDoFrete } from "@/lib/etiqueta-segura"
 import { executarComTrava, DespachoEmAndamento } from "@/lib/trava-despacho"
 import { lerDadosFiscais } from "@/lib/dados-fiscais"
@@ -19,11 +19,20 @@ import { AVISO_PAGAMENTO, pagamentoConfirmado } from "@/lib/pagamento-despacho"
 import { sendWhatsappText } from "@/lib/evolution"
 
 // Despacha um pedido: confere as peças (leitor) + emite a NF-e + cria fulfillment + marca envio
-// (com rastreio) + avisa o cliente por WhatsApp (no despacho com etiqueta da SuperFrete, o aviso
-// espera o código de rastreio e quem manda é o backend — ver passo 3). Rastreio: manual
-// (tracking_number) OU gerado pela transportadora (use_carrier). Conferência (spec leitor-codigo-barras F1): a tela manda as
-// leituras; o servidor recalcula contra os itens reais do pedido e só despacha conferência
-// divergente com motivo. O registro vai para metadata.conferencia ANTES do fulfillment.
+// (com rastreio) + avisa o cliente por WhatsApp (no despacho com etiqueta da SuperFrete e com o
+// interruptor abaixo ligado, o aviso espera o código de rastreio e quem manda é o backend — ver
+// passo 3). Rastreio: manual (tracking_number) OU gerado pela transportadora (use_carrier).
+//
+// INTERRUPTOR SUPERFRETE_AVISO_PELO_BACKEND (lib/aviso-despacho.ts, avisoPeloBackend): DESLIGADO por
+// padrão = o despacho com etiqueta avisa a cliente na hora, daqui, igual ao despacho manual (o
+// comportamento de antes). LIGADO (`true`) = o Cockpit só grava metadata.frete.aviso_despacho e pede
+// ao backend, que manda quando o código de rastreio existir. O Cockpit vai ao ar sozinho no push
+// (Vercel) e o backend só com `railway up`, então a ordem segura para ligar é: `railway up` do
+// backend → confirmar que o backend está mandando os avisos → ligar a variável no Vercel → redeploy
+// do Cockpit. Ligar antes disso deixa todo aviso de etiqueta pendente para sempre.
+//
+// Conferência (spec leitor-codigo-barras F1): a tela manda as leituras; o servidor recalcula contra
+// os itens reais do pedido e só despacha conferência divergente com motivo. O registro vai para metadata.conferencia ANTES do fulfillment.
 //
 // A decisão "emissão falhou → aborta o despacho" mora em lib/fiscal-despacho.ts (decidirDespacho),
 // não aqui — é a regra fiscal/legal de maior risco do projeto, e uma route.ts sem teste (como toda
@@ -295,20 +304,22 @@ export async function POST(
 
       // 3) aviso à cliente.
       //
-      // Etiqueta da SuperFrete (spec §9, 2026-09-21): o Cockpit NÃO manda mais o WhatsApp — o código
-      // de rastreio pode levar dezenas de segundos para existir, e a mensagem espera por ele. Quem
+      // Etiqueta da SuperFrete COM o interruptor ligado (spec §9, 2026-09-21): o Cockpit NÃO manda o
+      // WhatsApp — o código de rastreio pode levar dezenas de segundos para existir, e a mensagem
+      // espera por ele. Quem
       // envia é o backend (webhook order.generated + verificação a cada 5 min), um remetente só. Aqui:
       // grava o estado em metadata.frete.aviso_despacho e, se ficou pendente, pede ao backend que
       // tente na hora (melhor esforço). O despacho já aconteceu neste ponto, então nenhuma falha
       // daqui vira erro da rota: vira aviso na resposta.
       //
-      // Despacho manual (código digitado ou sem código): igual a antes — avisa na hora com o que
-      // houver; só menciona rastreio quando ele existe de fato.
+      // Um bloco só manda o WhatsApp daqui (o `else if` abaixo): o despacho manual (código digitado ou
+      // sem código) e o despacho com etiqueta com o interruptor DESLIGADO — igual a antes, avisa na
+      // hora com o que houver; só menciona rastreio quando ele existe de fato.
       let whatsapp: { ok: boolean; error?: string } | null = null
       let avisoDespacho: AvisoDespacho | null = null
       let avisoDespachoErro: string | null = null
       const phone = order.shipping_address?.phone
-      if (body.use_carrier) {
+      if (body.use_carrier && avisoPeloBackend()) {
         const aviso = avisoAoDespacharComEtiqueta({
           notificar: body.notify === true,
           temTelefone: !!phone,
@@ -318,7 +329,11 @@ export async function POST(
           await gravarAvisoDespacho(id, aviso)
           avisoDespacho = aviso
         } catch (e) {
-          console.error(`[aviso-despacho] pedido ${id}: não foi possível gravar o aviso — ${(e as Error).message}`)
+          // Só texto fixo + id + status HTTP: a mensagem do erro pode trazer o corpo da resposta do
+          // Medusa (medusaMergeOrderMetadata), que pode ecoar o metadata do pedido (ex.: e-mail do
+          // operador na conferência).
+          const http = /HTTP (\d{3})/.exec((e as Error)?.message ?? "")?.[1]
+          console.error(`[aviso-despacho] pedido ${id}: não foi possível gravar o aviso no pedido${http ? ` (HTTP ${http})` : ""}`)
           avisoDespachoErro =
             "Não foi possível registrar o aviso à cliente no pedido. Avise a cliente à mão pelo WhatsApp."
         }
