@@ -135,7 +135,14 @@ medusaIntegrationTestRunner({
       servidorSuperfrete.close()
     })
 
-    beforeEach(() => {
+    beforeEach(async () => {
+      // Isolamento: o job varre o banco inteiro, e um teste que falhou no meio pode ter deixado pedidos
+      // em "pendente" ou "enviando". Todo aviso não final vira "dispensado" antes de cada teste, para
+      // uma falha não derrubar os seguintes em cascata. (Os finais ficam como estão: não são candidatos.)
+      await pgReal().raw(
+        `UPDATE "order" SET metadata = jsonb_set(metadata, '{frete,aviso_despacho,status}', '"dispensado"')
+         WHERE metadata->'frete'->'aviso_despacho'->>'status' IN ('pendente','enviando')`
+      )
       atrasoEvolutionMs = 0
       modoEvolution = "ok"
       for (const r of pendurados.splice(0)) r.destroy()
@@ -490,6 +497,20 @@ medusaIntegrationTestRunner({
 
       it("o job agendado fica desligado nas suítes (NODE_ENV=test): o cron não mexe nos pedidos dos testes", () => {
         expect(process.env.NODE_ENV).toBe("test")
+      })
+
+      // Isolamento entre testes (revisão final): um teste que falha no meio deixa pedidos em
+      // "pendente"/"enviando", e o job varre o banco inteiro — sem o `beforeEach` que os dispensa, os
+      // testes seguintes contariam esses pedidos. O par abaixo simula exatamente isso.
+      it("isolamento (1/2): um teste deixa um pendente e um enviando para trás, como se tivesse falhado no meio", async () => {
+        await criarPedido({ ...pendente(), tracking_number: CODIGO })
+        await criarPedido({ tracking_number: CODIGO, aviso_despacho: { status: "enviando", desde: minutosAtras(3), desde_envio: minutosAtras(2), por: "job" } })
+      })
+
+      it("isolamento (2/2): o teste seguinte não enxerga as sobras do anterior", async () => {
+        const r = await verificar(containerCom({ pg: pgReal(), logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() } }))
+        expect(r.candidatos).toBe(0)
+        expect(whatsappEnviados).toHaveLength(0)
       })
 
       it("sem candidatos → nada acontece e nada é logado", async () => {
