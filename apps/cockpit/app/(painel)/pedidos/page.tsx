@@ -194,6 +194,9 @@ export default function PedidosPage() {
       setDet(null)
       setDocFiscal(null)
       setErroFiscal(null)
+      // Explícito: a confirmação de pagamento nunca atravessa de um pedido para outro — nem quando o
+      // drawer é fechado sem abrir outro (não depender da ordem de render para isso).
+      setPagamentoConferido(false)
       return
     }
     setTrackNum("")

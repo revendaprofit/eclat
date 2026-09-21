@@ -49,10 +49,14 @@ describe("serviço e pacote lidos do pedido", () => {
     expect(pacoteDoPedido({ pacote: { pecas: 1, largura: 15, altura: 4, comprimento: 15, peso_kg: 0.21 } }, 1)).toEqual({ width: 15, height: 4, length: 15, weight: 0.21 })
   })
 
+  // Os pesos abaixo TÊM que bater com apps/backend/src/modules/superfrete/embalagem.ts (a fonte da
+  // verdade): PESO_PADRAO_G = 300 por peça, SAQUINHO_G = 50 (1 ou 2 peças) e CAIXA_G = 115 (3 ou
+  // mais). Se alguém mudar lá e esquecer da cópia do Cockpit, este teste quebra em vez de a
+  // divergência passar em silêncio até a transportadora cobrar a diferença.
   it("sem pacote gravado, ou com contagem divergente, cai na tabela da spec §4.3 (300 g por peça)", () => {
-    expect(pacoteDoPedido(null, 1)).toEqual({ width: 15, height: 5, length: 15, weight: 0.31 })
-    expect(pacoteDoPedido(null, 2)).toEqual({ width: 20, height: 5, length: 20, weight: 0.61 })
-    expect(pacoteDoPedido({ pacote: { pecas: 1, largura: 15, altura: 4, comprimento: 15, peso_kg: 0.21 } }, 4)).toEqual({ width: 25, height: 10, length: 20, weight: 1.35 })
+    expect(pacoteDoPedido(null, 1)).toEqual({ width: 15, height: 5, length: 15, weight: 0.35 })
+    expect(pacoteDoPedido(null, 2)).toEqual({ width: 20, height: 5, length: 20, weight: 0.65 })
+    expect(pacoteDoPedido({ pacote: { pecas: 1, largura: 15, altura: 4, comprimento: 15, peso_kg: 0.21 } }, 4)).toEqual({ width: 25, height: 10, length: 20, weight: 1.315 })
   })
 })
 

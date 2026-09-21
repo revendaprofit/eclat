@@ -12,8 +12,9 @@
 
 /**
  * Status de `payment_status` que contam como pagamento confirmado.
- * É o MESMO conjunto que `app/api/dashboard/route.ts` usa como `PAGOS` para somar receita —
- * o teste trava a regressão para ninguém afrouxar um dos dois lados sem perceber.
+ * Fonte única: `app/api/dashboard/route.ts` IMPORTA daqui para somar receita (antes tinha uma cópia
+ * privada chamada `PAGOS`, que podia divergir em silêncio). O teste trava a regressão para ninguém
+ * afrouxar o conjunto sem perceber.
  */
 export const PAGAMENTOS_CONFIRMADOS: ReadonlySet<string> = new Set([
   "captured",

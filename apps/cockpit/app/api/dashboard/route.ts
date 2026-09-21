@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server"
 import { medusaListOrders, medusaListProducts, medusaListCustomers } from "@/lib/medusa"
 import { sb } from "@/lib/sb-admin"
+import { PAGAMENTOS_CONFIRMADOS } from "@/lib/pagamento-despacho"
 
 // Consolida as filas de ação do dia (Fase 6). Tudo em uma chamada server-side.
 const ESTOQUE_BAIXO = 5
-const PAGOS = new Set(["captured", "authorized", "partially_captured"])
 const REATIVACAO_DIAS = 60
 
 export async function GET() {
@@ -23,7 +23,7 @@ export async function GET() {
     const ultimoPedidoPorCliente = new Map<string, string>()
     const pedidosPorCliente = new Map<string, number>()
     for (const o of orders) {
-      if (o.status !== "canceled" && PAGOS.has(o.payment_status)) {
+      if (o.status !== "canceled" && PAGAMENTOS_CONFIRMADOS.has(o.payment_status)) {
         if ((o.created_at ?? "").slice(0, 10) === hoje) {
           vendasHojePedidos++
           vendasHojeReceita += Math.round((o.total ?? 0) * 100)

@@ -49,13 +49,17 @@ export function servicoDoPedido(dados: Record<string, unknown> | null): 1 | 2 | 
   return (SERVICOS as readonly number[]).includes(s) ? (s as 1 | 2 | 17) : 1
 }
 
-// Cópia mínima da tabela da spec §4.3 (a fonte é apps/backend/src/modules/superfrete/embalagem.ts).
+// Cópia mínima da tabela de embalagem. A FONTE DA VERDADE é
+// apps/backend/src/modules/superfrete/embalagem.ts (spec §4.3): se aquele arquivo mudar, ESTA cópia
+// precisa mudar junto, senão a etiqueta é comprada com um peso diferente do que foi cotado e a
+// transportadora cobra a diferença depois. Valores de lá (pesagem do dono em 2026-09-19):
+// saquinho 50 g (1 ou 2 peças), caixa 115 g (3 ou mais), 300 g por peça sem peso cadastrado.
 // Só vale para pedido sem `data.pacote` ou cujo pacote ficou velho; sem o peso real, 300 g por peça.
 function pacoteDaTabela(pecas: number): Volume {
   const gramas = pecas * 300
-  if (pecas <= 1) return { width: 15, height: 5, length: 15, weight: (gramas + 10) / 1000 }
-  if (pecas === 2) return { width: 20, height: 5, length: 20, weight: (gramas + 10) / 1000 }
-  return { width: 25, height: 10, length: 20, weight: (gramas + 150) / 1000 }
+  if (pecas <= 1) return { width: 15, height: 5, length: 15, weight: (gramas + 50) / 1000 }
+  if (pecas === 2) return { width: 20, height: 5, length: 20, weight: (gramas + 50) / 1000 }
+  return { width: 25, height: 10, length: 20, weight: (gramas + 115) / 1000 }
 }
 
 export function pacoteDoPedido(dados: Record<string, unknown> | null, pecas: number): Volume {
