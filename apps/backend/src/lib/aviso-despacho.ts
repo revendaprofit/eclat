@@ -223,9 +223,9 @@ function codigoDeRede(e: unknown): string {
 // True só quando é CERTO que a mensagem não saiu:
 //  - `EvolutionHttpError`: a Evolution respondeu 4xx/5xx (o `numeroInexistente` é tratado antes).
 //    TROCA no 5xx: um proxy na frente da Evolution poderia devolver 5xx depois de ela ter entregado,
-//    e aí a cliente receberia duas vezes. DECISÃO TÉCNICA de 2026-09-21 (retentar em vez de
-//    silenciar), AINDA A CONFIRMAR COM O DONO: 5xx volta para "pendente". Se ele preferir o outro
-//    lado da troca, 5xx passa a virar "incerto" (basta tirar o 5xx deste `true`).
+//    e aí a cliente receberia duas vezes. CONFIRMADO PELO DONO EM 2026-09-21 (retentar em vez de
+//    silenciar): 5xx volta para "pendente" e o job tenta de novo em 5 min. Para trocar de lado,
+//    5xx passaria a virar "incerto" (basta tirar o 5xx deste `true`).
 //  - erro de rede que prova que a conexão nunca aconteceu (REDE_SEM_CONEXAO).
 // Todo o resto — timeout, ECONNRESET, 2xx com corpo que não é JSON, `terminated` lendo o corpo — é
 // AMBÍGUO (o erro pode ter nascido depois da entrega) e vira "incerto".

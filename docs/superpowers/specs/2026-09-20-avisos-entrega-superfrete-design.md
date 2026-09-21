@@ -41,6 +41,8 @@ SuperFrete ──POST──▶ Backend (Medusa, Railway)
 
 ### 4.1 Eventos e o que cada um faz
 
+> substituído em parte pelo §9 (aviso de despacho) e §10 (segredo)
+
 | Evento | Grava no pedido | Mensagem para a cliente |
 |---|---|---|
 | `order.created` | estado, data | não |
@@ -69,6 +71,8 @@ Ao comprar a etiqueta, já mandamos o número do pedido da ÉCLAT em `options.ta
 
 ### 4.4 Não repetir mensagem
 
+> substituído em parte pelo §9 (aviso de despacho) e §10 (segredo)
+
 A SuperFrete reenvia até 5 vezes, a cada 15 minutos, se não receber resposta em 30 s. Regra:
 
 - `metadata.frete.avisos` guarda a data de cada aviso já enviado (`generated`, `posted`, `delivered`).
@@ -78,6 +82,8 @@ A SuperFrete reenvia até 5 vezes, a cada 15 minutos, se não receber resposta e
 - Tudo o que não é envio (gravar estado, evento ignorado, pedido não encontrado) responde 200.
 
 ### 4.5 Mensagens
+
+> substituído em parte pelo §9 (aviso de despacho) e §10 (segredo)
 
 WhatsApp, na voz da Éclat, curtas, com o nome da cliente:
 

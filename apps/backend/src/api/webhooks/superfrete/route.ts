@@ -49,7 +49,8 @@ import { acaoDoEvento, assinaturaSuperfreteValida, numeroDoPedido, rastreioDoEve
 //         desconectada ou payload ruim, 5xx, rede — atinge todas as clientes e é FALHA (→ 500).
 //         TIMEOUT É AMBÍGUO: a Evolution pode ter entregado e respondido tarde. Ainda assim conta
 //         como falha (→ 500 → reenvio), e nesse caso a cliente pode receber a mensagem duas
-//         vezes. Troca aceita: perder o aviso em silêncio é pior que uma repetição rara.
+//         vezes. Troca aceita — DECISÃO DO DONO EM 2026-09-21: perder o aviso em silêncio é pior
+//         que uma repetição rara.
 //   500 — também, de propósito, quando o NOSSO banco falha (ler o pedido ou gravar o estado): o
 //         erro sobe e a retentativa da SuperFrete cobre a instabilidade passageira. As regras de
 //         "nunca 500" da §4.4 são sobre eventos ignorados ou que não são nossos, não sobre queda nossa.

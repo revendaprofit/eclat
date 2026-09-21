@@ -506,7 +506,7 @@ medusaIntegrationTestRunner({
       await freteDoCockpitIntacto(p.id)
     })
 
-    it("Evolution 5xx → volta para pendente (decisão técnica: retentar em vez de silenciar; a confirmar com o dono)", async () => {
+    it("Evolution 5xx → volta para pendente (confirmado pelo dono em 2026-09-21: retentar em vez de silenciar)", async () => {
       const desde = minutosAtras(2)
       const p = await criarPedido({ ...pendente(desde), tracking_number: CODIGO })
       modoEvolution = "503"

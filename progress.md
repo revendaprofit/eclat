@@ -1194,6 +1194,10 @@ Pedido da sócia: aba Acessórios com as subcategorias Meias e Óculos de sol. A
      no `.env` local do backend, junto com `SUPERFRETE_TOKEN` e `SUPERFRETE_CONTACT_EMAIL` (é de lá que o script
      lê). No Railway nada novo ainda: sem `SUPERFRETE_WEBHOOK_SECRET` a rota responde 200 e ignora — é seguro
      publicar antes.
+     **Atenção: o push põe o Cockpit no ar NA HORA (Vercel), mesmo com o interruptor desligado.** Entram já:
+     a conferência de pagamento antes de comprar a etiqueta (pedido não pago pede a confirmação do operador);
+     a recusa logo no começo quando a SuperFrete não está configurada no Cockpit; os pesos das embalagens
+     (50 g / 115 g); e a máquina de estados mais segura da etiqueta (`garantirEtiqueta`, nunca paga em dobro).
   2. **Dono ("pode aplicar"):** `railway up` do backend.
   3. **Claude/dono:** no log do Railway, o job `frete-avisos-pendentes` rodando sem erro a cada 5 min; um POST
      sem assinatura em `/webhooks/superfrete` responde 200 (log "SUPERFRETE_WEBHOOK_SECRET não está
@@ -1218,8 +1222,14 @@ Pedido da sócia: aba Acessórios com as subcategorias Meias e Óculos de sol. A
   8. **Reverter:** desligar `SUPERFRETE_AVISO_PELO_BACKEND` no Vercel + redeploy (volta ao aviso imediato pelo
      Cockpit); `node --env-file=.env ativar-webhook-superfrete.mjs --aplicar --desfazer` (para
      postado/entregue; o job continua mandando os despachos pendentes).
-- **Pendências abertas:** (1) confirmação do dono: Evolution respondendo 5xx volta o aviso a `pendente`
-  (retenta) em vez de `incerto` — decisão técnica provisória; (2) formato real da resposta "número sem
-  WhatsApp" da Evolution — conferir no primeiro caso real (`sem_whatsapp`); (3) índice parcial em
-  `metadata->'frete'->'aviso_despacho'->>'status'` se o volume de pedidos crescer (o job varre sem índice);
-  (4) e-mail de postado só sai com o Resend ativo (`RESEND_API_KEY` no Railway).
+- **Decidido pelo dono em 2026-09-21:** (a) aviso de despacho com a Evolution respondendo 5xx volta a
+  `pendente` e o job tenta de novo em 5 min (não vira `incerto`); (b) postado/entregue com o WhatsApp estourando
+  o tempo continua respondendo 500 para a SuperFrete reenviar — uma repetição rara é aceita, um aviso perdido não.
+- **Revisão final (2026-09-21):** etiqueta cancelada (`order.cancelled`, ou a consulta diz `canceled`) e
+  `order.posted` com o despacho ainda pendente passam o aviso a `dispensado` (com `motivo`), sem mandar o
+  despacho; o link das mensagens é sempre o dos Correios; o Cockpit não manda "avisar à mão" quando a gravação
+  do aviso deu certo mas respondeu erro.
+- **Pendências abertas:** (1) formato real da resposta "número sem WhatsApp" da Evolution — conferir no
+  primeiro caso real (`sem_whatsapp`); (2) índice parcial em `metadata->'frete'->'aviso_despacho'->>'status'`
+  se o volume de pedidos crescer (o job varre sem índice); (3) e-mail de postado só sai com o Resend ativo
+  (`RESEND_API_KEY` no Railway).

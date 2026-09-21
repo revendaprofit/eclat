@@ -115,8 +115,12 @@ antes de qualquer chamada — erro de dado não gasta saldo).
 - Pendências conhecidas: não há botão de cancelar etiqueta no Cockpit (o id da SuperFrete fica só em
   `metadata.frete.superfrete_id`; cancelar hoje é pelo painel da SuperFrete ou por `POST
   /api/v0/order/cancel`, só antes de postar, com estorno na carteira). A busca de rastreio só acontece
-  durante a compra (até ~12s); se ainda faltar depois disso, não há uma re-consulta automática depois do
-  despacho — o operador confere manualmente no painel da SuperFrete e atualiza o pedido, se precisar.
+  durante a compra (até ~12s). Com o interruptor `SUPERFRETE_AVISO_PELO_BACKEND` DESLIGADO, se ainda faltar
+  depois disso não há re-consulta automática — o operador confere no painel da SuperFrete e atualiza o
+  pedido, se precisar. Com ele LIGADO, o job de 5 min do backend (`frete-avisos-pendentes`) re-consulta a
+  etiqueta (`GET /api/v0/order/info/{id}`) de todo aviso de despacho pendente, grava o código em
+  `metadata.frete.tracking_number` e manda a mensagem (ver "Avisos de entrega" abaixo). O código não é
+  copiado para o rótulo do envio no Medusa: fica no `metadata.frete`.
   A mensagem de erro de etiqueta cancelada (`garantirEtiqueta`, regra A) pede pra "limpar o frete do
   pedido" antes de gerar outra — hoje isso é um passo MANUAL, sem botão no Cockpit: apagar/zerar
   `metadata.frete` do pedido pelo admin do Medusa ou por um script.
@@ -131,10 +135,17 @@ Spec: `docs/superpowers/specs/2026-09-20-avisos-entrega-superfrete-design.md`. A
 | Despacho (etiqueta com código de rastreio) | WhatsApp: número do pedido + código + link | remetente único do backend |
 | Postado (`order.posted`) | WhatsApp + e-mail "pedido postado" (e-mail só com o Resend ligado) | rota do webhook |
 | Entregue (`order.delivered`) | WhatsApp | rota do webhook |
-| `order.created`/`released`/`cancelled` | nada (só registro no pedido / log) | — |
+| `order.created`/`released`/`cancelled` | nada (só registro no pedido / log). O `cancelled` dispensa um aviso de despacho ainda pendente | — |
 
-Cada aviso sai uma vez: a marca fica em `metadata.frete.avisos` (postado/entregue) e em
-`metadata.frete.aviso_despacho` (despacho). Reenvio da SuperFrete cai em "já avisado".
+**Quantas vezes cada aviso sai.** A marca fica em `metadata.frete.aviso_despacho` (despacho) e em
+`metadata.frete.avisos` (postado/entregue); reenvio da SuperFrete cai em "já avisado".
+- **Despacho: nunca duplica.** A trava no Postgres garante uma mensagem só; na dúvida o aviso vira `incerto`
+  e ninguém reenvia.
+- **Postado/entregue: pode repetir, raramente.** Se o WhatsApp estoura o tempo (15 s) a mensagem pode ter
+  saído mesmo assim; a rota responde 500 e a SuperFrete reenvia em 15 min — a cliente pode receber duas vezes.
+  **Decisão do dono em 2026-09-21:** fica assim. Uma repetição rara é aceita; um aviso perdido não é.
+- **Despacho, Evolution 5xx:** volta para `pendente` e o job tenta de novo em 5 min (**confirmado pelo dono em
+  2026-09-21**). Um proxy que responda 5xx depois de a Evolution entregar poderia duplicar — risco aceito.
 
 **Aviso de despacho — remetente único.** Só `tentarAvisoDeDespacho` (`apps/backend/src/lib/aviso-despacho.ts`)
 manda a mensagem de despacho da etiqueta. É chamado de três lugares: o Cockpit logo depois do despacho (rota
@@ -153,7 +164,13 @@ Estados (`metadata.frete.aviso_despacho.status`, mostrados no pedido do Cockpit)
 | `sem_whatsapp` | a Evolution disse que o número não tem WhatsApp | avisar por outro canal (e-mail/telefone) |
 | `sem_telefone` | pedido sem telefone | avisar por e-mail |
 | `incerto` | não dá para saber se saiu (timeout, resposta estranha) | **abrir a conversa da cliente**: se a mensagem não está lá, mandar à mão. O sistema nunca reenvia sozinho |
-| `dispensado` | operador dispensou | nada |
+| `dispensado` | não vai sair. Sem `motivo`: o operador desligou o aviso no despacho | nada |
+| `dispensado` + `motivo: "etiqueta cancelada"` | a etiqueta foi cancelada (webhook `order.cancelled`, ou a consulta da SuperFrete diz `canceled`) antes de o aviso sair | nada — se houver etiqueta nova, avisar a cliente à mão |
+| `dispensado` + `motivo: "coberto pelo aviso de postado"` | o `order.posted` chegou com o despacho ainda pendente: a mensagem de postado já leva código e link, então o despacho atrasado não sai depois dela | nada |
+
+Só um aviso `pendente` é dispensado (transição condicional no banco): `enviando` e os estados finais nunca
+são tocados pelo cancelamento nem pelo postado. O link nas mensagens é sempre o do rastreamento dos Correios
+montado a partir do código (`linkDeRastreio`); o `tracking_url` que vem no corpo do webhook é ignorado.
 
 **Interruptor do Cockpit: `SUPERFRETE_AVISO_PELO_BACKEND`** (Vercel, ambiente do Cockpit). Desligado (padrão) =
 como antes: o Cockpit manda o WhatsApp na hora do despacho, com o código que houver. Ligado (`true`) = na
