@@ -465,6 +465,10 @@ def main():
     # 6) conjuntos montados pelo admin (curados do Benefício Conjunto)
     if not a.modelo:
         sincronizar_conjuntos(api, st, idx, dry)
+    # versões leves (.w480/.w960) que a vitrine pede no modo "direto" do loader — sem elas a foto nova aparece quebrada
+    if not dry:
+        import subprocess
+        subprocess.run([sys.executable, "-B", os.path.join(RAIZ, "scripts", "gerar-variantes-fotos.py"), "--apply"], check=False)
     print("\nConcluído. Rode: python scripts/check-catalog-options.py")
 
 if __name__ == "__main__":

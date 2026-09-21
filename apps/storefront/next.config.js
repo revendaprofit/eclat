@@ -32,8 +32,9 @@ const nextConfig = {
     ignoreBuildErrors: false,
   },
   images: {
-    // Redimensionamento pelo Supabase (src/lib/util/image-loader.ts), não pelo otimizador da Vercel:
-    // a cota da Vercel estourou em 2026-09-20 e imagem nova passou a responder 402.
+    // Loader próprio (src/lib/util/image-loader.ts), não o otimizador da Vercel: a cota da Vercel estourou em
+    // 2026-09-20 e imagem nova passou a responder 402. Padrão = modo "direto" (arquivo do Storage + variantes
+    // .w480/.w960 prontas, custo zero); NEXT_PUBLIC_IMAGENS_MODO=supabase usa o redimensionamento pago do Supabase.
     // Para voltar ao otimizador da Vercel sem mexer em código: IMAGENS_OTIMIZADOR=vercel no ambiente.
     ...(process.env.IMAGENS_OTIMIZADOR === "vercel"
       ? {}
