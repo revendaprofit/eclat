@@ -58,6 +58,18 @@ async function fetchVitrineRaw(): Promise<VitrineStore> {
   }
 }
 
+// Ids das peças que formam os conjuntos da vitrine (curados + pares gerados). Serve ao menu e ao
+// sitemap para saber se a página Conjuntos tem o que mostrar, sem hidratar os produtos. Usa o
+// mesmo cache de `fetchVitrineRaw` (5 min) e nunca lança: falha → lista vazia.
+export async function getIdsProdutosConjuntos(): Promise<string[]> {
+  const vitrine = await fetchVitrineRaw()
+  const ids = [
+    ...vitrine.curados.flatMap((c) => c.product_ids),
+    ...vitrine.colecoes.flatMap((col) => col.pares.flatMap((p) => p.product_ids)),
+  ]
+  return Array.from(new Set(ids))
+}
+
 // Mapa categoria id -> handle da raiz, subindo a árvore com `buildChain` (mesma lógica de
 // breadcrumb/relacionados). Categoria sem cadeia resolvível fica de fora do mapa.
 async function buildRaizesMap(): Promise<Map<string, string>> {
