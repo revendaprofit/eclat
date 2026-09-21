@@ -13,9 +13,31 @@ export function evolutionConfigured(): boolean {
 // fora do WhatsApp, por exemplo) de falha passageira (5xx). Atenção: `message` carrega o corpo da
 // resposta, que pode ecoar o número da cliente — quem loga dado pessoal deve logar só o `status`.
 export class EvolutionHttpError extends Error {
-  constructor(message: string, readonly status: number) {
+  // Corpo cru da resposta, em campo PRIVADO de verdade (#): não aparece em JSON.stringify, em
+  // inspeção de log nem em spread do erro. Só serve para o getter abaixo; nunca deve ser logado —
+  // ele ecoa o número da cliente.
+  readonly #corpo: string
+
+  constructor(message: string, readonly status: number, corpo = "") {
     super(message)
     this.name = "EvolutionHttpError"
+    this.#corpo = corpo
+  }
+
+  // True SÓ quando a Evolution recusou porque aquele número não tem WhatsApp: HTTP 400 com
+  // `exists: false` no corpo (forma real: { response: { message: [{ exists: false, jid, number }] } }).
+  // É a única recusa PERMANENTE e específica de uma cliente. Qualquer outro 4xx — chave errada
+  // (401/403), instância ausente (404), limite (429), instância desconectada ou payload ruim (400
+  // sem `exists: false`) — atinge todas as clientes e deve ser tratado como falha.
+  get numeroInexistente(): boolean {
+    if (this.status !== 400) return false
+    try {
+      const d = JSON.parse(this.#corpo) as { response?: { message?: unknown }; message?: unknown }
+      const itens = Array.isArray(d?.response?.message) ? d.response.message : Array.isArray(d?.message) ? d.message : []
+      return itens.some((i) => i && typeof i === "object" && (i as { exists?: unknown }).exists === false)
+    } catch {
+      return false
+    }
   }
 }
 
@@ -36,7 +58,8 @@ export async function sendWhatsappText(number: string, text: string, delayMs = 0
     ...(opcoes.timeoutMs ? { signal: AbortSignal.timeout(opcoes.timeoutMs) } : {}),
   })
   if (!res.ok) {
-    throw new EvolutionHttpError(`Evolution sendText falhou: ${res.status} ${await res.text()}`, res.status)
+    const corpo = await res.text()
+    throw new EvolutionHttpError(`Evolution sendText falhou: ${res.status} ${corpo}`, res.status, corpo)
   }
   return res.json()
 }

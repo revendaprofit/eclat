@@ -28,8 +28,9 @@ const ETIQUETA = "sfid_teste_1"
 let servidorEvolution: Server
 // "ok" entrega; "503" é falha passageira; "400" é a recusa permanente (número fora do WhatsApp — a
 // Evolution de verdade ecoa o número no corpo, e é isso que o 400 daqui faz também); "pendurado"
-// nunca responde, para o timeout da rota estourar.
-let modoEvolution: "ok" | "503" | "400" | "pendurado" = "ok"
+// nunca responde, para o timeout da rota estourar. "401" (chave errada) e "400-outro" (400 sem
+// `exists: false`, como o de instância desconectada) são erros que atingem TODAS as clientes.
+let modoEvolution: "ok" | "503" | "400" | "400-outro" | "401" | "pendurado" = "ok"
 // Roda DURANTE o envio, antes da resposta: é como o teste simula outro escritor gravando no pedido
 // enquanto a mensagem está saindo.
 let duranteOEnvio: (() => Promise<void>) | null = null
@@ -45,6 +46,14 @@ function subirEvolutionSimulada(): Promise<void> {
     req.on("end", async () => {
       if (!req.url?.startsWith("/message/sendText/") || modoEvolution === "503") {
         res.writeHead(503, { "content-type": "application/json" }).end("{}")
+        return
+      }
+      if (modoEvolution === "401") {
+        res.writeHead(401, { "content-type": "application/json" }).end(JSON.stringify({ status: 401, error: "Unauthorized" }))
+        return
+      }
+      if (modoEvolution === "400-outro") {
+        res.writeHead(400, { "content-type": "application/json" }).end(JSON.stringify({ status: 400, response: { message: ["Connection Closed"] } }))
         return
       }
       if (modoEvolution === "pendurado") {
@@ -479,6 +488,54 @@ medusaIntegrationTestRunner({
       }
       expect(whatsappEnviados).toHaveLength(1)
       expect((await lerFrete(p.id)).avisos).toBeUndefined()
+    })
+
+    // ---- Revisão da Task 2 (fix round 2) ----
+
+    it("Evolution responde 401 (chave errada ou trocada) → FALHA: 500 e sem marca", async () => {
+      const p = await criarPedido({ tracking_number: "AA123456789BR" })
+      modoEvolution = "401"
+      const r = await chamar(corpoDe(p.display_id, "order.posted"))
+      expect(r.status).toBe(500)
+      expect((await lerFrete(p.id)).avisos).toBeUndefined()
+    })
+
+    it("Evolution responde 400 SEM `exists: false` (instância desconectada, payload ruim) → FALHA: 500 e sem marca", async () => {
+      const p = await criarPedido({ tracking_number: "AA123456789BR" })
+      modoEvolution = "400-outro"
+      const r = await chamar(corpoDe(p.display_id, "order.posted"))
+      expect(r.status).toBe(500)
+      expect((await lerFrete(p.id)).avisos).toBeUndefined()
+    })
+
+    it("aviso_despacho marcado 'enviado' por outro caminho ENTRE a leitura do pedido e o write do estado: não volta a 'pendente' nem manda de novo", async () => {
+      const p = await criarPedido(PENDENTE)
+      const jaEnviado = { status: "enviado", desde: "2026-09-21T10:00:00.000Z", em: "2026-09-21T10:00:30.000Z", por: "cockpit" }
+      // A rota lê o pedido pelo Query no começo e RELÊ pelo módulo de pedidos antes do write do
+      // estado. O espião, na primeira releitura, faz o que o Cockpit/job faria nesse intervalo:
+      // marca o despacho como enviado. Determinístico — não depende de tempo.
+      const original = pedidos.retrieveOrder.bind(pedidos)
+      let primeira = true
+      const espiao = jest.spyOn(pedidos, "retrieveOrder").mockImplementation((async (...args: unknown[]) => {
+        if (primeira) {
+          primeira = false
+          const atual = (await original(p.id)).metadata as Record<string, any>
+          await pedidos.updateOrders(p.id, { metadata: { frete: { ...atual.frete, aviso_despacho: jaEnviado } } })
+        }
+        return (original as (...a: unknown[]) => unknown)(...args)
+      }) as never)
+      try {
+        const r = await chamar(corpoDe(p.display_id, "order.generated", COM_CODIGO))
+        expect(r.status).toBe(200)
+        expect(primeira).toBe(false)
+      } finally {
+        espiao.mockRestore()
+      }
+      const frete = await lerFrete(p.id)
+      expect(frete.aviso_despacho).toEqual(jaEnviado)
+      expect(frete.tracking_number).toBe("AA123456789BR")
+      expect(frete.eventos["order.generated"]).toEqual(expect.any(String))
+      expect(whatsappEnviados).toHaveLength(0)
     })
   },
 })
