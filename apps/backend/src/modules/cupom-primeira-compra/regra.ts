@@ -1,4 +1,5 @@
-// Cupom de primeira compra: UM por CPF (decisão do dono, 2026-09-21).
+// Cupom de primeira compra: só para CPF que NUNCA comprou (decisão do dono, 2026-09-21).
+// Quem já tem pedido na loja — com ou sem cupom — não usa mais; logo, cada CPF usa no máximo um.
 // Exceção consciente à regra geral "cupom nunca preso a cliente" (2026-09-20): os cupons comuns seguem
 // limitados só por usos no total; os de primeira compra ganham, ALÉM disso, a trava por CPF.
 //
@@ -28,21 +29,19 @@ export function cuponsDePrimeiraCompra(codigos: Array<string | null | undefined>
 
 export const normalizarCpf = (v: unknown): string => (typeof v === "string" ? v : "").replace(/\D/g, "")
 
-export function mensagemCupomJaUsado(codigo: string): string {
-  return `O cupom ${codigo} é de primeira compra e já foi usado neste CPF. Remova o cupom da sacola para continuar`
+export function mensagemCupomSoPrimeiraCompra(codigo: string): string {
+  return `O cupom ${codigo} vale só para a primeira compra, e este CPF já tem pedido na loja. Remova o cupom da sacola para continuar`
 }
 
 /**
- * Decide se o carrinho pode seguir. `pedidosDoCpf` = pedidos NÃO cancelados desse CPF, com os cupons de cada um.
- * Bloqueia quando o carrinho traz um cupom de primeira compra e o CPF já tem pedido com QUALQUER cupom de
- * primeira compra (trocar BEMVINDA10 por BEMVINDA15 não abre um segundo desconto).
+ * Decide se o carrinho pode seguir. `pedidosDoCpf` = quantos pedidos NÃO cancelados esse CPF já tem.
+ * Carrinho com cupom de primeira compra + CPF com qualquer pedido anterior → recusado.
  */
 export function avaliarCupomPrimeiraCompra(
   cuponsDoCarrinho: Array<string | null | undefined>,
-  pedidosDoCpf: Array<{ cupons: Array<string | null | undefined> }>
+  pedidosDoCpf: number
 ): { permitido: true } | { permitido: false; codigo: string } {
   const noCarrinho = cuponsDePrimeiraCompra(cuponsDoCarrinho)
-  if (!noCarrinho.length) return { permitido: true }
-  const jaUsou = pedidosDoCpf.some((p) => cuponsDePrimeiraCompra(p.cupons).length > 0)
-  return jaUsou ? { permitido: false, codigo: noCarrinho[0] } : { permitido: true }
+  if (!noCarrinho.length || pedidosDoCpf <= 0) return { permitido: true }
+  return { permitido: false, codigo: noCarrinho[0] }
 }

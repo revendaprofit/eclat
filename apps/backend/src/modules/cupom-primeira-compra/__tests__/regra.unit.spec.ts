@@ -1,4 +1,4 @@
-import { avaliarCupomPrimeiraCompra, ehCupomDePrimeiraCompra, mensagemCupomJaUsado, normalizarCpf } from "../regra"
+import { avaliarCupomPrimeiraCompra, ehCupomDePrimeiraCompra, mensagemCupomSoPrimeiraCompra, normalizarCpf } from "../regra"
 
 describe("ehCupomDePrimeiraCompra", () => {
   afterEach(() => {
@@ -20,17 +20,16 @@ describe("ehCupomDePrimeiraCompra", () => {
 })
 
 describe("avaliarCupomPrimeiraCompra", () => {
-  it("sem cupom de primeira compra no carrinho: sempre permitido, mesmo com histórico", () => {
-    expect(avaliarCupomPrimeiraCompra(["CLUBE10"], [{ cupons: ["BEMVINDA10"] }])).toEqual({ permitido: true })
-    expect(avaliarCupomPrimeiraCompra([], [{ cupons: ["BEMVINDA10"] }])).toEqual({ permitido: true })
+  it("sem cupom de primeira compra no carrinho: sempre permitido, mesmo para quem já comprou", () => {
+    expect(avaliarCupomPrimeiraCompra(["CLUBE10"], 3)).toEqual({ permitido: true })
+    expect(avaliarCupomPrimeiraCompra([], 1)).toEqual({ permitido: true })
   })
-  it("CPF sem pedido, ou só com pedidos SEM cupom de primeira compra: permitido", () => {
-    expect(avaliarCupomPrimeiraCompra(["BEMVINDA10"], [])).toEqual({ permitido: true })
-    expect(avaliarCupomPrimeiraCompra(["BEMVINDA10"], [{ cupons: [] }, { cupons: ["CLUBE10"] }])).toEqual({ permitido: true })
+  it("CPF sem nenhum pedido: permitido", () => {
+    expect(avaliarCupomPrimeiraCompra(["BEMVINDA10"], 0)).toEqual({ permitido: true })
   })
-  it("CPF que já usou um cupom de primeira compra: recusado — inclusive trocando de código", () => {
-    expect(avaliarCupomPrimeiraCompra(["BEMVINDA10"], [{ cupons: ["BEMVINDA10"] }])).toEqual({ permitido: false, codigo: "BEMVINDA10" })
-    expect(avaliarCupomPrimeiraCompra(["bemvinda15"], [{ cupons: [] }, { cupons: ["BEMVINDA10"] }])).toEqual({ permitido: false, codigo: "BEMVINDA15" })
+  it("CPF que já comprou — com OU sem cupom — não usa cupom de primeira compra", () => {
+    expect(avaliarCupomPrimeiraCompra(["BEMVINDA10"], 1)).toEqual({ permitido: false, codigo: "BEMVINDA10" })
+    expect(avaliarCupomPrimeiraCompra(["CLUBE10", "bemvinda15"], 2)).toEqual({ permitido: false, codigo: "BEMVINDA15" })
   })
 })
 
@@ -38,6 +37,6 @@ describe("apoio", () => {
   it("CPF só com dígitos; a mensagem fala o código e o que fazer", () => {
     expect(normalizarCpf("123.456.789-09")).toBe("12345678909")
     expect(normalizarCpf(undefined)).toBe("")
-    expect(mensagemCupomJaUsado("BEMVINDA10")).toContain("Remova o cupom")
+    expect(mensagemCupomSoPrimeiraCompra("BEMVINDA10")).toContain("Remova o cupom")
   })
 })

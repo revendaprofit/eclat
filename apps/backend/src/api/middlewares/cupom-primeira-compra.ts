@@ -2,7 +2,7 @@ import { MedusaError } from "@medusajs/framework/utils"
 import type { MedusaNextFunction, MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import { recusaPorCupomDePrimeiraCompra } from "../../modules/cupom-primeira-compra/checar"
 
-// Cupom de primeira compra: recusa criar a cobrança quando o CPF já usou um. É a ÚNICA barreira
+// Cupom de primeira compra: recusa criar a cobrança quando o CPF já tem pedido na loja. É a ÚNICA barreira
 // (ver modules/cupom-primeira-compra/checar.ts): fica antes de qualquer pagamento, e é o primeiro
 // ponto em que o CPF já existe no carrinho (vem do passo de endereço).
 export async function exigirCupomPrimeiraCompraLivre(req: MedusaRequest, _res: MedusaResponse, next: MedusaNextFunction) {

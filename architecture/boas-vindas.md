@@ -34,11 +34,12 @@ chama `POST /store/boas-vindas`; com a rota fora do ar o formulário mostra erro
 ## Regras de cupom
 - Cupom nunca soma com o Benefício Conjunto: por peça vale o maior desconto (CLAUDE.md, "Regras de venda").
 - Todo cupom tem teto de usos NO TOTAL (`scripts/cupom.mjs --usos N`).
-- **Cupom de primeira compra: um por CPF** (decisão do dono, 2026-09-21). É de primeira compra todo código que
+- **Cupom de primeira compra: só para CPF que nunca comprou** (decisão do dono, 2026-09-21) — quem já tem
+  pedido na loja, com ou sem cupom, não usa; logo cada CPF usa no máximo um. É de primeira compra todo código que
   começa com `BEMVINDA`; a env `CUPONS_PRIMEIRA_COMPRA` (vírgulas) acrescenta outros sem deploy.
   - Onde trava: `POST /store/payment-collections` (`api/middlewares/cupom-primeira-compra.ts`), antes de qualquer
-    pagamento. Procura pedidos NÃO cancelados com o mesmo `metadata.cpf` e olha os cupons de cada um; se algum
-    usou cupom de primeira compra (qualquer código da família), recusa com mensagem para a cliente — a vitrine
+    pagamento. Procura pedido NÃO cancelado com o mesmo `metadata.cpf`; se existir qualquer um, recusa com
+    mensagem para a cliente (pedido cancelado não conta: compra desfeita não é "já comprou") — a vitrine
     mostra o texto (`mensagemDoErro` em `lib/data/pagamento-mercadopago.ts`) e ela remove o cupom para seguir.
   - Por que CPF: a loja vende sem login e e-mail troca fácil; o CPF é obrigatório e validado no endereço.
   - Por que NÃO trava no fechamento: ali o Pix já foi pago; recusar deixaria dinheiro sem pedido.
@@ -46,11 +47,10 @@ chama `POST /store/boas-vindas`; com a rota fora do ar o formulário mostra erro
     existir não passa pela trava (mesmo limite do pedido mínimo); (2) dois carrinhos do mesmo CPF abertos ao
     mesmo tempo podem passar os dois. Nos dois casos a perda é um desconto de 10%, e o teto de usos segura o total.
   - Falha na consulta libera a venda (nunca o contrário).
-  - A parte de banco (`checar.ts`: filtro por `metadata->>'cpf'` na tabela `order` + cupons pelo vínculo
-    pedido↔promoção) NÃO tem teste automatizado — conferir em produção com o roteiro abaixo.
-  - Roteiro de conferência (depois do deploy): com um CPF que já tem pedido com BEMVINDA10, montar sacola, aplicar
-    o cupom, preencher o endereço com o mesmo CPF e ir ao pagamento → deve aparecer "O cupom BEMVINDA10 é de
-    primeira compra e já foi usado neste CPF…". Com outro CPF → segue normal.
+  - A parte de banco (`checar.ts`: filtro por `metadata->>'cpf'` na tabela `order`) NÃO tem teste automatizado — conferir em produção com o roteiro abaixo.
+  - Roteiro de conferência (depois do deploy): com um CPF que já tem pedido na loja, montar sacola, aplicar o
+    cupom, preencher o endereço com o mesmo CPF e ir ao pagamento → deve aparecer "O cupom BEMVINDA10 vale só para
+    a primeira compra, e este CPF já tem pedido na loja…". Com um CPF sem pedido → segue normal.
 
 ## Testes
 `apps/backend/src/lib/__tests__/boas-vindas.unit.spec.ts` · `apps/backend/src/modules/cupom-primeira-compra/__tests__/regra.unit.spec.ts` · `apps/storefront/src/lib/util/boas-vindas.test.ts`.
