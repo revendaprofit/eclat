@@ -25,6 +25,9 @@ const CODIGO = "AA123456789BR"
 // ---- Evolution simulada ----
 // Atraso antes de responder: usado para o Cockpit "desistir" (fechar a conexão) no meio do envio.
 let atrasoEvolutionMs = 0
+// Quantas mensagens a Evolution falsa está atendendo ao mesmo tempo (o job manda EM SEQUÊNCIA).
+let emVoo = 0
+let maxEmVoo = 0
 const whatsappEnviados: { number: string; text: string }[] = []
 let servidorEvolution: Server
 
@@ -47,7 +50,10 @@ async function subirSimulados(): Promise<void> {
       }
       const { number, text } = JSON.parse(corpo || "{}")
       whatsappEnviados.push({ number, text })
+      emVoo++
+      maxEmVoo = Math.max(maxEmVoo, emVoo)
       if (atrasoEvolutionMs) await new Promise((r) => setTimeout(r, atrasoEvolutionMs))
+      emVoo--
       res.writeHead(200, { "content-type": "application/json" }).end(JSON.stringify({ key: { id: "msg_1" } }))
     })
   })
@@ -83,11 +89,14 @@ medusaIntegrationTestRunner({
   testSuite: ({ api, getContainer }) => {
     let pedidos: IOrderModuleService
     let admin: Record<string, string>
+    let verificar: typeof import("../../src/lib/aviso-despacho").verificarAvisosPendentes
 
     beforeAll(async () => {
       await pronto
       admin = (await criarAdmin(api, getContainer())).headers
       pedidos = getContainer().resolve(Modules.ORDER)
+      // Import dinâmico: a lib/evolution.ts precisa carregar com as variáveis já no process.env.
+      verificar = (await import("../../src/lib/aviso-despacho.js")).verificarAvisosPendentes
     })
 
     afterAll(() => {
@@ -97,6 +106,7 @@ medusaIntegrationTestRunner({
 
     beforeEach(() => {
       atrasoEvolutionMs = 0
+      maxEmVoo = 0
       whatsappEnviados.length = 0
       infoDasEtiquetas.clear()
     })
@@ -214,5 +224,99 @@ medusaIntegrationTestRunner({
         expect(despachos()).toHaveLength(1)
       })
     })
+
+    // O job de 5 min só chama verificarAvisosPendentes. Os testes do job ficam DEPOIS dos da rota, e
+    // cada teste deixa todos os seus pedidos fora de "pendente"/"enviando" no fim: o job varre o banco
+    // inteiro, então sobra de um teste viraria candidato no seguinte.
+    describe("verificarAvisosPendentes (o que o job de 5 min roda)", () => {
+      const dispensar = (id: string) =>
+        pgReal().raw(`UPDATE "order" SET metadata = jsonb_set(metadata, '{frete,aviso_despacho,status}', '"dispensado"') WHERE id = ?`, [id])
+
+      it("3 pedidos: pendente com código, pendente sem código na SuperFrete, enviando velho → 1 enviado, 1 pendente, 1 incerto; 1 mensagem", async () => {
+        const comCodigo = await criarPedido({ ...pendente(), tracking_number: CODIGO })
+        const semCodigo = await criarPedido(pendente(), { superfreteId: "sfid_sem_codigo" })
+        infoDasEtiquetas.set("sfid_sem_codigo", { status: 200, corpo: { status: "released", tracking: "", tags: [] } })
+        const preso = await criarPedido({
+          tracking_number: CODIGO,
+          aviso_despacho: { status: "enviando", desde: minutosAtras(30), desde_envio: minutosAtras(15), por: "cockpit" },
+        })
+        // Um pedido já resolvido não é candidato.
+        const jaEnviado = await criarPedido({ tracking_number: CODIGO, aviso_despacho: { status: "enviado", em: minutosAtras(5), por: "webhook" } })
+
+        const r = await verificar(getContainer())
+
+        expect(r).toEqual({ candidatos: 3, porEstado: { enviado: 1, pendente: 1, incerto: 1 }, falhas: 0 })
+        expect((await lerFrete(comCodigo.id)).aviso_despacho).toMatchObject({ status: "enviado", por: "job" })
+        expect((await lerFrete(semCodigo.id)).aviso_despacho.status).toBe("pendente")
+        expect((await lerFrete(preso.id)).aviso_despacho.status).toBe("incerto")
+        expect((await lerFrete(jaEnviado.id)).aviso_despacho).toMatchObject({ status: "enviado", por: "webhook" })
+        expect(despachos()).toHaveLength(1)
+        expect(despachos()[0].text).toContain(`#${comCodigo.display_id}`)
+
+        await dispensar(semCodigo.id)
+      })
+
+      it("envia EM SEQUÊNCIA (nunca duas mensagens ao mesmo tempo) e um pedido com erro não para os outros", async () => {
+        const a = await criarPedido({ ...pendente(minutosAtras(3)), tracking_number: CODIGO })
+        const quebrado = await criarPedido({ ...pendente(minutosAtras(2)), tracking_number: CODIGO })
+        const b = await criarPedido({ ...pendente(minutosAtras(1)), tracking_number: CODIGO })
+        atrasoEvolutionMs = 300
+        // A reserva do pedido "quebrado" explode no banco: a função lança ANTES de enviar.
+        const pg = pgReal()
+        const pgQueQuebraUm = {
+          raw: (sql: string, bindings?: unknown[]) =>
+            Array.isArray(bindings) && bindings.includes(quebrado.id) && bindings.some((x) => typeof x === "string" && x.includes('"status":"enviando"'))
+              ? Promise.reject(new Error("banco fora do ar"))
+              : pg.raw(sql, bindings),
+        }
+        const logger = { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() }
+        const r = await verificar(containerCom({ pg: pgQueQuebraUm, logger }))
+
+        expect(r).toEqual({ candidatos: 3, porEstado: { enviado: 2 }, falhas: 1 })
+        expect(despachos()).toHaveLength(2)
+        expect(maxEmVoo).toBe(1)
+        expect((await lerFrete(a.id)).aviso_despacho.status).toBe("enviado")
+        expect((await lerFrete(b.id)).aviso_despacho.status).toBe("enviado")
+        expect((await lerFrete(quebrado.id)).aviso_despacho.status).toBe("pendente")
+        // Log de erro do pedido com falha: número do pedido e tipo do erro — nada de dado pessoal.
+        const erros = logger.error.mock.calls.map((c) => String(c[0]))
+        expect(erros.some((m) => m.includes(`#${quebrado.display_id}`) && m.includes("Error"))).toBe(true)
+        expect(erros.join(" ")).not.toContain(TELEFONE)
+        expect(erros.join(" ")).not.toContain("banco fora do ar")
+        // E o resumo em `info`, porque houve algo.
+        expect(logger.info.mock.calls.map((c) => String(c[0])).some((m) => m.includes("verificação"))).toBe(true)
+
+        await dispensar(quebrado.id)
+      })
+
+      it("o job agendado fica desligado nas suítes (NODE_ENV=test): o cron não mexe nos pedidos dos testes", () => {
+        expect(process.env.NODE_ENV).toBe("test")
+      })
+
+      it("sem candidatos → nada acontece e nada é logado", async () => {
+        const logger = { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() }
+        const r = await verificar(containerCom({ pg: pgReal(), logger }))
+        expect(r).toEqual({ candidatos: 0, porEstado: {}, falhas: 0 })
+        expect(logger.info).not.toHaveBeenCalled()
+        expect(logger.error).not.toHaveBeenCalled()
+        expect(whatsappEnviados).toHaveLength(0)
+      })
+    })
+
+    // ---- utilidades para trocar o knex e o logger só numa chamada ----
+    function pgReal() {
+      return getContainer().resolve(ContainerRegistrationKeys.PG_CONNECTION) as unknown as {
+        raw: (sql: string, bindings?: unknown[]) => Promise<{ rows: Record<string, unknown>[] }>
+      }
+    }
+
+    // Um container igual ao do app, exceto pelo knex e pelo logger.
+    function containerCom(troca: { pg: unknown; logger: unknown }) {
+      const real = getContainer()
+      return {
+        resolve: (chave: string) =>
+          chave === ContainerRegistrationKeys.PG_CONNECTION ? troca.pg : chave === ContainerRegistrationKeys.LOGGER ? troca.logger : real.resolve(chave),
+      } as unknown as ReturnType<typeof getContainer>
+    }
   },
 })

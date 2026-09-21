@@ -395,3 +395,58 @@ export async function tentarAvisoDeDespacho(
     return enviado
   }
 }
+
+// ---------------------------------------------------------------------------------------------
+// Verificação a cada 5 minutos (o job `jobs/frete-avisos-pendentes.ts` só chama isto).
+//
+// Candidatos: pedidos com o aviso em "pendente" (esperando código ou uma nova tentativa) ou
+// "enviando" (para a função transformar a reserva presa em "incerto"), os mais antigos primeiro,
+// no máximo `limite` por rodada. Um por vez, EM SEQUÊNCIA — o WhatsApp não gosta de rajada — e cada
+// um no seu try/catch: um pedido com erro não para os outros.
+//
+// Logs: `info` com a contagem por estado final só quando algo MUDOU (saiu de pendente/enviando) ou
+// falhou — um pedido que segue pendente já tem o próprio log dentro da função. `error` por pedido
+// com falha: número do pedido e tipo do erro. Nenhum dado pessoal.
+// ---------------------------------------------------------------------------------------------
+export type ResultadoDaVerificacao = { candidatos: number; porEstado: Record<string, number>; falhas: number }
+
+const LIMITE_POR_RODADA = 50
+
+export async function verificarAvisosPendentes(
+  container: MedusaContainer,
+  limite = LIMITE_POR_RODADA
+): Promise<ResultadoDaVerificacao> {
+  const logger = container.resolve(ContainerRegistrationKeys.LOGGER)
+  const pg = pgDo(container)
+  const { rows } = await pg.raw(
+    `SELECT id, display_id FROM "order"
+     WHERE deleted_at IS NULL AND metadata->'frete'->'aviso_despacho'->>'status' IN ('pendente','enviando')
+     ORDER BY created_at ASC, id ASC
+     LIMIT ?`,
+    [limite]
+  )
+
+  const resultado: ResultadoDaVerificacao = { candidatos: rows.length, porEstado: {}, falhas: 0 }
+  for (const linha of rows) {
+    const id = String(linha.id)
+    try {
+      const final = await tentarAvisoDeDespacho(container, id, "job")
+      const estado = String(final?.status ?? "sem_aviso")
+      resultado.porEstado[estado] = (resultado.porEstado[estado] ?? 0) + 1
+    } catch (e) {
+      resultado.falhas++
+      logger.error(`[aviso-despacho] verificação: pedido #${String(linha.display_id ?? "?")} falhou (${(e as Error)?.name ?? "erro"}) — tenta de novo na próxima rodada`)
+    }
+  }
+
+  const mudou = Object.keys(resultado.porEstado).some((s) => s !== "pendente" && s !== "enviando")
+  if (mudou || resultado.falhas) {
+    const contagem = Object.entries(resultado.porEstado)
+      .map(([s, q]) => `${q} ${s}`)
+      .join(", ")
+    logger.info(
+      `[aviso-despacho] verificação: ${resultado.candidatos} candidato(s) — ${contagem || "nenhum concluído"}${resultado.falhas ? `, ${resultado.falhas} com falha` : ""}`
+    )
+  }
+  return resultado
+}
