@@ -41,6 +41,9 @@ export default function RodapeConjunto({
       <p className="text-xs text-eclat-grafite/70" data-testid="rodape-conjunto-regra">
         {fraseEconomia(precoCheio, precoComBeneficio) ?? descricaoRegra(regra, numPecas)}
       </p>
+      <p className="text-[11px] text-eclat-grafite/60" data-testid="rodape-conjunto-pagamento">
+        Pix ou cartão em até 4x · envio para todo o Brasil
+      </p>
       {erro && (
         <p className="text-xs text-red-600" role="alert" data-testid="rodape-conjunto-erro">
           {erro}

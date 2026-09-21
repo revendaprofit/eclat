@@ -6,16 +6,19 @@ import Breadcrumb from "@modules/common/components/breadcrumb"
 import Track, { type EcommercePayload } from "@modules/analytics/track"
 import { ConjuntoJsonLd } from "@modules/seo/jsonld"
 import ConjuntoBuilder from "@modules/conjuntos/components/conjunto-builder"
+import InformacoesConjunto from "@modules/conjuntos/components/informacoes-conjunto"
+import { formatarReais, fraseEconomia } from "@lib/util/conjuntos"
 
 // `view_item` do conjunto (spec §7.2): os "items" são as PEÇAS, não uma linha "conjunto" — não
 // existe SKU de conjunto no catálogo. `value` é o total com benefício (o que a cliente paga).
-function viewItemPayload(card: CardConjuntoData): EcommercePayload {
+// `item_id` = id da 1ª variante da peça (o `g:id` do feed), como no resto do site (analytics/items.ts).
+function viewItemPayload(card: CardConjuntoData, produtos: HttpTypes.StoreProduct[]): EcommercePayload {
   return {
     currency: "BRL",
     value: card.precoComBeneficio / 100,
     item_list_name: `Conjunto: ${card.nome}`,
     items: card.pecas.map((p, i) => ({
-      item_id: p.id,
+      item_id: produtos.find((x) => x.id === p.id)?.variants?.[0]?.id ?? p.id,
       item_name: p.title,
       price: (p.precoMin ?? 0) / 100,
       index: i,
@@ -39,6 +42,7 @@ export default async function ConjuntoTemplate({
   const colorMap = await getColorMap()
   const base = getBaseURL()
   const url = `${base}/${countryCode}/conjuntos/${card.handle}`
+  const economia = fraseEconomia(card.precoCheio, card.precoComBeneficio)
 
   return (
     <div className="content-container py-6" data-testid="conjunto-container">
@@ -50,7 +54,7 @@ export default async function ConjuntoTemplate({
         ]}
         countryCode={countryCode}
       />
-      <Track event="view_item" ecommerce={viewItemPayload(card)} />
+      <Track event="view_item" ecommerce={viewItemPayload(card, produtos)} />
       <ConjuntoJsonLd
         nome={card.nome}
         url={url}
@@ -62,10 +66,18 @@ export default async function ConjuntoTemplate({
           url: `${base}/${countryCode}/products/${p.handle}`,
         }))}
       />
-      <h1 className="font-serif text-2xl text-eclat-grafite mb-6" data-testid="conjunto-nome">
+      <h1 className="font-serif text-2xl text-eclat-grafite" data-testid="conjunto-nome">
         {card.nome}
       </h1>
+      {/* A promessa do anúncio repetida no topo (peças + preço do conjunto): quem clicou num
+          "conjunto por R$ X" precisa ler isso antes de rolar — no celular o preço fica no rodapé. */}
+      <p className="text-sm text-eclat-grafite/80 mt-1 mb-6" data-testid="conjunto-promessa">
+        {card.pecas.map((p) => p.title).join(" + ")} por{" "}
+        <strong className="text-eclat-terracota font-medium">{formatarReais(card.precoComBeneficio)}</strong>
+        {economia ? ` — ${economia.charAt(0).toLowerCase()}${economia.slice(1)}.` : "."}
+      </p>
       <ConjuntoBuilder card={card} produtos={produtos} colorMap={colorMap} countryCode={countryCode} corInicial={corInicial} />
+      <InformacoesConjunto produtos={produtos} />
     </div>
   )
 }
