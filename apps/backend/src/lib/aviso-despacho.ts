@@ -211,6 +211,15 @@ export function naoChegouAEntregar(e: unknown): boolean {
   return REDE_SEM_CONEXAO.has(codigoDeRede(e))
 }
 
+// O que aconteceu com a TENTATIVA de envio numa chamada (a verificação de 5 min usa isto para parar
+// a rodada quando a Evolution não responde):
+//   nenhuma      — não chegou a chamar a Evolution (sem código, já enviado, expirou, sem telefone…);
+//   saiu         — a Evolution aceitou;
+//   sem_whatsapp — o número daquela cliente não tem WhatsApp (desfecho de UM pedido);
+//   falhou       — com CERTEZA não saiu (4xx/5xx, conexão que nunca aconteceu): Evolution fora do ar;
+//   ambigua      — timeout ou resposta ambígua: a Evolution não está respondendo direito.
+export type TentativaDeEnvio = "nenhuma" | "saiu" | "sem_whatsapp" | "falhou" | "ambigua"
+
 /**
  * Tenta mandar a mensagem de despacho pendente de um pedido. Retorna o `aviso_despacho` final (ou
  * null se o pedido não existe ou não tem aviso). Nunca manda duas vezes, nem com chamadores
@@ -225,6 +234,26 @@ export async function tentarAvisoDeDespacho(
   container: MedusaContainer,
   orderId: string,
   origem: OrigemDoAviso
+): Promise<AvisoDespacho | null> {
+  return (await tentarAvisoComDesfecho(container, orderId, origem)).aviso
+}
+
+/** Igual a `tentarAvisoDeDespacho`, e diz também o que aconteceu com a tentativa de envio. */
+export async function tentarAvisoComDesfecho(
+  container: MedusaContainer,
+  orderId: string,
+  origem: OrigemDoAviso
+): Promise<{ aviso: AvisoDespacho | null; tentativa: TentativaDeEnvio }> {
+  const desfecho: { tentativa: TentativaDeEnvio } = { tentativa: "nenhuma" }
+  const aviso = await tentarAviso(container, orderId, origem, desfecho)
+  return { aviso, tentativa: desfecho.tentativa }
+}
+
+async function tentarAviso(
+  container: MedusaContainer,
+  orderId: string,
+  origem: OrigemDoAviso,
+  desfecho: { tentativa: TentativaDeEnvio }
 ): Promise<AvisoDespacho | null> {
   const logger = container.resolve(ContainerRegistrationKeys.LOGGER)
   const pg = pgDo(container)
@@ -259,13 +288,18 @@ export async function tentarAvisoDeDespacho(
   }
   if (aviso.status !== "pendente") return aviso
 
-  // 2. Pendente há mais de 24 h → para de tentar. `desde` ilegível não expira (não há como contar);
-  // o Cockpit sempre grava `desde`.
+  // 2. Pendente há mais de 24 h → para de tentar. `desde` ausente ou ilegível também expira: sem ele
+  // não há como contar o prazo, e o pendente ficaria para sempre custando uma consulta à SuperFrete a
+  // cada 5 min. (O Cockpit sempre grava `desde`; isto é defesa contra dado estragado.)
   const desde = instante(aviso.desde)
-  if (Date.now() - desde > PENDENTE_MAX_MS) {
+  if (!(Date.now() - desde <= PENDENTE_MAX_MS)) {
     const expirado = await mudarAvisoDespacho(pg, orderId, "pendente", { status: "expirado", expirado_em: new Date().toISOString() })
     if (expirado) {
-      logger.warn(`[aviso-despacho] pedido #${n}: 24 h sem código de rastreio — aviso de despacho EXPIRADO, avisar a cliente à mão`)
+      logger.warn(
+        Number.isNaN(desde)
+          ? `[aviso-despacho] pedido #${n}: aviso pendente sem data de início legível — EXPIRADO, avisar a cliente à mão`
+          : `[aviso-despacho] pedido #${n}: 24 h sem código de rastreio — aviso de despacho EXPIRADO, avisar a cliente à mão`
+      )
       return expirado
     }
     return avisoAtual(container, orderId)
@@ -349,6 +383,7 @@ export async function tentarAvisoDeDespacho(
   } catch (e) {
     // 7b. Falhou. Três desfechos, todos condicionais em "enviando".
     if (e instanceof EvolutionHttpError && e.numeroInexistente) {
+      desfecho.tentativa = "sem_whatsapp"
       logger.warn(`[aviso-despacho] pedido #${n}: número da cliente não tem WhatsApp — aviso de despacho não enviado (${origem})`)
       return depoisDaReserva(
         () => mudarAvisoDespacho(pg, orderId, "enviando", { status: "sem_whatsapp", em: new Date().toISOString() }, ["desde_envio"]),
@@ -358,12 +393,14 @@ export async function tentarAvisoDeDespacho(
     if (naoChegouAEntregar(e)) {
       // A mensagem com CERTEZA não saiu (4xx/5xx da Evolution, ou conexão que nunca aconteceu):
       // volta para pendente e o job tenta de novo em 5 min.
+      desfecho.tentativa = "falhou"
       const motivo = e instanceof EvolutionHttpError ? `HTTP ${e.status}` : `sem conexão: ${codigoDeRede(e)}`
       logger.error(`[aviso-despacho] pedido #${n}: WhatsApp falhou (${motivo}) — aviso de despacho volta para pendente (${origem})`)
       return depoisDaReserva(() => mudarAvisoDespacho(pg, orderId, "enviando", { status: "pendente" }, ["desde_envio", "por"]), reservado)
     }
     // Todo o resto é AMBÍGUO — timeout, conexão caída no meio, 2xx com corpo ilegível, erro
     // desconhecido: a Evolution pode ter entregado. Reenviar arriscaria duplicar: `incerto`.
+    desfecho.tentativa = "ambigua"
     const nome = (e as Error)?.name ?? "erro"
     const motivo = nome === "TimeoutError" || nome === "AbortError" ? "tempo esgotado no envio do WhatsApp" : "resposta ambígua do WhatsApp"
     logger.error(`[aviso-despacho] pedido #${n}: ${motivo} (${nome}) — aviso INCERTO, conferir se a cliente recebeu (${origem})`)
@@ -373,6 +410,7 @@ export async function tentarAvisoDeDespacho(
     )
   }
 
+  desfecho.tentativa = "saiu"
   // 7a. Saiu. Marca "enviado". Se ESTA gravação falhar, NÃO relança e devolve "enviado" para quem
   // chamou: no banco fica "enviando", que vira "incerto" em 10 min — e ninguém reenvia. De propósito.
   const enviado = { ...reservado, status: "enviado", em: new Date().toISOString(), por: origem }
@@ -404,18 +442,49 @@ export async function tentarAvisoDeDespacho(
 // no máximo `limite` por rodada. Um por vez, EM SEQUÊNCIA — o WhatsApp não gosta de rajada — e cada
 // um no seu try/catch: um pedido com erro não para os outros.
 //
+// A RODADA PARA quando a Evolution não responde: se um envio TENTADO estoura o tempo ou dá resposta
+// ambígua (vira "incerto"), ou falha com certeza (volta a "pendente"), o problema é da Evolution e
+// não daquele pedido. Seguir transformaria cada candidato em "incerto" (final, sem retentativa) a
+// 15 s cada — com 50 candidatos, 12 min, passando por cima da próxima rodada. Os que sobram não são
+// tocados (continuam "pendente", sem reserva) e ficam para a próxima. "sem_whatsapp" e "ainda sem
+// código" são desfechos de UM pedido e não param nada.
+//
+// Rodadas nunca se sobrepõem no mesmo processo (`rodadaEmAndamento`). O motor de workflows em
+// memória do Medusa só agenda o disparo seguinte depois de o anterior terminar, então hoje isso não
+// acontece; a trava protege a troca para um motor que dispare no relógio (Redis) e uma chamada manual.
+// Com a rodada anterior ainda rodando, a nova devolve `pulada: true` sem fazer nada.
+//
 // Logs: `info` com a contagem por estado final só quando algo MUDOU (saiu de pendente/enviando) ou
 // falhou — um pedido que segue pendente já tem o próprio log dentro da função. `error` por pedido
-// com falha: número do pedido e tipo do erro. Nenhum dado pessoal.
+// com falha: número do pedido e tipo do erro. `warn` quando a rodada é interrompida. Nenhum dado pessoal.
 // ---------------------------------------------------------------------------------------------
-export type ResultadoDaVerificacao = { candidatos: number; porEstado: Record<string, number>; falhas: number }
+export type ResultadoDaVerificacao = {
+  candidatos: number
+  porEstado: Record<string, number>
+  falhas: number
+  /** Quantos candidatos ficaram para a próxima rodada porque a Evolution não respondeu. */
+  interrompida?: number
+  /** A rodada anterior ainda estava rodando; esta não fez nada. */
+  pulada?: true
+}
 
 const LIMITE_POR_RODADA = 50
+let rodadaEmAndamento = false
 
 export async function verificarAvisosPendentes(
   container: MedusaContainer,
   limite = LIMITE_POR_RODADA
 ): Promise<ResultadoDaVerificacao> {
+  if (rodadaEmAndamento) return { candidatos: 0, porEstado: {}, falhas: 0, pulada: true }
+  rodadaEmAndamento = true
+  try {
+    return await rodadaDeVerificacao(container, limite)
+  } finally {
+    rodadaEmAndamento = false
+  }
+}
+
+async function rodadaDeVerificacao(container: MedusaContainer, limite: number): Promise<ResultadoDaVerificacao> {
   const logger = container.resolve(ContainerRegistrationKeys.LOGGER)
   const pg = pgDo(container)
   const { rows } = await pg.raw(
@@ -427,12 +496,20 @@ export async function verificarAvisosPendentes(
   )
 
   const resultado: ResultadoDaVerificacao = { candidatos: rows.length, porEstado: {}, falhas: 0 }
-  for (const linha of rows) {
+  for (const [i, linha] of rows.entries()) {
     const id = String(linha.id)
     try {
-      const final = await tentarAvisoDeDespacho(container, id, "job")
+      const { aviso: final, tentativa } = await tentarAvisoComDesfecho(container, id, "job")
       const estado = String(final?.status ?? "sem_aviso")
       resultado.porEstado[estado] = (resultado.porEstado[estado] ?? 0) + 1
+      if (tentativa === "ambigua" || tentativa === "falhou") {
+        const restantes = rows.length - (i + 1)
+        if (restantes > 0) {
+          resultado.interrompida = restantes
+          logger.warn(`[aviso-despacho] verificação: Evolution sem resposta; rodada interrompida, ${restantes} pedido(s) ficam para a próxima`)
+        }
+        break
+      }
     } catch (e) {
       resultado.falhas++
       logger.error(`[aviso-despacho] verificação: pedido #${String(linha.display_id ?? "?")} falhou (${(e as Error)?.name ?? "erro"}) — tenta de novo na próxima rodada`)

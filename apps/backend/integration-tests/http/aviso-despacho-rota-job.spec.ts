@@ -25,6 +25,12 @@ const CODIGO = "AA123456789BR"
 // ---- Evolution simulada ----
 // Atraso antes de responder: usado para o Cockpit "desistir" (fechar a conexão) no meio do envio.
 let atrasoEvolutionMs = 0
+// "pendurado": recebe e nunca responde (o envio estoura os 15 s → incerto). "503": falha antes de
+// entregar (volta a pendente). "400": número sem WhatsApp (sem_whatsapp, desfecho de UM pedido).
+let modoEvolution: "ok" | "pendurado" | "503" | "400" = "ok"
+const pendurados: import("node:http").ServerResponse[] = []
+// Toda requisição de envio que chegou, entregue ou não.
+let requisicoesEvolution = 0
 // Quantas mensagens a Evolution falsa está atendendo ao mesmo tempo (o job manda EM SEQUÊNCIA).
 let emVoo = 0
 let maxEmVoo = 0
@@ -33,6 +39,7 @@ let servidorEvolution: Server
 
 // ---- SuperFrete simulada: `order/info` por id de etiqueta ----
 const infoDasEtiquetas = new Map<string, { status: number; corpo: unknown }>()
+const consultasSuperfrete: string[] = []
 let servidorSuperfrete: Server
 
 function ouvir(servidor: Server): Promise<string> {
@@ -48,7 +55,20 @@ async function subirSimulados(): Promise<void> {
         res.writeHead(404).end("{}")
         return
       }
+      requisicoesEvolution++
+      if (modoEvolution === "pendurado") {
+        pendurados.push(res)
+        return
+      }
+      if (modoEvolution === "503") {
+        res.writeHead(503, { "content-type": "application/json" }).end("{}")
+        return
+      }
       const { number, text } = JSON.parse(corpo || "{}")
+      if (modoEvolution === "400") {
+        res.writeHead(400, { "content-type": "application/json" }).end(JSON.stringify({ response: { message: [{ exists: false, jid: `${number}@s.whatsapp.net` }] } }))
+        return
+      }
       whatsappEnviados.push({ number, text })
       emVoo++
       maxEmVoo = Math.max(maxEmVoo, emVoo)
@@ -63,6 +83,7 @@ async function subirSimulados(): Promise<void> {
       res.writeHead(404).end("{}")
       return
     }
+    consultasSuperfrete.push(decodeURIComponent(m[1]))
     const r = infoDasEtiquetas.get(decodeURIComponent(m[1])) ?? { status: 404, corpo: { message: "order not found" } }
     res.writeHead(r.status, { "content-type": "application/json" }).end(JSON.stringify(r.corpo))
   })
@@ -100,12 +121,17 @@ medusaIntegrationTestRunner({
     })
 
     afterAll(() => {
+      for (const r of pendurados) r.destroy()
       servidorEvolution.close()
       servidorSuperfrete.close()
     })
 
     beforeEach(() => {
       atrasoEvolutionMs = 0
+      modoEvolution = "ok"
+      for (const r of pendurados.splice(0)) r.destroy()
+      requisicoesEvolution = 0
+      consultasSuperfrete.length = 0
       maxEmVoo = 0
       whatsappEnviados.length = 0
       infoDasEtiquetas.clear()
@@ -287,6 +313,120 @@ medusaIntegrationTestRunner({
         expect(logger.info.mock.calls.map((c) => String(c[0])).some((m) => m.includes("verificação"))).toBe(true)
 
         await dispensar(quebrado.id)
+      })
+
+      // ---- Fix round 1 ----
+
+      // Três pedidos prontos para enviar, criados nesta ordem (o job pega o mais antigo primeiro).
+      async function tresProntos() {
+        const lista: { id: string; display_id: number }[] = []
+        for (const min of [3, 2, 1]) lista.push(await criarPedido({ ...pendente(minutosAtras(min)), tracking_number: CODIGO }))
+        return lista
+      }
+      const loggerEspiao = () => ({ info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() })
+      const avisos = async (ids: string[]) => Promise.all(ids.map(async (id) => (await lerFrete(id)).aviso_despacho))
+
+      it("Evolution PENDURADA: só o primeiro vira incerto; a rodada para e os outros 2 seguem pendentes, sem reserva", async () => {
+        const [a, b, c] = await tresProntos()
+        modoEvolution = "pendurado"
+        const logger = loggerEspiao()
+        const r = await verificar(containerCom({ pg: pgReal(), logger }))
+
+        expect(r).toEqual({ candidatos: 3, porEstado: { incerto: 1 }, falhas: 0, interrompida: 2 })
+        expect(requisicoesEvolution).toBeLessThanOrEqual(1)
+        const [fa, fb, fc] = await avisos([a.id, b.id, c.id])
+        expect(fa.status).toBe("incerto")
+        for (const f of [fb, fc]) {
+          expect(f.status).toBe("pendente")
+          expect(f.desde_envio).toBeUndefined()
+          expect(f.por).toBeUndefined()
+        }
+        const warns = logger.warn.mock.calls.map((x) => String(x[0]))
+        expect(warns.some((m) => m.includes("Evolution sem resposta") && m.includes("2 pedido(s)"))).toBe(true)
+
+        for (const p of [a, b, c]) await dispensar(p.id)
+      }, 60_000)
+
+      it("Evolution fora do ar (503): o primeiro volta a pendente e a rodada para — 1 requisição só", async () => {
+        const [a, b, c] = await tresProntos()
+        modoEvolution = "503"
+        const r = await verificar(containerCom({ pg: pgReal(), logger: loggerEspiao() }))
+
+        expect(r).toEqual({ candidatos: 3, porEstado: { pendente: 1 }, falhas: 0, interrompida: 2 })
+        expect(requisicoesEvolution).toBe(1)
+        expect((await avisos([a.id, b.id, c.id])).map((x) => x.status)).toEqual(["pendente", "pendente", "pendente"])
+
+        for (const p of [a, b, c]) await dispensar(p.id)
+      })
+
+      it("número sem WhatsApp é desfecho de UM pedido: a rodada NÃO para", async () => {
+        const [a, b, c] = await tresProntos()
+        modoEvolution = "400"
+        const r = await verificar(containerCom({ pg: pgReal(), logger: loggerEspiao() }))
+
+        expect(r).toEqual({ candidatos: 3, porEstado: { sem_whatsapp: 3 }, falhas: 0 })
+        expect(requisicoesEvolution).toBe(3)
+        expect((await avisos([a.id, b.id, c.id])).map((x) => x.status)).toEqual(["sem_whatsapp", "sem_whatsapp", "sem_whatsapp"])
+      })
+
+      it("duas rodadas ao mesmo tempo no mesmo processo: a segunda é pulada (nunca se sobrepõem)", async () => {
+        const lista = await tresProntos()
+        atrasoEvolutionMs = 200
+        const [r1, r2] = await Promise.all([verificar(getContainer()), verificar(getContainer())])
+
+        expect(r1).toEqual({ candidatos: 3, porEstado: { enviado: 3 }, falhas: 0 })
+        expect(r2).toEqual({ candidatos: 0, porEstado: {}, falhas: 0, pulada: true })
+        expect(despachos()).toHaveLength(3)
+        expect(maxEmVoo).toBe(1)
+        // A trava é liberada no fim: a rodada seguinte roda normalmente.
+        expect(await verificar(getContainer())).toEqual({ candidatos: 0, porEstado: {}, falhas: 0 })
+        expect((await avisos(lista.map((p) => p.id))).every((x) => x.status === "enviado")).toBe(true)
+      })
+
+      it("pendente com `desde` ausente ou ilegível → expirado, sem consultar a SuperFrete", async () => {
+        const semDesde = await criarPedido({ aviso_despacho: { status: "pendente" } })
+        const ilegivel = await criarPedido({ aviso_despacho: { status: "pendente", desde: "não é data" } })
+        const logger = loggerEspiao()
+        const r = await verificar(containerCom({ pg: pgReal(), logger }))
+
+        expect(r).toEqual({ candidatos: 2, porEstado: { expirado: 2 }, falhas: 0 })
+        for (const f of await avisos([semDesde.id, ilegivel.id])) expect(f).toMatchObject({ status: "expirado", expirado_em: expect.any(String) })
+        expect(consultasSuperfrete).toHaveLength(0)
+        expect(whatsappEnviados).toHaveLength(0)
+        const warns = logger.warn.mock.calls.map((x) => String(x[0]))
+        expect(warns.some((m) => m.includes(`#${semDesde.display_id}`))).toBe(true)
+        expect(warns.some((m) => m.includes(`#${ilegivel.display_id}`))).toBe(true)
+      })
+
+      it("enviando RECENTE (menos de 10 min) que o job encontra fica como está, sem envio", async () => {
+        const recente = await criarPedido({
+          tracking_number: CODIGO,
+          aviso_despacho: { status: "enviando", desde: minutosAtras(3), desde_envio: minutosAtras(2), por: "webhook" },
+        })
+        const antes = (await lerFrete(recente.id)).aviso_despacho
+        const r = await verificar(getContainer())
+
+        expect(r).toEqual({ candidatos: 1, porEstado: { enviando: 1 }, falhas: 0 })
+        expect((await lerFrete(recente.id)).aviso_despacho).toEqual(antes)
+        expect(requisicoesEvolution).toBe(0)
+
+        await dispensar(recente.id)
+      })
+
+      it("o mais antigo primeiro: com limite 1, sai o pedido de created_at mais antigo, mesmo criado depois", async () => {
+        const primeiroCriado = await criarPedido({ ...pendente(), tracking_number: CODIGO })
+        const maisAntigo = await criarPedido({ ...pendente(), tracking_number: CODIGO })
+        // O segundo pedido passa a ser o mais antigo. (O UPDATE põe a versão nova da linha no fim da
+        // tabela: sem ORDER BY, a varredura devolveria o primeiroCriado.)
+        await pgReal().raw(`UPDATE "order" SET created_at = now() - interval '1 day' WHERE id = ?`, [maisAntigo.id])
+        const r = await verificar(getContainer(), 1)
+
+        expect(r).toEqual({ candidatos: 1, porEstado: { enviado: 1 }, falhas: 0 })
+        expect(despachos()).toHaveLength(1)
+        expect(despachos()[0].text).toContain(`#${maisAntigo.display_id}`)
+        expect((await lerFrete(primeiroCriado.id)).aviso_despacho.status).toBe("pendente")
+
+        await dispensar(primeiroCriado.id)
       })
 
       it("o job agendado fica desligado nas suítes (NODE_ENV=test): o cron não mexe nos pedidos dos testes", () => {
