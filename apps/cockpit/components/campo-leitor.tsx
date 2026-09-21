@@ -92,7 +92,7 @@ export default function CampoLeitor({
         spellCheck={false}
         inputMode="text"
         data-testid="campo-leitor"
-        className={`border-2 rounded-md px-3 py-2.5 text-sm font-mono tracking-wider bg-white focus:outline-none transition-colors ${
+        className={`border-2 rounded-md px-3 py-2.5 text-corpo font-mono tracking-wider bg-white focus:outline-none transition-colors ${
           ultimo ? CORES[ultimo.sinal] : "border-eclat-pedra/50 focus:border-eclat-dourado"
         } disabled:opacity-50`}
       />
@@ -100,7 +100,7 @@ export default function CampoLeitor({
         <p
           role="status"
           data-testid="campo-leitor-mensagem"
-          className={`text-xs ${ultimo.sinal === "ok" ? "text-green-800" : ultimo.sinal === "aviso" ? "text-amber-800" : "text-red-700"}`}
+          className={`text-meta ${ultimo.sinal === "ok" ? "text-green-800" : ultimo.sinal === "aviso" ? "text-amber-800" : "text-red-700"}`}
         >
           {ultimo.mensagem}
         </p>

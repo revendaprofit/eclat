@@ -47,8 +47,8 @@ export default function ConfiguracoesPage() {
   return (
     <div className="flex flex-col gap-10">
       <div>
-        <h1 className="font-serif text-3xl text-eclat-grafite">Configurações</h1>
-        <p className="text-sm text-eclat-grafite/60 mt-1">Conexões, WhatsApp, categorias de despesa, parâmetros e conta.</p>
+        <h1 className="font-serif text-3xl text-eclat-texto">Configurações</h1>
+        <p className="text-corpo text-eclat-texto-3 mt-1">Conexões, WhatsApp, categorias de despesa, parâmetros e conta.</p>
       </div>
 
       {/* Conexões (inclui WhatsApp/Evolution) */}
@@ -56,12 +56,12 @@ export default function ConfiguracoesPage() {
 
       {/* Categorias de despesa */}
       <section className="flex flex-col gap-3">
-        <h2 className="font-serif text-2xl text-eclat-grafite">Categorias de despesa</h2>
+        <h2 className="font-serif text-2xl text-eclat-texto">Categorias de despesa</h2>
         <div className="border border-eclat-pedra/40 rounded-lg bg-white/60 p-4 flex flex-wrap gap-2 items-center">
           {categorias.map((c) => (
-            <span key={c.id} className="text-sm bg-white border border-eclat-pedra/30 rounded-full px-3 py-1 flex items-center gap-2">
+            <span key={c.id} className="text-corpo bg-white border border-eclat-pedra/30 rounded-full px-3 py-1 flex items-center gap-2">
               {c.nome}
-              <button onClick={() => delCategoria(c.id)} className="text-eclat-grafite/40 hover:text-red-700">✕</button>
+              <button onClick={() => delCategoria(c.id)} className="text-eclat-texto/40 hover:text-red-700">✕</button>
             </span>
           ))}
           <input
@@ -74,15 +74,15 @@ export default function ConfiguracoesPage() {
               }
             }}
             placeholder="+ categoria (Enter)"
-            className="border border-eclat-pedra/50 rounded-md px-3 py-1.5 text-sm bg-white focus:outline-none focus:border-eclat-dourado w-44"
+            className="border border-eclat-pedra/50 rounded-md px-3 py-1.5 text-corpo bg-white focus:outline-none focus:border-eclat-dourado w-44"
           />
         </div>
-        <p className="text-xs text-eclat-grafite/50">Usadas ao lançar despesas no Financeiro.</p>
+        <p className="text-meta text-eclat-texto-3">Usadas ao lançar despesas no Financeiro.</p>
       </section>
 
       {/* Parâmetros do negócio */}
       <section className="flex flex-col gap-3">
-        <h2 className="font-serif text-2xl text-eclat-grafite">Parâmetros do negócio</h2>
+        <h2 className="font-serif text-2xl text-eclat-texto">Parâmetros do negócio</h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <Param label="Moeda" valor="BRL (R$)" />
           <Param label="Estoque baixo" valor="≤ 5 unidades" />
@@ -93,17 +93,17 @@ export default function ConfiguracoesPage() {
           <Param label="Frete no DRE" valor="linha separada" />
           <Param label="IA (chat/leads)" valor="Google Gemini" />
         </div>
-        <p className="text-xs text-eclat-grafite/50">
+        <p className="text-meta text-eclat-texto-3">
           Estes parâmetros são fixos no código por enquanto. Posso torná-los editáveis (salvos no Supabase) se você quiser.
         </p>
       </section>
 
       {/* Conta */}
       <section className="flex flex-col gap-3">
-        <h2 className="font-serif text-2xl text-eclat-grafite">Conta</h2>
-        <div className="border border-eclat-pedra/40 rounded-lg bg-white/60 p-4 text-sm">
+        <h2 className="font-serif text-2xl text-eclat-texto">Conta</h2>
+        <div className="border border-eclat-pedra/40 rounded-lg bg-white/60 p-4 text-corpo">
           <div>Operador: <b>{email || "—"}</b></div>
-          <div className="text-eclat-grafite/50 text-xs mt-1">Sair pelo menu lateral (canto inferior esquerdo).</div>
+          <div className="text-eclat-texto-3 text-meta mt-1">Sair pelo menu lateral (canto inferior esquerdo).</div>
         </div>
       </section>
     </div>
@@ -115,8 +115,8 @@ export default function ConfiguracoesPage() {
 function Param({ label, valor }: { label: string; valor: string }) {
   return (
     <div className="border border-eclat-pedra/40 rounded-lg bg-white/60 p-4">
-      <div className="text-xs uppercase tracking-wider text-eclat-grafite/50">{label}</div>
-      <div className="text-lg text-eclat-grafite mt-1">{valor}</div>
+      <div className="text-meta uppercase tracking-wider text-eclat-texto-3">{label}</div>
+      <div className="text-lg text-eclat-texto mt-1">{valor}</div>
     </div>
   )
 }

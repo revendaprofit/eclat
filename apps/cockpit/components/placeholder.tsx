@@ -10,14 +10,14 @@ export default function Placeholder({
   return (
     <div className="flex flex-col gap-4">
       <div>
-        <h1 className="font-serif text-4xl text-eclat-grafite">{titulo}</h1>
-        <p className="text-sm text-eclat-grafite/60 mt-1">{descricao}</p>
+        <h1 className="font-serif text-4xl text-eclat-texto">{titulo}</h1>
+        <p className="text-corpo text-eclat-texto-3 mt-1">{descricao}</p>
       </div>
       <div className="border border-dashed border-eclat-pedra/50 rounded-lg p-8 text-center">
-        <span className="uppercase tracking-[0.3em] text-[10px] text-eclat-dourado">
+        <span className="uppercase tracking-[0.3em] text-meta text-eclat-dourado">
           {fase}
         </span>
-        <p className="text-eclat-grafite/60 mt-2">Em construção</p>
+        <p className="text-eclat-texto-3 mt-2">Em construção</p>
       </div>
     </div>
   )

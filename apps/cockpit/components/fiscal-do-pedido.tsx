@@ -48,10 +48,10 @@ export function FiscalDoPedido({
   if (erroCarregar) {
     return (
       <section className="border border-red-200 bg-red-50 rounded-lg p-4 flex flex-col gap-1">
-        <h4 className="text-xs uppercase tracking-wider text-red-800/80 mb-1">Nota fiscal</h4>
-        <p className="text-sm text-red-800">{erroCarregar}</p>
+        <h4 className="text-meta uppercase tracking-wider text-red-800/80 mb-1">Nota fiscal</h4>
+        <p className="text-corpo text-red-800">{erroCarregar}</p>
         {onTentarNovamente && (
-          <button type="button" onClick={onTentarNovamente} className="self-start text-sm text-red-800 underline">
+          <button type="button" onClick={onTentarNovamente} className="self-start text-corpo text-red-800 underline">
             Tentar de novo
           </button>
         )}
@@ -62,8 +62,8 @@ export function FiscalDoPedido({
   if (!documento) {
     return (
       <section className="border border-eclat-pedra/40 rounded-lg p-4 bg-white/60 flex flex-col gap-2">
-        <h4 className="text-xs uppercase tracking-wider text-eclat-grafite/60 mb-1">Nota fiscal</h4>
-        <p className="text-sm text-eclat-grafite/50">Nenhuma nota fiscal emitida para este pedido.</p>
+        <h4 className="text-meta uppercase tracking-wider text-eclat-texto-3 mb-1">Nota fiscal</h4>
+        <p className="text-corpo text-eclat-texto-3">Nenhuma nota fiscal emitida para este pedido.</p>
         <LinkPrevia orderId={orderId} />
       </section>
     )
@@ -91,31 +91,31 @@ export function FiscalDoPedido({
   return (
     <section className="border border-eclat-pedra/40 rounded-lg p-4 bg-white/60 flex flex-col gap-2">
       <div className="flex items-center justify-between gap-2 flex-wrap">
-        <h4 className="text-xs uppercase tracking-wider text-eclat-grafite/60">Nota fiscal</h4>
-        <span className={`text-[11px] px-2 py-0.5 rounded-full ${CORES_STATUS[corDoStatus(documento.status)]}`}>
+        <h4 className="text-meta uppercase tracking-wider text-eclat-texto-3">Nota fiscal</h4>
+        <span className={`text-meta px-2 py-0.5 rounded-full ${CORES_STATUS[corDoStatus(documento.status)]}`}>
           {rotuloStatus(documento.status)}
         </span>
       </div>
 
       {documento.numero != null && (
-        <p className="text-sm text-eclat-grafite">
+        <p className="text-corpo text-eclat-texto">
           NF-e nº {documento.numero} · série {documento.serie}
         </p>
       )}
 
       {documento.chave_acesso && (
-        <p className="break-all font-mono text-xs text-eclat-grafite/60">{documento.chave_acesso}</p>
+        <p className="break-all font-mono text-meta text-eclat-texto-3">{documento.chave_acesso}</p>
       )}
 
       {documento.rejeicao_motivo && (
-        <p className="text-sm text-red-800">
+        <p className="text-corpo text-red-800">
           {documento.rejeicao_motivo}
           {documento.rejeicao_codigo ? ` (código ${documento.rejeicao_codigo})` : ""}
         </p>
       )}
 
       {documento.chave_acesso && (
-        <div className="flex gap-3 text-sm">
+        <div className="flex gap-3 text-corpo">
           <a
             className="text-eclat-dourado underline"
             href={`/api/fiscal-danfe/${documento.id}`}
@@ -132,7 +132,7 @@ export function FiscalDoPedido({
       {!documento.chave_acesso && <LinkPrevia orderId={orderId} />}
 
       {statusBloqueiaDevolucao(documento.status) && (
-        <div className="border border-amber-300 bg-amber-50 rounded-md p-2 text-sm text-amber-900">
+        <div className="border border-amber-300 bg-amber-50 rounded-md p-2 text-corpo text-amber-900">
           <p>Devolução bloqueada até a reconciliação (o nItem da SEFAZ ainda não foi lido).</p>
           {/* C1 (achado crítico da revisão final): documento denegado/rejeitado não tem nota
               autorizada nenhuma para reconciliar — reconciliarDocumento agora recusa (ErroFiscal),
@@ -160,7 +160,7 @@ export function FiscalDoPedido({
 function LinkPrevia({ orderId }: { orderId?: string }) {
   if (!orderId) return null
   return (
-    <div className="flex gap-3 text-sm">
+    <div className="flex gap-3 text-corpo">
       <a
         className="text-eclat-dourado underline"
         href={`/api/fiscal-previa/${orderId}`}

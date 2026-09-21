@@ -29,11 +29,11 @@ export type PedidoComDadosFiscais = {
 
 const card = "border border-eclat-pedra/40 rounded-lg p-5 bg-eclat-luz flex flex-col gap-3"
 const input =
-  "w-full border border-eclat-pedra/50 rounded-md px-3 py-2 text-sm bg-white focus:outline-none focus:border-eclat-dourado"
-const label = "text-xs uppercase tracking-wider text-eclat-grafite/60 mb-1 block"
-const hint = "text-xs text-eclat-grafite/55 leading-relaxed"
+  "w-full border border-eclat-pedra/50 rounded-md px-3 py-2 text-corpo bg-white focus:outline-none focus:border-eclat-dourado"
+const label = "text-meta uppercase tracking-wider text-eclat-texto-3 mb-1 block"
+const hint = "text-meta text-eclat-texto-3 leading-relaxed"
 const btn =
-  "bg-eclat-grafite text-eclat-luz uppercase tracking-widest text-xs px-4 py-2 rounded-md hover:bg-eclat-dourado hover:text-eclat-grafite disabled:opacity-50"
+  "bg-eclat-grafite text-eclat-luz uppercase tracking-widest text-meta px-4 py-2 rounded-md hover:bg-eclat-dourado hover:text-eclat-texto disabled:opacity-50"
 
 export function DadosFiscaisDoPedido({
   order,
@@ -102,9 +102,9 @@ export function DadosFiscaisDoPedido({
 
   return (
     <section className={card}>
-      <h3 className="font-medium text-eclat-grafite">Dados fiscais</h3>
+      <h3 className="font-medium text-eclat-texto">Dados fiscais</h3>
 
-      <p className="rounded border border-yellow-300 bg-yellow-50 p-2 text-sm">
+      <p className="rounded border border-yellow-300 bg-yellow-50 p-2 text-corpo">
         Este pedido não pode gerar nota fiscal ainda. Falta: <b>{faltam.join(", ")}</b>.
       </p>
 
@@ -151,7 +151,7 @@ export function DadosFiscaisDoPedido({
         {ocupado ? "Salvando…" : "Salvar dados fiscais"}
       </button>
 
-      {erro && <p className="text-sm text-red-700">{erro}</p>}
+      {erro && <p className="text-corpo text-red-700">{erro}</p>}
     </section>
   )
 }

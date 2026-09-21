@@ -31,8 +31,8 @@ function Bloco({
   return (
     <div className="border border-eclat-pedra/40 rounded-md p-3 bg-white flex flex-col gap-2">
       <div className="flex items-center justify-between">
-        <span className="text-sm font-medium">{titulo} <span className="text-xs text-eclat-grafite/40">({images.length})</span></span>
-        <label className="text-xs text-eclat-dourado underline cursor-pointer">
+        <span className="text-corpo font-medium">{titulo} <span className="text-meta text-eclat-texto/40">({images.length})</span></span>
+        <label className="text-meta text-eclat-dourado underline cursor-pointer">
           + fotos
           <input type="file" accept="image/*" multiple className="hidden" onChange={(e) => e.target.files?.length && onUpload(e.target.files, color)} />
         </label>
@@ -42,17 +42,17 @@ function Bloco({
           <div key={img.id} className="w-24 flex flex-col gap-1">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={img.url} alt="" className={`w-24 h-24 object-cover rounded border ${thumbnail === img.url ? "border-eclat-dourado ring-2 ring-eclat-dourado/40" : "border-eclat-pedra/40"}`} />
-            <select value={color ?? ""} onChange={(e) => onMove(img.id, e.target.value || null)} className="text-[11px] border border-eclat-pedra/50 rounded px-1 py-0.5 bg-white">
+            <select value={color ?? ""} onChange={(e) => onMove(img.id, e.target.value || null)} className="text-meta border border-eclat-pedra/50 rounded px-1 py-0.5 bg-white">
               <option value="">Sem cor</option>
               {cores.map((c) => <option key={c} value={c}>{c}</option>)}
             </select>
-            <div className="flex justify-between text-[11px]">
+            <div className="flex justify-between text-meta">
               <button onClick={() => onCapa(img.url)} className="underline" title="Usar como capa do produto">{thumbnail === img.url ? "capa ✓" : "capa"}</button>
               <button onClick={() => onRemove(img.id)} className="text-red-700 underline">remover</button>
             </div>
           </div>
         ))}
-        {!images.length && <p className="text-xs text-eclat-grafite/40">Nenhuma foto.</p>}
+        {!images.length && <p className="text-meta text-eclat-texto/40">Nenhuma foto.</p>}
       </div>
     </div>
   )
@@ -121,19 +121,19 @@ export default function ColorImages({ productId }: { productId: string }) {
 
   if (erro && !data)
     return (
-      <div className="text-xs text-red-700 flex items-center gap-2">
+      <div className="text-meta text-red-700 flex items-center gap-2">
         <span>{erro}</span>
         <button onClick={() => carregar()} className="underline">tentar novamente</button>
       </div>
     )
-  if (!data) return <p className="text-xs text-eclat-grafite/50">Carregando fotos…</p>
+  if (!data) return <p className="text-meta text-eclat-texto-3">Carregando fotos…</p>
 
   const cores = data.groups.map((g) => g.color)
 
   return (
     <div className={`flex flex-col gap-3 ${busy ? "opacity-60 pointer-events-none" : ""}`}>
-      {erro && <p className="text-xs text-red-700">{erro}</p>}
-      {!cores.length && <p className="text-xs text-amber-700">Este produto não tem a opção &quot;Cor&quot;; as fotos ficam sem agrupamento.</p>}
+      {erro && <p className="text-meta text-red-700">{erro}</p>}
+      {!cores.length && <p className="text-meta text-amber-700">Este produto não tem a opção &quot;Cor&quot;; as fotos ficam sem agrupamento.</p>}
       {data.groups.map((g) => (
         <Bloco
           key={g.color}
@@ -159,7 +159,7 @@ export default function ColorImages({ productId }: { productId: string }) {
         onRemove={remover}
         onCapa={capa}
       />
-      <p className="text-xs text-eclat-grafite/50">
+      <p className="text-meta text-eclat-texto-3">
         A vitrine mostra as fotos da cor escolhida; a capa é a foto do card. Foto em &quot;Sem cor&quot; aparece em todas as cores.
       </p>
     </div>

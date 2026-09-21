@@ -8,14 +8,35 @@
   --color-eclat-grafite: #2b2a28;
   --color-eclat-dourado: #c2a36b;
   --color-eclat-dourado-claro: #d9c49b;
+  /* Fundo do menu: exatamente o mesmo tom que `areia/40` sobre o creme dava como coluna, só
+     que opaco. Como gaveta no celular, o tom translúcido deixava a página aparecer por baixo. */
+  --color-eclat-painel: #f5f0e5;
+
+  /* Texto em três níveis, medidos sobre o creme (#faf8f3). Antes o painel escrevia o cinza
+     com opacidade (grafite/50 = 2,96:1, grafite/60 = 3,92:1) e metade da informação ficava
+     ilegível; o mínimo para texto é 4,5:1. Tom sólido também não muda de leitura conforme o
+     fundo embaixo, que é o defeito da opacidade. */
+  --color-eclat-texto: #2b2a28; /* 13,5:1 — o que se lê primeiro */
+  --color-eclat-texto-2: #55534e; /* 7,2:1 — apoio, descrições */
+  --color-eclat-texto-3: #6b6862; /* 5,2:1 — rótulos, datas, unidades */
+  /* O dourado da marca tem 2,26:1 sobre o creme: serve para filete e fundo, NUNCA para texto.
+     Quando o texto precisa ser dourado, é este. */
+  --color-eclat-dourado-texto: #8a6c33; /* 4,6:1 */
 
   --font-sans: var(--font-inter), system-ui, sans-serif;
   --font-serif: var(--font-cormorant), Georgia, serif;
+
+  /* Escala única. Antes havia sete tamanhos soltos (316 usos de 12px, 17 de 10px): tudo
+     parecia igualmente importante e nada se lia de longe. */
+  --text-meta: 0.8125rem; /* 13px — rótulo, data, unidade */
+  --text-corpo: 0.9375rem; /* 15px — tabela, formulário, texto comum */
+  --text-secao: 1.25rem; /* 20px — título de seção (a Cormorant tem altura-x baixa: 17px lia como legenda) */
+  --text-numero: 1.75rem; /* 28px — número de destaque */
 }
 
 html,
 body {
   background-color: var(--color-eclat-luz);
-  color: var(--color-eclat-grafite);
+  color: var(--color-eclat-texto);
   font-family: var(--font-sans);
 }

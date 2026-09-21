@@ -24,7 +24,7 @@ type Message = {
 }
 
 const baixarLink = (src: string) => (
-  <a href={src} download className="text-[10px] underline text-eclat-grafite/50">
+  <a href={src} download className="text-meta underline text-eclat-texto-3">
     baixar
   </a>
 )
@@ -38,7 +38,7 @@ function MediaView({
 }) {
   if (!m.media_url) {
     // mídia ainda não baixada/armazenada
-    return <span className="italic text-eclat-grafite/50">{m.texto}</span>
+    return <span className="italic text-eclat-texto-3">{m.texto}</span>
   }
   const src = `/api/media?path=${encodeURIComponent(m.media_url)}`
   if (m.tipo === "imagem")
@@ -69,7 +69,7 @@ function MediaView({
       </div>
     )
   return (
-    <a href={src} target="_blank" rel="noreferrer" className="underline text-eclat-grafite">
+    <a href={src} target="_blank" rel="noreferrer" className="underline text-eclat-texto">
       {m.texto || "Baixar documento"}
     </a>
   )
@@ -225,12 +225,12 @@ export default function ConversasPage() {
 
   return (
     <div className="flex flex-col h-[calc(100vh-4rem)]">
-      <h1 className="font-serif text-3xl text-eclat-grafite mb-4">Conversas</h1>
+      <h1 className="font-serif text-3xl text-eclat-texto mb-4">Conversas</h1>
       <div className="flex flex-1 min-h-0 border border-eclat-pedra/40 rounded-lg overflow-hidden bg-white/50">
         {/* Lista */}
         <div className="w-72 shrink-0 border-r border-eclat-pedra/40 overflow-y-auto">
           {convs.length === 0 && (
-            <p className="p-4 text-sm text-eclat-grafite/50">Nenhuma conversa ainda.</p>
+            <p className="p-4 text-corpo text-eclat-texto-3">Nenhuma conversa ainda.</p>
           )}
           {convs.map((c) => (
             <button
@@ -241,16 +241,16 @@ export default function ConversasPage() {
               }`}
             >
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium truncate">
+                <span className="text-corpo font-medium truncate">
                   {c.nome_contato || c.contato_e164}
                 </span>
                 {c.nao_lidas > 0 && (
-                  <span className="ml-2 text-[10px] bg-eclat-dourado text-eclat-grafite rounded-full px-1.5 py-0.5">
+                  <span className="ml-2 text-meta bg-eclat-dourado text-eclat-texto rounded-full px-1.5 py-0.5">
                     {c.nao_lidas}
                   </span>
                 )}
               </div>
-              <span className="text-xs text-eclat-grafite/50">{c.contato_e164}</span>
+              <span className="text-meta text-eclat-texto-3">{c.contato_e164}</span>
             </button>
           ))}
         </div>
@@ -258,16 +258,16 @@ export default function ConversasPage() {
         {/* Thread */}
         <div className="flex-1 flex flex-col min-w-0">
           {!selected ? (
-            <div className="flex-1 flex items-center justify-center text-sm text-eclat-grafite/50">
+            <div className="flex-1 flex items-center justify-center text-corpo text-eclat-texto-3">
               Selecione uma conversa
             </div>
           ) : (
             <>
               <div className="px-4 py-3 border-b border-eclat-pedra/30">
-                <div className="font-medium text-sm">
+                <div className="font-medium text-corpo">
                   {atual?.nome_contato || atual?.contato_e164}
                 </div>
-                <div className="text-xs text-eclat-grafite/50">
+                <div className="text-meta text-eclat-texto-3">
                   {atual?.contato_e164}
                 </div>
               </div>
@@ -275,7 +275,7 @@ export default function ConversasPage() {
                 {messages.map((m) => (
                   <div
                     key={m.id}
-                    className={`max-w-[70%] rounded-lg px-3 py-2 text-sm ${
+                    className={`max-w-[70%] rounded-lg px-3 py-2 text-corpo ${
                       m.direcao === "out"
                         ? "self-end bg-eclat-dourado/25"
                         : "self-start bg-white border border-eclat-pedra/30"
@@ -288,7 +288,7 @@ export default function ConversasPage() {
                         <MediaView m={m} onOpenImage={setLightbox} />
                       )}
                     </div>
-                    <div className="text-[10px] text-eclat-grafite/40 mt-1 text-right">
+                    <div className="text-meta text-eclat-texto/40 mt-1 text-right">
                       {hora(m.timestamp)}
                       {m.origem === "ia" ? " · IA" : ""}
                     </div>
@@ -301,7 +301,7 @@ export default function ConversasPage() {
                   onClick={suggest}
                   disabled={suggesting}
                   title="Sugerir resposta na voz da Éclat (IA)"
-                  className="shrink-0 h-10 border border-eclat-dourado/60 text-eclat-grafite text-xs px-3 rounded-md hover:bg-eclat-dourado/15 transition-colors disabled:opacity-50"
+                  className="shrink-0 h-10 border border-eclat-dourado/60 text-eclat-texto text-meta px-3 rounded-md hover:bg-eclat-dourado/15 transition-colors disabled:opacity-50"
                 >
                   {suggesting ? "…" : "✨ IA"}
                 </button>
@@ -317,12 +317,12 @@ export default function ConversasPage() {
                   }}
                   rows={1}
                   placeholder="Escreva uma mensagem… (Enter envia, Shift+Enter quebra linha)"
-                  className="flex-1 resize-none max-h-[200px] overflow-y-auto border border-eclat-pedra/50 rounded-md px-3 py-2 text-sm bg-white focus:outline-none focus:border-eclat-dourado leading-snug"
+                  className="flex-1 resize-none max-h-[200px] overflow-y-auto border border-eclat-pedra/50 rounded-md px-3 py-2 text-corpo bg-white focus:outline-none focus:border-eclat-dourado leading-snug"
                 />
                 <button
                   onClick={send}
                   disabled={sending || !text.trim()}
-                  className="shrink-0 h-10 bg-eclat-grafite text-eclat-luz uppercase tracking-widest text-xs px-5 rounded-md hover:bg-eclat-dourado hover:text-eclat-grafite transition-colors disabled:opacity-50"
+                  className="shrink-0 h-10 bg-eclat-grafite text-eclat-luz uppercase tracking-widest text-meta px-5 rounded-md hover:bg-eclat-dourado hover:text-eclat-texto transition-colors disabled:opacity-50"
                 >
                   {sending ? "…" : "Enviar"}
                 </button>
@@ -350,14 +350,14 @@ export default function ConversasPage() {
               <a
                 href={lightbox}
                 download
-                className="bg-eclat-luz text-eclat-grafite px-4 py-2 rounded-md text-sm"
+                className="bg-eclat-luz text-eclat-texto px-4 py-2 rounded-md text-corpo"
               >
                 Baixar
               </a>
               <button
                 type="button"
                 onClick={() => setLightbox(null)}
-                className="text-eclat-luz text-sm underline"
+                className="text-eclat-luz text-corpo underline"
               >
                 Fechar
               </button>

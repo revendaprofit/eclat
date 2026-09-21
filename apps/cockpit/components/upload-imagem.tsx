@@ -39,14 +39,14 @@ export default function UploadImagem({
           type="file"
           accept="image/*"
           onChange={(e) => e.target.files?.[0] && enviar(e.target.files[0])}
-          className="text-xs"
+          className="text-meta"
         />
-        {enviando && <span className="text-xs text-eclat-grafite/50">enviando…</span>}
+        {enviando && <span className="text-meta text-eclat-texto-3">enviando…</span>}
         {url && (
-          <button onClick={() => onChange(undefined)} className="text-xs text-red-700 underline">remover</button>
+          <button onClick={() => onChange(undefined)} className="text-meta text-red-700 underline">remover</button>
         )}
       </div>
-      {erro && <p className="text-xs text-red-700">{erro}</p>}
+      {erro && <p className="text-meta text-red-700">{erro}</p>}
     </div>
   )
 }

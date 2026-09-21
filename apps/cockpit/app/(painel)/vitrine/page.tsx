@@ -60,10 +60,10 @@ type FaqItem = { q: string; a: string }
 type Faq = { visible?: boolean; heading?: string; items?: FaqItem[] }
 
 const input =
-  "w-full border border-eclat-pedra/50 rounded-md px-3 py-2 text-sm bg-white focus:outline-none focus:border-eclat-dourado"
-const label = "text-xs uppercase tracking-wider text-eclat-grafite/60 mb-1 block"
+  "w-full border border-eclat-pedra/50 rounded-md px-3 py-2 text-corpo bg-white focus:outline-none focus:border-eclat-dourado"
+const label = "text-meta uppercase tracking-wider text-eclat-texto-3 mb-1 block"
 const btn =
-  "self-start bg-eclat-grafite text-eclat-luz uppercase tracking-widest text-xs px-6 py-3 rounded-md hover:bg-eclat-dourado hover:text-eclat-grafite disabled:opacity-50"
+  "self-start bg-eclat-grafite text-eclat-luz uppercase tracking-widest text-meta px-6 py-3 rounded-md hover:bg-eclat-dourado hover:text-eclat-texto disabled:opacity-50"
 
 function Toggle({
   on,
@@ -73,9 +73,9 @@ function Toggle({
   onChange: (v: boolean) => void
 }) {
   return (
-    <label className="flex items-center gap-2 text-sm cursor-pointer select-none">
+    <label className="flex items-center gap-2 text-corpo cursor-pointer select-none">
       <input type="checkbox" checked={on} onChange={(e) => onChange(e.target.checked)} />
-      <span className="text-eclat-grafite/70">Mostrar na home</span>
+      <span className="text-eclat-texto-2">Mostrar na home</span>
     </label>
   )
 }
@@ -186,7 +186,7 @@ export default function VitrinePage() {
           { q: "Posso trocar ou devolver?", a: "Sim, 30 dias para trocar ou devolver — é só falar no WhatsApp." },
         ]
 
-  if (loading) return <p className="text-sm text-eclat-grafite/50">Carregando…</p>
+  if (loading) return <p className="text-corpo text-eclat-texto-3">Carregando…</p>
 
   const sectionA = "border border-eclat-dourado/40 rounded-lg bg-white/60 p-5 flex flex-col gap-4"
   const sectionB = "border border-eclat-pedra/40 rounded-lg bg-white/60 p-5 flex flex-col gap-4"
@@ -194,31 +194,31 @@ export default function VitrinePage() {
   return (
     <div className="flex flex-col gap-8 max-w-2xl">
       <div>
-        <h1 className="font-serif text-3xl text-eclat-grafite">Vitrine (site)</h1>
-        <p className="text-sm text-eclat-grafite/60 mt-1">
+        <h1 className="font-serif text-3xl text-eclat-texto">Vitrine (site)</h1>
+        <p className="text-corpo text-eclat-texto-3 mt-1">
           Textos, imagens e SEO da loja — editáveis aqui. Cada bloco tem liga/desliga.
         </p>
       </div>
 
       {/* CORES (mapa de cores do catálogo) */}
       <section className={sectionA}>
-        <h2 className="font-serif text-xl text-eclat-grafite">Cores (catálogo)</h2>
+        <h2 className="font-serif text-xl text-eclat-texto">Cores (catálogo)</h2>
         <CoresEditor />
       </section>
 
       {/* MEDIDAS (guia por categoria) */}
       <section className={sectionA}>
-        <h2 className="font-serif text-xl text-eclat-grafite">Guia de medidas por categoria</h2>
+        <h2 className="font-serif text-xl text-eclat-texto">Guia de medidas por categoria</h2>
         <MedidasEditor />
       </section>
 
       {/* HERO */}
       <section className={sectionA}>
-        <h2 className="font-serif text-xl text-eclat-grafite">Hero (primeira dobra)</h2>
+        <h2 className="font-serif text-xl text-eclat-texto">Hero (primeira dobra)</h2>
 
         {/* BANNER (imagem) — modo principal */}
         <div className="rounded-md bg-eclat-areia/30 border border-eclat-pedra/30 p-4 flex flex-col gap-4">
-          <p className="text-xs text-eclat-grafite/70">
+          <p className="text-meta text-eclat-texto-2">
             <strong>Banner (recomendado):</strong> envie a arte pronta. A imagem
             preenche a primeira dobra (proporção preservada) e é clicável. Havendo
             banner, os textos abaixo não aparecem.
@@ -239,7 +239,7 @@ export default function VitrinePage() {
 
         {/* BANNER EM VÍDEO — vence a imagem na tela em que tiver vídeo */}
         <div className="rounded-md bg-eclat-areia/30 border border-eclat-pedra/30 p-4 flex flex-col gap-4">
-          <p className="text-xs text-eclat-grafite/70">
+          <p className="text-meta text-eclat-texto-2">
             <strong>Banner em vídeo:</strong> vídeo gerado da arte <em>sem texto</em> (MP4, sem som, em loop) e a capa
             (primeiro quadro do vídeo, JPG). O logo e os textos abaixo são desenhados pelo site por cima. Cada tela é
             independente: sem vídeo do mobile, o celular continua mostrando a imagem acima. Deixe o endereço do vídeo
@@ -289,7 +289,7 @@ export default function VitrinePage() {
 
         {/* BANNER INTERATIVO — só no celular; vence o vídeo/imagem do mobile quando ligado */}
         <div className="rounded-md bg-eclat-areia/30 border border-eclat-pedra/30 p-4 flex flex-col gap-4">
-          <label className="flex items-center gap-2 text-sm text-eclat-grafite">
+          <label className="flex items-center gap-2 text-corpo text-eclat-texto">
             <input
               type="checkbox"
               checked={hero.interativo_mobile === true}
@@ -297,7 +297,7 @@ export default function VitrinePage() {
             />
             <strong>Banner interativo no celular</strong>
           </label>
-          <p className="text-xs text-eclat-grafite/70">
+          <p className="text-meta text-eclat-texto-2">
             Céu do amanhecer com os mesmos textos do banner em vídeo e, abaixo, a modelo girando: a cliente arrasta
             para girar e toca na peça para trocar. Só aparece no celular (o computador continua com o banner acima) e
             só se houver pelo menos uma peça com vídeo e capa. Desmarque para voltar ao vídeo na hora.
@@ -306,7 +306,7 @@ export default function VitrinePage() {
             <label className={label}>Imagem do céu (topo do banner)</label>
             <UploadImagem url={hero.interativo_ceu_url} onChange={(u) => setHero({ ...hero, interativo_ceu_url: u })} />
           </div>
-          <p className="text-xs uppercase tracking-wider text-eclat-grafite/50">
+          <p className="text-meta uppercase tracking-wider text-eclat-texto-3">
             Peças do giro (a primeira abre o banner) — vídeo MP4 vertical, sem som, em loop; capa = primeiro quadro
           </p>
           {(hero.interativo_pecas || []).map((p, i, lista) => {
@@ -347,9 +347,9 @@ export default function VitrinePage() {
                     <UploadImagem url={p.poster_url} onChange={(u) => mudar({ poster_url: u })} />
                   </div>
                 </div>
-                <div className="flex gap-3 text-xs">
-                  <button type="button" disabled={i === 0} onClick={() => mover(i - 1)} className="text-eclat-grafite/70 disabled:opacity-30">↑ Subir</button>
-                  <button type="button" disabled={i === lista.length - 1} onClick={() => mover(i + 1)} className="text-eclat-grafite/70 disabled:opacity-30">↓ Descer</button>
+                <div className="flex gap-3 text-meta">
+                  <button type="button" disabled={i === 0} onClick={() => mover(i - 1)} className="text-eclat-texto-2 disabled:opacity-30">↑ Subir</button>
+                  <button type="button" disabled={i === lista.length - 1} onClick={() => mover(i + 1)} className="text-eclat-texto-2 disabled:opacity-30">↓ Descer</button>
                   <button
                     type="button"
                     onClick={() => setHero({ ...hero, interativo_pecas: lista.filter((_, j) => j !== i) })}
@@ -364,19 +364,19 @@ export default function VitrinePage() {
           <button
             type="button"
             onClick={() => setHero({ ...hero, interativo_pecas: [...(hero.interativo_pecas || []), { nome: "" }] })}
-            className="self-start text-sm text-eclat-terracota"
+            className="self-start text-corpo text-eclat-terracota"
           >
             + Adicionar peça
           </button>
         </div>
 
-        <p className="text-xs uppercase tracking-wider text-eclat-grafite/50 border-t border-eclat-pedra/30 pt-3">
+        <p className="text-meta uppercase tracking-wider text-eclat-texto-3 border-t border-eclat-pedra/30 pt-3">
           Textos (usados só quando NÃO há banner)
         </p>
 
         <div>
           <span className={label}>Destaque (eyebrow)</span>
-          <div className="flex gap-4 text-sm mb-2">
+          <div className="flex gap-4 text-corpo mb-2">
             <label className="flex items-center gap-1">
               <input type="radio" checked={modo === "collection"} onChange={() => setHero({ ...hero, eyebrow_mode: "collection" })} /> Coleção
             </label>
@@ -428,7 +428,7 @@ export default function VitrinePage() {
       {/* MANIFESTO */}
       <section className={sectionB}>
         <div className="flex items-center justify-between">
-          <h2 className="font-serif text-xl text-eclat-grafite">Manifesto</h2>
+          <h2 className="font-serif text-xl text-eclat-texto">Manifesto</h2>
           <Toggle on={manifesto.visible !== false} onChange={(v) => setManifesto({ ...manifesto, visible: v })} />
         </div>
         <div>
@@ -443,7 +443,7 @@ export default function VitrinePage() {
       {/* LINHAS EM DESTAQUE */}
       <section className={sectionA}>
         <div className="flex items-center justify-between">
-          <h2 className="font-serif text-xl text-eclat-grafite">Linhas em destaque</h2>
+          <h2 className="font-serif text-xl text-eclat-texto">Linhas em destaque</h2>
           <Toggle on={linhas.visible !== false} onChange={(v) => setLinhas({ ...linhas, visible: v })} />
         </div>
         <div>
@@ -488,7 +488,7 @@ export default function VitrinePage() {
       {/* COLEÇÃO EM DESTAQUE */}
       <section className={sectionB}>
         <div className="flex items-center justify-between">
-          <h2 className="font-serif text-xl text-eclat-grafite">Coleção em destaque</h2>
+          <h2 className="font-serif text-xl text-eclat-texto">Coleção em destaque</h2>
           <Toggle on={featured.visible !== false} onChange={(v) => setFeatured({ ...featured, visible: v })} />
         </div>
         <div>
@@ -512,7 +512,7 @@ export default function VitrinePage() {
       {/* BANNER EDITORIAL */}
       <section className={sectionA}>
         <div className="flex items-center justify-between">
-          <h2 className="font-serif text-xl text-eclat-grafite">Banner editorial / campanha</h2>
+          <h2 className="font-serif text-xl text-eclat-texto">Banner editorial / campanha</h2>
           <Toggle on={banner.visible !== false} onChange={(v) => setBanner({ ...banner, visible: v })} />
         </div>
         <div className="grid grid-cols-2 gap-3">
@@ -558,7 +558,7 @@ export default function VitrinePage() {
       {/* BENEFÍCIOS */}
       <section className={sectionB}>
         <div className="flex items-center justify-between">
-          <h2 className="font-serif text-xl text-eclat-grafite">Faixa de benefícios</h2>
+          <h2 className="font-serif text-xl text-eclat-texto">Faixa de benefícios</h2>
           <Toggle on={beneficios.visible !== false} onChange={(v) => setBeneficios({ ...beneficios, visible: v })} />
         </div>
         {benItems.map((it, i) => (
@@ -585,7 +585,7 @@ export default function VitrinePage() {
       {/* NEWSLETTER */}
       <section className={sectionA}>
         <div className="flex items-center justify-between">
-          <h2 className="font-serif text-xl text-eclat-grafite">Newsletter</h2>
+          <h2 className="font-serif text-xl text-eclat-texto">Newsletter</h2>
           <Toggle on={news.visible !== false} onChange={(v) => setNews({ ...news, visible: v })} />
         </div>
         <div>
@@ -608,7 +608,7 @@ export default function VitrinePage() {
       {/* DEPOIMENTOS (provas sociais) */}
       <section className={sectionA}>
         <div className="flex items-center justify-between">
-          <h2 className="font-serif text-xl text-eclat-grafite">Depoimentos (provas sociais)</h2>
+          <h2 className="font-serif text-xl text-eclat-texto">Depoimentos (provas sociais)</h2>
           <Toggle on={depoimentos.visible !== false} onChange={(v) => setDepoimentos({ ...depoimentos, visible: v })} />
         </div>
         <div>
@@ -639,10 +639,10 @@ export default function VitrinePage() {
       {/* FAQ (perguntas frequentes — GEO) */}
       <section className={sectionB}>
         <div className="flex items-center justify-between">
-          <h2 className="font-serif text-xl text-eclat-grafite">FAQ (perguntas frequentes)</h2>
+          <h2 className="font-serif text-xl text-eclat-texto">FAQ (perguntas frequentes)</h2>
           <Toggle on={faq.visible !== false} onChange={(v) => setFaq({ ...faq, visible: v })} />
         </div>
-        <p className="text-xs text-eclat-grafite/55">Respostas diretas ajudam a marca a ser citada por IA (ChatGPT, Perplexity, Google AI). Vira schema FAQPage automaticamente.</p>
+        <p className="text-meta text-eclat-texto-3">Respostas diretas ajudam a marca a ser citada por IA (ChatGPT, Perplexity, Google AI). Vira schema FAQPage automaticamente.</p>
         <div>
           <label className={label}>Título da seção</label>
           <input value={faq.heading ?? "Perguntas frequentes"} onChange={(e) => setFaq({ ...faq, heading: e.target.value })} className={input} />
@@ -670,7 +670,7 @@ export default function VitrinePage() {
 
       {/* SEO HOME */}
       <section className={sectionB}>
-        <h2 className="font-serif text-xl text-eclat-grafite">SEO da home</h2>
+        <h2 className="font-serif text-xl text-eclat-texto">SEO da home</h2>
         <div>
           <label className={label}>Título (aba do navegador / Google)</label>
           <input value={seo.title || ""} onChange={(e) => setSeo({ ...seo, title: e.target.value })} placeholder="use.ÉCLAT — athleisure da mulher inteira" className={input} />
