@@ -193,6 +193,16 @@ medusaIntegrationTestRunner({
       expect(await lerFrete(p.id)).not.toHaveProperty("eventos")
     })
 
+    it("event que não é string (array com um evento válido) → tratado como desconhecido: 200 e nada é gravado", async () => {
+      const p = await criarPedido({ aviso_despacho: { status: "pendente", desde: new Date().toISOString() } })
+      // String(["order.generated"]) === "order.generated": sem a checagem de tipo, o array passaria.
+      const r = await chamar({ event: ["order.generated"], data: { id: ETIQUETA, tags: [{ tag: String(p.display_id) }], tracking: "AA123456789BR" } })
+      expect(r.status).toBe(200)
+      expect(r.data).toEqual({ ignorado: "evento desconhecido" })
+      expect(await lerFrete(p.id)).not.toHaveProperty("eventos")
+      expect(whatsappEnviados).toHaveLength(0)
+    })
+
     it("sem tag com o número do pedido → 200 e nada é gravado", async () => {
       const p = await criarPedido()
       const r = await chamar(corpoDe(null, "order.posted"))

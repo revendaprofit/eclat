@@ -59,13 +59,16 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
     return res.status(401).json({ error: "assinatura inválida" })
   }
 
-  const { event, data } = (req.body || {}) as { event?: string; data?: unknown }
+  const { event, data } = (req.body || {}) as { event?: unknown; data?: unknown }
 
-  const acao = acaoDoEvento(String(event ?? ""))
-  if (!acao) {
+  // `event` que não é string (array, número, objeto) é desconhecido ANTES de chegar à tabela:
+  // `String(["order.generated"])` vira "order.generated" e passaria como evento válido.
+  const acao = typeof event === "string" ? acaoDoEvento(event) : null
+  if (!acao || typeof event !== "string") {
     // O `event` vem do corpo e não está na tabela: nunca vai cru para o log (injeção de linhas,
-    // lixo arbitrário). Só um texto fixo e o tamanho.
-    logger.info(`[frete] webhook da SuperFrete com evento desconhecido (${String(event ?? "").length} caracteres) — ignorado`)
+    // lixo arbitrário). Só um texto fixo e o tamanho (ou o tipo, quando nem string é).
+    const descricao = typeof event === "string" ? `${event.length} caracteres` : `tipo ${Array.isArray(event) ? "array" : typeof event}`
+    logger.info(`[frete] webhook da SuperFrete com evento desconhecido (${descricao}) — ignorado`)
     return res.status(200).json({ ignorado: "evento desconhecido" })
   }
 
