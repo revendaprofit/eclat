@@ -220,16 +220,6 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
     return res.status(200).json({ ok: true, gravado: true, enviado: false })
   }
 
-  // Postado com despacho ainda PENDENTE (I-4 da revisão final): a mensagem de postado já leva o
-  // código e o link, então o despacho atrasado não sai depois dela. Condicional `pendente →
-  // dispensado`: um despacho `enviando` (já saindo) fica como está. É gravado ANTES de mandar o
-  // postado — se o postado falhar, a retentativa da SuperFrete o manda de novo.
-  if (event === "order.posted") {
-    if (await dispensarAvisoPendente(pg, pedido.id, MOTIVO_COBERTO_PELO_POSTADO)) {
-      logger.info(`[frete] webhook ${event} do pedido #${displayId}: aviso de despacho pendente dispensado — o aviso de postado leva o código`)
-    }
-  }
-
   const codigo = String(freteNovo.tracking_number ?? "")
   const link = String(freteNovo.tracking_url ?? "")
   const nome = (pedido.shipping_address?.first_name as string | undefined) || ""
@@ -261,6 +251,29 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
       logger.error(
         `[frete] aviso ${aviso} do pedido #${displayId} ENVIADO, mas a marca não foi gravada (${(e as Error)?.name ?? "erro"}) — ` +
           `conferir o pedido: um reenvio da SuperFrete pode repetir a mensagem`
+      )
+    }
+    if (aviso === "posted") await dispensarDespachoCoberto()
+  }
+
+  // Postado com o despacho ainda PENDENTE (I-4 da revisão final): a mensagem de postado já leva o
+  // código e o link, então o despacho atrasado não sai depois dela. A dispensa só acontece DEPOIS de
+  // o postado ter saído por pelo menos um canal (o mesmo momento da marca `avisos.posted`) — decisão
+  // do dono em 2026-09-21: perder um aviso é pior que uma repetição rara. Se todos os canais falharem
+  // (500 → a SuperFrete reenvia), o despacho segue `pendente` e o job de 5 min ainda pode mandá-lo.
+  // Condicional `pendente → dispensado`: um despacho `enviando` (já saindo) fica como está.
+  // JANELA ACEITA: enquanto o postado está saindo, o job pode mandar o despacho. A cliente recebe
+  // DUAS mensagens diferentes (despacho e postado), nunca nenhuma — e o despacho nunca duplica.
+  // Nunca vira 500: o postado já saiu, e um 500 faria a SuperFrete reenviá-lo.
+  const dispensarDespachoCoberto = async () => {
+    try {
+      if (await dispensarAvisoPendente(pg, pedido.id, MOTIVO_COBERTO_PELO_POSTADO)) {
+        logger.info(`[frete] webhook ${event} do pedido #${displayId}: aviso de despacho pendente dispensado — o aviso de postado levou o código`)
+      }
+    } catch (e) {
+      logger.error(
+        `[frete] webhook ${event} do pedido #${displayId}: postado enviado, mas o aviso de despacho pendente não foi dispensado (${(e as Error)?.name ?? "erro"}) — ` +
+          `o job pode mandar também o despacho`
       )
     }
   }

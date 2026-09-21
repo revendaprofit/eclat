@@ -166,7 +166,7 @@ Estados (`metadata.frete.aviso_despacho.status`, mostrados no pedido do Cockpit)
 | `incerto` | não dá para saber se saiu (timeout, resposta estranha) | **abrir a conversa da cliente**: se a mensagem não está lá, mandar à mão. O sistema nunca reenvia sozinho |
 | `dispensado` | não vai sair. Sem `motivo`: o operador desligou o aviso no despacho | nada |
 | `dispensado` + `motivo: "etiqueta cancelada"` | a etiqueta foi cancelada (webhook `order.cancelled`, ou a consulta da SuperFrete diz `canceled`) antes de o aviso sair | nada — se houver etiqueta nova, avisar a cliente à mão |
-| `dispensado` + `motivo: "coberto pelo aviso de postado"` | o `order.posted` chegou com o despacho ainda pendente: a mensagem de postado já leva código e link, então o despacho atrasado não sai depois dela | nada |
+| `dispensado` + `motivo: "coberto pelo aviso de postado"` | o `order.posted` chegou com o despacho ainda pendente e a mensagem de postado (que já leva código e link) SAIU por pelo menos um canal; só então o despacho atrasado é dispensado. Se o postado falha em todos os canais, o despacho segue `pendente` e o job ainda pode mandá-lo | nada |
 
 Só um aviso `pendente` é dispensado (transição condicional no banco): `enviando` e os estados finais nunca
 são tocados pelo cancelamento nem pelo postado. O link nas mensagens é sempre o do rastreamento dos Correios

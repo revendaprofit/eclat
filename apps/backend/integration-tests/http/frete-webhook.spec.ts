@@ -799,6 +799,24 @@ medusaIntegrationTestRunner({
       expect(whatsappEnviados).toHaveLength(1)
     })
 
+    it("I-4: order.posted falha em TODOS os canais → 500 e o aviso de despacho segue PENDENTE (o job ainda pode mandá-lo); o reenvio que entrega dispensa", async () => {
+      const p = await criarPedido(PENDENTE)
+      modoEvolution = "503"
+      const r = await chamar(corpoDe(p.display_id, "order.posted", COM_CODIGO))
+      expect(r.status).toBe(500)
+      const frete = await lerFrete(p.id)
+      expect(frete.aviso_despacho).toEqual({ status: "pendente", desde: "2026-09-21T10:00:00.000Z" })
+      expect(frete.avisos?.posted).toBeUndefined()
+
+      // A retentativa da SuperFrete entrega o postado: só AGORA o despacho pendente é dispensado.
+      modoEvolution = "ok"
+      const r2 = await chamar(corpoDe(p.display_id, "order.posted", COM_CODIGO))
+      expect(r2.status).toBe(200)
+      const depois = await lerFrete(p.id)
+      expect(depois.aviso_despacho).toMatchObject({ status: "dispensado", motivo: "coberto pelo aviso de postado" })
+      expect(depois.avisos.posted).toEqual(expect.any(String))
+    })
+
     it("I-4: order.posted com aviso_despacho ENVIANDO → não mexe no aviso (o envio em curso decide); o postado sai", async () => {
       const enviando = { status: "enviando", desde: "2026-09-21T10:00:00.000Z", desde_envio: new Date().toISOString(), por: "job" }
       const p = await criarPedido({ aviso_despacho: enviando, tracking_number: "AA123456789BR" })
