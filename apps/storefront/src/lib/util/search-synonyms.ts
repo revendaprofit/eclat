@@ -13,6 +13,10 @@ export const SEARCH_SYNONYMS: Record<string, string> = {
   macacoes: "macaquinhos",
   shortinho: "shorts",
   shortinhos: "shorts",
+  meia: "meias",
+  "oculos de sol": "oculos",
+  "oculos escuro": "oculos",
+  "oculos escuros": "oculos",
 }
 
 // Mesma normalização de normalizeColorName (acento/caixa/espaços) — aqui para texto livre.

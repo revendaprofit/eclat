@@ -5,6 +5,7 @@ import { StoreRegion } from "@medusajs/types";
 import Image from "next/image";
 
 import LocalizedClientLink from "@modules/common/components/localized-client-link";
+import IdentificacaoDaEmpresa from "@modules/layout/components/identificacao-da-empresa";
 
 export default async function Footer() {
   // I8: mesma árvore de navegação da barra/menu (getNavigation) — só raízes visíveis
@@ -141,6 +142,7 @@ export default async function Footer() {
             </div>
           </div>
         </div>
+        <IdentificacaoDaEmpresa className="w-full border-t border-ui-border-base pt-8 mb-8" />
         <div className="flex w-full mb-16 justify-between text-ui-fg-muted">
           <Text className="txt-compact-small">
             © {new Date().getFullYear()} use.ÉCLAT. Todos os direitos reservados.

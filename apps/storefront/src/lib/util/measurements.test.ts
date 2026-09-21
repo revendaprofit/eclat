@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { isMeasureTable, pickMeasurements } from "./measurements"
+import { hidesMeasures, isMeasureTable, pickMeasurements } from "./measurements"
 
 const T = (c: string[]) => ({ columns: c, rows: [["P", ...c.map(() => "1")], ["M", ...c.map(() => "2")]] })
 const MAP = {
@@ -29,5 +29,21 @@ describe("isMeasureTable", () => {
     expect(isMeasureTable({ columns: ["a"], rows: [["P", "1"]] })).toBe(true)
     expect(isMeasureTable({ columns: "a", rows: [] })).toBe(false)
     expect(isMeasureTable(null)).toBe(false)
+  })
+})
+
+describe("hidesMeasures", () => {
+  it("acessório sem tabela esconde o bloco de medidas", () => {
+    expect(hidesMeasures("acessorios/oculos", null)).toBe(true)
+    expect(hidesMeasures("acessorios", null)).toBe(true)
+    expect(hidesMeasures("/acessorios/meias/", null)).toBe(true)
+  })
+  it("acessório COM tabela própria mostra (ex.: meias 34-38 / 39-43)", () => {
+    expect(hidesMeasures("acessorios/meias", T(["Calçado"]))).toBe(false)
+  })
+  it("demais peças sem tabela seguem com a tabela fixa", () => {
+    expect(hidesMeasures("leggings", null)).toBe(false)
+    expect(hidesMeasures("masculino/bermudas", null)).toBe(false)
+    expect(hidesMeasures(null, null)).toBe(false)
   })
 })

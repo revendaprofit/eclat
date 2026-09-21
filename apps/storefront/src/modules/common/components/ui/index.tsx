@@ -82,11 +82,13 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         ref={ref}
         disabled={disabled || isLoading}
         className={clsx(
-          "inline-flex gap-2 items-center justify-center rounded-md font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
-          variant === "primary" && "bg-black text-white hover:bg-gray-800",
+          // Botões da marca: terracota no primário (era preto puro do tema padrão), contorno grafite no
+          // secundário. Foco visível em terracota sobre o fundo off-white.
+          "inline-flex gap-2 items-center justify-center rounded-md font-medium tracking-wide transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-eclat-terracota focus-visible:ring-offset-2 focus-visible:ring-offset-eclat-luz disabled:pointer-events-none disabled:opacity-50",
+          variant === "primary" && "bg-eclat-terracota text-eclat-luz hover:bg-eclat-terracota-escuro active:bg-eclat-terracota-escuro",
           variant === "secondary" &&
-            "bg-white text-black border border-gray-200 hover:bg-gray-50",
-          variant === "transparent" && "bg-transparent hover:bg-gray-100",
+            "bg-transparent text-eclat-grafite border border-eclat-grafite/30 hover:border-eclat-terracota hover:text-eclat-terracota",
+          variant === "transparent" && "bg-transparent text-eclat-grafite hover:bg-eclat-blush-claro",
           size === "small" && "h-8 px-3 text-sm",
           size === "medium" && "h-10 px-4",
           size === "large" && "h-12 px-6 text-lg",
@@ -221,7 +223,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
         <input
           ref={ref}
           className={clsx(
-            "flex h-10 w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
+            "flex h-11 w-full rounded-md border border-eclat-pedra bg-[#FFFDF9] px-3 py-2 text-base small:text-sm placeholder:text-eclat-grafite/40 focus:outline-none focus:border-eclat-terracota focus:ring-2 focus:ring-eclat-terracota/25 disabled:cursor-not-allowed disabled:opacity-50",
             className
           )}
           {...props}
@@ -384,7 +386,7 @@ const RadioGroupItem = forwardRef<HTMLInputElement, RadioGroupItemProps>(
           type="radio"
           id={id}
           className={clsx(
-            "h-4 w-4 border-gray-300 text-gray-900 focus:ring-gray-900",
+            "h-4 w-4 border-eclat-pedra accent-eclat-terracota focus:ring-eclat-terracota",
             className
           )}
           {...props}
@@ -414,7 +416,7 @@ export const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(
           type="checkbox"
           id={id}
           className={clsx(
-            "h-4 w-4 rounded border-gray-300 text-gray-900 focus:ring-gray-900",
+            "h-4 w-4 rounded border-eclat-pedra accent-eclat-terracota focus:ring-eclat-terracota",
             className
           )}
           {...props}

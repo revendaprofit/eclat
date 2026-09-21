@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { medusaGetOrder, medusaFulfillOrder, medusaMergeOrderMetadata, medusaShipFulfillment, medusaAdmin } from "@/lib/medusa"
+import { podeDespachar } from "@/lib/despacho-permitido"
 import { validarConferencia, type ConferenciaEnviada } from "@/lib/leitor"
 import { decidirDespacho, type ResultadoEmissao } from "@/lib/fiscal-despacho"
 import { createSupabaseServer } from "@/lib/supabase/server"
@@ -70,8 +71,10 @@ export async function POST(
   try {
     return await executarComTrava(id, async () => {
       const order = await medusaGetOrder(id)
-      if (order.fulfillment_status !== "not_fulfilled") {
-        return NextResponse.json({ error: "Este pedido já foi despachado." }, { status: 400 })
+      // Trava dianteira: já despachado, não pago ou com o dinheiro devolvido não sai daqui.
+      const trava = podeDespachar(order)
+      if (!trava.pode) {
+        return NextResponse.json({ error: trava.motivo }, { status: 400 })
       }
       // Quem está operando: resolvido já aqui no topo porque a guarda de pagamento logo abaixo
       // precisa registrar quem confirmou o despacho de um pedido que não consta como pago.

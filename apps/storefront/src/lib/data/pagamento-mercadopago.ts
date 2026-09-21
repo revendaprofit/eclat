@@ -7,6 +7,7 @@
 // navegador só manda o que só ele tem: o token de uso único do Brick, a bandeira e as parcelas.
 import { sdk } from "@lib/config"
 import { normalizarCpf } from "@lib/util/cpf"
+import { dadosDoPagador } from "@lib/util/pagamento-dados"
 import { isMercadoPago } from "@lib/util/pagamento-mercadopago"
 import { HttpTypes } from "@medusajs/types"
 import { revalidateTag } from "next/cache"
@@ -16,7 +17,7 @@ import { getAuthHeaders, getCacheTag, removeCartId } from "./cookies"
 import { listCartPaymentMethods } from "./payment"
 
 const CAMPOS_DO_CARRINHO =
-  "id,email,total,metadata,region_id,*billing_address,*shipping_address,*payment_collection.payment_sessions"
+  "id,email,total,shipping_total,discount_total,metadata,region_id,*items,*billing_address,*shipping_address,*payment_collection.payment_sessions"
 
 const ERRO_GENERICO =
   "Não conseguimos iniciar o pagamento agora. Tenta de novo em instantes ou escolhe outra forma de pagamento."
@@ -43,6 +44,8 @@ async function contextoDoPagamento(): Promise<Contexto | null> {
       cpf,
       email: cart.email,
       nomeTitular: cart.billing_address?.first_name ?? cart.shipping_address?.first_name ?? undefined,
+      // sobrenome, telefone, endereço e itens: o antifraude do Mercado Pago pontua cada campo
+      ...dadosDoPagador(cart),
     },
   }
 }
@@ -69,11 +72,14 @@ async function concluirSePago(cartId: string): Promise<void> {
 }
 
 /** Gera (ou regenera) o código Pix para o valor atual do carrinho. */
-export async function gerarPix(): Promise<{ erro?: string }> {
+export async function gerarPix(deviceId?: string): Promise<{ erro?: string }> {
   const ctx = await contextoDoPagamento()
   if (!ctx) return { erro: ERRO_GENERICO }
   try {
-    await initiatePaymentSession(ctx.cart, { provider_id: ctx.providerId, data: { ...ctx.base, metodo: "pix" } })
+    await initiatePaymentSession(ctx.cart, {
+      provider_id: ctx.providerId,
+      data: { ...ctx.base, metodo: "pix", ...(deviceId ? { device_id: deviceId } : {}) },
+    })
     return {}
   } catch {
     return { erro: ERRO_GENERICO }
@@ -87,6 +93,8 @@ export async function pagarComCartao(dados: {
   parcelas: number
   nomeTitular?: string
   finalCartao?: string
+  /** Id do aparelho (`MP_DEVICE_SESSION_ID`), criado pelo SDK do Mercado Pago no navegador. */
+  deviceId?: string
 }): Promise<ResultadoDoCartao> {
   const ctx = await contextoDoPagamento()
   if (!ctx || !dados.token || !dados.bandeira) return { resultado: "erro", mensagem: ERRO_GENERICO }
@@ -103,6 +111,7 @@ export async function pagarComCartao(dados: {
         parcelas: dados.parcelas,
         ...(dados.nomeTitular ? { nomeTitular: dados.nomeTitular } : {}),
         ...(dados.finalCartao ? { final_cartao: dados.finalCartao } : {}),
+        ...(dados.deviceId ? { device_id: dados.deviceId } : {}),
       },
     })
     sessao = sessaoDoMercadoPago(resp?.payment_collection)

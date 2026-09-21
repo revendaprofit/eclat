@@ -42,7 +42,7 @@ const slugify = (s: string) =>
     .replace(/(^-|-$)/g, "")
 
 const input =
-  "w-full border border-eclat-pedra/50 rounded px-3 py-2 text-sm bg-white/80 text-eclat-grafite focus:outline-none focus:border-eclat-dourado"
+  "w-full border border-eclat-pedra/50 rounded px-3 py-2 text-corpo bg-white/80 text-eclat-texto focus:outline-none focus:border-eclat-dourado"
 
 export default function EditorialPage() {
   const [posts, setPosts] = useState<Post[]>([])
@@ -125,8 +125,8 @@ export default function EditorialPage() {
     <div className="flex flex-col gap-6 max-w-3xl">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="font-serif text-3xl text-eclat-grafite">Editorial</h1>
-          <p className="text-sm text-eclat-grafite/60 mt-1">
+          <h1 className="font-serif text-3xl text-eclat-texto">Editorial</h1>
+          <p className="text-corpo text-eclat-texto-3 mt-1">
             Artigos e guias publicados na loja em /editorial — a maior alavanca
             de citação por IA (GEO). Escreva respondendo perguntas reais de
             clientes.
@@ -138,7 +138,7 @@ export default function EditorialPage() {
               setForm({ ...empty })
               setMsg("")
             }}
-            className="shrink-0 bg-eclat-dourado/90 hover:bg-eclat-dourado text-white text-sm px-4 py-2 rounded"
+            className="shrink-0 bg-eclat-dourado/90 hover:bg-eclat-dourado text-white text-corpo px-4 py-2 rounded"
           >
             + Novo artigo
           </button>
@@ -147,7 +147,7 @@ export default function EditorialPage() {
 
       {form && (
         <div className="border border-eclat-dourado/40 rounded-lg bg-white/70 p-5 flex flex-col gap-3">
-          <label className="text-xs text-eclat-grafite/60">
+          <label className="text-meta text-eclat-texto-3">
             Título
             <input
               className={input}
@@ -162,7 +162,7 @@ export default function EditorialPage() {
               placeholder="Ex.: Como escolher legging de compressão"
             />
           </label>
-          <label className="text-xs text-eclat-grafite/60">
+          <label className="text-meta text-eclat-texto-3">
             Slug (URL: /br/editorial/…)
             <input
               className={input}
@@ -170,7 +170,7 @@ export default function EditorialPage() {
               onChange={(e) => setForm({ ...form, slug: slugify(e.target.value) })}
             />
           </label>
-          <label className="text-xs text-eclat-grafite/60">
+          <label className="text-meta text-eclat-texto-3">
             Resumo (aparece no Google e nos cards — 1 a 2 frases)
             <textarea
               className={input}
@@ -179,7 +179,7 @@ export default function EditorialPage() {
               onChange={(e) => setForm({ ...form, excerpt: e.target.value })}
             />
           </label>
-          <label className="text-xs text-eclat-grafite/60">
+          <label className="text-meta text-eclat-texto-3">
             Imagem de capa (URL — use Vitrine → Mídia para subir)
             <input
               className={input}
@@ -188,7 +188,7 @@ export default function EditorialPage() {
               placeholder="https://…"
             />
           </label>
-          <label className="text-xs text-eclat-grafite/60">
+          <label className="text-meta text-eclat-texto-3">
             Tags (separadas por vírgula)
             <input
               className={input}
@@ -197,7 +197,7 @@ export default function EditorialPage() {
               placeholder="legging, treino, guia"
             />
           </label>
-          <label className="text-xs text-eclat-grafite/60">
+          <label className="text-meta text-eclat-texto-3">
             Corpo (Markdown: ## título · ### subtítulo · - lista · **negrito** ·
             [link](url))
             <textarea
@@ -207,25 +207,25 @@ export default function EditorialPage() {
               onChange={(e) => setForm({ ...form, body_md: e.target.value })}
             />
           </label>
-          {msg && <p className="text-sm text-red-700">{msg}</p>}
+          {msg && <p className="text-corpo text-red-700">{msg}</p>}
           <div className="flex gap-2 items-center">
             <button
               onClick={() => save(true)}
               disabled={saving || !form.title}
-              className="bg-eclat-dourado/90 hover:bg-eclat-dourado text-white text-sm px-4 py-2 rounded disabled:opacity-50"
+              className="bg-eclat-dourado/90 hover:bg-eclat-dourado text-white text-corpo px-4 py-2 rounded disabled:opacity-50"
             >
               {saving ? "Salvando…" : "Publicar"}
             </button>
             <button
               onClick={() => save(false)}
               disabled={saving || !form.title}
-              className="border border-eclat-pedra/60 text-eclat-grafite text-sm px-4 py-2 rounded hover:bg-eclat-areia/40 disabled:opacity-50"
+              className="border border-eclat-pedra/60 text-eclat-texto text-corpo px-4 py-2 rounded hover:bg-eclat-areia/40 disabled:opacity-50"
             >
               Salvar rascunho
             </button>
             <button
               onClick={() => setForm(null)}
-              className="text-sm text-eclat-grafite/60 hover:text-eclat-grafite px-2"
+              className="text-corpo text-eclat-texto-3 hover:text-eclat-texto px-2"
             >
               Cancelar
             </button>
@@ -235,7 +235,7 @@ export default function EditorialPage() {
 
       <ul className="flex flex-col divide-y divide-eclat-pedra/30 border border-eclat-pedra/30 rounded-lg bg-white/60">
         {posts.length === 0 && (
-          <li className="p-4 text-sm text-eclat-grafite/50">
+          <li className="p-4 text-corpo text-eclat-texto-3">
             Nenhum artigo ainda. Comece com guias que respondem perguntas de
             clientes (ex.: “qual tamanho de legging escolher?”).
           </li>
@@ -243,29 +243,29 @@ export default function EditorialPage() {
         {posts.map((p) => (
           <li key={p.id} className="p-4 flex items-center gap-3">
             <div className="flex-1 min-w-0">
-              <p className="text-sm text-eclat-grafite truncate">{p.title}</p>
-              <p className="text-xs text-eclat-grafite/50 truncate">
+              <p className="text-corpo text-eclat-texto truncate">{p.title}</p>
+              <p className="text-meta text-eclat-texto-3 truncate">
                 /editorial/{p.slug}
               </p>
             </div>
             <span
-              className={`text-[11px] px-2 py-0.5 rounded-full ${
+              className={`text-meta px-2 py-0.5 rounded-full ${
                 p.status === "published"
                   ? "bg-green-100 text-green-800"
-                  : "bg-eclat-areia text-eclat-grafite/70"
+                  : "bg-eclat-areia text-eclat-texto-2"
               }`}
             >
               {p.status === "published" ? "publicado" : "rascunho"}
             </span>
             <button
               onClick={() => openEdit(p.id)}
-              className="text-sm text-eclat-grafite/70 hover:text-eclat-grafite underline"
+              className="text-corpo text-eclat-texto-2 hover:text-eclat-texto underline"
             >
               editar
             </button>
             <button
               onClick={() => remove(p.id)}
-              className="text-sm text-red-700/70 hover:text-red-700 underline"
+              className="text-corpo text-red-700/70 hover:text-red-700 underline"
             >
               excluir
             </button>

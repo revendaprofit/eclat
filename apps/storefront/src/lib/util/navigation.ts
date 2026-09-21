@@ -67,7 +67,9 @@ export function buildNavData(input: { categories: CategoryInput[]; products: Pro
       id: c.id,
       name: c.name,
       handle: c.handle,
-      image_url: str(meta.image_url),
+      // capa do menu (quadradinho 3:4): `menu_image_url` quando existe; senão a capa da página da categoria.
+      // A página usa `image_url` como faixa 3:1 — uma imagem só não serve nítida aos dois formatos.
+      image_url: str(meta.menu_image_url) ?? str(meta.image_url),
       descricao_curta: str(meta.descricao_curta),
       rank: c.rank ?? 0,
       feminine: (FEMININE_HANDLES as readonly string[]).includes(c.handle),

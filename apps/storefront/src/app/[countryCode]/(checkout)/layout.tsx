@@ -2,6 +2,7 @@ import LocalizedClientLink from "@modules/common/components/localized-client-lin
 import Image from "next/image"
 import ChevronDown from "@modules/common/icons/chevron-down"
 import MedusaCTA from "@modules/layout/components/medusa-cta"
+import IdentificacaoDaEmpresa from "@modules/layout/components/identificacao-da-empresa"
 
 export default function CheckoutLayout({
   children,
@@ -34,8 +35,11 @@ export default function CheckoutLayout({
         </nav>
       </div>
       <div className="relative" data-testid="checkout-container">{children}</div>
-      <div className="py-4 w-full flex items-center justify-center">
+      <div className="py-8 w-full flex flex-col items-center gap-y-4 text-center">
         <MedusaCTA />
+        {/* O extrato da cliente mostra a razão social, não a marca. Dizer isso aqui, antes de
+            pagar, é o que evita o susto de ver um nome desconhecido na hora da cobrança. */}
+        <IdentificacaoDaEmpresa titulo="Quem recebe o pagamento" />
       </div>
     </div>
   )

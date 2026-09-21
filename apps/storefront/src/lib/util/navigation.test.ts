@@ -51,6 +51,13 @@ describe("buildNavData", () => {
     expect(top.image_url).toBe("top.jpg")
     expect(top.descricao_curta).toBe("Tops que sustentam")
   })
+  it("capa do menu: metadata.menu_image_url vence image_url (que fica para a faixa da página)", () => {
+    const n = buildNavData({
+      categories: [cat("c_top", "Top", "tops", 0, null, { image_url: "faixa.jpg", menu_image_url: "menu.jpg" })],
+      products: PRODUCTS, collections: [], colorMap: {},
+    })
+    expect(n.roots.find((r) => r.handle === "tops")!.image_url).toBe("menu.jpg")
+  })
   it("femininas = só as visíveis entre as cinco, na ordem", () => {
     expect(nav.feminine.map((c) => c.handle)).toEqual(["tops", "leggings"])
   })

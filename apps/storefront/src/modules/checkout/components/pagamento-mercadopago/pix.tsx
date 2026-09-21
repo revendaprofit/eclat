@@ -1,5 +1,6 @@
 "use client"
 
+import { deviceIdDoMercadoPago } from "@lib/util/device-id-mercadopago"
 import { conferirPagamento, gerarPix } from "@lib/data/pagamento-mercadopago"
 import { pixVigente, tempoRestante } from "@lib/util/pagamento-mercadopago"
 import { HttpTypes } from "@medusajs/types"
@@ -63,7 +64,7 @@ const PixMercadoPago = ({ cart, bloqueado }: { cart: HttpTypes.StoreCart; bloque
   const gerar = async () => {
     setGerando(true)
     setErro(null)
-    const { erro: falha } = await gerarPix()
+    const { erro: falha } = await gerarPix(deviceIdDoMercadoPago())
     if (falha) setErro(falha)
     else router.refresh()
     setAgora(Date.now())

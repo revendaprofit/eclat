@@ -30,6 +30,15 @@ export type PagamentoDaOrder = {
   payment_method: PaymentMethodOrder
 }
 
+/** Reembolso como a Orders API devolve dentro de `transactions.refunds`. */
+export type ReembolsoDaOrder = {
+  id: string
+  transaction_id?: string
+  amount: string
+  /** "processed" quando o dinheiro já voltou. */
+  status?: string
+}
+
 export type Order = {
   id: string
   type: "online"
@@ -39,7 +48,14 @@ export type Order = {
   total_paid_amount?: string
   status: string
   status_detail?: string
-  transactions: { payments: PagamentoDaOrder[] }
+  transactions: { payments: PagamentoDaOrder[]; refunds?: ReembolsoDaOrder[] }
+}
+
+/** Quanto desta order já voltou para a cliente (só reembolsos concluídos). */
+export function totalJaEstornado(order: Order): number {
+  return (order.transactions?.refunds ?? [])
+    .filter((r) => (r.status ?? "processed") === "processed")
+    .reduce((soma, r) => soma + Number(r.amount ?? 0), 0)
 }
 
 export type PagamentoClassico = {
@@ -86,7 +102,8 @@ export class ClienteMercadoPago {
     metodo: "GET" | "POST",
     caminho: string,
     corpo?: unknown,
-    chaveIdempotencia?: string
+    chaveIdempotencia?: string,
+    headersExtras?: Record<string, string>
   ): Promise<T> {
     const resposta = await fetch(`${API}${caminho}`, {
       method: metodo,
@@ -94,6 +111,7 @@ export class ClienteMercadoPago {
         "content-type": "application/json",
         authorization: `Bearer ${this.accessToken}`,
         ...(chaveIdempotencia ? { "x-idempotency-key": chaveIdempotencia } : {}),
+        ...(headersExtras ?? {}),
       },
       body: corpo !== undefined ? JSON.stringify(corpo) : undefined,
     })
@@ -118,8 +136,23 @@ export class ClienteMercadoPago {
    * (`corpo.data`) — por isso o chamador deve capturar `ErroMercadoPago` e olhar
    * `erro.corpo.data` antes de desistir, em vez de tratar todo erro como "nada foi criado".
    */
-  async criarOrder(payload: Record<string, unknown>, chaveIdempotencia: string): Promise<Order> {
-    return this.chamar<Order>("POST", "/v1/orders", payload, chaveIdempotencia)
+  async criarOrder(
+    payload: Record<string, unknown>,
+    chaveIdempotencia: string,
+    /**
+     * Identificador do aparelho de quem está comprando (`X-Meli-Session-Id`). O Mercado Pago usa
+     * no antifraude: sem ele a cobrança chega marcada como `security:none` e cai muito mais em
+     * `cc_rejected_high_risk` (achado de 2026-09-19 em produção, três cartões seguidos).
+     */
+    deviceId?: string
+  ): Promise<Order> {
+    return this.chamar<Order>(
+      "POST",
+      "/v1/orders",
+      payload,
+      chaveIdempotencia,
+      deviceId ? { "x-meli-session-id": deviceId } : undefined
+    )
   }
 
   async buscarOrder(orderId: string): Promise<Order> {

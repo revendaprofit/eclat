@@ -59,11 +59,11 @@ type Documento = {
 }
 
 const card = "border border-eclat-pedra/40 rounded-lg p-5 bg-eclat-luz flex flex-col gap-3"
-const input = "w-full border border-eclat-pedra/50 rounded-md px-3 py-2 text-sm bg-white focus:outline-none focus:border-eclat-dourado"
-const label = "text-xs uppercase tracking-wider text-eclat-grafite/60 mb-1 block"
-const hint = "text-xs text-eclat-grafite/55 leading-relaxed"
-const btn = "bg-eclat-grafite text-eclat-luz uppercase tracking-widest text-xs px-4 py-2 rounded-md hover:bg-eclat-dourado hover:text-eclat-grafite disabled:opacity-50"
-const btn2 = "border border-eclat-grafite/30 text-eclat-grafite uppercase tracking-widest text-xs px-4 py-2 rounded-md hover:border-eclat-dourado disabled:opacity-50"
+const input = "w-full border border-eclat-pedra/50 rounded-md px-3 py-2 text-corpo bg-white focus:outline-none focus:border-eclat-dourado"
+const label = "text-meta uppercase tracking-wider text-eclat-texto-3 mb-1 block"
+const hint = "text-meta text-eclat-texto-3 leading-relaxed"
+const btn = "bg-eclat-grafite text-eclat-luz uppercase tracking-widest text-meta px-4 py-2 rounded-md hover:bg-eclat-dourado hover:text-eclat-texto disabled:opacity-50"
+const btn2 = "border border-eclat-grafite/30 text-eclat-texto uppercase tracking-widest text-meta px-4 py-2 rounded-md hover:border-eclat-dourado disabled:opacity-50"
 
 const CORES_STATUS: Record<"verde" | "amarelo" | "vermelho", string> = {
   verde: "bg-emerald-100 text-emerald-900",
@@ -135,20 +135,20 @@ export default function FiscalPage() {
     [perfis]
   )
 
-  if (loading && !config) return <p className="text-sm text-eclat-grafite/50">Carregando…</p>
-  if (!config) return <p className="text-sm text-red-800">Não foi possível carregar a configuração fiscal.</p>
+  if (loading && !config) return <p className="text-corpo text-eclat-texto-3">Carregando…</p>
+  if (!config) return <p className="text-corpo text-red-800">Não foi possível carregar a configuração fiscal.</p>
 
   return (
     <div className="flex flex-col gap-6 max-w-4xl">
       <div>
-        <h1 className="font-serif text-3xl text-eclat-grafite">Fiscal</h1>
-        <p className="text-sm text-eclat-grafite/60 mt-1">
+        <h1 className="font-serif text-3xl text-eclat-texto">Fiscal</h1>
+        <p className="text-corpo text-eclat-texto-3 mt-1">
           Emissão de NF-e via Brasil NFe. Config do emitente, perfis tributários que decidem CSOSN/CFOP
           por venda ou devolução, e a fila de documentos que precisam da sua atenção.
         </p>
       </div>
 
-      {aviso && <div className="text-sm text-red-800 bg-red-50 border border-red-200 rounded-md px-4 py-2">{aviso}</div>}
+      {aviso && <div className="text-corpo text-red-800 bg-red-50 border border-red-200 rounded-md px-4 py-2">{aviso}</div>}
 
       <ConfiguracaoBlock config={config} credenciaisOk={credenciaisOk} busy={busy} salvar={(p) => api("/api/fiscal/config", "PATCH", p)} />
 
@@ -176,7 +176,7 @@ function ConfiguracaoBlock({
     <section className={card}>
       <div className="flex items-center justify-between gap-4">
         <div>
-          <p className="font-semibold text-eclat-grafite">Emissão {config.emissao_ativa ? "LIGADA" : "DESLIGADA"}</p>
+          <p className="font-semibold text-eclat-texto">Emissão {config.emissao_ativa ? "LIGADA" : "DESLIGADA"}</p>
           <p className={hint}>Interruptor-mestre. Desligado, o sistema nunca transmite nota — só monta prévia.</p>
         </div>
         <button disabled={busy} onClick={() => salvar({ emissao_ativa: !config.emissao_ativa })} className={config.emissao_ativa ? btn2 : btn}>
@@ -184,7 +184,7 @@ function ConfiguracaoBlock({
         </button>
       </div>
 
-      <div className="grid grid-cols-2 small:grid-cols-4 gap-3 text-sm">
+      <div className="grid grid-cols-2 small:grid-cols-4 gap-3 text-corpo">
         <Stat rotulo="Credenciais Brasil NFe" valor={credenciaisOk ? "configuradas" : "⚠ faltando"} alerta={!credenciaisOk} />
         <Stat rotulo="Ambiente" valor={config.ambiente === "producao" ? "produção" : "homologação"} alerta={config.ambiente === "producao"} />
         <Stat rotulo="Série NF-e" valor={String(config.serie_nfe)} />
@@ -244,14 +244,14 @@ function PerfisBlock({
 
   return (
     <section className={card}>
-      <p className="font-semibold text-eclat-grafite">Perfis tributários</p>
+      <p className="font-semibold text-eclat-texto">Perfis tributários</p>
       <p className={hint}>
         Cada perfil decide o CSOSN e os quatro CFOPs (venda e devolução, dentro e fora de {config.uf || "UF"}) usados
         na nota. O escopo &quot;padrão&quot; vale quando produto e categoria não têm perfil próprio.
       </p>
 
       {!perfilPadraoAtivo && (
-        <div className="text-sm text-red-800 bg-red-50 border border-red-200 rounded-md px-4 py-2">
+        <div className="text-corpo text-red-800 bg-red-50 border border-red-200 rounded-md px-4 py-2">
           Falta um perfil tributário <strong>padrão</strong> ativo. Sem ele, o sistema recusa emitir qualquer nota
           que não tenha um perfil específico de produto ou categoria — cadastre um abaixo antes de emitir.
         </div>
@@ -261,9 +261,9 @@ function PerfisBlock({
         <p className={hint}>Nenhum perfil cadastrado ainda.</p>
       ) : (
         <div className="overflow-x-auto">
-          <table className="text-sm w-full">
+          <table className="text-corpo w-full">
             <thead>
-              <tr className="text-left text-eclat-grafite/60">
+              <tr className="text-left text-eclat-texto-3">
                 <th className="pr-3">Escopo</th><th className="pr-3">Alvo</th><th className="pr-3">CSOSN</th>
                 <th className="pr-3">Ativo</th><th className="pr-3" />
               </tr>
@@ -284,7 +284,7 @@ function PerfisBlock({
       )}
 
       <div className="border-t border-eclat-pedra/30 pt-3 flex flex-col gap-3">
-        <p className="font-semibold text-eclat-grafite text-sm">{editandoId ? "Editar perfil" : "Novo perfil"}</p>
+        <p className="font-semibold text-eclat-texto text-corpo">{editandoId ? "Editar perfil" : "Novo perfil"}</p>
         <div className="grid grid-cols-2 small:grid-cols-4 gap-3">
           <div>
             <label className={label}>Escopo</label>
@@ -314,7 +314,7 @@ function PerfisBlock({
           <div><label className={label}>Origem padrão</label><input type="number" min={0} className={input} value={form.origem_padrao} onChange={(e) => setForm({ ...form, origem_padrao: Number(e.target.value) })} /></div>
           <div><label className={label}>CST PIS/COFINS (2 dígitos, opcional)</label><input className={input} maxLength={2} value={form.cst_pis_cofins ?? ""} onChange={(e) => setForm({ ...form, cst_pis_cofins: e.target.value.replace(/\D/g, "") || null })} /></div>
           <div><label className={label}>CEST (7 dígitos, só se houver ICMS-ST)</label><input className={input} maxLength={7} value={form.cest ?? ""} onChange={(e) => setForm({ ...form, cest: e.target.value.replace(/\D/g, "") || null })} /></div>
-          <div className="flex items-end pb-2"><label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={form.ativo} onChange={(e) => setForm({ ...form, ativo: e.target.checked })} /> ativo</label></div>
+          <div className="flex items-end pb-2"><label className="flex items-center gap-2 text-corpo"><input type="checkbox" checked={form.ativo} onChange={(e) => setForm({ ...form, ativo: e.target.checked })} /> ativo</label></div>
         </div>
         <div className="flex gap-2">
           <button disabled={busy || !form.csosn} className={btn} onClick={async () => { await salvar({ ...(editandoId ? { id: editandoId } : {}), ...form }); novo() }}>
@@ -348,7 +348,7 @@ function FilaBlock({
 
   return (
     <section className={card}>
-      <p className="font-semibold text-eclat-grafite">Fila de exceções</p>
+      <p className="font-semibold text-eclat-texto">Fila de exceções</p>
       <p className={hint}>
         Documentos rejeitados, denegados, em contingência ou ainda sem confirmação da SEFAZ. Reconciliar busca o XML
         autorizado e grava o número do item real de cada linha — só depois disso o documento libera devolução.
@@ -361,12 +361,12 @@ function FilaBlock({
         const autorizadoSemVerificar = d.status === "autorizado_nao_verificado" && !d.verificado_em
         return (
           <div key={d.id} className="border border-eclat-pedra/30 rounded-md p-3 flex flex-col gap-2">
-            <div className="flex items-center gap-2 flex-wrap text-xs">
+            <div className="flex items-center gap-2 flex-wrap text-meta">
               <span className={`px-2 py-0.5 rounded ${CORES_STATUS[corDoStatus(d.status)]}`}>{rotuloStatus(d.status)}</span>
-              <span className="text-eclat-grafite/60">{d.tipo === "venda" ? "Venda" : "Devolução"} · pedido {d.medusa_order_id} · {d.ambiente === "producao" ? "produção" : "homologação"}</span>
+              <span className="text-eclat-texto-3">{d.tipo === "venda" ? "Venda" : "Devolução"} · pedido {d.medusa_order_id} · {d.ambiente === "producao" ? "produção" : "homologação"}</span>
             </div>
             {d.rejeicao_motivo && (
-              <p className="text-sm text-red-800">
+              <p className="text-corpo text-red-800">
                 {d.rejeicao_codigo ? `[${d.rejeicao_codigo}] ` : ""}{d.rejeicao_motivo}
               </p>
             )}
@@ -380,7 +380,7 @@ function FilaBlock({
               </div>
             )}
             {resultado[d.id] && (
-              <div className="text-sm bg-white border border-eclat-pedra/40 rounded-md p-2">
+              <div className="text-corpo bg-white border border-eclat-pedra/40 rounded-md p-2">
                 <p>{resultado[d.id].verificado ? "Verificado com sucesso." : "Não verificado — veja divergências abaixo."}</p>
                 {(resultado[d.id].divergencias || []).map((div, i) => <p key={i} className="text-amber-800">{div}</p>)}
               </div>
@@ -438,8 +438,8 @@ function FilaBlock({
 function Stat({ rotulo, valor, alerta }: { rotulo: string; valor: string; alerta?: boolean }) {
   return (
     <div className={`rounded-md px-3 py-2 ${alerta ? "bg-amber-50 border border-amber-200" : "bg-white border border-eclat-pedra/40"}`}>
-      <div className="text-[11px] uppercase tracking-wider text-eclat-grafite/60">{rotulo}</div>
-      <div className="text-lg font-semibold text-eclat-grafite">{valor}</div>
+      <div className="text-meta uppercase tracking-wider text-eclat-texto-3">{rotulo}</div>
+      <div className="text-lg font-semibold text-eclat-texto">{valor}</div>
     </div>
   )
 }

@@ -1,4 +1,4 @@
-import { ClienteMercadoPago, ErroMercadoPago, extrairMotivoDeRecusa } from "../cliente"
+import { ClienteMercadoPago, ErroMercadoPago, extrairMotivoDeRecusa, totalJaEstornado, type Order } from "../cliente"
 
 function mockFetch(status: number, corpo: unknown) {
   const spy = jest.fn().mockResolvedValue({
@@ -116,5 +116,34 @@ describe("extrairMotivoDeRecusa", () => {
   it("devolve undefined quando não há details", () => {
     expect(extrairMotivoDeRecusa({ errors: [{ code: "failed" }] })).toBeUndefined()
     expect(extrairMotivoDeRecusa({})).toBeUndefined()
+  })
+})
+
+describe("totalJaEstornado", () => {
+  const order = (refunds?: unknown[]): Order =>
+    ({ total_amount: "199.90", transactions: { payments: [], refunds } } as unknown as Order)
+
+  it("soma só os reembolsos concluídos", () => {
+    expect(
+      totalJaEstornado(
+        order([
+          { id: "a", amount: "50.00", status: "processed" },
+          { id: "b", amount: "30.00", status: "processed" },
+        ])
+      )
+    ).toBe(80)
+  })
+
+  it("reembolso em processamento não conta — o dinheiro ainda não voltou", () => {
+    expect(totalJaEstornado(order([{ id: "a", amount: "199.90", status: "pending" }]))).toBe(0)
+  })
+
+  it("sem reembolso nenhum, zero (inclusive quando o campo não vem)", () => {
+    expect(totalJaEstornado(order([]))).toBe(0)
+    expect(totalJaEstornado(order(undefined))).toBe(0)
+  })
+
+  it("reembolso sem status é tratado como concluído (é o que a Orders API devolve)", () => {
+    expect(totalJaEstornado(order([{ id: "a", amount: "49.80" }]))).toBe(49.8)
   })
 })

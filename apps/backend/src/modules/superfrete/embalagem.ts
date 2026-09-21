@@ -3,9 +3,10 @@
 export type ItemParaEmbalagem = { quantidade: number; peso_g?: number | null }
 export type Pacote = { pecas: number; largura: number; altura: number; comprimento: number; peso_kg: number }
 
-const PESO_PADRAO_G = 300 // peça sem peso cadastrado
-const SAQUINHO_G = 10
-const CAIXA_G = 150
+const PESO_PADRAO_G = 300 // peça sem peso cadastrado (margem de segurança: a peça mais pesada é o macaquinho, 222 g)
+// Pesados pelo dono em 2026-09-19: saquinho 50 g (1 ou 2 peças), caixa 115 g (3 peças ou mais).
+const SAQUINHO_G = 50
+const CAIXA_G = 115
 // Mini Envios (SuperFrete/Correios): até 0,3 kg, altura 1–4, largura 10–16, comprimento 15–24.
 const MINI = { peso_g: 300, altura: 4, largura: [10, 16], comprimento: [15, 24] } as const
 

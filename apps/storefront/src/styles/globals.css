@@ -13,10 +13,34 @@
   h3 {
     @apply font-serif;
   }
-  /* Realce de seleção em dourado suave */
+  /* Realce de seleção em blush da marca */
   ::selection {
-    background-color: rgba(194, 163, 107, 0.28);
+    background-color: rgba(232, 201, 184, 0.6);
   }
+}
+
+/* Tema do kit Medusa (ui-preset) repintado com a paleta da marca: troca o azul "interactive", os
+   cinzas frios e o branco puro em TODO lugar que usa as classes ui-* (sacola, checkout, pedido,
+   conta), sem editar componente por componente. `:root:root` vence o `:root` que o preset injeta. */
+:root:root {
+  --fg-base: #2b2a28; /* eclat-grafite */
+  --fg-subtle: rgba(43, 42, 40, 0.72);
+  --fg-muted: rgba(43, 42, 40, 0.5);
+  --fg-disabled: rgba(43, 42, 40, 0.32);
+  --fg-interactive: #7a3b2c; /* eclat-terracota */
+  --fg-interactive-hover: #5e2c20; /* eclat-terracota-escuro */
+  --bg-interactive: #7a3b2c;
+  --border-interactive: #7a3b2c;
+  --border-base: rgba(201, 191, 174, 0.7); /* eclat-pedra */
+  --border-strong: #c9bfae;
+  --bg-base: #fffdf9;
+  --bg-subtle: #f5efe6;
+  --bg-component: #f5efe6;
+  --bg-field: #fffdf9;
+  --bg-field-hover: #f3dfd3; /* eclat-blush-claro */
+  --borders-interactive-with-active: 0 0 0 1px #7a3b2c, 0 0 0 4px rgba(122, 59, 44, 0.18);
+  --borders-interactive-with-focus: 0 0 0 1px #7a3b2c, 0 0 0 2px #fffdf9, 0 0 0 4px rgba(122, 59, 44, 0.45);
+  --borders-interactive-with-shadow: 0 1px 2px 0 rgba(94, 44, 32, 0.25), 0 0 0 1px #7a3b2c;
 }
 
 @layer utilities {
@@ -259,5 +283,25 @@
   .ceu-deriva,
   .dica-empurra {
     animation: none !important;
+  }
+}
+
+/* === Menu do celular: fio terracota que nasce da esquerda, em cascata === */
+@keyframes eclat-fio-cresce {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+.menu-fio {
+  transform: scaleX(0);
+  animation: eclat-fio-cresce 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+@media (prefers-reduced-motion: reduce) {
+  .menu-fio {
+    animation: none !important;
+    transform: none !important;
   }
 }

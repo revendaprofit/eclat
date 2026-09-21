@@ -146,7 +146,7 @@ export default function TaxonomyManager({
     if (confirm(`Excluir a tag "${t.name}"?`)) call(`/api/taxonomy/tags/${t.id}`, "DELETE")
   }
 
-  const secaoTitulo = "font-serif text-xl text-eclat-grafite mb-2"
+  const secaoTitulo = "font-serif text-xl text-eclat-texto mb-2"
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end bg-black/40" onClick={onClose}>
@@ -155,8 +155,8 @@ export default function TaxonomyManager({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="sticky top-0 bg-eclat-luz border-b border-eclat-pedra/30 px-6 py-4 flex items-center justify-between z-10">
-          <h2 className="font-serif text-2xl text-eclat-grafite">Categorias, coleções &amp; tags</h2>
-          <button onClick={onClose} className="text-eclat-grafite/50 hover:text-eclat-grafite text-xl">✕</button>
+          <h2 className="font-serif text-2xl text-eclat-texto">Categorias, coleções &amp; tags</h2>
+          <button onClick={onClose} className="text-eclat-texto-3 hover:text-eclat-texto text-xl">✕</button>
         </div>
 
         <div className={`p-6 flex flex-col gap-8 ${busy ? "opacity-60 pointer-events-none" : ""}`}>
@@ -164,26 +164,26 @@ export default function TaxonomyManager({
           <section>
             <div className="flex items-center justify-between">
               <h3 className={secaoTitulo}>Categorias</h3>
-              <button onClick={() => novaCategoria(null)} className="text-xs text-eclat-dourado underline">
+              <button onClick={() => novaCategoria(null)} className="text-meta text-eclat-dourado underline">
                 + categoria raiz
               </button>
             </div>
             <div className="border border-eclat-pedra/40 rounded-md bg-white divide-y divide-eclat-pedra/15">
-              {arvore.length === 0 && <p className="p-3 text-sm text-eclat-grafite/50">Nenhuma categoria.</p>}
+              {arvore.length === 0 && <p className="p-3 text-corpo text-eclat-texto-3">Nenhuma categoria.</p>}
               {arvore.map(({ cat, depth }) => (
                 <div
                   key={cat.id}
-                  className={`flex items-center justify-between px-3 py-2 text-sm group ${
+                  className={`flex items-center justify-between px-3 py-2 text-corpo group ${
                     cat.is_active ? "" : "opacity-50"
                   }`}
                   style={{ paddingLeft: 12 + depth * 20 }}
                 >
                   <span className="flex items-center gap-1">
-                    {depth > 0 && <span className="text-eclat-grafite/30">└</span>}
+                    {depth > 0 && <span className="text-eclat-texto/30">└</span>}
                     {cat.name}
-                    {!cat.is_active && <span className="text-eclat-grafite/50 text-xs">(inativa)</span>}
+                    {!cat.is_active && <span className="text-eclat-texto-3 text-meta">(inativa)</span>}
                   </span>
-                  <span className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity text-xs">
+                  <span className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity text-meta">
                     <button onClick={() => novaCategoria(cat.id)} className="text-eclat-dourado underline" title="Adicionar subcategoria">+ sub</button>
                     <button onClick={() => setEditando(cat)} className="underline">editar</button>
                     <button onClick={() => renomearCategoria(cat)} className="underline">renomear</button>
@@ -199,16 +199,16 @@ export default function TaxonomyManager({
           <section>
             <div className="flex items-center justify-between">
               <h3 className={secaoTitulo}>Coleções</h3>
-              <button onClick={novaColecao} className="text-xs text-eclat-dourado underline">+ coleção</button>
+              <button onClick={novaColecao} className="text-meta text-eclat-dourado underline">+ coleção</button>
             </div>
             <div className="border border-eclat-pedra/40 rounded-md bg-white divide-y divide-eclat-pedra/15">
-              {colls.length === 0 && <p className="p-3 text-sm text-eclat-grafite/50">Nenhuma coleção.</p>}
+              {colls.length === 0 && <p className="p-3 text-corpo text-eclat-texto-3">Nenhuma coleção.</p>}
               {colls.map((c) => (
-                <div key={c.id} className="flex items-center justify-between px-3 py-2 text-sm group">
+                <div key={c.id} className="flex items-center justify-between px-3 py-2 text-corpo group">
                   <span>
-                    {c.title} <span className="text-eclat-grafite/40 text-xs">/{c.handle}</span>
+                    {c.title} <span className="text-eclat-texto/40 text-meta">/{c.handle}</span>
                   </span>
-                  <span className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity text-xs">
+                  <span className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity text-meta">
                     <button onClick={() => renomearColecao(c)} className="underline">renomear</button>
                     <button onClick={() => excluirColecao(c)} className="text-red-700 underline">excluir</button>
                   </span>
@@ -222,9 +222,9 @@ export default function TaxonomyManager({
             <h3 className={secaoTitulo}>Tags</h3>
             <div className="flex flex-wrap gap-2 items-center">
               {tags.map((t) => (
-                <span key={t.id} className="text-xs bg-eclat-areia/60 rounded-full px-3 py-1 flex items-center gap-1">
+                <span key={t.id} className="text-meta bg-eclat-areia/60 rounded-full px-3 py-1 flex items-center gap-1">
                   {t.name}
-                  <button onClick={() => excluirTag(t)} className="text-eclat-grafite/50 hover:text-red-700">✕</button>
+                  <button onClick={() => excluirTag(t)} className="text-eclat-texto-3 hover:text-red-700">✕</button>
                 </span>
               ))}
               <input
@@ -237,7 +237,7 @@ export default function TaxonomyManager({
                   }
                 }}
                 placeholder="+ tag (Enter)"
-                className="border border-eclat-pedra/50 rounded-md px-2 py-1 text-xs w-28 bg-white focus:outline-none focus:border-eclat-dourado"
+                className="border border-eclat-pedra/50 rounded-md px-2 py-1 text-meta w-28 bg-white focus:outline-none focus:border-eclat-dourado"
               />
             </div>
           </section>
@@ -261,8 +261,8 @@ function CategoriaEditor({
   const [descricao, setDescricao] = useState(String(cat.metadata?.descricao_curta ?? ""))
   const [enviando, setEnviando] = useState(false)
   const inputCls =
-    "w-full border border-eclat-pedra/50 rounded-md px-3 py-2 text-sm bg-white focus:outline-none focus:border-eclat-dourado"
-  const labelCls = "text-xs uppercase tracking-wider text-eclat-grafite/60 mb-1 block"
+    "w-full border border-eclat-pedra/50 rounded-md px-3 py-2 text-corpo bg-white focus:outline-none focus:border-eclat-dourado"
+  const labelCls = "text-meta uppercase tracking-wider text-eclat-texto-3 mb-1 block"
 
   async function upload(file: File) {
     setEnviando(true)
@@ -283,10 +283,10 @@ function CategoriaEditor({
   return (
     <div className="mt-3 border border-eclat-dourado/40 rounded-lg bg-white/70 p-4 flex flex-col gap-3">
       <div className="flex items-center justify-between">
-        <h4 className="text-sm font-medium text-eclat-grafite">
-          {cat.name} <span className="text-eclat-grafite/40 text-xs">/{cat.handle}</span>
+        <h4 className="text-corpo font-medium text-eclat-texto">
+          {cat.name} <span className="text-eclat-texto/40 text-meta">/{cat.handle}</span>
         </h4>
-        <button onClick={onClose} className="text-eclat-grafite/50 hover:text-eclat-grafite">✕</button>
+        <button onClick={onClose} className="text-eclat-texto-3 hover:text-eclat-texto">✕</button>
       </div>
       <div className="grid grid-cols-3 gap-3">
         <div>
@@ -305,9 +305,9 @@ function CategoriaEditor({
             // eslint-disable-next-line @next/next/no-img-element
             <img src={imageUrl} alt="capa" className="w-16 h-16 rounded object-cover border border-eclat-pedra/40" />
           )}
-          <input type="file" accept="image/*" onChange={(e) => e.target.files?.[0] && upload(e.target.files[0])} className="text-xs" />
-          {enviando && <span className="text-xs text-eclat-grafite/50">enviando…</span>}
-          {imageUrl && <button onClick={() => setImageUrl("")} className="text-xs text-red-700 underline">remover</button>}
+          <input type="file" accept="image/*" onChange={(e) => e.target.files?.[0] && upload(e.target.files[0])} className="text-meta" />
+          {enviando && <span className="text-meta text-eclat-texto-3">enviando…</span>}
+          {imageUrl && <button onClick={() => setImageUrl("")} className="text-meta text-red-700 underline">remover</button>}
         </div>
       </div>
       <div className="flex gap-3">
@@ -317,11 +317,11 @@ function CategoriaEditor({
             if (!Number.isFinite(n) || n < 0) return alert("Ordem deve ser um número ≥ 0.")
             onSave(cat, { rank: n, image_url: imageUrl.trim(), descricao_curta: descricao.trim() })
           }}
-          className="bg-eclat-grafite text-eclat-luz uppercase tracking-widest text-xs px-5 py-2 rounded-md hover:bg-eclat-dourado hover:text-eclat-grafite transition-colors"
+          className="bg-eclat-grafite text-eclat-luz uppercase tracking-widest text-meta px-5 py-2 rounded-md hover:bg-eclat-dourado hover:text-eclat-texto transition-colors"
         >
           Salvar
         </button>
-        <button onClick={onClose} className="text-sm text-eclat-grafite/60 underline">cancelar</button>
+        <button onClick={onClose} className="text-corpo text-eclat-texto-3 underline">cancelar</button>
       </div>
     </div>
   )

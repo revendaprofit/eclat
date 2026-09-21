@@ -29,15 +29,15 @@ type CockpitProduct = {
 }
 
 const input =
-  "w-full border border-eclat-pedra/50 rounded-md px-3 py-2 text-sm bg-white focus:outline-none focus:border-eclat-dourado"
-const label = "text-xs uppercase tracking-wider text-eclat-grafite/60 mb-1 block"
+  "w-full border border-eclat-pedra/50 rounded-md px-3 py-2 text-corpo bg-white focus:outline-none focus:border-eclat-dourado"
+const label = "text-meta uppercase tracking-wider text-eclat-texto-3 mb-1 block"
 const btn =
-  "self-start bg-eclat-grafite text-eclat-luz uppercase tracking-widest text-xs px-6 py-3 rounded-md hover:bg-eclat-dourado hover:text-eclat-grafite disabled:opacity-50"
+  "self-start bg-eclat-grafite text-eclat-luz uppercase tracking-widest text-meta px-6 py-3 rounded-md hover:bg-eclat-dourado hover:text-eclat-texto disabled:opacity-50"
 
 const HANDLE_REGEX = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
 
 const SELO: Record<string, { texto: string; cls: string }> = {
-  rascunho: { texto: "Rascunho", cls: "bg-eclat-pedra/30 text-eclat-grafite/60" },
+  rascunho: { texto: "Rascunho", cls: "bg-eclat-pedra/30 text-eclat-texto-3" },
   sem_estoque: { texto: "Sem estoque", cls: "bg-red-100 text-red-700" },
   estoque_baixo: { texto: "Estoque baixo · bom para queimar estoque", cls: "bg-amber-100 text-amber-700" },
 }
@@ -156,21 +156,21 @@ export default function ConjuntoCurados() {
     }
   }
 
-  if (carregando) return <p className="text-sm text-eclat-grafite/50">Carregando…</p>
-  if (erroCarregar) return <p className="text-sm text-red-700">{erroCarregar}</p>
+  if (carregando) return <p className="text-corpo text-eclat-texto-3">Carregando…</p>
+  if (erroCarregar) return <p className="text-corpo text-red-700">{erroCarregar}</p>
 
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between gap-4">
-        <p className="text-xs text-eclat-grafite/55">Arraste os cards para reordenar como aparecem na vitrine.</p>
+        <p className="text-meta text-eclat-texto-3">Arraste os cards para reordenar como aparecem na vitrine.</p>
         <button onClick={() => setFormAberto({ mode: "create" })} className={btn}>
           + Novo conjunto
         </button>
       </div>
 
-      {erroOrdem && <p className="text-xs text-red-700">{erroOrdem}</p>}
+      {erroOrdem && <p className="text-meta text-red-700">{erroOrdem}</p>}
 
-      {ordenados.length === 0 && <p className="text-sm text-eclat-grafite/50">Nenhum conjunto curado ainda.</p>}
+      {ordenados.length === 0 && <p className="text-corpo text-eclat-texto-3">Nenhum conjunto curado ainda.</p>}
 
       <div className="flex flex-col gap-2">
         {ordenados.map((c) => {
@@ -192,20 +192,20 @@ export default function ConjuntoCurados() {
                   className="w-12 h-12 rounded object-cover border border-eclat-pedra/40 shrink-0"
                 />
               ) : (
-                <div className="w-12 h-12 rounded bg-eclat-areia flex items-center justify-center text-eclat-grafite/50 font-serif text-lg shrink-0">
+                <div className="w-12 h-12 rounded bg-eclat-areia flex items-center justify-center text-eclat-texto-3 font-serif text-lg shrink-0">
                   {c.nome.charAt(0).toUpperCase() || "?"}
                 </div>
               )}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-sm font-medium text-eclat-grafite truncate">{c.nome}</span>
-                  <span className="text-xs text-eclat-grafite/40">/{c.handle}</span>
+                  <span className="text-corpo font-medium text-eclat-texto truncate">{c.nome}</span>
+                  <span className="text-meta text-eclat-texto/40">/{c.handle}</span>
                 </div>
                 <div className="flex items-center gap-1 mt-1 flex-wrap">
                   {pecas.map((p) => (
                     <span
                       key={p.id}
-                      className="flex items-center gap-1 bg-eclat-areia/50 rounded-full pl-1 pr-2 py-0.5 text-[11px] text-eclat-grafite/70"
+                      className="flex items-center gap-1 bg-eclat-areia/50 rounded-full pl-1 pr-2 py-0.5 text-meta text-eclat-texto-2"
                     >
                       {p.thumbnail ? (
                         // eslint-disable-next-line @next/next/no-img-element
@@ -217,40 +217,40 @@ export default function ConjuntoCurados() {
                     </span>
                   ))}
                   {c.product_ids.length > pecas.length && (
-                    <span className="text-[11px] text-eclat-grafite/40">
+                    <span className="text-meta text-eclat-texto/40">
                       +{c.product_ids.length - pecas.length} produto(s) não encontrado(s)
                     </span>
                   )}
                 </div>
-                <p className="text-xs text-eclat-grafite/55 mt-1">
+                <p className="text-meta text-eclat-texto-3 mt-1">
                   {TIPOS_DESCONTO.find((t) => t.value === c.regra.tipo_desconto)?.label} ·{" "}
                   {formatarValorRegra(c.regra.tipo_desconto, c.regra.valor)}
                 </p>
-                {erroLinha[c.id] && <p className="text-xs text-red-700 mt-1">{erroLinha[c.id]}</p>}
+                {erroLinha[c.id] && <p className="text-meta text-red-700 mt-1">{erroLinha[c.id]}</p>}
               </div>
-              <label className="flex items-center gap-1 text-xs cursor-pointer select-none shrink-0">
+              <label className="flex items-center gap-1 text-meta cursor-pointer select-none shrink-0">
                 <input type="checkbox" checked={c.ativo} onChange={() => alternarAtivo(c)} />
                 Ativo
               </label>
               <button
                 onClick={() => setFormAberto({ mode: "edit", curado: c })}
-                className="text-xs text-eclat-dourado underline shrink-0"
+                className="text-meta text-eclat-dourado underline shrink-0"
               >
                 Editar
               </button>
               {confirmandoExcluir === c.id ? (
-                <span className="flex items-center gap-2 text-xs shrink-0">
+                <span className="flex items-center gap-2 text-meta shrink-0">
                   <button onClick={() => excluir(c.id)} disabled={excluindo} className="text-red-700 underline disabled:opacity-50">
                     {excluindo ? "Excluindo…" : "Confirmar"}
                   </button>
-                  <button onClick={() => setConfirmandoExcluir(null)} className="text-eclat-grafite/50 underline">
+                  <button onClick={() => setConfirmandoExcluir(null)} className="text-eclat-texto-3 underline">
                     cancelar
                   </button>
                 </span>
               ) : (
                 <button
                   onClick={() => setConfirmandoExcluir(c.id)}
-                  className="text-xs text-red-700/80 underline shrink-0"
+                  className="text-meta text-red-700/80 underline shrink-0"
                 >
                   Excluir
                 </button>
@@ -423,17 +423,17 @@ function CuradoForm({
     <div className="fixed inset-0 z-50 flex justify-end bg-black/40" onClick={onClose}>
       <div className="w-full max-w-xl h-full bg-eclat-luz overflow-y-auto shadow-xl" onClick={(e) => e.stopPropagation()}>
         <div className="sticky top-0 bg-eclat-luz border-b border-eclat-pedra/30 px-6 py-4 flex items-center justify-between z-10">
-          <h2 className="font-serif text-2xl text-eclat-grafite">
+          <h2 className="font-serif text-2xl text-eclat-texto">
             {mode === "create" ? "Novo conjunto curado" : "Editar conjunto"}
           </h2>
-          <button onClick={onClose} className="text-eclat-grafite/50 hover:text-eclat-grafite text-xl">
+          <button onClick={onClose} className="text-eclat-texto-3 hover:text-eclat-texto text-xl">
             ✕
           </button>
         </div>
 
         <div className="p-6 flex flex-col gap-4">
           {erro && (
-            <p className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-md p-3">{erro}</p>
+            <p className="text-corpo text-red-700 bg-red-50 border border-red-200 rounded-md p-3">{erro}</p>
           )}
 
           <div>
@@ -443,7 +443,7 @@ function CuradoForm({
 
           <div>
             <label className={label}>
-              Handle (URL) {mode === "edit" && <span className="normal-case text-eclat-grafite/40">(fixo após criação)</span>}
+              Handle (URL) {mode === "edit" && <span className="normal-case text-eclat-texto/40">(fixo após criação)</span>}
             </label>
             <input
               value={handle}
@@ -454,7 +454,7 @@ function CuradoForm({
               }}
               className={input + (mode === "edit" ? " opacity-60 cursor-not-allowed" : "")}
             />
-            {mode === "create" && erroHandle && <p className="text-xs text-red-700 mt-1">{erroHandle}</p>}
+            {mode === "create" && erroHandle && <p className="text-meta text-red-700 mt-1">{erroHandle}</p>}
           </div>
 
           <div>
@@ -465,7 +465,7 @@ function CuradoForm({
           <div>
             <label className={label}>Produtos ({escolhidos.length} escolhido(s) — mínimo 2)</label>
             {idsNaoResolvidos.length > 0 && (
-              <p className="text-xs text-amber-700 mb-2">
+              <p className="text-meta text-amber-700 mb-2">
                 {idsNaoResolvidos.length} produto(s) deste conjunto estão fora da lista carregada (limite de 100) e
                 serão mantidos.
               </p>
@@ -476,8 +476,8 @@ function CuradoForm({
               placeholder="Buscar produto por nome…"
               className={input}
             />
-            {buscando && <p className="text-xs text-eclat-grafite/50 mt-1">Buscando…</p>}
-            {erroBusca && <p className="text-xs text-red-700 mt-1">{erroBusca}</p>}
+            {buscando && <p className="text-meta text-eclat-texto-3 mt-1">Buscando…</p>}
+            {erroBusca && <p className="text-meta text-red-700 mt-1">{erroBusca}</p>}
             {resultados.length > 0 && (
               <div className="border border-eclat-pedra/40 rounded-md mt-2 divide-y divide-eclat-pedra/15 bg-white max-h-56 overflow-y-auto">
                 {resultados.map((p) => {
@@ -490,7 +490,7 @@ function CuradoForm({
                       type="button"
                       disabled={bloqueado || jaEscolhido}
                       onClick={() => adicionar(p)}
-                      className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm hover:bg-eclat-areia/30 disabled:opacity-50 disabled:hover:bg-transparent"
+                      className="w-full flex items-center gap-2 px-3 py-2 text-left text-corpo hover:bg-eclat-areia/30 disabled:opacity-50 disabled:hover:bg-transparent"
                     >
                       {p.thumbnail ? (
                         // eslint-disable-next-line @next/next/no-img-element
@@ -499,17 +499,17 @@ function CuradoForm({
                         <span className="w-8 h-8 rounded bg-eclat-areia shrink-0" />
                       )}
                       <span className="flex-1 min-w-0">
-                        <span className="block truncate text-eclat-grafite">{p.title}</span>
-                        <span className="block text-xs text-eclat-grafite/50 truncate">
+                        <span className="block truncate text-eclat-texto">{p.title}</span>
+                        <span className="block text-meta text-eclat-texto-3 truncate">
                           {p.collection || "sem coleção"}
                         </span>
                       </span>
                       {selo && (
-                        <span className={`text-[10px] uppercase tracking-wide rounded-full px-2 py-0.5 shrink-0 ${SELO[selo].cls}`}>
+                        <span className={`text-meta uppercase tracking-wide rounded-full px-2 py-0.5 shrink-0 ${SELO[selo].cls}`}>
                           {SELO[selo].texto}
                         </span>
                       )}
-                      {jaEscolhido && <span className="text-[10px] text-eclat-grafite/40 shrink-0">já escolhido</span>}
+                      {jaEscolhido && <span className="text-meta text-eclat-texto/40 shrink-0">já escolhido</span>}
                     </button>
                   )
                 })}
@@ -527,17 +527,17 @@ function CuradoForm({
                     ) : (
                       <span className="w-8 h-8 rounded bg-eclat-pedra/30 shrink-0" />
                     )}
-                    <span className="flex-1 min-w-0 text-sm text-eclat-grafite truncate">{p.title}</span>
-                    <span className="text-xs text-eclat-grafite/50 shrink-0">
+                    <span className="flex-1 min-w-0 text-corpo text-eclat-texto truncate">{p.title}</span>
+                    <span className="text-meta text-eclat-texto-3 shrink-0">
                       {preco != null ? `a partir de ${formatarReais(preco)}` : "sem preço"}
                     </span>
-                    <button onClick={() => remover(p.id)} className="text-eclat-grafite/50 hover:text-red-700 shrink-0">
+                    <button onClick={() => remover(p.id)} className="text-eclat-texto-3 hover:text-red-700 shrink-0">
                       ×
                     </button>
                   </div>
                 )
               })}
-              {escolhidos.length === 0 && <p className="text-xs text-eclat-grafite/40">Nenhum produto escolhido ainda.</p>}
+              {escolhidos.length === 0 && <p className="text-meta text-eclat-texto/40">Nenhum produto escolhido ainda.</p>}
             </div>
           </div>
 
@@ -569,14 +569,14 @@ function CuradoForm({
                   placeholder={unidadeDoTipo(tipo) === "%" ? "ex.: 15" : "ex.: 45,90"}
                   className={input}
                 />
-                <span className="text-xs text-eclat-grafite/50 shrink-0">{unidadeDoTipo(tipo)}</span>
+                <span className="text-meta text-eclat-texto-3 shrink-0">{unidadeDoTipo(tipo)}</span>
               </div>
             </div>
           </div>
 
-          <label className="flex items-center gap-2 text-sm cursor-pointer select-none">
+          <label className="flex items-center gap-2 text-corpo cursor-pointer select-none">
             <input type="checkbox" checked={ativo} onChange={(e) => setAtivo(e.target.checked)} />
-            <span className="text-eclat-grafite/70">Ativo</span>
+            <span className="text-eclat-texto-2">Ativo</span>
           </label>
 
           <div className="border border-eclat-dourado/40 rounded-lg bg-white/60 p-4 flex items-center gap-3">
@@ -584,30 +584,30 @@ function CuradoForm({
               // eslint-disable-next-line @next/next/no-img-element
               <img src={capaUrl} alt="" className="w-16 h-16 rounded object-cover border border-eclat-pedra/40 shrink-0" />
             ) : (
-              <div className="w-16 h-16 rounded bg-eclat-areia flex items-center justify-center text-eclat-grafite/50 font-serif text-xl shrink-0">
+              <div className="w-16 h-16 rounded bg-eclat-areia flex items-center justify-center text-eclat-texto-3 font-serif text-xl shrink-0">
                 {(nome || "?").charAt(0).toUpperCase()}
               </div>
             )}
             <div>
-              <p className="text-sm font-medium text-eclat-grafite">{nome || "Nome do conjunto"}</p>
+              <p className="text-corpo font-medium text-eclat-texto">{nome || "Nome do conjunto"}</p>
               {previa ? (
-                <p className="text-xs text-eclat-grafite/70">
-                  a partir de <strong className="text-eclat-grafite">{formatarReais(previa.final)}</strong>
+                <p className="text-meta text-eclat-texto-2">
+                  a partir de <strong className="text-eclat-texto">{formatarReais(previa.final)}</strong>
                 </p>
               ) : (
-                <p className="text-xs text-eclat-grafite/40">Escolha produtos e um valor válido para ver a prévia.</p>
+                <p className="text-meta text-eclat-texto/40">Escolha produtos e um valor válido para ver a prévia.</p>
               )}
             </div>
           </div>
 
-          {tentouSalvar && erroValidacao && <p className="text-xs text-red-700">{erroValidacao}</p>}
-          {tentouSalvar && mode === "create" && erroHandle && <p className="text-xs text-red-700">{erroHandle}</p>}
+          {tentouSalvar && erroValidacao && <p className="text-meta text-red-700">{erroValidacao}</p>}
+          {tentouSalvar && mode === "create" && erroHandle && <p className="text-meta text-red-700">{erroHandle}</p>}
 
           <div className="flex gap-3 pt-2 pb-8">
             <button onClick={salvar} disabled={salvando} className={btn}>
               {salvando ? "Salvando…" : mode === "create" ? "Criar conjunto" : "Salvar alterações"}
             </button>
-            <button onClick={onClose} className="text-sm text-eclat-grafite/60 underline">
+            <button onClick={onClose} className="text-corpo text-eclat-texto-3 underline">
               cancelar
             </button>
           </div>

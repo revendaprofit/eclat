@@ -2,6 +2,7 @@
 
 import { conferirPagamento, pagarComCartao } from "@lib/data/pagamento-mercadopago"
 import { normalizarCpf } from "@lib/util/cpf"
+import { deviceIdDoMercadoPago } from "@lib/util/device-id-mercadopago"
 import { HttpTypes } from "@medusajs/types"
 import { CardPayment, initMercadoPago } from "@mercadopago/sdk-react"
 import { Text } from "@modules/common/components/ui"
@@ -119,6 +120,7 @@ const CartaoMercadoPago = ({ cart }: { cart: HttpTypes.StoreCart }) => {
             parcelas: dados.installments,
             nomeTitular: extra?.cardholderName,
             finalCartao: extra?.lastFourDigits,
+            deviceId: deviceIdDoMercadoPago(),
           })
           // Aprovado não volta: a ação de servidor redireciona para a confirmação do pedido.
           if (r.resultado === "pendente") return setEmAnalise(true)

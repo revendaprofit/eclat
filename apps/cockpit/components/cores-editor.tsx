@@ -117,17 +117,17 @@ export default function CoresEditor() {
   }
 
   const inputCls =
-    "border border-eclat-pedra/50 rounded-md px-2 py-1 text-sm bg-white focus:outline-none focus:border-eclat-dourado"
-  if (loading) return <p className="text-sm text-eclat-grafite/50">Carregando cores…</p>
+    "border border-eclat-pedra/50 rounded-md px-2 py-1 text-corpo bg-white focus:outline-none focus:border-eclat-dourado"
+  if (loading) return <p className="text-corpo text-eclat-texto-3">Carregando cores…</p>
 
   if (loadError) {
     return (
       <div className="flex flex-col gap-2">
-        <p className="text-sm text-red-700">
+        <p className="text-corpo text-red-700">
           Não foi possível carregar as cores atuais ({loadError}). Salvar agora apagaria as cores já cadastradas, então
           isso foi bloqueado.
         </p>
-        <button onClick={carregar} className="self-start text-xs text-eclat-dourado underline">
+        <button onClick={carregar} className="self-start text-meta text-eclat-dourado underline">
           tentar novamente
         </button>
       </div>
@@ -136,7 +136,7 @@ export default function CoresEditor() {
 
   return (
     <div className="flex flex-col gap-3">
-      <p className="text-xs text-eclat-grafite/60">
+      <p className="text-meta text-eclat-texto-3">
         O nome aqui é o nome canônico: escreva-o igual na opção &quot;Cor&quot; de todo produto. O hex vira o círculo
         (swatch) no card, no filtro e na página do produto; a foto do tecido é opcional e substitui o círculo.
       </p>
@@ -146,15 +146,15 @@ export default function CoresEditor() {
             <input value={r.name} onChange={(e) => upd(r.id, { name: e.target.value })} className={inputCls} placeholder="Nome canônico" />
             <input value={r.hex} onChange={(e) => upd(r.id, { hex: e.target.value })} className={inputCls} placeholder="#RRGGBB" />
             <input type="color" value={HEX_RE.test(r.hex) ? r.hex : "#c9c4bc"} onChange={(e) => upd(r.id, { hex: e.target.value.toUpperCase() })} className="w-9 h-8 p-0 border-0 bg-transparent" title="Escolher cor" />
-            <div className="flex items-center gap-2 text-xs">
+            <div className="flex items-center gap-2 text-meta">
               {r.swatch_url && (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={r.swatch_url} alt="" className="w-8 h-8 rounded-full object-cover border border-eclat-pedra/40" />
               )}
-              <input type="file" accept="image/*" onChange={(e) => e.target.files?.[0] && upload(r.id, e.target.files[0])} className="text-xs" />
+              <input type="file" accept="image/*" onChange={(e) => e.target.files?.[0] && upload(r.id, e.target.files[0])} className="text-meta" />
               {r.swatch_url && <button onClick={() => upd(r.id, { swatch_url: "" })} className="text-red-700 underline">tirar foto</button>}
             </div>
-            <button onClick={() => setRows(rows.filter((x) => x.id !== r.id))} className="text-eclat-grafite/40 hover:text-red-700 px-1" title="Remover">✕</button>
+            <button onClick={() => setRows(rows.filter((x) => x.id !== r.id))} className="text-eclat-texto/40 hover:text-red-700 px-1" title="Remover">✕</button>
           </div>
         ))}
       </div>
@@ -172,12 +172,12 @@ export default function CoresEditor() {
           placeholder="+ nova cor (Enter)"
           className={inputCls + " w-44"}
         />
-        <button onClick={importarDoCatalogo} className="text-xs text-eclat-dourado underline">importar cores já usadas no catálogo</button>
+        <button onClick={importarDoCatalogo} className="text-meta text-eclat-dourado underline">importar cores já usadas no catálogo</button>
       </div>
       <button
         onClick={salvar}
         disabled={saving}
-        className="self-start bg-eclat-grafite text-eclat-luz uppercase tracking-widest text-xs px-5 py-2 rounded-md hover:bg-eclat-dourado hover:text-eclat-grafite transition-colors disabled:opacity-50"
+        className="self-start bg-eclat-grafite text-eclat-luz uppercase tracking-widest text-meta px-5 py-2 rounded-md hover:bg-eclat-dourado hover:text-eclat-texto transition-colors disabled:opacity-50"
       >
         {saving ? "Salvando…" : "Salvar cores"}
       </button>

@@ -1,10 +1,10 @@
 const STORE = "https://www.useeclat.com.br"
 const code =
-  "px-1.5 py-0.5 bg-eclat-areia/60 rounded text-[12px] font-mono text-eclat-grafite break-all"
+  "px-1.5 py-0.5 bg-eclat-areia/60 rounded text-meta font-mono text-eclat-texto break-all"
 
 function Done({ children }: { children: React.ReactNode }) {
   return (
-    <li className="flex gap-2 text-sm text-eclat-grafite/80 leading-relaxed">
+    <li className="flex gap-2 text-corpo text-eclat-texto-2 leading-relaxed">
       <span className="text-green-700 mt-0.5">✓</span>
       <span>{children}</span>
     </li>
@@ -12,7 +12,7 @@ function Done({ children }: { children: React.ReactNode }) {
 }
 function Step({ children }: { children: React.ReactNode }) {
   return (
-    <li className="flex gap-2 text-sm text-eclat-grafite/80 leading-relaxed">
+    <li className="flex gap-2 text-corpo text-eclat-texto-2 leading-relaxed">
       <span className="text-eclat-dourado mt-0.5">☐</span>
       <span>{children}</span>
     </li>
@@ -23,8 +23,8 @@ export default function GeoPage() {
   return (
     <div className="flex flex-col gap-8 max-w-2xl">
       <div>
-        <h1 className="font-serif text-3xl text-eclat-grafite">GEO — busca por IA</h1>
-        <p className="text-sm text-eclat-grafite/60 mt-1">
+        <h1 className="font-serif text-3xl text-eclat-texto">GEO — busca por IA</h1>
+        <p className="text-corpo text-eclat-texto-3 mt-1">
           GEO (Generative Engine Optimization) é fazer a marca ser <strong>encontrada e citada</strong>{" "}
           por ChatGPT, Perplexity, Gemini, Claude e Google AI Overviews.
         </p>
@@ -32,7 +32,7 @@ export default function GeoPage() {
 
       {/* JÁ NO AR */}
       <section className="border border-eclat-dourado/40 rounded-lg bg-white/60 p-5 flex flex-col gap-3">
-        <h2 className="font-serif text-xl text-eclat-grafite">O que já está no ar (técnico)</h2>
+        <h2 className="font-serif text-xl text-eclat-texto">O que já está no ar (técnico)</h2>
         <ul className="flex flex-col gap-1.5">
           <Done><strong>Dados estruturados (Schema.org)</strong>: Organization, WebSite, Product (preço/estoque) e Breadcrumb — a maior alavanca de citação.</Done>
           <Done><strong>FAQ</strong> answer-first + schema FAQPage (edite em <em>Vitrine → FAQ</em>).</Done>
@@ -46,7 +46,7 @@ export default function GeoPage() {
 
       {/* CADASTROS — FASE 2 */}
       <section className="border border-eclat-dourado/40 rounded-lg bg-white/60 p-5 flex flex-col gap-3">
-        <h2 className="font-serif text-xl text-eclat-grafite">Cadastros (uma vez — você/gestor)</h2>
+        <h2 className="font-serif text-xl text-eclat-texto">Cadastros (uma vez — você/gestor)</h2>
         <ul className="flex flex-col gap-1.5">
           <Step><strong>Google Search Console</strong> (search.google.com/search-console): adicionar {STORE}, verificar (meta tag já suportada em Vitrine → Marketing) e enviar o sitemap <code className={code}>{STORE}/sitemap.xml</code>.</Step>
           <Step><strong>Google Merchant Center</strong> (merchants.google.com): criar conta BR, ativar <em>listagens gratuitas</em> e cadastrar o feed <code className={code}>{STORE}/feed.xml</code> (atualização diária). Produtos aparecem em Busca, Shopping, Imagens, Lens e Gemini.</Step>
@@ -58,8 +58,8 @@ export default function GeoPage() {
       </section>
 
       {/* MONITORAMENTO */}
-      <section className="border border-eclat-pedra/40 rounded-lg bg-white/60 p-5 flex flex-col gap-3 text-sm text-eclat-grafite/75">
-        <h2 className="font-serif text-lg text-eclat-grafite">Monitorar citações (ferramenta externa)</h2>
+      <section className="border border-eclat-pedra/40 rounded-lg bg-white/60 p-5 flex flex-col gap-3 text-corpo text-eclat-texto-2">
+        <h2 className="font-serif text-lg text-eclat-texto">Monitorar citações (ferramenta externa)</h2>
         <p className="leading-relaxed">
           Para <strong>medir</strong> quando/como a IA cita a Éclat, assine uma ferramenta de AI
           visibility. Elas rastreiam menções, share of voice e sentimento nos motores de IA:
@@ -70,7 +70,7 @@ export default function GeoPage() {
           <li><strong>SE Ranking</strong> — AI visibility dentro de um SEO completo (cruza com rankings).</li>
           <li><strong>Profound / AthenaHQ / Brandi</strong> — enterprise, análise mais profunda.</li>
         </ul>
-        <p className="leading-relaxed text-eclat-grafite/60">
+        <p className="leading-relaxed text-eclat-texto-3">
           Comece rastreando prompts como &quot;melhores marcas de legging de compressão no Brasil&quot;,
           &quot;roupa fitness que não fica transparente&quot;, &quot;athleisure premium brasileiro&quot;.
         </p>
@@ -78,8 +78,8 @@ export default function GeoPage() {
 
       {/* OFF-SITE */}
       <section className="border border-eclat-dourado/40 rounded-lg bg-eclat-areia/20 p-5 flex flex-col gap-3">
-        <h2 className="font-serif text-xl text-eclat-grafite">Fora do site (você / gestor)</h2>
-        <p className="text-xs text-eclat-grafite/55">
+        <h2 className="font-serif text-xl text-eclat-texto">Fora do site (você / gestor)</h2>
+        <p className="text-meta text-eclat-texto-3">
           A IA cita quando há <strong>consenso entre fontes independentes</strong>. Isto o código
           não faz — é trabalho de marca/PR:
         </p>

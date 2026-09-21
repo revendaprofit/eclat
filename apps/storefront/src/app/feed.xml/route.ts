@@ -25,7 +25,25 @@ const esc = (s: unknown) =>
 // Categoria da taxonomia do Google (obrigatória para vestuário no Merchant Center,
 // junto com gender/age_group). Caminho completo em inglês, como o Google aceita.
 const GPC_ACTIVEWEAR = "Apparel & Accessories > Clothing > Activewear"
-function googleCategory(p: { title?: string | null }, type?: string): string {
+// Acessórios não são Activewear: vão pelo handle da categoria (flat no Medusa), antes do casamento por nome.
+const GPC_POR_HANDLE: Record<string, string> = {
+  oculos: "Apparel & Accessories > Clothing Accessories > Sunglasses",
+  meias: "Apparel & Accessories > Clothing > Underwear & Socks > Socks",
+  acessorios: "Apparel & Accessories > Clothing Accessories",
+}
+// Acessórios (óculos, meias) são unissex — decisão da sócia em 2026-09-19. As demais peças seguem femininas.
+function feedGender(p: { categories?: { handle?: string | null }[] | null }): "unisex" | "female" {
+  const handles = (p?.categories ?? []).map((c) => c?.handle ?? "")
+  return handles.some((h) => Object.keys(GPC_POR_HANDLE).includes(h)) ? "unisex" : "female"
+}
+function googleCategory(
+  p: { title?: string | null; categories?: { handle?: string | null }[] | null },
+  type?: string
+): string {
+  const handles = (p?.categories ?? []).map((c) => c?.handle ?? "")
+  for (const h of ["oculos", "meias", "acessorios"]) {
+    if (handles.includes(h)) return GPC_POR_HANDLE[h]
+  }
   const t = `${type ?? ""} ${p?.title ?? ""}`.toLowerCase()
   if (/\btop\b|sutiã|bra/.test(t)) return `${GPC_ACTIVEWEAR} > Sports Bras`
   if (/short|bermuda/.test(t)) return `${GPC_ACTIVEWEAR} > Active Shorts`
@@ -74,7 +92,7 @@ ${prevenda.ativa && variantInStock(v) ? `    <g:availability_date>${prevenda.env
     <g:condition>new</g:condition>
     <g:identifier_exists>no</g:identifier_exists>
     <g:google_product_category>${esc(googleCategory(p, type))}</g:google_product_category>
-    <g:gender>female</g:gender>
+    <g:gender>${feedGender(p)}</g:gender>
     <g:age_group>adult</g:age_group>
 ${size ? `    <g:size>${esc(size)}</g:size>\n` : ""}${color ? `    <g:color>${esc(color)}</g:color>\n` : ""}${type ? `    <g:product_type>${esc(type)}</g:product_type>\n` : ""}  </item>`)
     }

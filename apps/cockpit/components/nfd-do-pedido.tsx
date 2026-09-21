@@ -141,20 +141,20 @@ export function NfdDoPedido({
 
   return (
     <section className="border border-eclat-pedra/40 rounded-lg p-4 bg-white/60 flex flex-col gap-3">
-      <h4 className="text-xs uppercase tracking-wider text-eclat-grafite/60">Devolução (NFD)</h4>
+      <h4 className="text-meta uppercase tracking-wider text-eclat-texto-3">Devolução (NFD)</h4>
 
       {bloqueado ? (
-        <p className="text-sm text-amber-900 bg-amber-50 border border-amber-300 rounded-md p-2">{motivoBloqueio()}</p>
+        <p className="text-corpo text-amber-900 bg-amber-50 border border-amber-300 rounded-md p-2">{motivoBloqueio()}</p>
       ) : (
         <>
           <div className="border border-eclat-pedra/30 rounded-md overflow-hidden bg-white">
-            <table className="w-full text-sm">
+            <table className="w-full text-corpo">
               <tbody>
                 {itens.map((i) => (
                   <tr key={i.line_item_id} className="border-b border-eclat-pedra/10 last:border-0">
                     <td className="px-3 py-2">
                       <div>{i.titulo}</div>
-                      <div className="text-xs text-eclat-grafite/50">{i.variante} · pedido: {i.quantidade_pedido}×</div>
+                      <div className="text-meta text-eclat-texto-3">{i.variante} · pedido: {i.quantidade_pedido}×</div>
                     </td>
                     <td className="px-3 py-2 text-right w-24">
                       <input
@@ -164,7 +164,7 @@ export function NfdDoPedido({
                         value={quantidades[i.line_item_id] ?? 0}
                         onChange={(e) => mudarQuantidade(i.line_item_id, Number(e.target.value))}
                         disabled={ocupado || previaOcupada}
-                        className="w-20 border border-eclat-pedra/50 rounded-md px-2 py-1 text-sm text-right bg-white focus:outline-none focus:border-eclat-dourado"
+                        className="w-20 border border-eclat-pedra/50 rounded-md px-2 py-1 text-corpo text-right bg-white focus:outline-none focus:border-eclat-dourado"
                       />
                     </td>
                   </tr>
@@ -178,7 +178,7 @@ export function NfdDoPedido({
               type="button"
               onClick={verPrevia}
               disabled={previaOcupada || ocupado}
-              className="self-start border border-eclat-grafite/40 uppercase tracking-widest text-xs px-4 py-2 rounded-md hover:bg-eclat-areia/40 disabled:opacity-50"
+              className="self-start border border-eclat-grafite/40 uppercase tracking-widest text-meta px-4 py-2 rounded-md hover:bg-eclat-areia/40 disabled:opacity-50"
             >
               {previaOcupada ? "Montando prévia…" : "Ver prévia"}
             </button>
@@ -187,7 +187,7 @@ export function NfdDoPedido({
                 type="button"
                 onClick={emitir}
                 disabled={ocupado}
-                className="self-start bg-eclat-grafite text-eclat-luz uppercase tracking-widest text-xs px-4 py-2 rounded-md hover:bg-eclat-dourado hover:text-eclat-grafite disabled:opacity-50"
+                className="self-start bg-eclat-grafite text-eclat-luz uppercase tracking-widest text-meta px-4 py-2 rounded-md hover:bg-eclat-dourado hover:text-eclat-texto disabled:opacity-50"
               >
                 {ocupado ? "Emitindo…" : "Emitir NFD"}
               </button>
@@ -195,15 +195,15 @@ export function NfdDoPedido({
           </div>
 
           {previa && (
-            <div className="border border-eclat-pedra/30 rounded-md p-3 bg-white text-sm flex flex-col gap-2">
-              <p className="text-xs uppercase tracking-wider text-eclat-grafite/60">Prévia da devolução (nada foi transmitido)</p>
-              <table className="w-full text-sm">
+            <div className="border border-eclat-pedra/30 rounded-md p-3 bg-white text-corpo flex flex-col gap-2">
+              <p className="text-meta uppercase tracking-wider text-eclat-texto-3">Prévia da devolução (nada foi transmitido)</p>
+              <table className="w-full text-corpo">
                 <tbody>
                   {previa.itens.map((it, idx) => (
                     <tr key={idx} className="border-b border-eclat-pedra/10 last:border-0">
-                      <td className="py-1">{it.descricao} <span className="text-xs text-eclat-grafite/50">({it.codigo})</span></td>
+                      <td className="py-1">{it.descricao} <span className="text-meta text-eclat-texto-3">({it.codigo})</span></td>
                       <td className="py-1 text-center">{it.quantidade}×</td>
-                      <td className="py-1 text-right text-eclat-grafite/60">{brl(it.desconto_centavos)} desc.</td>
+                      <td className="py-1 text-right text-eclat-texto-3">{brl(it.desconto_centavos)} desc.</td>
                       <td className="py-1 text-right font-medium">{brl(it.liquido_centavos)}</td>
                     </tr>
                   ))}
@@ -218,10 +218,10 @@ export function NfdDoPedido({
         </>
       )}
 
-      {erro && <p className="text-sm text-red-800">{erro}</p>}
+      {erro && <p className="text-corpo text-red-800">{erro}</p>}
 
       {resultado && (
-        <div className="text-sm bg-white border border-eclat-pedra/40 rounded-md p-2">
+        <div className="text-corpo bg-white border border-eclat-pedra/40 rounded-md p-2">
           {resultado.status === "rejeitado" || resultado.status === "denegado" ? (
             <p className="text-red-800">
               NFD {resultado.status}: {resultado.rejeicao_motivo ?? "sem motivo informado"}
@@ -233,7 +233,7 @@ export function NfdDoPedido({
             </p>
           )}
           {resultado.chave_acesso && (
-            <p className="break-all font-mono text-xs text-eclat-grafite/60 mt-1">{resultado.chave_acesso}</p>
+            <p className="break-all font-mono text-meta text-eclat-texto-3 mt-1">{resultado.chave_acesso}</p>
           )}
         </div>
       )}

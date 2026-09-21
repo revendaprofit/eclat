@@ -3,9 +3,10 @@ import { Modules } from "@medusajs/framework/utils"
 import { getPrevenda } from "../../../../lib/prevenda"
 import { montarDadosPedido } from "../../../../modules/resend/dados-pedido"
 
-// POST /admin/email/teste { to, pedido_id? } → { id }
+// POST /admin/email/enviar-exemplo { to, pedido_id? } → { id }
 // Manda o e-mail "pedido confirmado" pelo caminho real (Notification Module → Resend) para
-// conferir chave, domínio e aparência. Sem pedido_id usa um pedido de exemplo. Exige sessão admin.
+// conferir chave, domínio e aparência. ATENÇÃO ao nome da pasta: o `medusa build` descarta todo
+// arquivo cujo caminho contenha "test" (até "teste") — a rota some em produção sem erro nenhum. Sem pedido_id usa um pedido de exemplo. Exige sessão admin.
 export async function POST(req: MedusaRequest, res: MedusaResponse) {
   const { to, pedido_id } = (req.body || {}) as { to?: string; pedido_id?: string }
   if (!to || !/^\S+@\S+\.\S+$/.test(to)) return res.status(400).json({ error: "to (e-mail) obrigatório" })
@@ -27,7 +28,7 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
       to,
       channel: "email",
       template: "pedido-confirmado",
-      trigger_type: "admin.email.teste",
+      trigger_type: "admin.email.exemplo",
       data: montarDadosPedido(pedido as never, { lojaUrl, prevenda: await getPrevenda() }),
     })
     return res.json({ id: n.id, external_id: n.external_id ?? null })

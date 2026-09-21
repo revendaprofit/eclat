@@ -30,8 +30,8 @@ function ConjuntosPageInner() {
   return (
     <div className="flex flex-col gap-6 max-w-2xl">
       <div>
-        <h1 className="font-serif text-3xl text-eclat-grafite">Conjuntos (benefício)</h1>
-        <p className="text-sm text-eclat-grafite/60 mt-1">
+        <h1 className="font-serif text-3xl text-eclat-texto">Conjuntos (benefício)</h1>
+        <p className="text-corpo text-eclat-texto-3 mt-1">
           Desconto automático para pares de peças (ex.: Top + Legging) e conjuntos curados pela loja.
         </p>
       </div>
@@ -41,10 +41,10 @@ function ConjuntosPageInner() {
           <button
             key={a.value}
             onClick={() => irPara(a.value)}
-            className={`px-4 py-2 text-sm uppercase tracking-wider transition-colors border-b-2 -mb-px ${
+            className={`px-4 py-2 text-corpo uppercase tracking-wider transition-colors border-b-2 -mb-px ${
               aba === a.value
-                ? "border-eclat-dourado text-eclat-grafite font-medium"
-                : "border-transparent text-eclat-grafite/50 hover:text-eclat-grafite"
+                ? "border-eclat-dourado text-eclat-texto font-medium"
+                : "border-transparent text-eclat-texto-3 hover:text-eclat-texto"
             }`}
           >
             {a.label}
@@ -59,7 +59,7 @@ function ConjuntosPageInner() {
 
 export default function ConjuntosPage() {
   return (
-    <Suspense fallback={<p className="text-sm text-eclat-grafite/50">Carregando…</p>}>
+    <Suspense fallback={<p className="text-corpo text-eclat-texto-3">Carregando…</p>}>
       <ConjuntosPageInner />
     </Suspense>
   )

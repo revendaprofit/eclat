@@ -5,7 +5,9 @@ function criarLoggerFalso() {
   return { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() }
 }
 
-function criarServico(opcoes: Partial<{ webhookSecret: string; maxParcelas: number }> = {}) {
+function criarServico(
+  opcoes: Partial<{ webhookSecret: string; maxParcelas: number; descricaoFatura: string; urlDoBackend: string }> = {}
+) {
   const logger = criarLoggerFalso()
   const servico = new MercadoPagoProviderService(
     // @ts-expect-error — em teste não montamos o container completo do Medusa, só o `logger`
@@ -135,7 +137,7 @@ describe("MercadoPagoProviderService", () => {
         amount: 199.9,
         currency_code: "brl",
         data: { session_id: "payses_2", metodo: "cartao", cpf: "12345678909", token: "tok_1", bandeira: "master", parcelas: 1 },
-        context: {},
+        context: { customer: { id: "cus_1", email: "cliente@teste.com" } },
       })
 
       expect(resultado.status).toBe("captured")
@@ -158,7 +160,7 @@ describe("MercadoPagoProviderService", () => {
         amount: 199.9,
         currency_code: "brl",
         data: { session_id: "payses_3", metodo: "cartao", cpf: "12345678909", token: "tok_2", bandeira: "master" },
-        context: {},
+        context: { customer: { id: "cus_1", email: "cliente@teste.com" } },
       })
 
       expect(resultado.status).toBe("error")
@@ -172,13 +174,222 @@ describe("MercadoPagoProviderService", () => {
       const { servico } = criarServico()
       const base = { session_id: "payses_2", metodo: "cartao", cpf: "12345678909", token: "tok_1", bandeira: "master" }
 
-      const ok = await servico.initiatePayment({ amount: 199.9, currency_code: "brl", data: { ...base, final_cartao: "3311" }, context: {} })
+      const ok = await servico.initiatePayment({ amount: 199.9, currency_code: "brl", data: { ...base, final_cartao: "3311" }, context: { customer: { id: "cus_1", email: "cliente@teste.com" } } })
       expect(ok.data?.final_cartao).toBe("3311")
       expect(ok.data?.token).toBeUndefined() // o token nunca volta nos dados do provider
 
       mockFetchSequencial({ status: 201, corpo: orderCartaoAprovada }, { status: 200, corpo: { results: [] } })
-      const ruim = await servico.initiatePayment({ amount: 199.9, currency_code: "brl", data: { ...base, final_cartao: "5480832801033311" }, context: {} })
+      const ruim = await servico.initiatePayment({ amount: 199.9, currency_code: "brl", data: { ...base, final_cartao: "5480832801033311" }, context: { customer: { id: "cus_1", email: "cliente@teste.com" } } })
       expect(ruim.data?.final_cartao).toBeUndefined()
+    })
+
+    // Achado de 2026-09-19 em produção: três cartões recusados com `cc_rejected_high_risk`. No painel do
+    // Mercado Pago as cobranças de cartão chegavam SEM pagador (e-mail/CPF/nome nulos) e com
+    // `security:none` (sem o identificador do aparelho). Quanto menos dado, maior a nota de risco.
+    it("Cartão: manda pagador completo, itens e o identificador do aparelho no header", async () => {
+      const spy = mockFetchSequencial({ status: 201, corpo: orderCartaoAprovada }, { status: 200, corpo: { results: [] } })
+      const { servico } = criarServico()
+
+      await servico.initiatePayment({
+        amount: 199.9,
+        currency_code: "brl",
+        data: {
+          session_id: "payses_2",
+          metodo: "cartao",
+          cpf: "12345678909",
+          token: "tok_1",
+          bandeira: "master",
+          email: "cliente@exemplo.com",
+          nomeTitular: "Maria",
+          sobrenome: "Silva",
+          telefone: "31991032698",
+          device_id: "arm_xyz123",
+          endereco: { rua: "Rua Norte", numero: "180", bairro: "Centro", cidade: "Betim", estado: "MG", cep: "32604182" },
+          // a soma tem de bater com o total (199,90): produto + frete
+          itens: [
+            { titulo: "Macaquinho Solaris", quantidade: 1, preco_unitario: 185, sku: "ECL-MS-TEL-M" },
+            { titulo: "Frete (SEDEX)", quantidade: 1, preco_unitario: 14.9 },
+          ],
+        },
+        context: {},
+      })
+
+      const [, opcoes] = spy.mock.calls[0]
+      const corpo = JSON.parse(opcoes.body)
+      expect(opcoes.headers["x-meli-session-id"]).toBe("arm_xyz123")
+      expect(corpo.payer).toEqual({
+        email: "cliente@exemplo.com",
+        first_name: "Maria",
+        last_name: "Silva",
+        identification: { type: "CPF", number: "12345678909" },
+        phone: { area_code: "31", number: "991032698" },
+        // `country` e `unit_measure` NÃO existem na Orders API: mandá-los dá 400 (sondado em produção)
+        address: { street_name: "Rua Norte", street_number: "180", neighborhood: "Centro", city: "Betim", state: "MG", zip_code: "32604182" },
+      })
+      expect(corpo.items).toEqual([
+        { title: "Macaquinho Solaris", quantity: 1, unit_price: "185.00", external_code: "ECL-MS-TEL-M", type: "product" },
+        { title: "Frete (SEDEX)", quantity: 1, unit_price: "14.90", type: "product" },
+      ])
+    })
+
+    // Produção, 2026-09-20: complemento de 23 caracteres derrubou a cobrança inteira com
+    // "'$.payer.address.complement' - length must be <= 20". A cliente só via "não conseguimos
+    // iniciar o pagamento".
+    it("campos longos do endereço são cortados no limite da Orders API", async () => {
+      const spy = mockFetchSequencial({ status: 201, corpo: orderPix })
+      const { servico } = criarServico()
+
+      await servico.initiatePayment({
+        amount: 199.9,
+        currency_code: "brl",
+        data: {
+          session_id: "payses_1",
+          metodo: "pix",
+          cpf: "12345678909",
+          email: "c@e.com",
+          endereco: {
+            rua: "Rua com um nome realmente muito comprido para caber no limite da API do Mercado Pago",
+            numero: "1234567890123456789012345",
+            complemento: "Apartamento 302 bloco B fundos",
+            bairro: "Bairro",
+            cidade: "Betim",
+            estado: "MG",
+            cep: "32604182",
+          },
+        },
+        context: {},
+      })
+
+      const endereco = JSON.parse(spy.mock.calls[0][1].body).payer.address
+      expect(endereco.complement).toBe("Apartamento 302 bloc") // 20
+      expect(endereco.street_name).toHaveLength(50)
+      expect(endereco.street_number).toHaveLength(20)
+      expect(endereco.zip_code).toBe("32604182")
+    })
+
+    it("itens que não somam o total ficam de fora (a API recusa a order inteira)", async () => {
+      const spy = mockFetchSequencial({ status: 201, corpo: orderPix })
+      const { servico } = criarServico()
+
+      await servico.initiatePayment({
+        amount: 199.9,
+        currency_code: "brl",
+        data: {
+          session_id: "payses_1",
+          metodo: "pix",
+          cpf: "12345678909",
+          email: "c@e.com",
+          itens: [{ titulo: "Macaquinho Solaris", quantidade: 1, preco_unitario: 259 }],
+        },
+        context: {},
+      })
+
+      expect(JSON.parse(spy.mock.calls[0][1].body).items).toBeUndefined()
+    })
+
+    it("sem os dados extras, o pagador continua com o mínimo e nenhum campo vazio é inventado", async () => {
+      const spy = mockFetchSequencial({ status: 201, corpo: orderPix })
+      const { servico } = criarServico()
+
+      await servico.initiatePayment({
+        amount: 199.9,
+        currency_code: "brl",
+        data: { session_id: "payses_1", metodo: "pix", cpf: "12345678909", email: "cliente@exemplo.com" },
+        context: {},
+      })
+
+      const [, opcoes] = spy.mock.calls[0]
+      const corpo = JSON.parse(opcoes.body)
+      expect(corpo.payer).toEqual({ email: "cliente@exemplo.com", first_name: "Comprador", identification: { type: "CPF", number: "12345678909" } })
+      expect(corpo.items).toBeUndefined()
+      expect(opcoes.headers["x-meli-session-id"]).toBeUndefined()
+    })
+
+    it("telefone só vira area_code + number quando tem DDD; lixo é descartado", async () => {
+      const spy = mockFetchSequencial({ status: 201, corpo: orderPix })
+      const { servico } = criarServico()
+
+      await servico.initiatePayment({
+        amount: 199.9,
+        currency_code: "brl",
+        data: { session_id: "payses_1", metodo: "pix", cpf: "12345678909", email: "c@e.com", telefone: "+55 (31) 9 9103-2698" },
+        context: {},
+      })
+      expect(JSON.parse(spy.mock.calls[0][1].body).payer.phone).toEqual({ area_code: "31", number: "991032698" })
+
+      const spy2 = mockFetchSequencial({ status: 201, corpo: orderPix })
+      await servico.initiatePayment({
+        amount: 199.9,
+        currency_code: "brl",
+        data: { session_id: "payses_1", metodo: "pix", cpf: "12345678909", email: "c@e.com", telefone: "123" },
+        context: {},
+      })
+      expect(JSON.parse(spy2.mock.calls[0][1].body).payer.phone).toBeUndefined()
+    })
+
+    it("Pix: sem e-mail, lança dizendo o que falta em vez de mandar payer vazio", async () => {
+      const espiao = mockFetchSequencial({ status: 201, corpo: orderPix })
+      const { servico } = criarServico()
+
+      await expect(
+        servico.initiatePayment({
+          amount: 199.9,
+          currency_code: "brl",
+          data: { session_id: "payses_1", metodo: "pix", cpf: "12345678909" },
+          context: {},
+        })
+      ).rejects.toThrow(/e-mail do pagador/)
+      expect(espiao).not.toHaveBeenCalled() // nem chega a bater na API
+    })
+
+    it("manda o nome da fatura e o aviso de mudança de status (config da order)", async () => {
+      mockFetchSequencial({ status: 201, corpo: orderPix })
+      const { servico } = criarServico({ urlDoBackend: "https://backend.exemplo/" })
+
+      await servico.initiatePayment({
+        amount: 199.9,
+        currency_code: "brl",
+        data: { session_id: "payses_1", metodo: "pix", cpf: "12345678909" },
+        context: { customer: { id: "cus_1", email: "cliente@teste.com" } },
+      })
+
+      const corpo = JSON.parse((global.fetch as jest.Mock).mock.calls[0][1].body)
+      // A barra sobrando na opção não pode virar "//hooks" na URL de aviso.
+      expect(corpo.config).toEqual({
+        statement_descriptor: "USEECLAT",
+        online: { callback_url: "https://backend.exemplo/hooks/payment/mercadopago_mercadopago" },
+      })
+    })
+
+    it("sem endereço público configurado, manda só o nome da fatura — nunca uma URL inventada", async () => {
+      mockFetchSequencial({ status: 201, corpo: orderPix })
+      const { servico } = criarServico()
+
+      await servico.initiatePayment({
+        amount: 199.9,
+        currency_code: "brl",
+        data: { session_id: "payses_1", metodo: "pix", cpf: "12345678909" },
+        context: { customer: { id: "cus_1", email: "cliente@teste.com" } },
+      })
+
+      const corpo = JSON.parse((global.fetch as jest.Mock).mock.calls[0][1].body)
+      expect(corpo.config).toEqual({ statement_descriptor: "USEECLAT" })
+    })
+
+    it("nome de fatura comprido é cortado no limite que o Mercado Pago imprime", async () => {
+      mockFetchSequencial({ status: 201, corpo: orderPix })
+      const { servico } = criarServico({ descricaoFatura: "USEECLAT MODA E ATHLEISURE LTDA" })
+
+      await servico.initiatePayment({
+        amount: 199.9,
+        currency_code: "brl",
+        data: { session_id: "payses_1", metodo: "pix", cpf: "12345678909" },
+        context: { customer: { id: "cus_1", email: "cliente@teste.com" } },
+      })
+
+      const corpo = JSON.parse((global.fetch as jest.Mock).mock.calls[0][1].body)
+      expect(corpo.config.statement_descriptor).toBe("USEECLAT MODA E ATHLEI")
+      expect(corpo.config.statement_descriptor).toHaveLength(22)
     })
 
     it("respeita o teto de parcelas configurado (maxParcelas)", async () => {
@@ -189,7 +400,7 @@ describe("MercadoPagoProviderService", () => {
         amount: 199.9,
         currency_code: "brl",
         data: { session_id: "payses_2", metodo: "cartao", cpf: "12345678909", token: "tok_1", bandeira: "master", parcelas: 12 },
-        context: {},
+        context: { customer: { id: "cus_1", email: "cliente@teste.com" } },
       })
 
       const corpoEnviado = JSON.parse(spy.mock.calls[0][1].body)
@@ -211,8 +422,15 @@ describe("MercadoPagoProviderService", () => {
   })
 
   describe("refundPayment", () => {
+    // Desde 2026-09-20 todo estorno começa consultando a order: sem isso, um estorno já feito no
+    // painel do Mercado Pago seria executado de novo e a cliente receberia o dinheiro em dobro.
+    const orderSemEstorno = { ...orderCartaoAprovada, total_amount: "199.90" }
+
     it("estorno total (mesmo valor) manda corpo vazio", async () => {
-      const spy = mockFetchSequencial({ status: 200, corpo: { ...orderCartaoAprovada, status: "refunded" } })
+      const spy = mockFetchSequencial(
+        { status: 200, corpo: orderSemEstorno },
+        { status: 200, corpo: { ...orderSemEstorno, status: "refunded" } }
+      )
       const { servico } = criarServico()
 
       await servico.refundPayment({
@@ -220,12 +438,15 @@ describe("MercadoPagoProviderService", () => {
         data: { mp_order_id: "ORDTST_CARD_1", mp_payment_id: "PAY_CARD_1", valor_total: "199.90" },
       })
 
-      const corpoEnviado = JSON.parse(spy.mock.calls[0][1].body)
-      expect(corpoEnviado).toEqual({})
+      expect(spy.mock.calls[0][1].method).toBe("GET") // primeiro confere
+      expect(JSON.parse(spy.mock.calls[1][1].body)).toEqual({})
     })
 
     it("estorno parcial (valor menor) manda amount e transaction_id", async () => {
-      const spy = mockFetchSequencial({ status: 200, corpo: orderCartaoAprovada })
+      const spy = mockFetchSequencial(
+        { status: 200, corpo: orderSemEstorno },
+        { status: 200, corpo: orderSemEstorno }
+      )
       const { servico } = criarServico()
 
       await servico.refundPayment({
@@ -233,8 +454,85 @@ describe("MercadoPagoProviderService", () => {
         data: { mp_order_id: "ORDTST_CARD_1", mp_payment_id: "PAY_CARD_1", valor_total: "199.90" },
       })
 
-      const corpoEnviado = JSON.parse(spy.mock.calls[0][1].body)
-      expect(corpoEnviado).toEqual({ amount: "50.00", transaction_id: "PAY_CARD_1" })
+      expect(JSON.parse(spy.mock.calls[1][1].body)).toEqual({ amount: "50.00", transaction_id: "PAY_CARD_1" })
+    })
+
+    it("já estornado no Mercado Pago: não estorna de novo, só devolve os dados", async () => {
+      const spy = mockFetchSequencial({
+        status: 200,
+        corpo: {
+          ...orderSemEstorno,
+          status: "refunded",
+          transactions: {
+            ...orderSemEstorno.transactions,
+            refunds: [{ id: "REF_1", transaction_id: "PAY_CARD_1", amount: "199.90", status: "processed" }],
+          },
+        },
+      })
+      const { servico, logger } = criarServico()
+
+      const r = await servico.refundPayment({
+        amount: 199.9,
+        data: { mp_order_id: "ORDTST_CARD_1", mp_payment_id: "PAY_CARD_1", valor_total: "199.90" },
+      })
+
+      expect(spy.mock.calls.some((c: unknown[]) => String(c[0]).endsWith("/refund"))).toBe(false)
+      expect(r.data?.mp_order_id).toBe("ORDTST_CARD_1")
+      expect(logger.info).toHaveBeenCalledWith(expect.stringMatching(/nada a estornar/))
+    })
+
+    it("estorno parcial ainda passa quando sobra saldo", async () => {
+      const spy = mockFetchSequencial(
+        {
+          status: 200,
+          corpo: {
+            ...orderSemEstorno,
+            transactions: {
+              ...orderSemEstorno.transactions,
+              refunds: [{ id: "REF_1", amount: "50.00", status: "processed" }],
+            },
+          },
+        },
+        { status: 200, corpo: orderSemEstorno }
+      )
+      const { servico } = criarServico()
+
+      await servico.refundPayment({
+        amount: 100,
+        data: { mp_order_id: "ORDTST_CARD_1", mp_payment_id: "PAY_CARD_1", valor_total: "199.90" },
+      })
+
+      // sobravam R$ 149,90: o estorno segue
+      const refund = spy.mock.calls.find((c: unknown[]) => String(c[0]).endsWith("/refund"))
+      expect(refund).toBeDefined()
+      expect(JSON.parse((refund as [string, { body: string }])[1].body)).toEqual({
+        amount: "100.00",
+        transaction_id: "PAY_CARD_1",
+      })
+    })
+
+    it("reembolso ainda em processamento não conta como devolvido", async () => {
+      const spy = mockFetchSequencial(
+        {
+          status: 200,
+          corpo: {
+            ...orderSemEstorno,
+            transactions: {
+              ...orderSemEstorno.transactions,
+              refunds: [{ id: "REF_1", amount: "199.90", status: "pending" }],
+            },
+          },
+        },
+        { status: 200, corpo: orderSemEstorno }
+      )
+      const { servico } = criarServico()
+
+      await servico.refundPayment({
+        amount: 199.9,
+        data: { mp_order_id: "ORDTST_CARD_1", mp_payment_id: "PAY_CARD_1", valor_total: "199.90" },
+      })
+
+      expect(spy.mock.calls.some((c: unknown[]) => String(c[0]).endsWith("/refund"))).toBe(true)
     })
   })
 
@@ -248,7 +546,7 @@ describe("MercadoPagoProviderService", () => {
         amount: 249.9,
         currency_code: "brl",
         data: { session_id: "payses_1", metodo: "pix", cpf: "12345678909", valor_total: "199.90", mp_order_id: "ORDTST_PIX_1" },
-        context: {},
+        context: { customer: { id: "cus_1", email: "cliente@teste.com" } },
       })
 
       expect(resultado.data?.mp_order_id).toBe("ORDTST_PIX_2")

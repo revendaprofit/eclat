@@ -25,3 +25,11 @@ export function pickMeasurements(map: MeasureMap | null | undefined, handlePath:
   }
   return null
 }
+
+// Acessório (raiz `acessorios`) sem tabela própria não mostra bloco de medidas na PDP (spec §4.4):
+// a tabela fixa de Busto/Cintura/Quadril do SizeGuide não faz sentido para óculos ou meias.
+// As demais peças sem tabela continuam caindo na tabela fixa.
+export function hidesMeasures(handlePath: string | null | undefined, table: MeasureTable | null): boolean {
+  if (table || !handlePath) return false
+  return handlePath.split("/").filter(Boolean)[0] === "acessorios"
+}

@@ -47,12 +47,12 @@ const Item = ({ item, type = "full", currencyCode, etiqueta }: ItemProps) => {
 
   return (
     <Table.Row className="w-full" data-testid="product-row">
-      <Table.Cell className="!pl-0 p-4 w-24">
+      <Table.Cell className="!pl-0 py-4 pr-2 w-16 small:w-24 small:p-4">
         <LocalizedClientLink
           href={`/products/${item.product_handle}`}
           className={clx("flex", {
             "w-16": type === "preview",
-            "small:w-24 w-12": type === "full",
+            "small:w-24 w-14": type === "full",
           })}
         >
           <Thumbnail
@@ -63,9 +63,9 @@ const Item = ({ item, type = "full", currencyCode, etiqueta }: ItemProps) => {
         </LocalizedClientLink>
       </Table.Cell>
 
-      <Table.Cell className="text-left">
+      <Table.Cell className="text-left px-2 small:px-4 min-w-0">
         <Text
-          className="txt-medium-plus text-ui-fg-base"
+          className="txt-medium-plus text-ui-fg-base break-words"
           data-testid="product-title"
         >
           {item.product_title}
@@ -82,13 +82,13 @@ const Item = ({ item, type = "full", currencyCode, etiqueta }: ItemProps) => {
       </Table.Cell>
 
       {type === "full" && (
-        <Table.Cell>
-          <div className="flex gap-2 items-center w-28">
+        <Table.Cell className="px-1 small:px-4">
+          <div className="flex items-center gap-1 small:gap-2 w-auto small:w-28">
             <DeleteButton id={item.id} data-testid="product-delete-button" />
             <CartItemSelect
               value={item.quantity}
               onChange={(value) => changeQuantity(parseInt(value.target.value))}
-              className="w-14 h-10 p-4"
+              className="w-14 h-9 p-0 small:w-16 small:h-10"
               data-testid="product-select-button"
             >
               {/* TODO: Update this with the v2 way of managing inventory */}
@@ -123,7 +123,7 @@ const Item = ({ item, type = "full", currencyCode, etiqueta }: ItemProps) => {
         </Table.Cell>
       )}
 
-      <Table.Cell className="!pr-0">
+      <Table.Cell className="!pr-0 pl-1 small:pl-4 whitespace-nowrap">
         <span
           className={clx("!pr-0", {
             "flex flex-col items-end h-full justify-center": type === "preview",
