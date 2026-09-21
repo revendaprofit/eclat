@@ -4,6 +4,9 @@ import { ContainerRegistrationKeys, Modules } from "@medusajs/framework/utils"
 import { EvolutionHttpError, evolutionConfigured, sendWhatsappText } from "../../../lib/evolution"
 import { mesclarNoFrete, tentarAvisoDeDespacho, type Pg } from "../../../lib/aviso-despacho"
 import { normalizaWhatsapp, textoEntregue, textoPostado } from "../../../lib/superfrete-avisos"
+import { getPrevenda } from "../../../lib/prevenda"
+import { WHATSAPP_PADRAO } from "../../../modules/resend/dados-pedido"
+import type { DadosPostado } from "../../../modules/resend/templates/pedido-postado"
 import { acaoDoEvento, assinaturaSuperfreteValida, numeroDoPedido, rastreioDoEvento } from "../../../lib/superfrete-webhook"
 
 // Webhook de status da SuperFrete (spec 2026-09-20-avisos-entrega-superfrete-design.md §4.2–§4.4).
@@ -243,10 +246,20 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
     } else {
       tentados++
       try {
-        // TODO(Task 3): o template `pedido-postado` ainda não existe no módulo do Resend. O
-        // try/catch abaixo é o que impede um template faltando de derrubar a rota (e de virar 500,
-        // que faria a SuperFrete reenviar 5 vezes por um erro que retentar não conserta). Quando a
-        // Task 3 criar o template, o catch vira apenas o tratamento de falha real do envio.
+        // Os campos de `data` são exatamente os que o template `pedido-postado` lê (DadosPostado,
+        // src/modules/resend/templates/pedido-postado.ts) + `idempotencia`, que o provider do Resend
+        // manda como header — mesmo formato do "pedido confirmado". Uma falha aqui (inclusive do
+        // template) cai no catch e conta como canal com falha, nunca derruba a rota.
+        const idempotencia = `superfrete-${aviso}-${idDoEvento}`
+        const dadosEmail: DadosPostado = {
+          numero: String(pedido.display_id ?? displayId),
+          primeiroNome: nome || null,
+          codigo: codigo || null,
+          link: link || null,
+          lojaUrl: (process.env.STOREFRONT_URL || "https://www.useeclat.com.br").replace(/\/$/, ""),
+          // Mesmo contato do "pedido confirmado": o WhatsApp configurado na pré-venda, ou o padrão.
+          whatsapp: (await getPrevenda()).whatsapp || WHATSAPP_PADRAO,
+        }
         await req.scope.resolve(Modules.NOTIFICATION).createNotifications({
           to: email,
           channel: "email",
@@ -256,8 +269,8 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
           resource_id: pedido.id,
           // Chave de idempotência do §4.4: o mesmo evento da mesma etiqueta nunca vira dois e-mails,
           // nem que a marca de aviso se perca entre uma retentativa e outra.
-          idempotency_key: `superfrete-${aviso}-${idDoEvento}`,
-          data: { nome, display_id: pedido.display_id, tracking_number: codigo, tracking_url: link },
+          idempotency_key: idempotencia,
+          data: { ...dadosEmail, idempotencia },
         })
         entregues++
       } catch (e) {

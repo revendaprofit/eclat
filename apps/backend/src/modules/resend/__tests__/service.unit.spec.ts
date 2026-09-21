@@ -66,6 +66,22 @@ describe("ResendNotificationService", () => {
     expect(corpo.text).toContain("Pedido #42")
   })
 
+  it("o template pedido-postado está registrado (é o que a rota do webhook da SuperFrete pede)", async () => {
+    const spy = mockFetch(200, { id: "email_456" })
+    const svc = new ResendNotificationService({ logger } as never, opcoes)
+    await svc.send({
+      to: "cliente@exemplo.com",
+      channel: "email",
+      template: "pedido-postado",
+      data: { numero: "42", primeiroNome: "Ana", codigo: "AA123456789BR", link: "https://l/r", lojaUrl: "https://l", whatsapp: "5500000000000", idempotencia: "superfrete-posted-sfid_1" },
+    })
+    const [, init] = spy.mock.calls[0]
+    expect(init.headers["idempotency-key"]).toBe("superfrete-posted-sfid_1")
+    const corpo = JSON.parse(init.body)
+    expect(corpo.subject).toBe("Seu pedido #42 foi postado · use.ÉCLAT")
+    expect(corpo.html).toContain("AA123456789BR")
+  })
+
   it("template desconhecido falha com mensagem clara, sem chamar a API", async () => {
     const spy = mockFetch(200, {})
     const svc = new ResendNotificationService({ logger } as never, opcoes)

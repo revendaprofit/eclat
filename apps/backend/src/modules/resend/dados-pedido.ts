@@ -54,7 +54,7 @@ type PedidoDoMedusa = {
   } | null> | null
 }
 
-const WHATSAPP_PADRAO = "5531991184431"
+export const WHATSAPP_PADRAO = "5531991184431"
 
 // O Medusa entrega dinheiro ora como número, ora como BigNumber ({ numeric }) ou valor bruto
 // ({ value, precision }) — mesma armadilha documentada em modules/mercadopago/dinheiro.ts.

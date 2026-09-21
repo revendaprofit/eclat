@@ -6,6 +6,7 @@ import { AbstractNotificationProviderService, MedusaError } from "@medusajs/fram
 import type { Logger, NotificationTypes } from "@medusajs/framework/types"
 import type { DadosPedido } from "./dados-pedido"
 import { pedidoConfirmado, type EmailPronto } from "./templates/pedido-confirmado"
+import { pedidoPostado } from "./templates/pedido-postado"
 
 const API = "https://api.resend.com/emails"
 
@@ -14,6 +15,8 @@ export type OpcoesResend = { apiKey: string; from: string; replyTo?: string }
 // Um template novo entra aqui: nome usado no createNotifications → função que monta o e-mail.
 const TEMPLATES: Record<string, (dados: never) => EmailPronto> = {
   "pedido-confirmado": pedidoConfirmado as (dados: never) => EmailPronto,
+  // webhook `order.posted` da SuperFrete (src/api/webhooks/superfrete/route.ts)
+  "pedido-postado": pedidoPostado as (dados: never) => EmailPronto,
 }
 
 export default class ResendNotificationService extends AbstractNotificationProviderService {

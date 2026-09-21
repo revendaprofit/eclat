@@ -7,9 +7,10 @@
 // spec espiona o envio sem mock frágil (lib/evolution.ts lê EVOLUTION_API_URL no carregamento
 // do módulo, então a variável entra no process.env ANTES de o runner subir o app).
 //
-// O e-mail NÃO é exercitado aqui de propósito: RESEND_API_KEY fica ausente, o Notification Module
-// não ganha provider (medusa-config.ts) e o template `pedido-postado` só nasce na Task 3. O canal
-// é pulado, e o WhatsApp sozinho já prova a regra "pelo menos um canal entregue → 200 e marca".
+// O e-mail: RESEND_API_KEY fica ausente no boot, então o Notification Module não ganha provider
+// (medusa-config.ts) e nada chega ao Resend. Na maioria dos testes o canal é pulado, e o WhatsApp
+// sozinho prova a regra "pelo menos um canal entregue → 200 e marca". Um teste (seção E da Task 3)
+// liga a chave só no process.env e espiona o createNotifications para conferir os dados do e-mail.
 import { createHmac } from "node:crypto"
 import { createServer, type Server } from "node:http"
 import type { AddressInfo } from "node:net"
@@ -564,6 +565,52 @@ medusaIntegrationTestRunner({
       const r = await chamar(corpoDe(p.display_id, "order.generated", COM_CODIGO))
       expect(r.status).toBe(200)
       expect((await lerFrete(p.id)).aviso_despacho.status).toBe("sem_whatsapp")
+    })
+
+    // ---- Task 3, seção E: o e-mail "pedido postado" ----
+
+    it("order.posted com Resend ligado: pede o e-mail pedido-postado com os dados que o template lê", async () => {
+      const p = await criarPedido({ tracking_number: "AA123456789BR", tracking_url: "https://exemplo.invalid/AA" })
+      // O Resend NÃO é chamado: o provider só existe com a chave no boot (medusa-config.ts), e aqui a
+      // chave entra só no process.env, que a rota lê a cada requisição. Durante esta chamada, o
+      // registro do módulo de notificação no container é trocado por um falso que só captura o pedido
+      // de envio (um jest.spyOn na instância não pega: a rota resolve outra referência pelo req.scope).
+      const container = getContainer()
+      const notificacaoReal = container.resolve(Modules.NOTIFICATION)
+      const espiao = jest.fn().mockResolvedValue([])
+      container.register(Modules.NOTIFICATION, asValue({ createNotifications: espiao }))
+      process.env.RESEND_API_KEY = "re_ficticia_do_teste"
+      try {
+        const r = await chamar(corpoDe(p.display_id, "order.posted"))
+        expect(r.status).toBe(200)
+      } finally {
+        delete process.env.RESEND_API_KEY
+        container.register(Modules.NOTIFICATION, asValue(notificacaoReal))
+      }
+      expect(espiao).toHaveBeenCalledTimes(1)
+      const pedido = espiao.mock.calls[0][0] as unknown as Record<string, any>
+      expect(pedido).toMatchObject({
+        to: "cliente@example.com",
+        channel: "email",
+        template: "pedido-postado",
+        resource_id: p.id,
+        idempotency_key: `superfrete-posted-${ETIQUETA}`,
+      })
+      expect(pedido.data).toEqual({
+        numero: String(p.display_id),
+        primeiroNome: "Ana",
+        codigo: "AA123456789BR",
+        link: "https://exemplo.invalid/AA",
+        lojaUrl: expect.stringMatching(/^https?:\/\//),
+        whatsapp: expect.stringMatching(/^\d+$/),
+        idempotencia: `superfrete-posted-${ETIQUETA}`,
+      })
+      // E o template monta o e-mail com esses dados, sem campo faltando.
+      const { pedidoPostado } = await import("../../src/modules/resend/templates/pedido-postado.js")
+      const email = pedidoPostado(pedido.data)
+      expect(email.subject).toBe(`Seu pedido #${p.display_id} foi postado · use.ÉCLAT`)
+      expect(email.html).toContain("AA123456789BR")
+      expect((await lerFrete(p.id)).avisos.posted).toEqual(expect.any(String))
     })
 
     // ---- Task 3, seção G: a gravação de estado não é mais "ler, alterar e gravar" ----
