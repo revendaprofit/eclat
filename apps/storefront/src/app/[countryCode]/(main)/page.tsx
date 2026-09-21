@@ -117,6 +117,10 @@ export default async function Home(props: {
           o default (HOME_DEFAULTS.lines.visible = false) mantém o bloco oculto. */}
       {(lines ?? HOME_DEFAULTS.lines).visible === true && <FeaturedLines content={lines} />}
 
+      {/* Conjuntos logo abaixo de "Nossas linhas": a vitrine da coleção repete as mesmas peças dos
+          quadros, então vem depois (pedido da sócia, 2026-09-19). */}
+      {isVisible(banner) && <EditorialBanner content={banner} />}
+
       {isVisible(featured) && featuredCollection && (
         <section className="content-container">
           <h2 className="font-serif text-3xl small:text-4xl text-eclat-grafite text-center pt-4">
@@ -130,8 +134,6 @@ export default async function Home(props: {
           </ul>
         </section>
       )}
-
-      {isVisible(banner) && <EditorialBanner content={banner} />}
 
       {isVisible(benefits) && <Benefits content={benefits} />}
 

@@ -1,5 +1,6 @@
 import Image from "next/image"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
+import CarrosselBanner from "./carrossel"
 import {
   HOME_DEFAULTS,
   EditorialBanner as EditorialBannerType,
@@ -12,17 +13,22 @@ export default function EditorialBanner({
 }) {
   const c = { ...HOME_DEFAULTS.banner, ...(content || {}) }
   const imageRight = (c.image_side || "right") === "right"
+  // 2+ fotos em `image_urls` = carrossel de fotos inteiras (2:3); senão, a imagem única de sempre.
+  const fotos = (c.image_urls || []).filter((u) => typeof u === "string" && u.trim())
+  const carrossel = fotos.length > 1
 
   return (
     <section className="content-container py-12 small:py-20">
       <div className="grid grid-cols-1 small:grid-cols-2 items-stretch border border-eclat-pedra/30 overflow-hidden">
         {/* imagem */}
         <div
-          className={`relative min-h-[280px] small:min-h-[440px] bg-eclat-areia/40 ${
-            imageRight ? "small:order-2" : "small:order-1"
-          }`}
+          className={`relative ${
+            carrossel ? "aspect-[2/3] small:aspect-[4/3] bg-[#09090d]" : "min-h-[280px] small:min-h-[440px] bg-eclat-areia/40"
+          } ${imageRight ? "small:order-2" : "small:order-1"}`}
         >
-          {c.image_url ? (
+          {carrossel ? (
+            <CarrosselBanner fotos={fotos} alt={c.title || "use.ÉCLAT"} />
+          ) : c.image_url ? (
             <Image
               src={c.image_url}
               alt={c.title || "use.ÉCLAT"}
