@@ -56,9 +56,11 @@ import { acaoDoEvento, assinaturaSuperfreteValida, numeroDoPedido, rastreioDoEve
 export async function POST(req: MedusaRequest, res: MedusaResponse) {
   const logger = req.scope.resolve(ContainerRegistrationKeys.LOGGER)
 
-  // Lido a cada requisição (não no topo do módulo) para o "sem segredo" ser um estado do ambiente,
-  // não do boot: ligar a variável no Railway passa a valer sem redeploy do processo.
-  const segredo = process.env.SUPERFRETE_WEBHOOK_SECRET
+  // Lido a cada requisição (não no topo do módulo): o "sem segredo" é um estado do ambiente e os
+  // testes trocam a variável entre chamadas. Em produção a mudança só vale porque o Railway REINICIA
+  // o serviço (redeploy) ao aplicar uma mudança de variável — um processo em pé não enxerga variável nova.
+  // Aparado: um segredo colado com quebra de linha ou espaço daria 401 para sempre.
+  const segredo = (process.env.SUPERFRETE_WEBHOOK_SECRET ?? "").trim()
   if (!segredo) {
     logger.info("[frete] webhook da SuperFrete chegou, mas SUPERFRETE_WEBHOOK_SECRET não está configurado — ignorado")
     return res.status(200).json({ ignorado: "sem segredo" })

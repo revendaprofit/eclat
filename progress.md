@@ -1188,27 +1188,36 @@ Pedido da sócia: aba Acessórios com as subcategorias Meias e Óculos de sol. A
 - **Descoberta na doc da SuperFrete:** o segredo da assinatura NÃO é nosso. A criação do webhook não aceita
   segredo; a SuperFrete gera o `secret_token` e o devolve só na resposta da criação. Por isso o segredo vai
   ao Railway DEPOIS do `--aplicar` (a spec §4.2/§5 supunha o contrário).
-- **Passos de ir ao ar, em ordem:**
+- **Passos de ir ao ar, em ordem** (comandos do script sempre de `apps/backend`, com o `.env` local:
+  `cd apps/backend` e depois `node --env-file=.env ativar-webhook-superfrete.mjs …`):
   1. **Dono:** merge/push da branch. `SUPERFRETE_WEBHOOK_URL` (URL pública do backend + `/webhooks/superfrete`)
-     no ambiente de onde o script vai rodar (`.env` local do backend ou o shell), junto com `SUPERFRETE_TOKEN` e
-     `SUPERFRETE_CONTACT_EMAIL`. No Railway nada novo ainda: sem `SUPERFRETE_WEBHOOK_SECRET` a rota responde 200 e
-     ignora — é seguro publicar antes.
+     no `.env` local do backend, junto com `SUPERFRETE_TOKEN` e `SUPERFRETE_CONTACT_EMAIL` (é de lá que o script
+     lê). No Railway nada novo ainda: sem `SUPERFRETE_WEBHOOK_SECRET` a rota responde 200 e ignora — é seguro
+     publicar antes.
   2. **Dono ("pode aplicar"):** `railway up` do backend.
   3. **Claude/dono:** no log do Railway, o job `frete-avisos-pendentes` rodando sem erro a cada 5 min; um POST
      sem assinatura em `/webhooks/superfrete` responde 200 (log "SUPERFRETE_WEBHOOK_SECRET não está
      configurado — ignorado").
-  4. **Claude/dono:** `node apps/backend/ativar-webhook-superfrete.mjs` (só lista) → conferir → **"pode aplicar"**
-     → `--aplicar`. O segredo aparece UMA vez na tela (de preferência o dono roda este passo no terminal dele,
-     ou usa `--salvar-segredo=<arquivo fora do repositório e do Drive>`, para o segredo não passar pelo chat).
-  5. **Dono:** `SUPERFRETE_WEBHOOK_SECRET` = esse segredo no Railway (o serviço reinicia). Conferir: POST sem
-     assinatura agora responde **401** (prova de que o segredo carregou). Apagar o arquivo do segredo, se usou.
+  4. **SÓ O DONO, no terminal dele** (o Claude NUNCA roda o `--aplicar` que cria: o segredo iria para o chat).
+     `node --env-file=.env ativar-webhook-superfrete.mjs` (só lista; isto o Claude pode rodar) → conferir →
+     `node --env-file=.env ativar-webhook-superfrete.mjs --aplicar`. O segredo aparece UMA vez na tela.
+     Alternativa: `--salvar-segredo=<arquivo novo fora de qualquer repositório git e fora do Drive>` (o script
+     recusa caminho dentro de repositório; no Windows o arquivo NÃO fica protegido — apagar logo). Sem terminal
+     (saída redirecionada), o script recusa o `--aplicar` sem `--salvar-segredo`.
+  5. **Dono, EM SEGUIDA ao passo 4, sem intervalo:** `SUPERFRETE_WEBHOOK_SECRET` = esse segredo no Railway (aplicar
+     a mudança no Railway reinicia o serviço; é o reinício que faz a variável valer). Entre o 4 e o 5, os eventos "postado"/"entregue"
+     que chegarem são respondidos com 200 e ignorados — a SuperFrete não reenvia, e esses avisos se perdem (o
+     despacho fica coberto pelo job). Conferir: POST sem assinatura agora responde **401** (prova de que o
+     segredo carregou). Apagar o arquivo do segredo, se usou.
   6. **Dono:** só então `SUPERFRETE_AVISO_PELO_BACKEND=true` no Vercel (Cockpit) e redeploy do Cockpit.
   7. **Próximo despacho real com etiqueta:** conferir no pedido o estado do aviso (`pendente` → `enviado`), a
      mensagem no WhatsApp da cliente com o código, e depois o postado (WhatsApp + e-mail, se o Resend estiver
-     ligado) e o entregue.
+     ligado) e o entregue. **Conferir no log do Railway que NÃO aparece "assinatura inválida" depois do primeiro
+     evento real** — se aparecer, o segredo no Railway não é o da criação: `--aplicar --desfazer`, `--aplicar` e
+     segredo novo no Railway.
   8. **Reverter:** desligar `SUPERFRETE_AVISO_PELO_BACKEND` no Vercel + redeploy (volta ao aviso imediato pelo
-     Cockpit); `node apps/backend/ativar-webhook-superfrete.mjs --aplicar --desfazer` (para postado/entregue;
-     o job continua mandando os despachos pendentes).
+     Cockpit); `node --env-file=.env ativar-webhook-superfrete.mjs --aplicar --desfazer` (para
+     postado/entregue; o job continua mandando os despachos pendentes).
 - **Pendências abertas:** (1) confirmação do dono: Evolution respondendo 5xx volta o aviso a `pendente`
   (retenta) em vez de `incerto` — decisão técnica provisória; (2) formato real da resposta "número sem
   WhatsApp" da Evolution — conferir no primeiro caso real (`sem_whatsapp`); (3) índice parcial em

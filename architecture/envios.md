@@ -166,16 +166,25 @@ negrito). O texto de despacho tem uma cópia no Cockpit (`apps/cockpit/app/api/o
 usada no despacho manual e com o interruptor desligado — mudou um, mude o outro. O e-mail fica em
 `apps/backend/src/modules/resend/templates/pedido-postado.ts`.
 
-**Webhook na conta da SuperFrete — ligar/desligar:** `apps/backend/ativar-webhook-superfrete.mjs`.
+**Webhook na conta da SuperFrete — ligar/desligar:** `apps/backend/ativar-webhook-superfrete.mjs`, rodado de
+`apps/backend` com o `.env` local: `cd apps/backend` e `node --env-file=.env ativar-webhook-superfrete.mjs …`.
 - Ambiente: `SUPERFRETE_TOKEN`, `SUPERFRETE_CONTACT_EMAIL`, `SUPERFRETE_WEBHOOK_URL` (URL pública do backend +
-  `/webhooks/superfrete`, https). `SUPERFRETE_SANDBOX=true` usa o sandbox.
-- `node apps/backend/ativar-webhook-superfrete.mjs` → lista os webhooks da conta e diz o que faria (não grava).
-- `--aplicar` (com "pode aplicar") → cria com os seis eventos; se já existe um com a mesma URL, atualiza.
+  `/webhooks/superfrete`, https). `SUPERFRETE_SANDBOX=true` usa o sandbox. Argumento desconhecido → recusa.
+- Sem argumento → lista os webhooks da conta e diz o que faria (não grava). De webhooks de outros sistemas
+  mostra só a origem.
+- `--aplicar` (só o dono, no terminal dele, com "pode aplicar") → cria com os seis eventos; se já existe um
+  com a mesma URL, atualiza. Dois com a mesma URL → para sem gravar.
 - `--aplicar --desfazer` → remove só o(s) webhook(s) dessa URL. O despacho continua saindo pelo job de 5 min;
   postado e entregue param.
 - **O segredo da assinatura é gerado pela SuperFrete** (a API não aceita segredo nosso): vem uma vez só, na
-  resposta da criação. O script mostra na tela (ou grava num arquivo novo com `--salvar-segredo=<arquivo>`);
-  copiar para `SUPERFRETE_WEBHOOK_SECRET` no Railway. Perdeu? `--aplicar --desfazer` e `--aplicar` de novo.
+  resposta da criação. O script mostra na tela, ou grava num arquivo NOVO com `--salvar-segredo=<arquivo>`
+  (aberto antes da criação; caminho dentro de repositório git é recusado; sem quebra de linha no fim). Sem
+  terminal (agente, saída redirecionada) o `--aplicar` sem `--salvar-segredo` é recusado, para o segredo não
+  parar num log. Se a gravação do arquivo falhar depois da criação, o segredo sai na tela para não se perder.
+  No Windows o modo 0600 não protege o arquivo: copiar para `SUPERFRETE_WEBHOOK_SECRET` no Railway e apagar.
+  Perdeu o segredo? `--aplicar --desfazer` e `--aplicar` de novo.
+- O backend apara espaços e quebras de linha do `SUPERFRETE_WEBHOOK_SECRET`. A variável só vale depois que o
+  serviço reinicia: no Railway, aplicar a mudança de variável faz o redeploy do serviço.
 - Sem `SUPERFRETE_WEBHOOK_SECRET` no backend a rota responde 200 e ignora tudo (não quebra, não gera
   reenvio). Com o segredo, chamada sem assinatura válida → 401.
 - A SuperFrete reenvia até 5 vezes, a cada 15 min, quando não recebe resposta boa em 30 s. Backend fora do

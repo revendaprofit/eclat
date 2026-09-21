@@ -188,6 +188,31 @@ medusaIntegrationTestRunner({
       expect(whatsappEnviados).toHaveLength(0)
     })
 
+    it("segredo colado com quebra de linha/espaços no Railway → aparado, assinatura válida (não 401)", async () => {
+      const p = await criarPedido()
+      process.env.SUPERFRETE_WEBHOOK_SECRET = `  ${SEGREDO}\r\n`
+      try {
+        const r = await chamar(corpoDe(p.display_id, "order.created"))
+        expect(r.status).toBe(200)
+        expect((await lerFrete(p.id)).eventos).toHaveProperty(["order.created"])
+      } finally {
+        process.env.SUPERFRETE_WEBHOOK_SECRET = SEGREDO
+      }
+    })
+
+    it("segredo só com espaços/quebra de linha → tratado como sem segredo (200, ignorado)", async () => {
+      const p = await criarPedido()
+      process.env.SUPERFRETE_WEBHOOK_SECRET = " \n"
+      try {
+        const r = await chamar(corpoDe(p.display_id, "order.posted"))
+        expect(r.status).toBe(200)
+        expect(r.data).toEqual({ ignorado: "sem segredo" })
+        expect(await lerFrete(p.id)).not.toHaveProperty("eventos")
+      } finally {
+        process.env.SUPERFRETE_WEBHOOK_SECRET = SEGREDO
+      }
+    })
+
     it("sem SUPERFRETE_WEBHOOK_SECRET no ambiente → 200 e nada é gravado", async () => {
       const p = await criarPedido()
       delete process.env.SUPERFRETE_WEBHOOK_SECRET
