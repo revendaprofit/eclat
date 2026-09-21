@@ -14,12 +14,19 @@
 //    então ninguém saberia. Tenta concluir uma última vez; se não vira pedido, ESTORNA no MP e
 //    grava um erro no log com tudo que o atendimento precisa pra avisar a cliente.
 //
+// 3. ESTORNO FEITO NO MERCADO PAGO — o Medusa só aceita um punhado de avisos de pagamento
+//    (autorizado, capturado, falhou, pendente, cancelado) e estorno NÃO está entre eles: um
+//    estorno feito no painel do MP não tinha por onde chegar aqui. O pedido #10 (20/09) ficou
+//    "pago" e despachável depois de o dinheiro ter voltado para a cliente. Aqui a rotina compara
+//    o que o MP já devolveu com o que está registrado no Medusa e registra a diferença — o
+//    provider reconhece que não há saldo a estornar e só anota, sem devolver nada em dobro.
+//
 // Nada aqui adivinha: só age quando o MP confirma o status e quando o Medusa confirma que não
 // existe pedido. Os dois limiares são parâmetros pra os testes de integração rodarem com 0.
 import type { MedusaContainer } from "@medusajs/framework/types"
 import { ContainerRegistrationKeys, Modules } from "@medusajs/framework/utils"
 import { processPaymentWorkflow } from "@medusajs/medusa/core-flows"
-import { ClienteMercadoPago } from "./cliente"
+import { ClienteMercadoPago, totalJaEstornado } from "./cliente"
 import { paraAcaoDoWebhook } from "./status"
 
 export const PROVIDER_ID = "pp_mercadopago_mercadopago"
@@ -38,6 +45,8 @@ export type ResultadoDaReconciliacao = {
   carrinhosConcluidos: number
   pagamentosSemPedido: number
   estornados: number
+  /** Estornos feitos no Mercado Pago que passaram a constar também aqui. */
+  estornosRegistrados: number
   erros: string[]
 }
 
@@ -77,7 +86,14 @@ export async function reconciliarPagamentos(
   const query = container.resolve(ContainerRegistrationKeys.QUERY)
   const logger = container.resolve(ContainerRegistrationKeys.LOGGER)
   const pagamentoModule = container.resolve(Modules.PAYMENT)
-  const r: ResultadoDaReconciliacao = { sessoesConsultadas: 0, carrinhosConcluidos: 0, pagamentosSemPedido: 0, estornados: 0, erros: [] }
+  const r: ResultadoDaReconciliacao = {
+    sessoesConsultadas: 0,
+    carrinhosConcluidos: 0,
+    pagamentosSemPedido: 0,
+    estornados: 0,
+    estornosRegistrados: 0,
+    erros: [],
+  }
 
   // ── 1. Sessões sem Payment: o MP já confirmou e o Medusa não soube? ──
   const { data: sessoes } = await query.graph({
@@ -170,6 +186,40 @@ export async function reconciliarPagamentos(
       )
     } catch (e) {
       r.erros.push(`payment ${p.id}: ${(e as Error).message}`)
+    }
+  }
+
+  // ── 3. Estorno feito no Mercado Pago que o Medusa não soube ──
+  const { data: capturados } = await query.graph({
+    entity: "payment",
+    fields: ["id", "amount", "captured_at", "canceled_at", "data", "refunds.amount", "payment_collection.order.id"],
+    filters: { provider_id: PROVIDER_ID },
+    pagination: { take: limite, order: { created_at: "DESC" } },
+  })
+  for (const p of capturados as unknown as PagamentoCapturado[]) {
+    const orderId = p.data?.mp_order_id as string | undefined
+    if (!orderId || !p.captured_at || p.canceled_at) continue
+    const estornadoAqui = (p.refunds ?? []).reduce((soma, x) => soma + Number(x.amount ?? 0), 0)
+    if (estornadoAqui >= Number(p.amount) - 0.005) continue // já registrado
+    try {
+      const order = await cliente.buscarOrder(orderId)
+      const estornadoLa = totalJaEstornado(order)
+      const diferenca = estornadoLa - estornadoAqui
+      if (diferenca <= 0.005) continue
+
+      await pagamentoModule.refundPayment({
+        payment_id: p.id,
+        amount: diferenca,
+        note: `Estorno feito no Mercado Pago (order ${orderId}) — registrado pela reconciliação`,
+      })
+      r.estornosRegistrados++
+      logger.warn(
+        `[mercadopago] ESTORNO REGISTRADO: payment ${p.id} (order MP ${orderId}) foi estornado no Mercado Pago em ` +
+          `R$ ${estornadoLa.toFixed(2)} e aqui constava R$ ${estornadoAqui.toFixed(2)}. ` +
+          `O pedido ${p.payment_collection?.order?.id ?? "(sem pedido)"} passa a constar como estornado — não despachar.`
+      )
+    } catch (e) {
+      r.erros.push(`estorno do payment ${p.id}: ${(e as Error).message}`)
     }
   }
 

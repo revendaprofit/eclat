@@ -9,6 +9,8 @@ import { NfdDoPedido } from "@/components/nfd-do-pedido"
 import { DadosFiscaisDoPedido } from "@/components/dados-fiscais-do-pedido"
 import { resumoDoPagamento, type PagamentoDoPedido } from "@/lib/pagamento"
 import { aceiteDaEntregaApp, ehEntregaPorApp } from "@/lib/entrega-app"
+// `podeDespachar` já é o nome da variável local da conferência das peças nesta tela.
+import { podeDespachar as travaDeDespacho } from "@/lib/despacho-permitido"
 import {
   Aviso,
   Carregando,
@@ -507,8 +509,12 @@ export default function PedidosPage() {
                   <NfdDoPedido orderId={det.id} statusDocumentoVenda={docFiscal.status} itens={itensParaDevolucao} />
                 )}
 
-                {/* Despacho */}
-                {det.fulfillment_status === "not_fulfilled" ? (
+                {/* Despacho — a mesma trava da API (lib/despacho-permitido), para a pessoa não
+                    conferir peça por peça e só então descobrir que o pedido não pode sair. */}
+                {det.fulfillment_status === "not_fulfilled" && !travaDeDespacho(det).pode && (
+                  <Aviso tom="atencao">{(travaDeDespacho(det) as { motivo: string }).motivo}</Aviso>
+                )}
+                {det.fulfillment_status === "not_fulfilled" && travaDeDespacho(det).pode ? (
                   <section className="border border-eclat-dourado/40 rounded-lg p-4 bg-white/60 flex flex-col gap-3">
                     <h4 className="text-corpo font-medium text-eclat-texto">Despachar pedido</h4>
                     {ehEntregaPorApp(det) && (

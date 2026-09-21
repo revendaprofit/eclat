@@ -422,8 +422,15 @@ describe("MercadoPagoProviderService", () => {
   })
 
   describe("refundPayment", () => {
+    // Desde 2026-09-20 todo estorno começa consultando a order: sem isso, um estorno já feito no
+    // painel do Mercado Pago seria executado de novo e a cliente receberia o dinheiro em dobro.
+    const orderSemEstorno = { ...orderCartaoAprovada, total_amount: "199.90" }
+
     it("estorno total (mesmo valor) manda corpo vazio", async () => {
-      const spy = mockFetchSequencial({ status: 200, corpo: { ...orderCartaoAprovada, status: "refunded" } })
+      const spy = mockFetchSequencial(
+        { status: 200, corpo: orderSemEstorno },
+        { status: 200, corpo: { ...orderSemEstorno, status: "refunded" } }
+      )
       const { servico } = criarServico()
 
       await servico.refundPayment({
@@ -431,12 +438,15 @@ describe("MercadoPagoProviderService", () => {
         data: { mp_order_id: "ORDTST_CARD_1", mp_payment_id: "PAY_CARD_1", valor_total: "199.90" },
       })
 
-      const corpoEnviado = JSON.parse(spy.mock.calls[0][1].body)
-      expect(corpoEnviado).toEqual({})
+      expect(spy.mock.calls[0][1].method).toBe("GET") // primeiro confere
+      expect(JSON.parse(spy.mock.calls[1][1].body)).toEqual({})
     })
 
     it("estorno parcial (valor menor) manda amount e transaction_id", async () => {
-      const spy = mockFetchSequencial({ status: 200, corpo: orderCartaoAprovada })
+      const spy = mockFetchSequencial(
+        { status: 200, corpo: orderSemEstorno },
+        { status: 200, corpo: orderSemEstorno }
+      )
       const { servico } = criarServico()
 
       await servico.refundPayment({
@@ -444,8 +454,85 @@ describe("MercadoPagoProviderService", () => {
         data: { mp_order_id: "ORDTST_CARD_1", mp_payment_id: "PAY_CARD_1", valor_total: "199.90" },
       })
 
-      const corpoEnviado = JSON.parse(spy.mock.calls[0][1].body)
-      expect(corpoEnviado).toEqual({ amount: "50.00", transaction_id: "PAY_CARD_1" })
+      expect(JSON.parse(spy.mock.calls[1][1].body)).toEqual({ amount: "50.00", transaction_id: "PAY_CARD_1" })
+    })
+
+    it("já estornado no Mercado Pago: não estorna de novo, só devolve os dados", async () => {
+      const spy = mockFetchSequencial({
+        status: 200,
+        corpo: {
+          ...orderSemEstorno,
+          status: "refunded",
+          transactions: {
+            ...orderSemEstorno.transactions,
+            refunds: [{ id: "REF_1", transaction_id: "PAY_CARD_1", amount: "199.90", status: "processed" }],
+          },
+        },
+      })
+      const { servico, logger } = criarServico()
+
+      const r = await servico.refundPayment({
+        amount: 199.9,
+        data: { mp_order_id: "ORDTST_CARD_1", mp_payment_id: "PAY_CARD_1", valor_total: "199.90" },
+      })
+
+      expect(spy.mock.calls.some((c: unknown[]) => String(c[0]).endsWith("/refund"))).toBe(false)
+      expect(r.data?.mp_order_id).toBe("ORDTST_CARD_1")
+      expect(logger.info).toHaveBeenCalledWith(expect.stringMatching(/nada a estornar/))
+    })
+
+    it("estorno parcial ainda passa quando sobra saldo", async () => {
+      const spy = mockFetchSequencial(
+        {
+          status: 200,
+          corpo: {
+            ...orderSemEstorno,
+            transactions: {
+              ...orderSemEstorno.transactions,
+              refunds: [{ id: "REF_1", amount: "50.00", status: "processed" }],
+            },
+          },
+        },
+        { status: 200, corpo: orderSemEstorno }
+      )
+      const { servico } = criarServico()
+
+      await servico.refundPayment({
+        amount: 100,
+        data: { mp_order_id: "ORDTST_CARD_1", mp_payment_id: "PAY_CARD_1", valor_total: "199.90" },
+      })
+
+      // sobravam R$ 149,90: o estorno segue
+      const refund = spy.mock.calls.find((c: unknown[]) => String(c[0]).endsWith("/refund"))
+      expect(refund).toBeDefined()
+      expect(JSON.parse((refund as [string, { body: string }])[1].body)).toEqual({
+        amount: "100.00",
+        transaction_id: "PAY_CARD_1",
+      })
+    })
+
+    it("reembolso ainda em processamento não conta como devolvido", async () => {
+      const spy = mockFetchSequencial(
+        {
+          status: 200,
+          corpo: {
+            ...orderSemEstorno,
+            transactions: {
+              ...orderSemEstorno.transactions,
+              refunds: [{ id: "REF_1", amount: "199.90", status: "pending" }],
+            },
+          },
+        },
+        { status: 200, corpo: orderSemEstorno }
+      )
+      const { servico } = criarServico()
+
+      await servico.refundPayment({
+        amount: 199.9,
+        data: { mp_order_id: "ORDTST_CARD_1", mp_payment_id: "PAY_CARD_1", valor_total: "199.90" },
+      })
+
+      expect(spy.mock.calls.some((c: unknown[]) => String(c[0]).endsWith("/refund"))).toBe(true)
     })
   })
 
