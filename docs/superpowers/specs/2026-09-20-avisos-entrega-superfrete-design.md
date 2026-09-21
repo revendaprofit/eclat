@@ -129,3 +129,32 @@ O `SUPERFRETE_TOKEN` e o `SUPERFRETE_CONTACT_EMAIL` já existem.
 2. **O backend precisa estar publicado** para receber os avisos. Em desenvolvimento local a rota é testada com a SuperFrete simulada.
 3. **A entrega dos avisos não é garantida.** Se o backend ficar fora do ar por mais de ~1 h, a SuperFrete desiste depois de 5 tentativas e aquele aviso se perde. O pedido continua correto no Medusa; só a mensagem não sai.
 4. **Depende do número do pedido ir na etiqueta.** Etiquetas compradas fora do sistema (ou antes desta fase) não têm a tag e não serão reconhecidas — o aviso é ignorado com registro no log.
+
+## 9. Adendo 2026-09-21 — a mensagem de despacho espera o código de rastreio
+
+**Decisão do dono em 2026-09-21**, depois da primeira etiqueta real (pedido #21): o código de rastreio levou cerca de **24 s** para existir na SuperFrete; o despacho procurou por ~12 s e mandou o WhatsApp só com o número do pedido. O dono pediu: *"esperar esse número ser, de fato, gerado para depois mandar a mensagem"*.
+
+Confirmado com dado real no mesmo dia: a consulta `GET /api/v0/order/info/{id}` da etiqueta do #21 devolve `tags: [{"tag":"21"}]` — o número do pedido volta, como a §4.3 supõe. (A listagem `GET /api/v0/me/orders` **não** traz as tags; não usar a listagem para casar pedido.)
+
+### Nova regra (substitui a "mensagem de rastreio atrasado" da §4.1 e da §4.5)
+
+1. **No despacho pelo Cockpit, com etiqueta da SuperFrete:**
+   - etiqueta **com** código de rastreio → a mensagem de despacho sai na hora, como hoje; grava `metadata.frete.aviso_despacho = { status: "enviado", em }`;
+   - etiqueta **sem** código → o pedido é despachado normalmente (etiqueta, PDF, status "enviado"), mas **o WhatsApp não sai agora**; grava `metadata.frete.aviso_despacho = { status: "pendente", desde }`.
+   - O despacho **manual** (código digitado ou sem código) não muda: a mensagem sai na hora com o que houver — quem decide é o operador.
+2. **Quem manda a mensagem pendente é o backend, quando o código existir:**
+   - pelo webhook `order.generated` — caminho rápido (segundos);
+   - por uma **verificação a cada 5 minutos** (job agendado no backend, no molde da reconciliação do Mercado Pago) que consulta `GET /api/v0/order/info/{id}` dos pedidos com aviso pendente — **rede de segurança** para quando o webhook não chegar ou ainda não estiver cadastrado. Depois de **24 h** sem código, para de tentar e registra no log para o operador agir.
+   - Quem chegar primeiro envia e marca `aviso_despacho.status = "enviado"`; o outro vê a marca e não repete.
+3. **Uma mensagem só, completa:** é a mesma mensagem de despacho de hoje (número do pedido + código + link de acompanhamento), não um segundo aviso. O texto passa a viver no backend (`superfrete-avisos.ts`), e o Cockpit usa o mesmo texto quando envia na hora.
+4. **O Cockpit mostra** o estado no pedido: "Aviso à cliente: aguardando o código de rastreio" ou "Aviso à cliente enviado às HH:MM".
+5. **Consequência:** com a verificação periódica, o despacho deixa de depender do webhook para avisar a cliente. O webhook continua sendo o caminho rápido e continua necessário para os avisos de **postado** e **entregue**.
+
+### Tasks afetadas
+
+- Task 2 (rota): no `order.generated`, se `aviso_despacho.status === "pendente"` e agora há código → envia a mensagem de despacho completa e marca `enviado`. Some a lógica de "rastreio atrasado".
+- Task 3 (mensagens): acrescenta o texto da mensagem de despacho.
+- **Nova — job de avisos pendentes** (backend, a cada 5 min).
+- **Nova — Cockpit:** segurar a mensagem quando a etiqueta sai sem código, gravar `aviso_despacho` e mostrar o estado no pedido.
+- Task 4 (script e SOP): passa a descrever também o job.
+
