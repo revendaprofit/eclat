@@ -120,3 +120,64 @@ antes de qualquer chamada — erro de dado não gasta saldo).
   A mensagem de erro de etiqueta cancelada (`garantirEtiqueta`, regra A) pede pra "limpar o frete do
   pedido" antes de gerar outra — hoje isso é um passo MANUAL, sem botão no Cockpit: apagar/zerar
   `metadata.frete` do pedido pelo admin do Medusa ou por um script.
+
+## Avisos de entrega (SuperFrete)
+Spec: `docs/superpowers/specs/2026-09-20-avisos-entrega-superfrete-design.md`. A SuperFrete chama o backend
+(`POST /webhooks/superfrete`) quando a etiqueta muda de estado; o backend avisa a cliente.
+
+**O que a cliente recebe:**
+| Momento | Canal | Quem manda |
+|---|---|---|
+| Despacho (etiqueta com código de rastreio) | WhatsApp: número do pedido + código + link | remetente único do backend |
+| Postado (`order.posted`) | WhatsApp + e-mail "pedido postado" (e-mail só com o Resend ligado) | rota do webhook |
+| Entregue (`order.delivered`) | WhatsApp | rota do webhook |
+| `order.created`/`released`/`cancelled` | nada (só registro no pedido / log) | — |
+
+Cada aviso sai uma vez: a marca fica em `metadata.frete.avisos` (postado/entregue) e em
+`metadata.frete.aviso_despacho` (despacho). Reenvio da SuperFrete cai em "já avisado".
+
+**Aviso de despacho — remetente único.** Só `tentarAvisoDeDespacho` (`apps/backend/src/lib/aviso-despacho.ts`)
+manda a mensagem de despacho da etiqueta. É chamado de três lugares: o Cockpit logo depois do despacho (rota
+admin `POST /admin/frete/aviso-despacho/:order_id`), o webhook `order.generated` e o job
+`frete-avisos-pendentes` (a cada 5 min, os 50 mais antigos em `pendente`/`enviando`). Uma trava no Postgres
+garante uma mensagem só, mesmo com os três ao mesmo tempo. Se a Evolution não responde, a rodada do job para e
+os outros pedidos ficam para a próxima.
+
+Estados (`metadata.frete.aviso_despacho.status`, mostrados no pedido do Cockpit) e o que o operador faz:
+| Estado | Significa | Operador |
+|---|---|---|
+| `pendente` | etiqueta ainda sem código; o job tenta a cada 5 min | nada — até 24 h |
+| `enviando` | mensagem saindo agora | nada; se passar de 10 min vira `incerto` |
+| `enviado` | saiu (hora em `em`) | nada |
+| `expirado` | 24 h sem código de rastreio | conferir o código no painel da SuperFrete e **avisar a cliente à mão** |
+| `sem_whatsapp` | a Evolution disse que o número não tem WhatsApp | avisar por outro canal (e-mail/telefone) |
+| `sem_telefone` | pedido sem telefone | avisar por e-mail |
+| `incerto` | não dá para saber se saiu (timeout, resposta estranha) | **abrir a conversa da cliente**: se a mensagem não está lá, mandar à mão. O sistema nunca reenvia sozinho |
+| `dispensado` | operador dispensou | nada |
+
+**Interruptor do Cockpit: `SUPERFRETE_AVISO_PELO_BACKEND`** (Vercel, ambiente do Cockpit). Desligado (padrão) =
+como antes: o Cockpit manda o WhatsApp na hora do despacho, com o código que houver. Ligado (`true`) = na
+etiqueta da SuperFrete o Cockpit só grava `aviso_despacho` e pede ao backend; a mensagem sai quando o código
+existir. Despacho manual (código digitado) não muda. Ligar só depois do backend no ar (ordem no `progress.md`,
+2026-09-21).
+
+**Onde editar os textos:** `apps/backend/src/lib/superfrete-avisos.ts` (despacho, postado, entregue; `*` vira
+negrito). O texto de despacho tem uma cópia no Cockpit (`apps/cockpit/app/api/orders/[id]/dispatch/route.ts`),
+usada no despacho manual e com o interruptor desligado — mudou um, mude o outro. O e-mail fica em
+`apps/backend/src/modules/resend/templates/pedido-postado.ts`.
+
+**Webhook na conta da SuperFrete — ligar/desligar:** `apps/backend/ativar-webhook-superfrete.mjs`.
+- Ambiente: `SUPERFRETE_TOKEN`, `SUPERFRETE_CONTACT_EMAIL`, `SUPERFRETE_WEBHOOK_URL` (URL pública do backend +
+  `/webhooks/superfrete`, https). `SUPERFRETE_SANDBOX=true` usa o sandbox.
+- `node apps/backend/ativar-webhook-superfrete.mjs` → lista os webhooks da conta e diz o que faria (não grava).
+- `--aplicar` (com "pode aplicar") → cria com os seis eventos; se já existe um com a mesma URL, atualiza.
+- `--aplicar --desfazer` → remove só o(s) webhook(s) dessa URL. O despacho continua saindo pelo job de 5 min;
+  postado e entregue param.
+- **O segredo da assinatura é gerado pela SuperFrete** (a API não aceita segredo nosso): vem uma vez só, na
+  resposta da criação. O script mostra na tela (ou grava num arquivo novo com `--salvar-segredo=<arquivo>`);
+  copiar para `SUPERFRETE_WEBHOOK_SECRET` no Railway. Perdeu? `--aplicar --desfazer` e `--aplicar` de novo.
+- Sem `SUPERFRETE_WEBHOOK_SECRET` no backend a rota responde 200 e ignora tudo (não quebra, não gera
+  reenvio). Com o segredo, chamada sem assinatura válida → 401.
+- A SuperFrete reenvia até 5 vezes, a cada 15 min, quando não recebe resposta boa em 30 s. Backend fora do
+  ar por mais de ~1 h perde o aviso de postado/entregue (o pedido continua certo).
+- Etiqueta comprada fora do Cockpit (sem o número do pedido em `tags`) é ignorada, com registro no log.

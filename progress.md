@@ -1174,3 +1174,43 @@ Pedido da sócia: aba Acessórios com as subcategorias Meias e Óculos de sol. A
 - 2026-09-20 17:45 — **Correção da regra do cupom (decisão do dono):** nada de cupom preso a cliente. ERIKA20 passou a ter limite de **1 uso NO TOTAL** (`budget.type: "usage"`, limite 1) — a primeira pessoa que usar queima o cupom. Efeito colateral bom: ele volta a funcionar já na SACOLA, porque o limite não depende de saber quem é a cliente. A campanha antiga (`use_by_attribute customer_id`) foi apagada; `scripts/cupom.mjs` agora usa `--usos N` (padrão 1) e cria campanha do tipo `usage`. Conferido em produção: carrinho sem e-mail e carrinho com e-mail, os dois com 20% (R$ 51,80 numa peça de R$ 259). Nota: a campanha do Clube (primeira compra) continua por cliente, de propósito.
 - 2026-09-20 17:50 — **Tudo conferido em produção depois do deploy**: (1) pedido mínimo — carrinho de R$ 34,90 recusado já na criação da cobrança com "Pedido mínimo de R$ 150,00 em peças. Faltam R$ 115,10", carrinho de R$ 259 passa; (2) cupom ERIKA20 — 20% (R$ 51,80 numa peça de R$ 259) e, no carrinho com conjunto, vence o conjunto (desconto R$ 63,60 no lugar de R$ 19,00), sem somar; (3) entrega por aplicativo — aparece com CEP de Betim (R$ 0) e não aparece com CEP de São Paulo, recusa sem o aceite e grava o aceite com texto e hora. Campanha do ERIKA20 segue com 0 usos (o limite só conta quando vira pedido, não quando o cupom entra no carrinho).
 - 2026-09-20 21:19 — **Pix falhando em produção**: "Não conseguimos iniciar o pagamento agora". O log novo (com o corpo do erro) deu a causa na primeira tentativa: `'$.payer.address.complement' - length must be <= 20, but got 23` — o complemento do endereço da cliente estourava o limite da Orders API e derrubava a cobrança inteira. Corrigido: `enderecoDoPagador` corta cada campo no limite (`complement` 20; rua/bairro/cidade/estado 50; número 20). Endereço do PAGADOR é dado de antifraude; o de ENTREGA (etiqueta) continua inteiro. 82 testes no módulo do Mercado Pago, 417 no backend.
+
+## 2026-09-21 — Frete F5: avisos de entrega pela SuperFrete ✅ código (go-live aguarda o dono)
+- **Feito** (branch `feat/frete-superfrete`, sem push): rota `POST /webhooks/superfrete` (assinatura
+  `X-ME-Signature`, casa o pedido pela tag + `superfrete_id`, idempotente); WhatsApp de despacho, postado e
+  entregue + e-mail "pedido postado" (Resend), textos em `apps/backend/src/lib/superfrete-avisos.ts`;
+  **remetente único** do aviso de despacho (`tentarAvisoDeDespacho`, trava no Postgres) chamado pelo Cockpit
+  (rota admin `POST /admin/frete/aviso-despacho/:order_id`), pelo webhook `order.generated` e pelo job
+  `frete-avisos-pendentes` (5 min, expira em 24 h); Cockpit mostra os estados do aviso e tem o interruptor
+  `SUPERFRETE_AVISO_PELO_BACKEND` (desligado = comportamento antigo); script
+  `apps/backend/ativar-webhook-superfrete.mjs` (lista / `--aplicar` / `--aplicar --desfazer`). SOP:
+  `architecture/envios.md` › "Avisos de entrega (SuperFrete)".
+- **Descoberta na doc da SuperFrete:** o segredo da assinatura NÃO é nosso. A criação do webhook não aceita
+  segredo; a SuperFrete gera o `secret_token` e o devolve só na resposta da criação. Por isso o segredo vai
+  ao Railway DEPOIS do `--aplicar` (a spec §4.2/§5 supunha o contrário).
+- **Passos de ir ao ar, em ordem:**
+  1. **Dono:** merge/push da branch. `SUPERFRETE_WEBHOOK_URL` (URL pública do backend + `/webhooks/superfrete`)
+     no ambiente de onde o script vai rodar (`.env` local do backend ou o shell), junto com `SUPERFRETE_TOKEN` e
+     `SUPERFRETE_CONTACT_EMAIL`. No Railway nada novo ainda: sem `SUPERFRETE_WEBHOOK_SECRET` a rota responde 200 e
+     ignora — é seguro publicar antes.
+  2. **Dono ("pode aplicar"):** `railway up` do backend.
+  3. **Claude/dono:** no log do Railway, o job `frete-avisos-pendentes` rodando sem erro a cada 5 min; um POST
+     sem assinatura em `/webhooks/superfrete` responde 200 (log "SUPERFRETE_WEBHOOK_SECRET não está
+     configurado — ignorado").
+  4. **Claude/dono:** `node apps/backend/ativar-webhook-superfrete.mjs` (só lista) → conferir → **"pode aplicar"**
+     → `--aplicar`. O segredo aparece UMA vez na tela (de preferência o dono roda este passo no terminal dele,
+     ou usa `--salvar-segredo=<arquivo fora do repositório e do Drive>`, para o segredo não passar pelo chat).
+  5. **Dono:** `SUPERFRETE_WEBHOOK_SECRET` = esse segredo no Railway (o serviço reinicia). Conferir: POST sem
+     assinatura agora responde **401** (prova de que o segredo carregou). Apagar o arquivo do segredo, se usou.
+  6. **Dono:** só então `SUPERFRETE_AVISO_PELO_BACKEND=true` no Vercel (Cockpit) e redeploy do Cockpit.
+  7. **Próximo despacho real com etiqueta:** conferir no pedido o estado do aviso (`pendente` → `enviado`), a
+     mensagem no WhatsApp da cliente com o código, e depois o postado (WhatsApp + e-mail, se o Resend estiver
+     ligado) e o entregue.
+  8. **Reverter:** desligar `SUPERFRETE_AVISO_PELO_BACKEND` no Vercel + redeploy (volta ao aviso imediato pelo
+     Cockpit); `node apps/backend/ativar-webhook-superfrete.mjs --aplicar --desfazer` (para postado/entregue;
+     o job continua mandando os despachos pendentes).
+- **Pendências abertas:** (1) confirmação do dono: Evolution respondendo 5xx volta o aviso a `pendente`
+  (retenta) em vez de `incerto` — decisão técnica provisória; (2) formato real da resposta "número sem
+  WhatsApp" da Evolution — conferir no primeiro caso real (`sem_whatsapp`); (3) índice parcial em
+  `metadata->'frete'->'aviso_despacho'->>'status'` se o volume de pedidos crescer (o job varre sem índice);
+  (4) e-mail de postado só sai com o Resend ativo (`RESEND_API_KEY` no Railway).
