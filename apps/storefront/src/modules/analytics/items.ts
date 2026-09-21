@@ -5,6 +5,10 @@ import { EcommercePayload, GA4Item } from "./track"
 const n = (v: unknown): number | undefined =>
   typeof v === "number" ? v : undefined
 
+// `item_id` é SEMPRE o id da variante: é o `g:id` do feed (feed.xml), e é por ele que o catálogo
+// da Meta e o Merchant Center casam o evento com o produto. Com SKU aqui, o remarketing de
+// catálogo não achava ninguém ("conjunto de produtos vazio", 2026-09).
+
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 export function productToViewItem(
@@ -17,7 +21,7 @@ export function productToViewItem(
     value: n(price),
     items: [
       {
-        item_id: v?.sku || product.id,
+        item_id: v?.id || product.id,
         item_name: product.title || undefined,
         price: n(price),
         quantity: 1,
@@ -36,7 +40,7 @@ export function productsToItemList(
     items: products.map((p, i): GA4Item => {
       const v: any = p.variants?.[0]
       return {
-        item_id: v?.sku || p.id,
+        item_id: v?.id || p.id,
         item_name: p.title || undefined,
         price: n(v?.calculated_price?.calculated_amount),
         index: i,
@@ -86,7 +90,7 @@ export function variantToAddToCart(
     value: n(price) != null ? (n(price) as number) * quantity : undefined,
     items: [
       {
-        item_id: variant?.sku || variant?.id || product.id,
+        item_id: variant?.id || product.id,
         item_name: product.title || undefined,
         price: n(price),
         quantity,
@@ -101,7 +105,7 @@ export function cartToBeginCheckout(cart: HttpTypes.StoreCart): EcommercePayload
     value: n((cart as any).total),
     items: (cart.items || []).map(
       (it: any): GA4Item => ({
-        item_id: it.variant_sku || it.product_id || it.id,
+        item_id: it.variant_id || it.product_id || it.id,
         item_name: it.product_title || it.title,
         price: n(it.unit_price),
         quantity: it.quantity,
@@ -117,7 +121,7 @@ export function orderToPurchase(order: HttpTypes.StoreOrder): EcommercePayload {
     transaction_id: order.display_id ? String(order.display_id) : order.id,
     items: (order.items || []).map(
       (it: any): GA4Item => ({
-        item_id: it.variant_sku || it.product_id || it.id,
+        item_id: it.variant_id || it.product_id || it.id,
         item_name: it.product_title || it.title,
         price: n(it.unit_price),
         quantity: it.quantity,
