@@ -19,6 +19,7 @@ import {
 import { getRegion } from "./regions"
 import { getLocale } from "./locale-actions"
 import { retrieveCustomer, updateCustomer } from "./customer"
+import { sinaisDoMeta } from "@modules/analytics/capi"
 
 /**
  * Retrieves a cart by its ID. If no ID is provided, it will use the cart ID from the cookies.
@@ -396,7 +397,7 @@ export async function setAddresses(currentState: unknown, formData: FormData) {
         metadata: metaEnvio,
       },
       email: formData.get("email"),
-      metadata: { cpf },
+      metadata: { cpf, ...(await sinaisDoMeta()) },
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- payload montado de FormData (starter do Medusa)
     } as any
 

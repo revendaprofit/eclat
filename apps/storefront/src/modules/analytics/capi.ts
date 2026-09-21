@@ -95,6 +95,24 @@ async function sendCapi(eventName: string, opts: CapiOpts): Promise<CapiResult> 
   }
 }
 
+// Sinais do navegador que o BACKEND usa para mandar o Purchase no `order.placed`
+// (apps/backend/src/subscribers/compra-meta.ts). Com Pix a cliente paga no app do banco e muitas
+// vezes não volta: a página de confirmação não abre e o Purchase daqui nunca sai. Vão no metadata
+// do carrinho (que vira metadata do pedido) e só existem com o aceite de cookies.
+export async function sinaisDoMeta(): Promise<Record<string, string>> {
+  const c = await cookies()
+  if (c.get("eclat_consent")?.value !== "granted") return {}
+  const h = await headers()
+  const sinais: Record<string, string> = {}
+  const fbp = c.get("_fbp")?.value
+  const fbc = c.get("_fbc")?.value
+  const ua = h.get("user-agent")
+  if (fbp) sinais.meta_fbp = fbp
+  if (fbc) sinais.meta_fbc = fbc
+  if (ua) sinais.meta_ua = ua.slice(0, 400)
+  return sinais
+}
+
 // Diagnóstico: dispara um PageView de teste para a aba "Eventos de teste" do
 // Gerenciador de Eventos. Sem código de teste, só informa se pixel/token existem.
 export async function fireCapiTest(testEventCode?: string): Promise<CapiResult> {
@@ -123,7 +141,7 @@ export async function fireCapiPurchase(order: HttpTypes.StoreOrder) {
     email: (order as any).email,
     sourceUrl: `${getBaseURL()}/`,
     contents: (order.items || []).map((it: any) => ({
-      id: it.variant_sku || it.product_id || it.id,
+      id: it.variant_id || it.product_id || it.id, // = g:id do feed (variant.id)
       quantity: it.quantity,
       item_price: typeof it.unit_price === "number" ? it.unit_price : undefined,
     })),
