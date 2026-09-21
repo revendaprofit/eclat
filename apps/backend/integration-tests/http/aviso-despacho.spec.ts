@@ -331,8 +331,8 @@ medusaIntegrationTestRunner({
       const p = await criarPedido({ ...pendente(desde), tracking_number: CODIGO })
       modoEvolution = "401"
       const final = await tentar(getContainer(), p.id, "job")
-      expect(final).toEqual({ status: "pendente", desde })
-      expect((await lerFrete(p.id)).aviso_despacho).toEqual({ status: "pendente", desde })
+      expect(final).toEqual({ status: "pendente", desde, tentado_em: expect.any(String) })
+      expect((await lerFrete(p.id)).aviso_despacho).toEqual({ status: "pendente", desde, tentado_em: expect.any(String) })
       await freteDoCockpitIntacto(p.id)
 
       // A retentativa seguinte, com a Evolution de volta, manda.
@@ -432,7 +432,7 @@ medusaIntegrationTestRunner({
       const desde = minutosAtras(2)
       const p = await criarPedido({ ...pendente(desde), tracking_number: CODIGO })
       modoEvolution = "503"
-      expect(await tentar(getContainer(), p.id, "job")).toEqual({ status: "pendente", desde })
+      expect(await tentar(getContainer(), p.id, "job")).toEqual({ status: "pendente", desde, tentado_em: expect.any(String) })
       expect(whatsappEnviados).toHaveLength(0)
     })
 
@@ -446,7 +446,7 @@ medusaIntegrationTestRunner({
       await new Promise((ok) => servidorEvolution.close(() => ok(undefined)))
       await new Promise((r) => setTimeout(r, 200))
       try {
-        expect(await tentar(getContainer(), p.id, "job")).toEqual({ status: "pendente", desde })
+        expect(await tentar(getContainer(), p.id, "job")).toEqual({ status: "pendente", desde, tentado_em: expect.any(String) })
       } finally {
         await new Promise((ok) => servidorEvolution.listen(porta, "127.0.0.1", () => ok(undefined)))
       }

@@ -29,8 +29,12 @@ let atrasoEvolutionMs = 0
 // entregar (volta a pendente). "400": número sem WhatsApp (sem_whatsapp, desfecho de UM pedido).
 let modoEvolution: "ok" | "pendurado" | "503" | "400" = "ok"
 const pendurados: import("node:http").ServerResponse[] = []
-// Toda requisição de envio que chegou, entregue ou não.
+// Toda requisição de envio que chegou, entregue ou não, com o número (na ordem de chegada).
 let requisicoesEvolution = 0
+const numerosPedidos: string[] = []
+// Números que a Evolution recusa com 400 SEM `exists:false` (erro que pode ser só daquele pedido,
+// ex.: um jid que ela não entende). Vale em qualquer modo.
+const numerosQueFalham = new Set<string>()
 // Quantas mensagens a Evolution falsa está atendendo ao mesmo tempo (o job manda EM SEQUÊNCIA).
 let emVoo = 0
 let maxEmVoo = 0
@@ -65,6 +69,11 @@ async function subirSimulados(): Promise<void> {
         return
       }
       const { number, text } = JSON.parse(corpo || "{}")
+      numerosPedidos.push(number)
+      if (numerosQueFalham.has(number)) {
+        res.writeHead(400, { "content-type": "application/json" }).end(JSON.stringify({ status: 400, response: { message: ["jid inválido"] } }))
+        return
+      }
       if (modoEvolution === "400") {
         res.writeHead(400, { "content-type": "application/json" }).end(JSON.stringify({ response: { message: [{ exists: false, jid: `${number}@s.whatsapp.net` }] } }))
         return
@@ -131,6 +140,8 @@ medusaIntegrationTestRunner({
       modoEvolution = "ok"
       for (const r of pendurados.splice(0)) r.destroy()
       requisicoesEvolution = 0
+      numerosPedidos.length = 0
+      numerosQueFalham.clear()
       consultasSuperfrete.length = 0
       maxEmVoo = 0
       whatsappEnviados.length = 0
@@ -145,11 +156,11 @@ medusaIntegrationTestRunner({
       label_url: "https://exemplo.invalid/etiqueta.pdf",
     }
 
-    async function criarPedido(frete: Record<string, unknown>, opts: { superfreteId?: string } = {}) {
+    async function criarPedido(frete: Record<string, unknown>, opts: { superfreteId?: string; telefone?: string } = {}) {
       const pedido = await pedidos.createOrders({
         currency_code: "brl",
         email: "cliente@example.com",
-        shipping_address: { first_name: "Ana", last_name: "Teste", city: "Belo Horizonte", country_code: "br", phone: TELEFONE },
+        shipping_address: { first_name: "Ana", last_name: "Teste", city: "Belo Horizonte", country_code: "br", phone: opts.telefone ?? TELEFONE },
         metadata: {
           observacao: "não mexer",
           frete: { ...FRETE_DO_COCKPIT, ...(opts.superfreteId ? { superfrete_id: opts.superfreteId } : {}), ...frete },
@@ -347,16 +358,64 @@ medusaIntegrationTestRunner({
         for (const p of [a, b, c]) await dispensar(p.id)
       }, 60_000)
 
-      it("Evolution fora do ar (503): o primeiro volta a pendente e a rodada para — 1 requisição só", async () => {
+      it("Evolution fora do ar (503 em tudo): a rodada para depois de DUAS falhas seguidas — 2 requisições", async () => {
         const [a, b, c] = await tresProntos()
         modoEvolution = "503"
         const r = await verificar(containerCom({ pg: pgReal(), logger: loggerEspiao() }))
 
-        expect(r).toEqual({ candidatos: 3, porEstado: { pendente: 1 }, falhas: 0, interrompida: 2 })
-        expect(requisicoesEvolution).toBe(1)
-        expect((await avisos([a.id, b.id, c.id])).map((x) => x.status)).toEqual(["pendente", "pendente", "pendente"])
+        expect(r).toEqual({ candidatos: 3, porEstado: { pendente: 2 }, falhas: 0, interrompida: 1 })
+        expect(requisicoesEvolution).toBe(2)
+        const [fa, fb, fc] = await avisos([a.id, b.id, c.id])
+        expect([fa.status, fb.status, fc.status]).toEqual(["pendente", "pendente", "pendente"])
+        // Os que falharam guardam `tentado_em` (vão para o fim da fila); o que não foi tentado, não.
+        expect(fa.tentado_em).toEqual(expect.any(String))
+        expect(fb.tentado_em).toEqual(expect.any(String))
+        expect(fc.tentado_em).toBeUndefined()
 
         for (const p of [a, b, c]) await dispensar(p.id)
+      })
+
+      // ---- Fix round 2: um pedido que sempre falha não trava a fila ----
+      const TELEFONE_RUIM = "31999990001"
+
+      it("o mais antigo sempre falha (400 sem exists:false) e o seguinte está pronto → o seguinte sai NA MESMA rodada", async () => {
+        const ruim = await criarPedido({ ...pendente(minutosAtras(3)), tracking_number: CODIGO }, { telefone: TELEFONE_RUIM })
+        const bom = await criarPedido({ ...pendente(minutosAtras(2)), tracking_number: CODIGO })
+        numerosQueFalham.add(`55${TELEFONE_RUIM}`)
+        const r = await verificar(containerCom({ pg: pgReal(), logger: loggerEspiao() }))
+
+        expect(r).toEqual({ candidatos: 2, porEstado: { pendente: 1, enviado: 1 }, falhas: 0 })
+        expect(numerosPedidos).toEqual([`55${TELEFONE_RUIM}`, `55${TELEFONE}`])
+        const [fr, fb] = await avisos([ruim.id, bom.id])
+        expect(fr).toMatchObject({ status: "pendente", tentado_em: expect.any(String) })
+        expect(fr.desde_envio).toBeUndefined()
+        expect(fb.status).toBe("enviado")
+
+        await dispensar(ruim.id)
+      })
+
+      it("depois de um `falhou`, a rodada seguinte tenta o pedido mais novo ANTES do que falhou", async () => {
+        const ruim = await criarPedido({ ...pendente(minutosAtras(3)), tracking_number: CODIGO }, { telefone: TELEFONE_RUIM })
+        await pgReal().raw(`UPDATE "order" SET created_at = now() - interval '2 days' WHERE id = ?`, [ruim.id])
+        const bom = await criarPedido({ ...pendente(minutosAtras(2)), tracking_number: CODIGO })
+        numerosQueFalham.add(`55${TELEFONE_RUIM}`)
+        // Rodada 1, com limite 1: o mais antigo (o ruim) é tentado e falha.
+        expect(await verificar(getContainer(), 1)).toEqual({ candidatos: 1, porEstado: { pendente: 1 }, falhas: 0 })
+        expect(numerosPedidos).toEqual([`55${TELEFONE_RUIM}`])
+        numerosPedidos.length = 0
+        // Rodada 2, com limite 1: vai o mais novo, não o que acabou de falhar.
+        expect(await verificar(getContainer(), 1)).toEqual({ candidatos: 1, porEstado: { enviado: 1 }, falhas: 0 })
+        expect(numerosPedidos).toEqual([`55${TELEFONE}`])
+        expect((await lerFrete(bom.id)).aviso_despacho.status).toBe("enviado")
+
+        await dispensar(ruim.id)
+      })
+
+      it("`tentado_em` estragado não derruba o SELECT (vale o created_at) e o pedido sai normalmente", async () => {
+        const p = await criarPedido({ aviso_despacho: { status: "pendente", desde: minutosAtras(1), tentado_em: "2026-13-45T99:99:99.999Z" }, tracking_number: CODIGO })
+        const r = await verificar(getContainer())
+        expect(r).toEqual({ candidatos: 1, porEstado: { enviado: 1 }, falhas: 0 })
+        expect((await lerFrete(p.id)).aviso_despacho.status).toBe("enviado")
       })
 
       it("número sem WhatsApp é desfecho de UM pedido: a rodada NÃO para", async () => {

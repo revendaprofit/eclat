@@ -396,7 +396,12 @@ async function tentarAviso(
       desfecho.tentativa = "falhou"
       const motivo = e instanceof EvolutionHttpError ? `HTTP ${e.status}` : `sem conexão: ${codigoDeRede(e)}`
       logger.error(`[aviso-despacho] pedido #${n}: WhatsApp falhou (${motivo}) — aviso de despacho volta para pendente (${origem})`)
-      return depoisDaReserva(() => mudarAvisoDespacho(pg, orderId, "enviando", { status: "pendente" }, ["desde_envio", "por"]), reservado)
+      // `tentado_em` põe este pedido no fim da fila da verificação de 5 min: um pedido que sempre
+      // falha (ex.: um número que a Evolution não entende) não fica na frente dos mais novos.
+      return depoisDaReserva(
+        () => mudarAvisoDespacho(pg, orderId, "enviando", { status: "pendente", tentado_em: new Date().toISOString() }, ["desde_envio", "por"]),
+        reservado
+      )
     }
     // Todo o resto é AMBÍGUO — timeout, conexão caída no meio, 2xx com corpo ilegível, erro
     // desconhecido: a Evolution pode ter entregado. Reenviar arriscaria duplicar: `incerto`.
@@ -442,12 +447,24 @@ async function tentarAviso(
 // no máximo `limite` por rodada. Um por vez, EM SEQUÊNCIA — o WhatsApp não gosta de rajada — e cada
 // um no seu try/catch: um pedido com erro não para os outros.
 //
-// A RODADA PARA quando a Evolution não responde: se um envio TENTADO estoura o tempo ou dá resposta
-// ambígua (vira "incerto"), ou falha com certeza (volta a "pendente"), o problema é da Evolution e
-// não daquele pedido. Seguir transformaria cada candidato em "incerto" (final, sem retentativa) a
-// 15 s cada — com 50 candidatos, 12 min, passando por cima da próxima rodada. Os que sobram não são
-// tocados (continuam "pendente", sem reserva) e ficam para a próxima. "sem_whatsapp" e "ainda sem
-// código" são desfechos de UM pedido e não param nada.
+// A RODADA PARA quando a Evolution não responde. Os que sobram não são tocados (continuam
+// "pendente", sem reserva) e ficam para a próxima.
+//  - Envio TENTADO com timeout ou resposta ambígua (vira "incerto"): para NA HORA. Seguir
+//    transformaria cada candidato em "incerto" (final, sem retentativa) a 15 s cada — com 50
+//    candidatos, 12 min, passando por cima da próxima rodada.
+//  - Envio que falhou com certeza (volta a "pendente"): para só depois de DUAS falhas SEGUIDAS, em
+//    pedidos diferentes. Uma falha sozinha pode ser daquele pedido (400 sem `exists:false`, 5xx num
+//    número que a Evolution não entende); com a Evolution fora do ar, a segunda confirma — custo de
+//    2 requisições. Um envio aceito ou um `sem_whatsapp` zera a contagem.
+//  - "sem_whatsapp" e "ainda sem código" são desfechos de UM pedido e não param nada.
+//
+// ORDEM: `coalesce(tentado_em, created_at)`, o mais antigo primeiro. O pedido que volta a "pendente"
+// por falha ganha `tentado_em` (agora) e vai para o fim da fila — sem isso, um pedido que sempre
+// falha seria sempre o primeiro, e os mais novos esperariam 24 h. A comparação é de TEXTO: o
+// `created_at` vira o mesmo formato do `toISOString()` (UTC, milissegundos, "Z"), que ordena como
+// data. Nada é convertido para timestamp, então um `tentado_em` estragado nunca derruba o SELECT;
+// e ele só entra na ordem se tem exatamente esse formato (senão vale o `created_at`). A expressão
+// regular não usa `?`, que o knex trataria como parâmetro.
 //
 // Rodadas nunca se sobrepõem no mesmo processo (`rodadaEmAndamento`). O motor de workflows em
 // memória do Medusa só agenda o disparo seguinte depois de o anterior terminar, então hoje isso não
@@ -490,19 +507,26 @@ async function rodadaDeVerificacao(container: MedusaContainer, limite: number): 
   const { rows } = await pg.raw(
     `SELECT id, display_id FROM "order"
      WHERE deleted_at IS NULL AND metadata->'frete'->'aviso_despacho'->>'status' IN ('pendente','enviando')
-     ORDER BY created_at ASC, id ASC
+     ORDER BY coalesce(
+       CASE WHEN metadata->'frete'->'aviso_despacho'->>'tentado_em' ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}[.][0-9]{3}Z$'
+            THEN metadata->'frete'->'aviso_despacho'->>'tentado_em' END,
+       to_char(created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')
+     ) ASC, id ASC
      LIMIT ?`,
     [limite]
   )
 
   const resultado: ResultadoDaVerificacao = { candidatos: rows.length, porEstado: {}, falhas: 0 }
+  let falhasSeguidas = 0
   for (const [i, linha] of rows.entries()) {
     const id = String(linha.id)
     try {
       const { aviso: final, tentativa } = await tentarAvisoComDesfecho(container, id, "job")
       const estado = String(final?.status ?? "sem_aviso")
       resultado.porEstado[estado] = (resultado.porEstado[estado] ?? 0) + 1
-      if (tentativa === "ambigua" || tentativa === "falhou") {
+      if (tentativa === "falhou") falhasSeguidas++
+      else if (tentativa === "saiu" || tentativa === "sem_whatsapp") falhasSeguidas = 0
+      if (tentativa === "ambigua" || falhasSeguidas >= 2) {
         const restantes = rows.length - (i + 1)
         if (restantes > 0) {
           resultado.interrompida = restantes

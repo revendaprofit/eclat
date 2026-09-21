@@ -135,6 +135,13 @@ describe("estados do remetente único do backend", () => {
     ).toEqual({ status: "incerto" })
   })
 
+  it("tolera `tentado_em` (gravado pelo backend quando uma tentativa falha) e o ignora", () => {
+    expect(lerAvisoDespacho({ frete: { aviso_despacho: { status: "pendente", desde: AGORA, tentado_em: AGORA } } })).toEqual({
+      status: "pendente",
+      desde: AGORA,
+    })
+  })
+
   it("a resposta da rota do backend ({ aviso_despacho }) é lida com os estados novos", () => {
     for (const status of ["enviando", "enviado", "sem_whatsapp", "incerto"]) {
       expect(lerAvisoDespacho({ frete: { aviso_despacho: { status } } })?.status).toBe(status)
