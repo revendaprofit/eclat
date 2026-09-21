@@ -4,8 +4,13 @@ import { paraCentavos } from "./dinheiro"
 import type { Pacote } from "./embalagem"
 import { ID_SUPERFRETE, SERVICOS, type Servico } from "./preco"
 
-/** O que usamos da consulta de uma etiqueta (`GET /api/v0/order/info/{id}`). */
-export type InfoEtiqueta = { status: string; tracking: string | null; tags: string[] }
+/**
+ * O que usamos da consulta de uma etiqueta (`GET /api/v0/order/info/{id}`). `status` vem como a API
+ * manda: "pending", "released", "posted", "delivered", "canceled" (com UM "l" — visto na etiqueta real
+ * cancelada em 2026-09-19; architecture/envios.md). As `tags` da resposta não são lidas: o pedido já é
+ * casado pelo `superfrete_id` gravado no Cockpit.
+ */
+export type InfoEtiqueta = { status: string; tracking: string | null }
 export type Cotacao = { servico: Servico; centavos: number; prazoMin: number; prazoMax: number }
 export type OpcoesCliente = {
   token: string
@@ -60,7 +65,7 @@ export class ClienteSuperfrete {
     // O relógio cobre a chamada E a leitura do corpo: um corpo que para de chegar no meio também é
     // cortado. Só é desligado depois do `json()`.
     const relogio = setTimeout(() => controle.abort(), this.o.timeoutMs ?? 8000)
-    let corpo: { status?: unknown; tracking?: unknown; tags?: unknown } | null
+    let corpo: { status?: unknown; tracking?: unknown } | null
     try {
       let resposta: Response
       try {
@@ -88,13 +93,7 @@ export class ClienteSuperfrete {
       clearTimeout(relogio)
     }
     const tracking = typeof corpo?.tracking === "string" && corpo.tracking.trim() ? corpo.tracking.trim() : null
-    const tags = Array.isArray(corpo?.tags)
-      ? corpo.tags
-          .map((t) => (t && typeof t === "object" ? (t as { tag?: unknown }).tag : undefined))
-          .filter((t) => typeof t === "string" || typeof t === "number")
-          .map(String)
-      : []
-    return { status: typeof corpo?.status === "string" ? corpo.status : "", tracking, tags }
+    return { status: typeof corpo?.status === "string" ? corpo.status : "", tracking }
   }
 
   async cotar(cepDestino: string, pacote: Pacote): Promise<Cotacao[]> {

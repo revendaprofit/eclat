@@ -277,7 +277,8 @@ medusaIntegrationTestRunner({
 
       const frete = await lerFrete(p.id)
       expect(frete.tracking_number).toBe("AA123456789BR")
-      expect(frete.tracking_url).toBe("https://exemplo.invalid/AA123456789BR")
+      // O `tracking_url` do corpo NUNCA é gravado nem vai para a cliente: o link é o dos Correios.
+      expect(frete.tracking_url).toBe(`https://rastreamento.correios.com.br/app/index.php?objetos=AA123456789BR`)
       expect(frete.status_transportadora).toBe("order.generated")
       expect(frete.eventos["order.generated"]).toEqual(expect.any(String))
       // Task 3: quem marca é `tentarAvisoDeDespacho` (o remetente único), que guarda também quando a
@@ -293,7 +294,8 @@ medusaIntegrationTestRunner({
       expect(whatsappEnviados[0].number).toBe(`55${TELEFONE}`)
       expect(whatsappEnviados[0].text).toContain(`#${p.display_id}`)
       expect(whatsappEnviados[0].text).toContain("AA123456789BR")
-      expect(whatsappEnviados[0].text).toContain("https://exemplo.invalid/AA123456789BR")
+      expect(whatsappEnviados[0].text).toContain(`https://rastreamento.correios.com.br/app/index.php?objetos=AA123456789BR`)
+      expect(whatsappEnviados[0].text).not.toContain("exemplo.invalid")
 
       // Reenvio da SuperFrete: nada sai de novo e a data do aviso não muda.
       const r2 = await chamar(corpoDe(p.display_id, "order.generated", COM_CODIGO))
@@ -460,7 +462,7 @@ medusaIntegrationTestRunner({
       expect(r.status).toBe(200)
       const frete = await lerFrete(p.id)
       expect(frete.tracking_number).toBe("AA123456789BR")
-      expect(frete.tracking_url).toBe("https://exemplo.invalid/AA123456789BR")
+      expect(frete.tracking_url).toBe(`https://rastreamento.correios.com.br/app/index.php?objetos=AA123456789BR`)
       expect(whatsappEnviados[0].text).toContain("AA123456789BR")
     })
 
@@ -741,6 +743,71 @@ medusaIntegrationTestRunner({
       expect(frete.tracking_number).toBe("AA123456789BR")
       expect(frete.eventos["order.generated"]).toEqual(expect.any(String))
       expect(whatsappEnviados).toHaveLength(0)
+    })
+
+    // ---- Revisão final (2026-09-21): I-3 e I-4 ----
+
+    it("I-3: order.cancelled com aviso_despacho pendente → dispensado (etiqueta cancelada), nada enviado", async () => {
+      const p = await criarPedido(PENDENTE)
+      const r = await chamar(corpoDe(p.display_id, "order.cancelled"))
+      expect(r.status).toBe(200)
+      const frete = await lerFrete(p.id)
+      expect(frete.status_transportadora).toBe("order.cancelled")
+      expect(frete.aviso_despacho).toEqual({ status: "dispensado", desde: "2026-09-21T10:00:00.000Z", em: expect.any(String), motivo: "etiqueta cancelada" })
+      expect(whatsappEnviados).toHaveLength(0)
+
+      // Um order.generated atrasado depois do cancelamento não manda o despacho.
+      await chamar(corpoDe(p.display_id, "order.generated", COM_CODIGO))
+      expect((await lerFrete(p.id)).aviso_despacho.status).toBe("dispensado")
+      expect(whatsappEnviados).toHaveLength(0)
+    })
+
+    it.each([
+      ["enviando", { status: "enviando", desde: "2026-09-21T10:00:00.000Z", desde_envio: "2026-09-21T10:00:01.000Z", por: "job" }],
+      ["enviado", { status: "enviado", desde: "2026-09-21T10:00:00.000Z", em: "2026-09-21T10:00:05.000Z", por: "job" }],
+      ["incerto", { status: "incerto", desde: "2026-09-21T10:00:00.000Z", motivo: "tempo esgotado no envio do WhatsApp" }],
+    ])("I-3: order.cancelled com aviso_despacho %s → não mexe no aviso", async (_status, aviso) => {
+      const p = await criarPedido({ aviso_despacho: aviso })
+      const r = await chamar(corpoDe(p.display_id, "order.cancelled"))
+      expect(r.status).toBe(200)
+      const frete = await lerFrete(p.id)
+      expect(frete.status_transportadora).toBe("order.cancelled")
+      expect(frete.aviso_despacho).toEqual(aviso)
+      expect(whatsappEnviados).toHaveLength(0)
+    })
+
+    it("I-4: order.posted com aviso_despacho pendente → dispensado (coberto pelo postado); só a mensagem de postado sai, e o despacho atrasado não sai depois", async () => {
+      const p = await criarPedido(PENDENTE)
+      const r = await chamar(corpoDe(p.display_id, "order.posted", COM_CODIGO))
+      expect(r.status).toBe(200)
+      const frete = await lerFrete(p.id)
+      expect(frete.aviso_despacho).toEqual({
+        status: "dispensado",
+        desde: "2026-09-21T10:00:00.000Z",
+        em: expect.any(String),
+        motivo: "coberto pelo aviso de postado",
+      })
+      expect(frete.avisos.posted).toEqual(expect.any(String))
+      expect(whatsappEnviados).toHaveLength(1)
+      expect(whatsappEnviados[0].text).not.toContain("acabou de ser enviado")
+      expect(whatsappEnviados[0].text).toContain("AA123456789BR")
+
+      // O order.generated chegando DEPOIS (fora de ordem) não manda o despacho.
+      const r2 = await chamar(corpoDe(p.display_id, "order.generated", COM_CODIGO))
+      expect(r2.status).toBe(200)
+      expect((await lerFrete(p.id)).aviso_despacho.status).toBe("dispensado")
+      expect(whatsappEnviados).toHaveLength(1)
+    })
+
+    it("I-4: order.posted com aviso_despacho ENVIANDO → não mexe no aviso (o envio em curso decide); o postado sai", async () => {
+      const enviando = { status: "enviando", desde: "2026-09-21T10:00:00.000Z", desde_envio: new Date().toISOString(), por: "job" }
+      const p = await criarPedido({ aviso_despacho: enviando, tracking_number: "AA123456789BR" })
+      const r = await chamar(corpoDe(p.display_id, "order.posted"))
+      expect(r.status).toBe(200)
+      const frete = await lerFrete(p.id)
+      expect(frete.aviso_despacho).toEqual(enviando)
+      expect(frete.avisos.posted).toEqual(expect.any(String))
+      expect(whatsappEnviados).toHaveLength(1)
     })
   },
 })

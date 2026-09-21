@@ -191,7 +191,10 @@ medusaIntegrationTestRunner({
       expect(whatsappEnviados[0].number).toBe(`55${TELEFONE}`)
       expect(whatsappEnviados[0].text).toContain(`#${p.display_id}`)
       expect(whatsappEnviados[0].text).toContain(CODIGO)
-      expect(whatsappEnviados[0].text).toContain("https://exemplo.invalid/AA")
+      // O link é SEMPRE o dos Correios montado do código — nunca um `tracking_url` gravado no pedido
+      // (que pode ter vindo do corpo de um webhook).
+      expect(whatsappEnviados[0].text).toContain(`https://rastreamento.correios.com.br/app/index.php?objetos=${CODIGO}`)
+      expect(whatsappEnviados[0].text).not.toContain("exemplo.invalid")
       expect(consultasSuperfrete).toHaveLength(0)
       await freteDoCockpitIntacto(p.id)
     })
@@ -239,10 +242,13 @@ medusaIntegrationTestRunner({
       expect(frete.tracking_number).toBeUndefined()
     })
 
-    it("CORRIDA: chamadores simultâneos + um webhook order.posted gravando estado → exatamente 1 mensagem de despacho", async () => {
+    // O webhook da corrida é o order.delivered: grava estado no mesmo `frete` e manda a mensagem dele,
+    // sem tocar no aviso de despacho. (O order.posted DISPENSA um despacho pendente — I-4 da revisão
+    // final — e tem teste próprio abaixo e no frete-webhook.spec.)
+    it("CORRIDA: chamadores simultâneos + um webhook order.delivered gravando estado → exatamente 1 mensagem de despacho", async () => {
       const p = await criarPedido({ ...pendente(), tracking_number: CODIGO })
       atrasoEvolutionMs = 300
-      const corpo = JSON.stringify({ event: "order.posted", data: { id: ETIQUETA, tags: [{ tag: String(p.display_id) }] } })
+      const corpo = JSON.stringify({ event: "order.delivered", data: { id: ETIQUETA, tags: [{ tag: String(p.display_id) }] } })
       const webhook = api
         .post("/webhooks/superfrete", corpo, {
           headers: { "content-type": "application/json", "x-me-signature": createHmac("sha256", SEGREDO).update(corpo).digest("hex") },
@@ -264,10 +270,76 @@ medusaIntegrationTestRunner({
       for (const r of resultados.slice(0, 4)) expect(["enviando", "enviado"]).toContain((r as { status: string }).status)
       // O webhook gravou o estado dele sem desfazer a reserva/marca (e vice-versa).
       expect((resultados[4] as { status: number }).status).toBe(200)
-      expect(frete.status_transportadora).toBe("order.posted")
-      expect(frete.eventos["order.posted"]).toEqual(expect.any(String))
-      expect(frete.avisos.posted).toEqual(expect.any(String))
+      expect(frete.status_transportadora).toBe("order.delivered")
+      expect(frete.eventos["order.delivered"]).toEqual(expect.any(String))
+      expect(frete.avisos.delivered).toEqual(expect.any(String))
       await freteDoCockpitIntacto(p.id)
+    })
+
+    it("CORRIDA com o order.posted (I-4): nunca duas mensagens de despacho; ou saiu o despacho, ou ele foi dispensado pelo postado", async () => {
+      const p = await criarPedido({ ...pendente(), tracking_number: CODIGO })
+      atrasoEvolutionMs = 300
+      const corpo = JSON.stringify({ event: "order.posted", data: { id: ETIQUETA, tags: [{ tag: String(p.display_id) }] } })
+      const webhook = api
+        .post("/webhooks/superfrete", corpo, {
+          headers: { "content-type": "application/json", "x-me-signature": createHmac("sha256", SEGREDO).update(corpo).digest("hex") },
+        })
+        .catch((e) => e.response)
+      await Promise.all([tentar(getContainer(), p.id, "cockpit"), tentar(getContainer(), p.id, "job"), webhook])
+
+      const aviso = (await lerFrete(p.id)).aviso_despacho
+      if (aviso.status === "dispensado") {
+        expect(aviso.motivo).toBe("coberto pelo aviso de postado")
+        expect(despachos()).toHaveLength(0)
+      } else {
+        expect(aviso.status).toBe("enviado")
+        expect(despachos()).toHaveLength(1)
+      }
+      expect((await lerFrete(p.id)).avisos.posted).toEqual(expect.any(String))
+    })
+
+    // ---- I-3 (revisão final): etiqueta cancelada não recebe mensagem de despacho ----
+
+    it("I-3: pendente e o estado da transportadora é order.cancelled → dispensado (etiqueta cancelada), sem consultar nem enviar; log warn com o número", async () => {
+      const desde = minutosAtras(2)
+      const p = await criarPedido({ ...pendente(desde), tracking_number: CODIGO, status_transportadora: "order.cancelled" })
+      const logger = getContainer().resolve(ContainerRegistrationKeys.LOGGER)
+      const aviso = jest.spyOn(logger, "warn")
+      try {
+        const final = await tentar(getContainer(), p.id, "job")
+        expect(final).toEqual({ status: "dispensado", desde, em: expect.any(String), motivo: "etiqueta cancelada" })
+        expect(aviso.mock.calls.some(([m]) => String(m).includes(`#${p.display_id}`) && String(m).includes("cancelada"))).toBe(true)
+      } finally {
+        aviso.mockRestore()
+      }
+      expect((await lerFrete(p.id)).aviso_despacho.status).toBe("dispensado")
+      expect(whatsappEnviados).toHaveLength(0)
+      expect(consultasSuperfrete).toHaveLength(0)
+      await freteDoCockpitIntacto(p.id)
+    })
+
+    it("I-3: pendente sem código e a SuperFrete diz que a etiqueta está \"canceled\" → dispensado, não envia", async () => {
+      const etiqueta = "sfid_cancelada"
+      infoDasEtiquetas.set(etiqueta, { status: 200, corpo: { id: etiqueta, status: "canceled", tracking: null } })
+      const desde = minutosAtras(2)
+      const p = await criarPedido(pendente(desde), { superfreteId: etiqueta })
+      const final = await tentar(getContainer(), p.id, "job")
+      expect(final).toEqual({ status: "dispensado", desde, em: expect.any(String), motivo: "etiqueta cancelada" })
+      expect(consultasSuperfrete).toEqual([etiqueta])
+      expect(whatsappEnviados).toHaveLength(0)
+      // E nada mais sai depois.
+      expect((await tentar(getContainer(), p.id, "job"))?.status).toBe("dispensado")
+      expect(whatsappEnviados).toHaveLength(0)
+    })
+
+    it("I-3: a SuperFrete diz \"canceled\" MESMO com código de rastreio → dispensado, não envia", async () => {
+      const etiqueta = "sfid_cancelada_com_codigo"
+      infoDasEtiquetas.set(etiqueta, { status: 200, corpo: { id: etiqueta, status: "canceled", tracking: CODIGO } })
+      const p = await criarPedido(pendente(), { superfreteId: etiqueta })
+      const final = await tentar(getContainer(), p.id, "job")
+      expect(final?.status).toBe("dispensado")
+      expect(final?.motivo).toBe("etiqueta cancelada")
+      expect(whatsappEnviados).toHaveLength(0)
     })
 
     it.each(["enviado", "dispensado", "sem_telefone", "expirado", "incerto", "sem_whatsapp"])(

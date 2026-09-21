@@ -101,18 +101,23 @@ describe("ClienteSuperfrete.consultarEtiqueta", () => {
     expect(chamado.mock.calls[0][0]).toBe("https://api.superfrete.com/api/v0/order/info/a%2F..%2Fb%3Fx%3D1")
   })
 
-  it("devolve só status, código e tags (como texto)", async () => {
+  it("devolve só status e código (as tags não são usadas: o pedido é casado pelo superfrete_id)", async () => {
     global.fetch = jest.fn().mockResolvedValue(
       respostaFetch(200, { id: "ord_1", status: "released", tracking: "AA123456789BR", tags: [{ tag: "21", url: null }, { tag: 7 }], price: 17.4 })
     ) as unknown as typeof fetch
-    expect(await new ClienteSuperfrete(opcoes).consultarEtiqueta("ord_1")).toEqual({ status: "released", tracking: "AA123456789BR", tags: ["21", "7"] })
+    expect(await new ClienteSuperfrete(opcoes).consultarEtiqueta("ord_1")).toEqual({ status: "released", tracking: "AA123456789BR" })
   })
 
-  it("campos ausentes ou estranhos viram null / lista vazia; código vazio vira null", async () => {
+  it("etiqueta cancelada: o status volta como a API manda, \"canceled\" (o aviso de despacho depende disto)", async () => {
+    global.fetch = jest.fn().mockResolvedValue(respostaFetch(200, { status: "canceled", tracking: null })) as unknown as typeof fetch
+    expect(await new ClienteSuperfrete(opcoes).consultarEtiqueta("ord_1")).toEqual({ status: "canceled", tracking: null })
+  })
+
+  it("campos ausentes ou estranhos viram vazio / null; código vazio vira null", async () => {
     global.fetch = jest.fn().mockResolvedValue(respostaFetch(200, { tracking: "", tags: "21" })) as unknown as typeof fetch
-    expect(await new ClienteSuperfrete(opcoes).consultarEtiqueta("ord_1")).toEqual({ status: "", tracking: null, tags: [] })
+    expect(await new ClienteSuperfrete(opcoes).consultarEtiqueta("ord_1")).toEqual({ status: "", tracking: null })
     global.fetch = jest.fn().mockResolvedValue(respostaFetch(200, null)) as unknown as typeof fetch
-    expect(await new ClienteSuperfrete(opcoes).consultarEtiqueta("ord_1")).toEqual({ status: "", tracking: null, tags: [] })
+    expect(await new ClienteSuperfrete(opcoes).consultarEtiqueta("ord_1")).toEqual({ status: "", tracking: null })
   })
 
   it("HTTP de erro vira ErroSuperfrete com o status, SEM o corpo da resposta nem o token", async () => {

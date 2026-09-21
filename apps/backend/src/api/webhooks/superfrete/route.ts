@@ -2,7 +2,15 @@ import type { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import type { IOrderModuleService } from "@medusajs/framework/types"
 import { ContainerRegistrationKeys, Modules } from "@medusajs/framework/utils"
 import { EvolutionHttpError, evolutionConfigured, sendWhatsappText } from "../../../lib/evolution"
-import { mesclarNoFrete, tentarAvisoDeDespacho, type Pg } from "../../../lib/aviso-despacho"
+import {
+  MOTIVO_COBERTO_PELO_POSTADO,
+  MOTIVO_ETIQUETA_CANCELADA,
+  dispensarAvisoPendente,
+  linkDeRastreio,
+  mesclarNoFrete,
+  tentarAvisoDeDespacho,
+  type Pg,
+} from "../../../lib/aviso-despacho"
 import { normalizaWhatsapp, textoEntregue, textoPostado } from "../../../lib/superfrete-avisos"
 import { getPrevenda } from "../../../lib/prevenda"
 import { WHATSAPP_PADRAO } from "../../../modules/resend/dados-pedido"
@@ -123,9 +131,9 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
   }
 
   const avisosAtuais = (freteAtual.avisos && typeof freteAtual.avisos === "object" ? freteAtual.avisos : {}) as Record<string, unknown>
-  // `order.generated` não usa `avisos`: a marca dele é `aviso_despacho` (§9), conferida mais abaixo,
-  // DEPOIS de gravar o rastreio — um reenvio ainda pode trazer o código que faltava.
-  if (event !== "order.generated" && acao.aviso && avisosAtuais[acao.aviso]) {
+  // `order.generated` não tem `acao.aviso` (a marca dele é `aviso_despacho`, §9, conferida pelo
+  // remetente único DEPOIS de gravar o rastreio — um reenvio ainda pode trazer o código que faltava).
+  if (acao.aviso && avisosAtuais[acao.aviso]) {
     // Reenvio da SuperFrete de algo que já avisamos: sai antes de reescrever qualquer coisa, para a
     // data do aviso (e a do evento) não mudarem a cada retentativa.
     logger.info(`[frete] webhook ${event} do pedido #${displayId} já avisado em ${String(avisosAtuais[acao.aviso])} — ignorado`)
@@ -142,7 +150,7 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
 
   // A mesma leitura fresca refaz a conferência de "já avisado": se outro caminho avisou enquanto
   // esta requisição corria, sai sem gravar nem enviar.
-  if (event !== "order.generated" && acao.aviso && objeto(freteBase.avisos)[acao.aviso]) {
+  if (acao.aviso && objeto(freteBase.avisos)[acao.aviso]) {
     logger.info(`[frete] webhook ${event} do pedido #${displayId} já avisado (conferido na releitura) — ignorado`)
     return res.status(200).json({ ignorado: "já avisado" })
   }
@@ -167,10 +175,21 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
   // NOTA DE ESCOPO: o rastreio do FULFILLMENT no Medusa não é reescrito aqui. Quem grava o `label`
   // no envio é o Cockpit, na hora de despachar. Esta fase registra o código no `metadata.frete`; o
   // Cockpit passa a exibi-lo de lá numa fase futura.
+  //
+  // O LINK gravado é sempre o dos Correios montado do código (`linkDeRastreio`), nunca o
+  // `tracking_url` do corpo: é ele que vai nas mensagens para a cliente (revisão final de 2026-09-21).
   if (rastreio.tracking) {
-    const campos: Record<string, unknown> = { tracking_number: rastreio.tracking }
-    if (rastreio.tracking_url) campos.tracking_url = rastreio.tracking_url
+    const campos = { tracking_number: rastreio.tracking, tracking_url: linkDeRastreio(rastreio.tracking) }
     freteNovo = (await mesclarNoFrete(pg, pedido.id, campos, { seSemRastreio: true })) ?? freteNovo
+  }
+
+  // Etiqueta cancelada (I-3 da revisão final): um aviso de despacho ainda PENDENTE não sai mais.
+  // Transição condicional `pendente → dispensado` — `enviando` e estados finais ficam como estão.
+  // Erro do nosso banco aqui sobe (→ 500 → a SuperFrete reenvia), como nas gravações acima.
+  if (event === "order.cancelled") {
+    if (await dispensarAvisoPendente(pg, pedido.id, MOTIVO_ETIQUETA_CANCELADA)) {
+      logger.warn(`[frete] webhook ${event} do pedido #${displayId}: etiqueta cancelada — aviso de despacho pendente DISPENSADO`)
+    }
   }
 
   // `order.generated` (spec §9, decisão do dono em 2026-09-21): quando a etiqueta sai sem código, o
@@ -195,9 +214,19 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
   }
 
   const aviso = acao.aviso
-  if (!aviso || aviso === "generated") {
+  if (!aviso) {
     logger.info(`[frete] webhook ${event} do pedido #${displayId} registrado (sem mensagem para a cliente)`)
     return res.status(200).json({ ok: true, gravado: true, enviado: false })
+  }
+
+  // Postado com despacho ainda PENDENTE (I-4 da revisão final): a mensagem de postado já leva o
+  // código e o link, então o despacho atrasado não sai depois dela. Condicional `pendente →
+  // dispensado`: um despacho `enviando` (já saindo) fica como está. É gravado ANTES de mandar o
+  // postado — se o postado falhar, a retentativa da SuperFrete o manda de novo.
+  if (event === "order.posted") {
+    if (await dispensarAvisoPendente(pg, pedido.id, MOTIVO_COBERTO_PELO_POSTADO)) {
+      logger.info(`[frete] webhook ${event} do pedido #${displayId}: aviso de despacho pendente dispensado — o aviso de postado leva o código`)
+    }
   }
 
   const codigo = String(freteNovo.tracking_number ?? "")

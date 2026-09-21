@@ -15,7 +15,7 @@ export type EventoSuperfrete =
 
 export type AcaoDoEvento = {
   gravar: true
-  aviso: "generated" | "posted" | "delivered" | null
+  aviso: "posted" | "delivered" | null
   canais: ("whatsapp" | "email")[]
 }
 
@@ -65,8 +65,9 @@ export function numeroDoPedido(data: unknown): number | null {
 const TABELA = new Map<EventoSuperfrete, AcaoDoEvento>([
   ["order.created", { gravar: true, aviso: null, canais: [] }],
   ["order.released", { gravar: true, aviso: null, canais: [] }],
-  // generated não avisa por si; quem decide é a rota, e só se o despacho saiu sem código (§4.1).
-  ["order.generated", { gravar: true, aviso: "generated", canais: ["whatsapp"] }],
+  // generated não tem aviso na tabela: a mensagem de despacho é do remetente único
+  // (lib/aviso-despacho.ts, §9), que a rota chama direto — ele decide se há algo pendente.
+  ["order.generated", { gravar: true, aviso: null, canais: [] }],
   ["order.posted", { gravar: true, aviso: "posted", canais: ["whatsapp", "email"] }],
   ["order.delivered", { gravar: true, aviso: "delivered", canais: ["whatsapp"] }],
   ["order.cancelled", { gravar: true, aviso: null, canais: [] }],
@@ -80,11 +81,9 @@ export function acaoDoEvento(evento: string): AcaoDoEvento | null {
 
 // O código de rastreio nasce alguns segundos DEPOIS do pagamento da etiqueta, então ele pode vir
 // vazio em qualquer evento. String vazia significa "ainda não sei" — a rota não sobrescreve o que
-// já está gravado com vazio.
-export function rastreioDoEvento(data: unknown): { tracking: string; tracking_url: string } {
-  const d = (data ?? {}) as { tracking?: unknown; tracking_url?: unknown }
-  return {
-    tracking: String(d.tracking ?? ""),
-    tracking_url: String(d.tracking_url ?? ""),
-  }
+// já está gravado com vazio. O `tracking_url` do corpo NÃO é lido: o link que a cliente recebe é
+// sempre o dos Correios montado a partir do código (`linkDeRastreio`, lib/aviso-despacho.ts).
+export function rastreioDoEvento(data: unknown): { tracking: string } {
+  const d = (data ?? {}) as { tracking?: unknown }
+  return { tracking: String(d.tracking ?? "") }
 }

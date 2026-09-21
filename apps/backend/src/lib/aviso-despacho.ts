@@ -15,7 +15,10 @@
 //   pendente      — esperando o código de rastreio (gravado pelo Cockpit, com `desde`).
 //   enviando      — reservado por um chamador (`desde_envio`, `por`). Transitório.
 //   enviado       — saiu (`em`, `por`). Final.
-//   dispensado    — o operador não quis avisar (Cockpit). Final.
+//   dispensado    — não vai sair. Final. Três origens: o operador não quis avisar (Cockpit, sem
+//                   `motivo`); a etiqueta foi cancelada (`motivo: "etiqueta cancelada"`, daqui e do
+//                   webhook `order.cancelled`); o aviso de postado já saiu com código e link
+//                   (`motivo: "coberto pelo aviso de postado"`, webhook `order.posted`).
 //   sem_telefone  — pedido sem telefone. Final.
 //   sem_whatsapp  — a Evolution disse que o número não tem WhatsApp. Final.
 //   expirado      — 24 h pendente sem código; o operador age. Final.
@@ -28,7 +31,7 @@
 // status, origem e o status HTTP / tipo do erro.
 import type { MedusaContainer } from "@medusajs/framework/types"
 import { ContainerRegistrationKeys } from "@medusajs/framework/utils"
-import { ClienteSuperfrete } from "../modules/superfrete/cliente"
+import { ClienteSuperfrete, type InfoEtiqueta } from "../modules/superfrete/cliente"
 import { EvolutionHttpError, evolutionConfigured, sendWhatsappText } from "./evolution"
 import { normalizaWhatsapp, textoDespacho } from "./superfrete-avisos"
 
@@ -51,6 +54,17 @@ function pgDo(container: MedusaContainer): Pg {
 function objeto(v: unknown): Record<string, unknown> {
   return v && typeof v === "object" && !Array.isArray(v) ? (v as Record<string, unknown>) : {}
 }
+
+// Os motivos de `dispensado` gravados pelo backend. O Cockpit (apps/cockpit/lib/aviso-despacho.ts)
+// lê estes textos para a frase da tela — mudar aqui é mudar lá.
+export const MOTIVO_ETIQUETA_CANCELADA = "etiqueta cancelada"
+export const MOTIVO_COBERTO_PELO_POSTADO = "coberto pelo aviso de postado"
+
+// Status da etiqueta cancelada: `order.cancelled` no webhook (gravado em `status_transportadora`) e
+// "canceled" (com UM "l") na consulta `GET /api/v0/order/info/{id}` — visto na etiqueta real
+// cancelada em 2026-09-19 (architecture/envios.md).
+const EVENTO_CANCELADA = "order.cancelled"
+const STATUS_CANCELADA = "canceled"
 
 // Mesma regra do Cockpit (apps/cockpit/lib/shipping.ts, carrierPagarFrete/carrierConsultarFrete):
 // os serviços da SuperFrete que usamos (Mini Envios, PAC, SEDEX) são dos Correios, e o link de
@@ -160,6 +174,15 @@ async function avisoAtual(container: MedusaContainer, orderId: string): Promise<
   return pedido ? avisoDe(pedido) : null
 }
 
+/**
+ * Dispensa um aviso de despacho que ainda está PENDENTE. Transição condicional (`pendente →
+ * dispensado`): `enviando` e os estados finais nunca são tocados. Devolve o aviso dispensado, ou null
+ * se ele não estava pendente (outro chamador chegou antes, ou já foi resolvido).
+ */
+export async function dispensarAvisoPendente(pg: Pg, orderId: string, motivo: string): Promise<AvisoDespacho | null> {
+  return mudarAvisoDespacho(pg, orderId, "pendente", { status: "dispensado", em: new Date().toISOString(), motivo })
+}
+
 // Instante em ms de um ISO do metadata; inválido/ausente → NaN.
 function instante(v: unknown): number {
   return typeof v === "string" ? Date.parse(v) : NaN
@@ -225,8 +248,8 @@ export type TentativaDeEnvio = "nenhuma" | "saiu" | "sem_whatsapp" | "falhou" | 
  * null se o pedido não existe ou não tem aviso). Nunca manda duas vezes, nem com chamadores
  * simultâneos.
  *
- * Quando lança: só em erro do NOSSO banco ANTES da reserva (ler o pedido, expirar, virar incerto,
- * gravar o código, a própria reserva). Nesses casos nada foi enviado e o aviso segue como estava.
+ * Quando lança: só em erro do NOSSO banco ANTES da reserva (ler o pedido, dispensar por etiqueta
+ * cancelada, expirar, virar incerto, a própria reserva). Falha ao gravar o código é só log: segue pendente. Nesses casos nada foi enviado e o aviso segue como estava.
  * Da reserva em diante NUNCA lança: uma gravação que falhar vira log de `error`, o aviso fica em
  * "enviando" e vira "incerto" em 10 min — ninguém reenvia.
  */
@@ -288,6 +311,18 @@ async function tentarAviso(
   }
   if (aviso.status !== "pendente") return aviso
 
+  // Dispensa por etiqueta cancelada (I-3 da revisão final) — antes de qualquer reserva, e nunca envia.
+  const dispensarPorCancelamento = async (): Promise<AvisoDespacho | null> => {
+    const dispensado = await dispensarAvisoPendente(pg, orderId, MOTIVO_ETIQUETA_CANCELADA)
+    if (dispensado) {
+      logger.warn(`[aviso-despacho] pedido #${n}: etiqueta cancelada — aviso de despacho DISPENSADO, nada enviado (${origem})`)
+      return dispensado
+    }
+    return avisoAtual(container, orderId)
+  }
+  const frete = objeto(pedido.metadata.frete)
+  if (frete.status_transportadora === EVENTO_CANCELADA) return dispensarPorCancelamento()
+
   // 2. Pendente há mais de 24 h → para de tentar. `desde` ausente ou ilegível também expira: sem ele
   // não há como contar o prazo, e o pendente ficaria para sempre custando uma consulta à SuperFrete a
   // cada 5 min. (O Cockpit sempre grava `desde`; isto é defesa contra dado estragado.)
@@ -306,9 +341,7 @@ async function tentarAviso(
   }
 
   // 3. O código de rastreio. Se falta, pergunta à SuperFrete pela etiqueta.
-  const frete = objeto(pedido.metadata.frete)
   let codigo = typeof frete.tracking_number === "string" ? frete.tracking_number.trim() : ""
-  let link = typeof frete.tracking_url === "string" ? frete.tracking_url : ""
   if (!codigo) {
     const superfreteId = typeof frete.superfrete_id === "string" ? frete.superfrete_id : ""
     const cliente = superfreteId ? clienteSuperfreteDoAmbiente() : null
@@ -316,24 +349,34 @@ async function tentarAviso(
       logger.info(`[aviso-despacho] pedido #${n}: sem código de rastreio e sem como consultar a SuperFrete — segue pendente (${origem})`)
       return aviso
     }
+    let info: InfoEtiqueta
     try {
-      const info = await cliente.consultarEtiqueta(superfreteId)
-      if (!info.tracking) {
-        logger.info(`[aviso-despacho] pedido #${n}: SuperFrete ainda sem código de rastreio (status ${info.status || "?"}) — segue pendente (${origem})`)
-        return aviso
-      }
+      info = await cliente.consultarEtiqueta(superfreteId)
+    } catch (e) {
+      logger.warn(`[aviso-despacho] pedido #${n}: consulta da etiqueta na SuperFrete falhou (${(e as Error)?.name ?? "erro"}) — segue pendente (${origem})`)
+      return aviso
+    }
+    // Etiqueta cancelada na SuperFrete (I-3): dispensa, mesmo que ela traga código. Um erro do NOSSO
+    // banco ao dispensar sobe (nada foi enviado) — não vira "a consulta falhou".
+    if (info.status === STATUS_CANCELADA) return dispensarPorCancelamento()
+    if (!info.tracking) {
+      logger.info(`[aviso-despacho] pedido #${n}: SuperFrete ainda sem código de rastreio (status ${info.status || "?"}) — segue pendente (${origem})`)
+      return aviso
+    }
+    try {
       // Grava o código (e o link) no `frete` — dentro do banco, sem desfazer a gravação de mais ninguém,
       // e só se ninguém gravou um código no meio-tempo.
       const gravado = await mesclarNoFrete(pg, orderId, { tracking_number: info.tracking, tracking_url: linkDeRastreio(info.tracking) }, { seSemRastreio: true })
       const freteAgora = gravado ?? objeto((await lerPedido(container, orderId))?.metadata.frete)
       codigo = String(freteAgora.tracking_number ?? info.tracking)
-      link = String(freteAgora.tracking_url ?? "")
     } catch (e) {
-      logger.warn(`[aviso-despacho] pedido #${n}: consulta da etiqueta na SuperFrete falhou (${(e as Error)?.name ?? "erro"}) — segue pendente (${origem})`)
+      logger.warn(`[aviso-despacho] pedido #${n}: gravar o código de rastreio falhou (${(e as Error)?.name ?? "erro"}) — segue pendente (${origem})`)
       return aviso
     }
   }
-  if (!link) link = linkDeRastreio(codigo)
+  // O link é SEMPRE o dos Correios montado do código — nunca um `tracking_url` gravado no pedido,
+  // que pode ter vindo de fora (revisão final de 2026-09-21).
+  const link = linkDeRastreio(codigo)
 
   if (!evolutionConfigured()) {
     // Sem Evolution neste ambiente não há como enviar — e não reservar é o que deixa o job tentar

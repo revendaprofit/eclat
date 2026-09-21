@@ -48,9 +48,8 @@ describe("ação por evento", () => {
     expect(acaoDoEvento("order.delivered")).toEqual({ gravar: true, aviso: "delivered", canais: ["whatsapp"] })
   })
 
-  it("gerada grava e pode avisar o rastreio; criada, paga e cancelada só gravam", () => {
-    expect(acaoDoEvento("order.generated")).toEqual({ gravar: true, aviso: "generated", canais: ["whatsapp"] })
-    for (const e of ["order.created", "order.released", "order.cancelled"]) {
+  it("gerada, criada, paga e cancelada só gravam (o despacho da gerada é do remetente único, não da tabela)", () => {
+    for (const e of ["order.generated", "order.created", "order.released", "order.cancelled"]) {
       expect(acaoDoEvento(e)).toEqual({ gravar: true, aviso: null, canais: [] })
     }
   })
@@ -62,9 +61,9 @@ describe("ação por evento", () => {
 })
 
 describe("rastreio do evento", () => {
-  it("lê tracking e tracking_url, tolerando ausência", () => {
-    expect(rastreioDoEvento({ tracking: "AA123BR", tracking_url: "https://x/y" })).toEqual({ tracking: "AA123BR", tracking_url: "https://x/y" })
-    expect(rastreioDoEvento({})).toEqual({ tracking: "", tracking_url: "" })
-    expect(rastreioDoEvento(null)).toEqual({ tracking: "", tracking_url: "" })
+  it("lê só o código, tolerando ausência — o `tracking_url` do corpo NUNCA é usado (o link é sempre o dos Correios)", () => {
+    expect(rastreioDoEvento({ tracking: "AA123BR", tracking_url: "https://x/y" })).toEqual({ tracking: "AA123BR" })
+    expect(rastreioDoEvento({})).toEqual({ tracking: "" })
+    expect(rastreioDoEvento(null)).toEqual({ tracking: "" })
   })
 })
