@@ -1,11 +1,11 @@
-// Pedido mínimo da loja (decisão do dono, 2026-09-20: R$ 150 em PEÇAS). A conta que VALE é a do
+// Pedido mínimo da loja (decisão do dono: R$ 150 em PEÇAS em 2026-09-20, R$ 100 desde 2026-09-21). A conta que VALE é a do
 // backend (`apps/backend/src/modules/pedido-minimo/regra.ts`, mesma fórmula) — aqui é para avisar
 // a cliente e travar o botão antes de ela perder tempo no checkout.
 //
 // Conta o preço CHEIO das peças (preço × quantidade), sem descontos e sem frete: o mínimo é sobre
 // o tamanho do pedido, não sobre o quanto ela paga depois do cupom.
 
-export const PEDIDO_MINIMO_CENTAVOS = 15000
+export const PEDIDO_MINIMO_CENTAVOS = 10000
 
 export type LinhaDePeca = { unit_price?: number | null; quantity?: number | null }
 

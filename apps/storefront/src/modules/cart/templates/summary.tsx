@@ -32,7 +32,7 @@ const reais = (centavos: number, moeda: string) =>
 
 const Summary = ({ cart, regrasDeFrete }: SummaryProps) => {
   const href = "/checkout?step=" + getCheckoutStep(cart)
-  // Pedido mínimo (R$ 150 em peças): a cliente é avisada aqui; quem recusa de verdade é o servidor.
+  // Pedido mínimo (R$ 100 em peças): a cliente é avisada aqui; quem recusa de verdade é o servidor.
   const minimo = avaliarMinimo(cart)
   const aviso = minimo.atingiu ? null : (
     <div

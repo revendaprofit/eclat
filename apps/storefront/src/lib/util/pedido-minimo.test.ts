@@ -8,11 +8,12 @@ describe("pedido mínimo (vitrine)", () => {
 
   it("abaixo do mínimo: diz quanto falta e o quanto já andou", () => {
     const a = avaliarMinimo({ items: [{ unit_price: 34.9, quantity: 1 }] })
-    expect(a).toEqual({ atingiu: false, subtotal: 3490, minimo: 15000, falta: 11510, percentual: 23 })
+    expect(a).toEqual({ atingiu: false, subtotal: 3490, minimo: 10000, falta: 6510, percentual: 34 })
   })
 
-  it("exatamente R$ 150 já libera", () => {
-    expect(avaliarMinimo({ items: [{ unit_price: 150, quantity: 1 }] }).atingiu).toBe(true)
+  it("exatamente R$ 100 já libera (mínimo desde 21/09)", () => {
+    expect(avaliarMinimo({ items: [{ unit_price: 100, quantity: 1 }] }).atingiu).toBe(true)
+    expect(avaliarMinimo({ items: [{ unit_price: 99.99, quantity: 1 }] }).atingiu).toBe(false)
   })
 
   it("mesma conta do backend: o desconto do cupom não derruba o mínimo", () => {

@@ -1,8 +1,9 @@
-// Pedido mínimo da loja (decisão do dono, 2026-09-20: R$ 150 em PEÇAS).
+// Pedido mínimo da loja (decisão do dono: R$ 150 em PEÇAS em 2026-09-20, baixado para R$ 100 em
+// 2026-09-21).
 // Conta o preço cheio das peças (preço × quantidade), sem descontos e sem frete: o mínimo é sobre
 // o tamanho do pedido, não sobre o quanto a cliente pagou depois do cupom. Dinheiro em centavos.
 
-export const PEDIDO_MINIMO_CENTAVOS = 15000
+export const PEDIDO_MINIMO_CENTAVOS = 10000
 
 export type LinhaDoCarrinho = { unit_price?: number | string | null; quantity?: number | string | null }
 
