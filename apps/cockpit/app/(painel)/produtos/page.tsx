@@ -471,17 +471,17 @@ export default function ProdutosPage() {
   }
 
   const selectCls =
-    "border border-eclat-pedra/50 rounded-md px-2 py-2 text-sm bg-white focus:outline-none focus:border-eclat-dourado"
+    "border border-eclat-pedra/50 rounded-md px-2 py-2 text-corpo bg-white focus:outline-none focus:border-eclat-dourado"
 
   return (
     <div>
       <div className="flex items-center justify-between mb-4 gap-4 flex-wrap">
-        <h1 className="font-serif text-3xl text-eclat-grafite">Produtos &amp; Estoque</h1>
+        <h1 className="font-serif text-3xl text-eclat-texto">Produtos &amp; Estoque</h1>
         <div className="flex items-center gap-3">
           {alertas > 0 && (
             <button
               onClick={() => setFEstoque((s) => (s === "baixo" ? "" : "baixo"))}
-              className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
+              className={`text-meta px-3 py-1.5 rounded-full border transition-colors ${
                 fEstoque === "baixo"
                   ? "bg-red-600 text-white border-red-600"
                   : "border-red-400 text-red-700 hover:bg-red-50"
@@ -493,19 +493,19 @@ export default function ProdutosPage() {
           )}
           <button
             onClick={() => setTaxonomia(true)}
-            className="text-xs uppercase tracking-widest border border-eclat-grafite/40 px-4 py-2 rounded-md hover:bg-eclat-areia/40 transition-colors"
+            className="text-meta uppercase tracking-widest border border-eclat-grafite/40 px-4 py-2 rounded-md hover:bg-eclat-areia/40 transition-colors"
           >
             ⚙ Categorias e coleções
           </button>
           <button
             onClick={() => setImportar(true)}
-            className="text-xs uppercase tracking-widest border border-eclat-grafite/40 px-4 py-2 rounded-md hover:bg-eclat-areia/40 transition-colors"
+            className="text-meta uppercase tracking-widest border border-eclat-grafite/40 px-4 py-2 rounded-md hover:bg-eclat-areia/40 transition-colors"
           >
             ⬆ Importar planilha
           </button>
           <button
             onClick={() => setForm({ mode: "create" })}
-            className="bg-eclat-grafite text-eclat-luz uppercase tracking-widest text-xs px-4 py-2 rounded-md hover:bg-eclat-dourado hover:text-eclat-grafite transition-colors"
+            className="bg-eclat-grafite text-eclat-luz uppercase tracking-widest text-meta px-4 py-2 rounded-md hover:bg-eclat-dourado hover:text-eclat-texto transition-colors"
           >
             + Novo produto
           </button>
@@ -518,7 +518,7 @@ export default function ProdutosPage() {
           value={busca}
           onChange={(e) => setBusca(e.target.value)}
           placeholder="Buscar título ou SKU…"
-          className="border border-eclat-pedra/50 rounded-md px-3 py-2 text-sm bg-white focus:outline-none focus:border-eclat-dourado w-56"
+          className="border border-eclat-pedra/50 rounded-md px-3 py-2 text-corpo bg-white focus:outline-none focus:border-eclat-dourado w-56"
         />
         <select value={fColecao} onChange={(e) => setFColecao(e.target.value)} className={selectCls}>
           <option value="">Coleção: todas</option>
@@ -557,15 +557,15 @@ export default function ProdutosPage() {
             onChange={(e) => setPrecoMin(e.target.value)}
             placeholder="R$ mín"
             inputMode="decimal"
-            className="w-20 border border-eclat-pedra/50 rounded-md px-2 py-2 text-sm bg-white focus:outline-none focus:border-eclat-dourado"
+            className="w-20 border border-eclat-pedra/50 rounded-md px-2 py-2 text-corpo bg-white focus:outline-none focus:border-eclat-dourado"
           />
-          <span className="text-eclat-grafite/40 text-xs">–</span>
+          <span className="text-eclat-texto/40 text-meta">–</span>
           <input
             value={precoMax}
             onChange={(e) => setPrecoMax(e.target.value)}
             placeholder="R$ máx"
             inputMode="decimal"
-            className="w-20 border border-eclat-pedra/50 rounded-md px-2 py-2 text-sm bg-white focus:outline-none focus:border-eclat-dourado"
+            className="w-20 border border-eclat-pedra/50 rounded-md px-2 py-2 text-corpo bg-white focus:outline-none focus:border-eclat-dourado"
           />
         </div>
         <select value={sort} onChange={(e) => setSort(e.target.value as Sort)} className={selectCls}>
@@ -577,18 +577,18 @@ export default function ProdutosPage() {
           <option value="recentes">Mais recentes</option>
         </select>
         {filtroAtivo && (
-          <button onClick={limparFiltros} className="text-xs text-eclat-grafite/50 underline ml-1">
+          <button onClick={limparFiltros} className="text-meta text-eclat-texto-3 underline ml-1">
             limpar filtros
           </button>
         )}
-        <span className="text-xs text-eclat-grafite/50 ml-auto">
+        <span className="text-meta text-eclat-texto-3 ml-auto">
           {filtrados.length} de {produtos.length} produto{produtos.length === 1 ? "" : "s"}
         </span>
       </div>
 
       {/* Toolbar: seleção + exportar + ações em massa */}
       <div className="flex flex-wrap items-center gap-2 mb-3">
-        <label className="flex items-center gap-2 text-xs text-eclat-grafite/70 cursor-pointer select-none">
+        <label className="flex items-center gap-2 text-meta text-eclat-texto-2 cursor-pointer select-none">
           <input
             type="checkbox"
             checked={todosVisiveisSelecionados}
@@ -600,31 +600,31 @@ export default function ProdutosPage() {
         <button
           onClick={exportarCSV}
           disabled={filtrados.length === 0}
-          className="text-xs border border-eclat-grafite/40 rounded-md px-3 py-1.5 hover:bg-eclat-areia/40 disabled:opacity-40"
+          className="text-meta border border-eclat-grafite/40 rounded-md px-3 py-1.5 hover:bg-eclat-areia/40 disabled:opacity-40"
         >
           ⬇ Exportar CSV
         </button>
 
         {sel.size > 0 && (
           <div className="flex flex-wrap items-center gap-2 ml-auto bg-eclat-dourado/15 border border-eclat-dourado/40 rounded-md px-3 py-1.5">
-            <span className="text-xs font-medium text-eclat-grafite">
+            <span className="text-meta font-medium text-eclat-texto">
               {sel.size} selecionado{sel.size === 1 ? "" : "s"}:
             </span>
-            <button disabled={bulkBusy} onClick={() => bulk("publish")} className="text-xs underline disabled:opacity-50">Publicar</button>
-            <button disabled={bulkBusy} onClick={() => bulk("unpublish")} className="text-xs underline disabled:opacity-50">Despublicar</button>
-            <button disabled={bulkBusy} onClick={definirPreco} className="text-xs underline disabled:opacity-50">Definir preço</button>
-            <button disabled={bulkBusy} onClick={definirCusto} className="text-xs underline disabled:opacity-50">Definir custo</button>
-            <button disabled={bulkBusy} onClick={ajustarEstoqueDelta} className="text-xs underline disabled:opacity-50">Ajustar estoque ±</button>
-            <button disabled={bulkBusy} onClick={definirEstoque} className="text-xs underline disabled:opacity-50">Definir estoque</button>
-            <button onClick={() => setSel(new Set())} className="text-xs text-eclat-grafite/50 underline">limpar</button>
-            {bulkBusy && <span className="text-xs text-eclat-grafite/60">processando…</span>}
+            <button disabled={bulkBusy} onClick={() => bulk("publish")} className="text-meta underline disabled:opacity-50">Publicar</button>
+            <button disabled={bulkBusy} onClick={() => bulk("unpublish")} className="text-meta underline disabled:opacity-50">Despublicar</button>
+            <button disabled={bulkBusy} onClick={definirPreco} className="text-meta underline disabled:opacity-50">Definir preço</button>
+            <button disabled={bulkBusy} onClick={definirCusto} className="text-meta underline disabled:opacity-50">Definir custo</button>
+            <button disabled={bulkBusy} onClick={ajustarEstoqueDelta} className="text-meta underline disabled:opacity-50">Ajustar estoque ±</button>
+            <button disabled={bulkBusy} onClick={definirEstoque} className="text-meta underline disabled:opacity-50">Definir estoque</button>
+            <button onClick={() => setSel(new Set())} className="text-meta text-eclat-texto-3 underline">limpar</button>
+            {bulkBusy && <span className="text-meta text-eclat-texto-3">processando…</span>}
           </div>
         )}
       </div>
 
-      {loading && <p className="text-sm text-eclat-grafite/50">Carregando…</p>}
+      {loading && <p className="text-corpo text-eclat-texto-3">Carregando…</p>}
       {erro && (
-        <p className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-md p-3">
+        <p className="text-corpo text-red-700 bg-red-50 border border-red-200 rounded-md p-3">
           {erro}
         </p>
       )}
@@ -650,8 +650,8 @@ export default function ProdutosPage() {
                   <div className="w-10 h-10 rounded bg-eclat-areia/60" />
                 )}
                 <div className="flex-1 min-w-0">
-                  <div className="font-medium text-sm truncate">{p.title}</div>
-                  <div className="text-xs text-eclat-grafite/50 truncate">
+                  <div className="font-medium text-corpo truncate">{p.title}</div>
+                  <div className="text-meta text-eclat-texto-3 truncate">
                     {[p.collection, ...p.categories.map((c) => c.name)]
                       .filter(Boolean)
                       .join(" · ")}
@@ -660,7 +660,7 @@ export default function ProdutosPage() {
                 <button
                   onClick={() => alternarStatus(p)}
                   title="Clique para alternar"
-                  className={`text-[11px] px-2 py-1 rounded-full border transition-colors ${
+                  className={`text-meta px-2 py-1 rounded-full border transition-colors ${
                     p.status === "published"
                       ? "bg-green-100 text-green-800 border-green-300 hover:bg-green-200"
                       : "bg-gray-100 text-gray-600 border-gray-300 hover:bg-gray-200"
@@ -671,22 +671,22 @@ export default function ProdutosPage() {
                 <button
                   onClick={() => setForm({ mode: "edit", id: p.id })}
                   title="Editar produto"
-                  className="text-xs border border-eclat-grafite/30 px-2 py-1 rounded hover:bg-eclat-areia/40"
+                  className="text-meta border border-eclat-grafite/30 px-2 py-1 rounded hover:bg-eclat-areia/40"
                 >
                   editar
                 </button>
                 <button
                   onClick={() => excluirProduto(p)}
                   title="Excluir produto"
-                  className="text-xs text-red-700/80 hover:text-red-700 px-1"
+                  className="text-meta text-red-700/80 hover:text-red-700 px-1"
                 >
                   🗑
                 </button>
               </div>
 
-              <table className="w-full text-sm">
+              <table className="w-full text-corpo">
                 <thead>
-                  <tr className="text-left text-xs text-eclat-grafite/50 border-b border-eclat-pedra/20">
+                  <tr className="text-left text-meta text-eclat-texto-3 border-b border-eclat-pedra/20">
                     <th className="px-4 py-2 font-normal">Variação</th>
                     <th className="px-4 py-2 font-normal">SKU</th>
                     <th className="px-4 py-2 font-normal">Custo (R$)</th>
@@ -704,7 +704,7 @@ export default function ProdutosPage() {
                     return (
                       <tr key={v.id} className="border-b border-eclat-pedra/10 last:border-0">
                         <td className="px-4 py-2">{v.title}</td>
-                        <td className="px-4 py-2 text-eclat-grafite/60 text-xs">{v.sku}</td>
+                        <td className="px-4 py-2 text-eclat-texto-3 text-meta">{v.sku}</td>
                         <td className="px-4 py-2">
                           {editCusto ? (
                             <input
@@ -720,13 +720,13 @@ export default function ProdutosPage() {
                               }}
                               disabled={salvando}
                               inputMode="decimal"
-                              className="w-24 border border-eclat-dourado/60 rounded px-2 py-1 text-sm"
+                              className="w-24 border border-eclat-dourado/60 rounded px-2 py-1 text-corpo"
                             />
                           ) : (
                             <button
                               onClick={() => startCell(v, "custo")}
                               title="Clique para editar o custo"
-                              className="text-left rounded px-1 -mx-1 hover:bg-eclat-dourado/15 hover:underline decoration-dotted text-eclat-grafite/70"
+                              className="text-left rounded px-1 -mx-1 hover:bg-eclat-dourado/15 hover:underline decoration-dotted text-eclat-texto-2"
                             >
                               {custo == null ? "—" : brl(custo)}
                             </button>
@@ -747,7 +747,7 @@ export default function ProdutosPage() {
                               }}
                               disabled={salvando}
                               inputMode="decimal"
-                              className="w-24 border border-eclat-dourado/60 rounded px-2 py-1 text-sm"
+                              className="w-24 border border-eclat-dourado/60 rounded px-2 py-1 text-corpo"
                             />
                           ) : (
                             <button
@@ -774,7 +774,7 @@ export default function ProdutosPage() {
                               }}
                               disabled={salvando}
                               inputMode="numeric"
-                              className="w-20 border border-eclat-dourado/60 rounded px-2 py-1 text-sm"
+                              className="w-20 border border-eclat-dourado/60 rounded px-2 py-1 text-corpo"
                             />
                           ) : (
                             <button
@@ -798,7 +798,7 @@ export default function ProdutosPage() {
             </div>
           ))}
         {!loading && !erro && filtrados.length === 0 && (
-          <p className="text-sm text-eclat-grafite/50">Nenhum produto encontrado.</p>
+          <p className="text-corpo text-eclat-texto-3">Nenhum produto encontrado.</p>
         )}
       </div>
 

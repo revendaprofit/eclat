@@ -30,6 +30,15 @@ export type PagamentoDaOrder = {
   payment_method: PaymentMethodOrder
 }
 
+/** Reembolso como a Orders API devolve dentro de `transactions.refunds`. */
+export type ReembolsoDaOrder = {
+  id: string
+  transaction_id?: string
+  amount: string
+  /** "processed" quando o dinheiro já voltou. */
+  status?: string
+}
+
 export type Order = {
   id: string
   type: "online"
@@ -39,7 +48,14 @@ export type Order = {
   total_paid_amount?: string
   status: string
   status_detail?: string
-  transactions: { payments: PagamentoDaOrder[] }
+  transactions: { payments: PagamentoDaOrder[]; refunds?: ReembolsoDaOrder[] }
+}
+
+/** Quanto desta order já voltou para a cliente (só reembolsos concluídos). */
+export function totalJaEstornado(order: Order): number {
+  return (order.transactions?.refunds ?? [])
+    .filter((r) => (r.status ?? "processed") === "processed")
+    .reduce((soma, r) => soma + Number(r.amount ?? 0), 0)
 }
 
 export type PagamentoClassico = {

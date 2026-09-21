@@ -33,7 +33,7 @@ import type {
   WebhookActionResult,
 } from "@medusajs/framework/types"
 import { assinaturaValida } from "./assinatura"
-import { ClienteMercadoPago, ErroMercadoPago, extrairMotivoDeRecusa, type Order } from "./cliente"
+import { ClienteMercadoPago, ErroMercadoPago, extrairMotivoDeRecusa, totalJaEstornado, type Order } from "./cliente"
 import { paraCentavos, paraValorMp } from "./dinheiro"
 import { mensagemDeRecusa } from "./recusas"
 import { estaAprovada, paraAcaoDoWebhook, paraStatusDaSessao } from "./status"
@@ -180,6 +180,22 @@ export default class MercadoPagoProviderService extends AbstractPaymentProvider<
     const valorTotalOriginal = input.data?.valor_total as string | undefined
     const valorPedido = paraValorMp(input.amount)
     const chave = `refund-${orderId}-${valorPedido}`
+
+    // Antes de mandar qualquer coisa: o dinheiro já voltou? Um estorno feito no painel do
+    // Mercado Pago (ou por uma tentativa anterior) não aparece sozinho aqui — e é assim que o
+    // Medusa pede um estorno que a Orders API executaria DE NOVO, devolvendo em dobro. Quando
+    // não sobra saldo para estornar, este método só registra: devolve os dados atuais da order
+    // sem chamar a API. Achado de 2026-09-20 (pedido #10, estornado no painel do MP).
+    const atual = await this.cliente_.buscarOrder(orderId)
+    const jaEstornado = totalJaEstornado(atual)
+    const falta = Number(atual.total_amount) - jaEstornado
+    if (Number(valorPedido) > falta + 0.005) {
+      this.logger_.info(
+        `mercadopago: order ${orderId} já tinha R$ ${jaEstornado.toFixed(2)} estornado(s) no MP e o pedido aqui é de ` +
+          `R$ ${valorPedido} — nada a estornar, só registrando no Medusa.`
+      )
+      return { data: await this.montarDadosDaSessao(atual) }
+    }
 
     const ehTotal = valorTotalOriginal === valorPedido
     const order = await this.cliente_.estornarOrder(

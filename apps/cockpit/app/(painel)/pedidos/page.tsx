@@ -9,6 +9,23 @@ import { NfdDoPedido } from "@/components/nfd-do-pedido"
 import { DadosFiscaisDoPedido } from "@/components/dados-fiscais-do-pedido"
 import { resumoDoPagamento, type PagamentoDoPedido } from "@/lib/pagamento"
 import { aceiteDaEntregaApp, ehEntregaPorApp } from "@/lib/entrega-app"
+// `podeDespachar` já é o nome da variável local da conferência das peças nesta tela.
+import { podeDespachar as travaDeDespacho } from "@/lib/despacho-permitido"
+import {
+  Aviso,
+  Carregando,
+  LinhaVazia,
+  Selo,
+  Tabela,
+  Td,
+  Th,
+  TituloPagina,
+  Tr,
+  botaoSecundarioCls,
+  campoCls,
+  selectCls,
+  type TomDoSelo,
+} from "@/components/ui"
 
 type Order = {
   id: string
@@ -88,26 +105,28 @@ const brlCent = (cent: number) => brl(cent / 100)
 const dataHora = (iso: string) =>
   new Date(iso).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })
 
-const PAGAMENTO: Record<string, { txt: string; cls: string }> = {
-  captured: { txt: "pago", cls: "bg-green-100 text-green-800" },
-  authorized: { txt: "autorizado", cls: "bg-blue-100 text-blue-800" },
-  partially_captured: { txt: "parcial", cls: "bg-amber-100 text-amber-800" },
-  refunded: { txt: "estornado", cls: "bg-gray-100 text-gray-600" },
-  canceled: { txt: "cancelado", cls: "bg-gray-100 text-gray-600" },
-  not_paid: { txt: "não pago", cls: "bg-red-100 text-red-700" },
+const PAGAMENTO: Record<string, { txt: string; tom: TomDoSelo }> = {
+  captured: { txt: "Pago", tom: "ok" },
+  authorized: { txt: "Autorizado", tom: "andamento" },
+  partially_captured: { txt: "Parcial", tom: "atencao" },
+  refunded: { txt: "Estornado", tom: "neutro" },
+  canceled: { txt: "Cancelado", tom: "neutro" },
+  not_paid: { txt: "Não pago", tom: "erro" },
 }
-const ENVIO: Record<string, { txt: string; cls: string }> = {
-  not_fulfilled: { txt: "a enviar", cls: "bg-amber-100 text-amber-800" },
-  fulfilled: { txt: "preparado", cls: "bg-blue-100 text-blue-800" },
-  shipped: { txt: "enviado", cls: "bg-green-100 text-green-800" },
-  partially_shipped: { txt: "parcial", cls: "bg-amber-100 text-amber-800" },
-  delivered: { txt: "entregue", cls: "bg-green-100 text-green-800" },
-  canceled: { txt: "cancelado", cls: "bg-gray-100 text-gray-600" },
+const ENVIO: Record<string, { txt: string; tom: TomDoSelo }> = {
+  not_fulfilled: { txt: "A enviar", tom: "atencao" },
+  fulfilled: { txt: "Preparado", tom: "andamento" },
+  shipped: { txt: "Enviado", tom: "ok" },
+  partially_shipped: { txt: "Parcial", tom: "atencao" },
+  delivered: { txt: "Entregue", tom: "ok" },
+  canceled: { txt: "Cancelado", tom: "neutro" },
 }
-const badge = (m: Record<string, { txt: string; cls: string }>, k: string) => {
-  const b = m[k] ?? { txt: k, cls: "bg-gray-100 text-gray-600" }
-  return <span className={`text-[11px] px-2 py-0.5 rounded-full ${b.cls}`}>{b.txt}</span>
+// Os selos eram 11px em pílula; agora usam a peça comum (13px, o piso de leitura do painel).
+const badge = (m: Record<string, { txt: string; tom: TomDoSelo }>, k: string) => {
+  const b = m[k] ?? { txt: k, tom: "neutro" as TomDoSelo }
+  return <Selo tom={b.tom}>{b.txt}</Selo>
 }
+
 
 export default function PedidosPage() {
   const [pedidos, setPedidos] = useState<Order[]>([])
@@ -265,41 +284,38 @@ export default function PedidosPage() {
     })
   }, [pedidos, busca, fPag, fEnvio])
 
-  const selectCls =
-    "border border-eclat-pedra/50 rounded-md px-2 py-2 text-sm bg-white focus:outline-none focus:border-eclat-dourado"
   const descontos = det ? agruparDescontosPedido(det.items) : { conjunto: 0, cupom: 0 }
   const residual = det ? residualDesconto(det.discount_total, descontos) : 0
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-4 gap-4 flex-wrap">
-        <h1 className="font-serif text-3xl text-eclat-grafite">Pedidos</h1>
-        <div className="flex items-center gap-3">
-          {(() => {
-            const aEnviar = pedidos.filter((o) => o.fulfillment_status === "not_fulfilled").length
-            return aEnviar > 0 ? (
-              <button
-                onClick={() => setFEnvio((s) => (s === "not_fulfilled" ? "" : "not_fulfilled"))}
-                className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
-                  fEnvio === "not_fulfilled"
-                    ? "bg-amber-500 text-white border-amber-500"
-                    : "border-amber-400 text-amber-700 hover:bg-amber-50"
-                }`}
-              >
-                📦 {aEnviar} a enviar
-              </button>
-            ) : null
-          })()}
-          <span className="text-xs text-eclat-grafite/50">{filtrados.length} pedido(s)</span>
-        </div>
-      </div>
+    <div className="flex flex-col gap-5">
+      <TituloPagina
+        titulo="Pedidos"
+        descricao={`${filtrados.length} pedido(s) na lista`}
+        acoes={(() => {
+          const aEnviar = pedidos.filter((o) => o.fulfillment_status === "not_fulfilled").length
+          return aEnviar > 0 ? (
+            <button
+              onClick={() => setFEnvio((s) => (s === "not_fulfilled" ? "" : "not_fulfilled"))}
+              aria-pressed={fEnvio === "not_fulfilled"}
+              className={`h-10 rounded-lg px-4 text-corpo border transition-colors ${
+                fEnvio === "not_fulfilled"
+                  ? "bg-amber-700 text-white border-amber-700"
+                  : "border-amber-700/50 text-amber-900 bg-amber-50 hover:bg-amber-100"
+              }`}
+            >
+              {aEnviar} a enviar
+            </button>
+          ) : null
+        })()}
+      />
 
-      <div className="flex flex-wrap gap-2 mb-4">
+      <div className="flex flex-wrap items-center gap-2">
         <input
           value={busca}
           onChange={(e) => setBusca(e.target.value)}
           placeholder="Buscar nº ou e-mail…"
-          className="border border-eclat-pedra/50 rounded-md px-3 py-2 text-sm bg-white focus:outline-none focus:border-eclat-dourado w-56"
+          className={`${campoCls} w-56`}
         />
         <select value={fPag} onChange={(e) => setFPag(e.target.value)} className={selectCls}>
           <option value="">Pagamento: todos</option>
@@ -322,97 +338,87 @@ export default function PedidosPage() {
               setFPag("")
               setFEnvio("")
             }}
-            className="text-xs text-eclat-grafite/50 underline"
+            className={botaoSecundarioCls}
           >
-            limpar
+            Limpar
           </button>
         )}
       </div>
 
-      {loading && <p className="text-sm text-eclat-grafite/50">Carregando…</p>}
-      {erro && <p className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-md p-3">{erro}</p>}
+      {loading && <Carregando />}
+      {erro && <Aviso>{erro}</Aviso>}
 
       {!loading && !erro && (
-        <div className="border border-eclat-pedra/40 rounded-lg bg-white/60 overflow-hidden">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-left text-xs text-eclat-grafite/50 border-b border-eclat-pedra/20">
-                <th className="px-4 py-2 font-normal">Pedido</th>
-                <th className="px-4 py-2 font-normal">Cliente</th>
-                <th className="px-4 py-2 font-normal">Data</th>
-                <th className="px-4 py-2 font-normal">Pagamento</th>
-                <th className="px-4 py-2 font-normal">Envio</th>
-                <th className="px-4 py-2 font-normal text-right">Total</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtrados.map((o) => (
-                <tr
-                  key={o.id}
-                  onClick={() => setDetId(o.id)}
-                  className="border-b border-eclat-pedra/10 last:border-0 cursor-pointer hover:bg-eclat-areia/30"
-                >
-                  <td className="px-4 py-2 font-medium">#{o.display_id}</td>
-                  <td className="px-4 py-2 text-eclat-grafite/70">{o.email || "—"}</td>
-                  <td className="px-4 py-2 text-eclat-grafite/60 text-xs">{dataHora(o.created_at)}</td>
-                  <td className="px-4 py-2">{badge(PAGAMENTO, o.payment_status)}</td>
-                  <td className="px-4 py-2">{badge(ENVIO, o.fulfillment_status)}</td>
-                  <td className="px-4 py-2 text-right font-medium">{brl(o.total)}</td>
-                </tr>
-              ))}
-              {filtrados.length === 0 && (
-                <tr>
-                  <td colSpan={6} className="px-4 py-6 text-center text-eclat-grafite/50 text-sm">
-                    Nenhum pedido.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+        <Tabela>
+          <thead>
+            <tr>
+              <Th>Pedido</Th>
+              <Th>Cliente</Th>
+              <Th>Data</Th>
+              <Th>Pagamento</Th>
+              <Th>Envio</Th>
+              <Th alinhamento="direita">Total</Th>
+            </tr>
+          </thead>
+          <tbody>
+            {filtrados.map((o) => (
+              <Tr key={o.id} onClick={() => setDetId(o.id)} rotuloDoClique={`Abrir pedido ${o.display_id}`}>
+                <Td className="font-medium whitespace-nowrap">#{o.display_id}</Td>
+                <Td tom="apoio">{o.email || "—"}</Td>
+                <Td tom="meta">{dataHora(o.created_at)}</Td>
+                <Td>{badge(PAGAMENTO, o.payment_status)}</Td>
+                <Td>{badge(ENVIO, o.fulfillment_status)}</Td>
+                <Td alinhamento="direita" className="font-medium whitespace-nowrap">
+                  {brl(o.total)}
+                </Td>
+              </Tr>
+            ))}
+            {filtrados.length === 0 && <LinhaVazia colunas={6}>Nenhum pedido.</LinhaVazia>}
+          </tbody>
+        </Tabela>
       )}
 
       {/* Detalhe */}
       {detId && (
         <div className="fixed inset-0 z-50 flex justify-end bg-black/40" onClick={() => setDetId(null)}>
           <div
-            className="w-full max-w-lg h-full bg-eclat-luz overflow-y-auto shadow-xl"
+            className="w-full max-w-2xl h-full bg-eclat-luz overflow-y-auto shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="sticky top-0 bg-eclat-luz border-b border-eclat-pedra/30 px-6 py-4 flex items-center justify-between z-10">
-              <h2 className="font-serif text-2xl text-eclat-grafite">
+              <h2 className="font-serif text-2xl text-eclat-texto">
                 {det ? `Pedido #${det.display_id}` : "Pedido"}
               </h2>
-              <button onClick={() => setDetId(null)} className="text-eclat-grafite/50 hover:text-eclat-grafite text-xl">✕</button>
+              <button onClick={() => setDetId(null)} className="text-eclat-texto-3 hover:text-eclat-texto text-xl">✕</button>
             </div>
 
             {detLoading || !det ? (
-              <p className="p-6 text-sm text-eclat-grafite/50">Carregando…</p>
+              <p className="p-6 text-corpo text-eclat-texto-3">Carregando…</p>
             ) : (
               <div className="p-6 flex flex-col gap-6">
                 <div className="flex items-center gap-2 flex-wrap">
                   {badge(PAGAMENTO, det.payment_status)}
                   {badge(ENVIO, det.fulfillment_status)}
-                  <span className="text-xs text-eclat-grafite/50">{dataHora(det.created_at)}</span>
+                  <span className="text-meta text-eclat-texto-3">{dataHora(det.created_at)}</span>
                 </div>
 
                 {/* Itens */}
                 <section>
-                  <h4 className="text-xs uppercase tracking-wider text-eclat-grafite/60 mb-2">Itens</h4>
+                  <h4 className="text-meta uppercase tracking-wider text-eclat-texto-3 mb-2">Itens</h4>
                   <div className="border border-eclat-pedra/30 rounded-md overflow-hidden">
-                    <table className="w-full text-sm">
+                    <table className="w-full text-corpo">
                       <tbody>
                         {det.items.map((i, idx) => (
                           <tr key={idx} className="border-b border-eclat-pedra/10 last:border-0">
                             <td className="px-3 py-2">
                               <div>{i.title}</div>
                               {etiquetaConjunto(i) && (
-                                <span className="inline-block mt-0.5 rounded-sm bg-eclat-areia px-1.5 text-[10px] uppercase tracking-wider text-eclat-grafite" data-testid="etiqueta-conjunto">Conjunto</span>
+                                <span className="inline-block mt-0.5 rounded-sm bg-eclat-areia px-1.5 text-meta uppercase tracking-wider text-eclat-texto" data-testid="etiqueta-conjunto">Conjunto</span>
                               )}
-                              <div className="text-xs text-eclat-grafite/50">{i.variant_title}</div>
+                              <div className="text-meta text-eclat-texto-3">{i.variant_title}</div>
                             </td>
-                            <td className="px-3 py-2 text-center text-eclat-grafite/70">{i.quantity}×</td>
-                            <td className="px-3 py-2 text-right text-eclat-grafite/60">{brl(i.unit_price)}</td>
+                            <td className="px-3 py-2 text-center text-eclat-texto-2">{i.quantity}×</td>
+                            <td className="px-3 py-2 text-right text-eclat-texto-3">{brl(i.unit_price)}</td>
                             <td className="px-3 py-2 text-right font-medium">{brl(i.total)}</td>
                           </tr>
                         ))}
@@ -422,43 +428,43 @@ export default function PedidosPage() {
                 </section>
 
                 {/* Totais */}
-                <section className="text-sm">
-                  <div className="flex justify-between py-1"><span className="text-eclat-grafite/60">Itens</span><span>{brl(det.item_subtotal)}</span></div>
+                <section className="text-corpo">
+                  <div className="flex justify-between py-1"><span className="text-eclat-texto-3">Itens</span><span>{brl(det.item_subtotal)}</span></div>
                   {descontos.conjunto > 0 && (
-                    <div className="flex justify-between py-1"><span className="text-eclat-grafite/60">Benefício Conjunto</span><span>- {brl(descontos.conjunto)}</span></div>
+                    <div className="flex justify-between py-1"><span className="text-eclat-texto-3">Benefício Conjunto</span><span>- {brl(descontos.conjunto)}</span></div>
                   )}
                   {descontos.cupom > 0 && (
-                    <div className="flex justify-between py-1"><span className="text-eclat-grafite/60">Cupom</span><span>- {brl(descontos.cupom)}</span></div>
+                    <div className="flex justify-between py-1"><span className="text-eclat-texto-3">Cupom</span><span>- {brl(descontos.cupom)}</span></div>
                   )}
                   {residual > 0 && (
-                    <div className="flex justify-between py-1"><span className="text-eclat-grafite/60">Desconto</span><span>- {brl(residual)}</span></div>
+                    <div className="flex justify-between py-1"><span className="text-eclat-texto-3">Desconto</span><span>- {brl(residual)}</span></div>
                   )}
-                  <div className="flex justify-between py-1"><span className="text-eclat-grafite/60">Frete</span><span>{brl(det.shipping_subtotal ?? det.shipping_total)}</span></div>
+                  <div className="flex justify-between py-1"><span className="text-eclat-texto-3">Frete</span><span>{brl(det.shipping_subtotal ?? det.shipping_total)}</span></div>
                   <div className="flex justify-between py-2 border-t border-eclat-pedra/30 font-medium text-base"><span>Total</span><span>{brl(det.total)}</span></div>
                 </section>
 
                 {/* Pagamento (Parte 4): o que a cliente usou e quanto o gateway cobrou */}
                 {pagamento && (
                   <section data-testid="bloco-pagamento">
-                    <h4 className="text-xs uppercase tracking-wider text-eclat-grafite/60 mb-2">Pagamento</h4>
-                    <p className="text-sm">
+                    <h4 className="text-meta uppercase tracking-wider text-eclat-texto-3 mb-2">Pagamento</h4>
+                    <p className="text-corpo">
                       {pagamento.metodo}
-                      {pagamento.detalhe && <span className="text-eclat-grafite/60"> · {pagamento.detalhe}</span>}
+                      {pagamento.detalhe && <span className="text-eclat-texto-3"> · {pagamento.detalhe}</span>}
                     </p>
                     {pagamento.ehMercadoPago && (
-                      <div className="text-sm mt-1">
+                      <div className="text-corpo mt-1">
                         {pagamento.tarifa_centavos != null ? (
                           <>
-                            <div className="flex justify-between py-0.5"><span className="text-eclat-grafite/60">Tarifa do Mercado Pago</span><span className="text-red-700">−{brlCent(pagamento.tarifa_centavos)}</span></div>
+                            <div className="flex justify-between py-0.5"><span className="text-eclat-texto-3">Tarifa do Mercado Pago</span><span className="text-red-700">−{brlCent(pagamento.tarifa_centavos)}</span></div>
                             {pagamento.liquido_centavos != null && (
-                              <div className="flex justify-between py-0.5"><span className="text-eclat-grafite/60">Líquido a receber</span><span className="font-medium">{brlCent(pagamento.liquido_centavos)}</span></div>
+                              <div className="flex justify-between py-0.5"><span className="text-eclat-texto-3">Líquido a receber</span><span className="font-medium">{brlCent(pagamento.liquido_centavos)}</span></div>
                             )}
                           </>
                         ) : (
-                          <p className="text-xs text-amber-700">Tarifa ainda não informada pelo Mercado Pago.</p>
+                          <p className="text-meta text-amber-700">Tarifa ainda não informada pelo Mercado Pago.</p>
                         )}
                         {pagamento.mp_order_id && (
-                          <p className="text-xs text-eclat-grafite/50 mt-1 break-all">Mercado Pago: {pagamento.mp_order_id}</p>
+                          <p className="text-meta text-eclat-texto-3 mt-1 break-all">Mercado Pago: {pagamento.mp_order_id}</p>
                         )}
                       </div>
                     )}
@@ -468,20 +474,20 @@ export default function PedidosPage() {
                 {/* Entrega */}
                 {det.shipping_address && (
                   <section>
-                    <h4 className="text-xs uppercase tracking-wider text-eclat-grafite/60 mb-2">Entrega</h4>
-                    <p className="text-sm">
+                    <h4 className="text-meta uppercase tracking-wider text-eclat-texto-3 mb-2">Entrega</h4>
+                    <p className="text-corpo">
                       {[det.shipping_address.first_name, det.shipping_address.last_name].filter(Boolean).join(" ")}
                     </p>
-                    <p className="text-sm text-eclat-grafite/70">
+                    <p className="text-corpo text-eclat-texto-2">
                       {[det.shipping_address.address_1, det.shipping_address.city, det.shipping_address.province, det.shipping_address.postal_code]
                         .filter(Boolean)
                         .join(", ")}
                     </p>
                     {det.shipping_address.phone && (
-                      <p className="text-sm text-eclat-grafite/60">{det.shipping_address.phone}</p>
+                      <p className="text-corpo text-eclat-texto-3">{det.shipping_address.phone}</p>
                     )}
                     {det.shipping_methods[0] && (
-                      <p className="text-xs text-eclat-grafite/50 mt-1">
+                      <p className="text-meta text-eclat-texto-3 mt-1">
                         {det.shipping_methods[0].name} · {brl(det.shipping_methods[0].total)}
                       </p>
                     )}
@@ -503,13 +509,17 @@ export default function PedidosPage() {
                   <NfdDoPedido orderId={det.id} statusDocumentoVenda={docFiscal.status} itens={itensParaDevolucao} />
                 )}
 
-                {/* Despacho */}
-                {det.fulfillment_status === "not_fulfilled" ? (
+                {/* Despacho — a mesma trava da API (lib/despacho-permitido), para a pessoa não
+                    conferir peça por peça e só então descobrir que o pedido não pode sair. */}
+                {det.fulfillment_status === "not_fulfilled" && !travaDeDespacho(det).pode && (
+                  <Aviso tom="atencao">{(travaDeDespacho(det) as { motivo: string }).motivo}</Aviso>
+                )}
+                {det.fulfillment_status === "not_fulfilled" && travaDeDespacho(det).pode ? (
                   <section className="border border-eclat-dourado/40 rounded-lg p-4 bg-white/60 flex flex-col gap-3">
-                    <h4 className="text-sm font-medium text-eclat-grafite">Despachar pedido</h4>
+                    <h4 className="text-corpo font-medium text-eclat-texto">Despachar pedido</h4>
                     {ehEntregaPorApp(det) && (
-                      <div className="border border-eclat-terracota/40 bg-eclat-blush-claro/60 rounded-md p-3 text-sm text-eclat-grafite flex flex-col gap-1">
-                        <strong className="text-xs uppercase tracking-wider text-eclat-terracota">
+                      <div className="border border-eclat-terracota/40 bg-eclat-blush-claro/60 rounded-md p-3 text-corpo text-eclat-texto flex flex-col gap-1">
+                        <strong className="text-meta uppercase tracking-wider text-eclat-terracota">
                           Entrega por aplicativo
                         </strong>
                         <span>
@@ -518,7 +528,7 @@ export default function PedidosPage() {
                           rastreio quando entregar.
                         </span>
                         {aceiteDaEntregaApp(det) && (
-                          <span className="text-xs text-eclat-grafite/60">
+                          <span className="text-meta text-eclat-texto-3">
                             Aceite da cliente registrado em {aceiteDaEntregaApp(det)}.
                           </span>
                         )}
@@ -536,15 +546,15 @@ export default function PedidosPage() {
                       value={trackNum}
                       onChange={(e) => setTrackNum(e.target.value)}
                       placeholder="Código de rastreio (opcional)"
-                      className="border border-eclat-pedra/50 rounded-md px-3 py-2 text-sm bg-white focus:outline-none focus:border-eclat-dourado"
+                      className="border border-eclat-pedra/50 rounded-md px-3 py-2 text-corpo bg-white focus:outline-none focus:border-eclat-dourado"
                     />
                     <input
                       value={trackUrl}
                       onChange={(e) => setTrackUrl(e.target.value)}
                       placeholder="URL de rastreio (opcional)"
-                      className="border border-eclat-pedra/50 rounded-md px-3 py-2 text-sm bg-white focus:outline-none focus:border-eclat-dourado"
+                      className="border border-eclat-pedra/50 rounded-md px-3 py-2 text-corpo bg-white focus:outline-none focus:border-eclat-dourado"
                     />
-                    <label className="flex items-center gap-2 text-sm">
+                    <label className="flex items-center gap-2 text-corpo">
                       <input
                         type="checkbox"
                         checked={notify && !!det.shipping_address?.phone}
@@ -554,7 +564,7 @@ export default function PedidosPage() {
                       />
                       Avisar cliente por WhatsApp
                       {!det.shipping_address?.phone && (
-                        <span className="text-xs text-eclat-grafite/40">(sem telefone)</span>
+                        <span className="text-meta text-eclat-texto/40">(sem telefone)</span>
                       )}
                     </label>
                     <div className="flex flex-wrap gap-2">
@@ -562,7 +572,7 @@ export default function PedidosPage() {
                         onClick={() => despachar(false)}
                         disabled={despachando || !podeDespachar}
                         title={podeDespachar ? undefined : "Confira as peças com o leitor ou informe o motivo"}
-                        className="bg-eclat-grafite text-eclat-luz uppercase tracking-widest text-xs px-5 py-2.5 rounded-md hover:bg-eclat-dourado hover:text-eclat-grafite disabled:opacity-50"
+                        className="bg-eclat-grafite text-eclat-luz uppercase tracking-widest text-meta px-5 py-2.5 rounded-md hover:bg-eclat-dourado hover:text-eclat-texto disabled:opacity-50"
                       >
                         {despachando ? "Despachando…" : conferenciaCompleta ? "Despachar" : "Despachar mesmo assim"}
                       </button>
@@ -574,19 +584,19 @@ export default function PedidosPage() {
                             ? "Entrega por aplicativo não tem etiqueta: a cliente contrata o transporte"
                             : "Gera a etiqueta na transportadora (requer credenciais configuradas)"
                         }
-                        className="border border-eclat-grafite/40 text-xs uppercase tracking-widest px-4 py-2.5 rounded-md hover:bg-eclat-areia/40 disabled:opacity-50"
+                        className="border border-eclat-grafite/40 text-meta uppercase tracking-widest px-4 py-2.5 rounded-md hover:bg-eclat-areia/40 disabled:opacity-50"
                       >
                         Gerar etiqueta (SuperFrete)
                       </button>
                     </div>
-                    <p className="text-xs text-eclat-grafite/50">
+                    <p className="text-meta text-eclat-texto-3">
                       Sem código → despacha sem rastreio. A etiqueta automática precisa das credenciais da transportadora (modo manual funciona já).
                     </p>
                   </section>
                 ) : (
                   det.fulfillments?.some((f) => !f.canceled_at) && (
-                    <section className="border border-green-200 bg-green-50 rounded-lg p-4 text-sm flex flex-col gap-1">
-                      <h4 className="text-xs uppercase tracking-wider text-green-800 mb-1">Envio</h4>
+                    <section className="border border-green-200 bg-green-50 rounded-lg p-4 text-corpo flex flex-col gap-1">
+                      <h4 className="text-meta uppercase tracking-wider text-green-800 mb-1">Envio</h4>
                       {det.fulfillments
                         .filter((f) => !f.canceled_at)
                         .flatMap((f) => f.labels)
@@ -615,7 +625,7 @@ export default function PedidosPage() {
                   )
                 )}
 
-                <section className="text-sm text-eclat-grafite/60">
+                <section className="text-corpo text-eclat-texto-3">
                   <span>Cliente: {det.email}</span>
                   {det.customer_id && (
                     <a href={`/clientes`} className="text-eclat-dourado underline ml-2">ver ficha</a>

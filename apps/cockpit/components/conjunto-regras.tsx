@@ -26,10 +26,10 @@ type Cat = {
 }
 
 const input =
-  "w-full border border-eclat-pedra/50 rounded-md px-3 py-2 text-sm bg-white focus:outline-none focus:border-eclat-dourado"
-const label = "text-xs uppercase tracking-wider text-eclat-grafite/60 mb-1 block"
+  "w-full border border-eclat-pedra/50 rounded-md px-3 py-2 text-corpo bg-white focus:outline-none focus:border-eclat-dourado"
+const label = "text-meta uppercase tracking-wider text-eclat-texto-3 mb-1 block"
 const btn =
-  "self-start bg-eclat-grafite text-eclat-luz uppercase tracking-widest text-xs px-6 py-3 rounded-md hover:bg-eclat-dourado hover:text-eclat-grafite disabled:opacity-50"
+  "self-start bg-eclat-grafite text-eclat-luz uppercase tracking-widest text-meta px-6 py-3 rounded-md hover:bg-eclat-dourado hover:text-eclat-texto disabled:opacity-50"
 
 // prévia fixa da spec: Top R$ 189,00 + Legging R$ 259,00
 const PRECOS_EXEMPLO = [18900, 25900]
@@ -87,8 +87,8 @@ export default function ConjuntoRegras() {
     if (Array.isArray(d?.regras)) setRegras(d.regras)
   }, [])
 
-  if (carregando) return <p className="text-sm text-eclat-grafite/50">Carregando…</p>
-  if (erroCarregar) return <p className="text-sm text-red-700">{erroCarregar}</p>
+  if (carregando) return <p className="text-corpo text-eclat-texto-3">Carregando…</p>
+  if (erroCarregar) return <p className="text-corpo text-red-700">{erroCarregar}</p>
 
   const categoriasRaiz = categorias.filter((c) => c.parent_id === null && c.is_active)
   const regraPadrao = regras.find((r) => r.escopo === "padrao") ?? null
@@ -164,7 +164,7 @@ function BlocoPadrao({
 
   return (
     <section className="border border-eclat-dourado/40 rounded-lg bg-white/60 p-5 flex flex-col gap-4">
-      <h2 className="font-serif text-xl text-eclat-grafite">Benefício padrão</h2>
+      <h2 className="font-serif text-xl text-eclat-texto">Benefício padrão</h2>
       <div className="grid grid-cols-2 gap-3">
         <div>
           <label className={label}>Tipo de desconto</label>
@@ -193,30 +193,30 @@ function BlocoPadrao({
               placeholder={unidadeDoTipo(tipo) === "%" ? "ex.: 15" : "ex.: 45,90"}
               className={input}
             />
-            <span className="text-xs text-eclat-grafite/50 shrink-0">{unidadeDoTipo(tipo)}</span>
+            <span className="text-meta text-eclat-texto-3 shrink-0">{unidadeDoTipo(tipo)}</span>
           </div>
         </div>
       </div>
-      <label className="flex items-center gap-2 text-sm cursor-pointer select-none">
+      <label className="flex items-center gap-2 text-corpo cursor-pointer select-none">
         <input type="checkbox" checked={ativa} onChange={(e) => setAtiva(e.target.checked)} />
-        <span className="text-eclat-grafite/70">Ativo</span>
+        <span className="text-eclat-texto-2">Ativo</span>
       </label>
       {!ativa && (
-        <p className="text-xs text-eclat-dourado bg-eclat-dourado/10 rounded px-3 py-2">
+        <p className="text-meta text-eclat-dourado bg-eclat-dourado/10 rounded px-3 py-2">
           Benefício desligado: a vitrine não mostra conjuntos nem aplica desconto.
         </p>
       )}
       {previa ? (
-        <p className="text-xs text-eclat-grafite/70">
+        <p className="text-meta text-eclat-texto-2">
           Exemplo: Top {formatarReais(PRECOS_EXEMPLO[0])} + Legging {formatarReais(PRECOS_EXEMPLO[1])} → cliente
-          paga <strong className="text-eclat-grafite">{formatarReais(previa.final)}</strong> (economia{" "}
+          paga <strong className="text-eclat-texto">{formatarReais(previa.final)}</strong> (economia{" "}
           {formatarReais(previa.economia)})
         </p>
       ) : (
-        <p className="text-xs text-eclat-grafite/40">Informe um valor válido para ver a prévia.</p>
+        <p className="text-meta text-eclat-texto/40">Informe um valor válido para ver a prévia.</p>
       )}
-      {tentouSalvar && erroValidacao && <p className="text-xs text-red-700">{erroValidacao}</p>}
-      {erro && <p className="text-xs text-red-700">{erro}</p>}
+      {tentouSalvar && erroValidacao && <p className="text-meta text-red-700">{erroValidacao}</p>}
+      {erro && <p className="text-meta text-red-700">{erro}</p>}
       <button onClick={salvar} disabled={salvando} className={btn}>
         {salvando ? "Salvando…" : regra ? "Salvar" : "Criar benefício padrão"}
       </button>
@@ -307,9 +307,9 @@ function BlocoExcecoes({
 
   return (
     <section className="border border-eclat-pedra/40 rounded-lg bg-white/60 p-5 flex flex-col gap-4">
-      <h2 className="font-serif text-xl text-eclat-grafite">Exceções por coleção</h2>
-      <p className="text-xs text-eclat-grafite/55">Coleções sem exceção usam o benefício padrão.</p>
-      {colecoes.length === 0 && <p className="text-sm text-eclat-grafite/50">Nenhuma coleção cadastrada.</p>}
+      <h2 className="font-serif text-xl text-eclat-texto">Exceções por coleção</h2>
+      <p className="text-meta text-eclat-texto-3">Coleções sem exceção usam o benefício padrão.</p>
+      {colecoes.length === 0 && <p className="text-corpo text-eclat-texto-3">Nenhuma coleção cadastrada.</p>}
       <div className="border border-eclat-pedra/30 rounded-md divide-y divide-eclat-pedra/15 bg-white">
         {colecoes.map((c) => {
           const regra = excecaoDe(c.id)
@@ -319,10 +319,10 @@ function BlocoExcecoes({
           return (
             <div key={c.id} className="p-3 flex flex-col gap-2">
               <div className="flex items-center justify-between gap-3">
-                <span className={`text-sm ${aberta ? "text-eclat-grafite" : "text-eclat-grafite/50"}`}>{c.title}</span>
+                <span className={`text-corpo ${aberta ? "text-eclat-texto" : "text-eclat-texto-3"}`}>{c.title}</span>
                 {!aberta && (
-                  <span className="flex items-center gap-3 text-xs">
-                    <span className="text-eclat-grafite/40 uppercase tracking-wider">padrão</span>
+                  <span className="flex items-center gap-3 text-meta">
+                    <span className="text-eclat-texto/40 uppercase tracking-wider">padrão</span>
                     <button onClick={() => abrir(c.id)} className="text-eclat-dourado underline">
                       Criar exceção
                     </button>
@@ -358,23 +358,23 @@ function BlocoExcecoes({
                           placeholder={unidadeDoTipo(form.tipo) === "%" ? "ex.: 15" : "ex.: 45,90"}
                           className={input}
                         />
-                        <span className="text-xs text-eclat-grafite/50 shrink-0">{unidadeDoTipo(form.tipo)}</span>
+                        <span className="text-meta text-eclat-texto-3 shrink-0">{unidadeDoTipo(form.tipo)}</span>
                       </div>
                     </div>
                   </div>
-                  <label className="flex items-center gap-2 text-sm cursor-pointer select-none">
+                  <label className="flex items-center gap-2 text-corpo cursor-pointer select-none">
                     <input
                       type="checkbox"
                       checked={form.ativa}
                       onChange={(e) => setForm(c.id, form, { ativa: e.target.checked })}
                     />
-                    <span className="text-eclat-grafite/70">Ativa</span>
+                    <span className="text-eclat-texto-2">Ativa</span>
                   </label>
-                  <p className="text-[11px] text-eclat-grafite/50">
+                  <p className="text-meta text-eclat-texto-3">
                     Exceção inativa = esta coleção fica SEM benefício (não volta ao padrão).
                   </p>
-                  {tentouSalvar.has(c.id) && erroValidacao && <p className="text-xs text-red-700">{erroValidacao}</p>}
-                  {erros[c.id] && <p className="text-xs text-red-700">{erros[c.id]}</p>}
+                  {tentouSalvar.has(c.id) && erroValidacao && <p className="text-meta text-red-700">{erroValidacao}</p>}
+                  {erros[c.id] && <p className="text-meta text-red-700">{erros[c.id]}</p>}
                   <div className="flex gap-3">
                     <button onClick={() => salvar(c, regra)} disabled={salvandoId === c.id} className={btn}>
                       {salvandoId === c.id ? "Salvando…" : regra ? "Salvar" : "Criar exceção"}
@@ -382,7 +382,7 @@ function BlocoExcecoes({
                     {!regra && (
                       <button
                         onClick={() => cancelar(c.id)}
-                        className="text-sm text-eclat-grafite/60 underline self-center"
+                        className="text-corpo text-eclat-texto-3 underline self-center"
                       >
                         cancelar
                       </button>
@@ -486,31 +486,31 @@ function BlocoPares({
 
   return (
     <section className="border border-eclat-dourado/40 rounded-lg bg-white/60 p-5 flex flex-col gap-4">
-      <h2 className="font-serif text-xl text-eclat-grafite">Pares permitidos</h2>
-      <p className="text-xs text-eclat-grafite/55">
+      <h2 className="font-serif text-xl text-eclat-texto">Pares permitidos</h2>
+      <p className="text-meta text-eclat-texto-3">
         Só peças de categorias pareadas aqui formam um conjunto com benefício na vitrine.
       </p>
       <div className="flex flex-wrap gap-2">
-        {ativos.length === 0 && <p className="text-sm text-eclat-grafite/50">Nenhum par cadastrado.</p>}
+        {ativos.length === 0 && <p className="text-corpo text-eclat-texto-3">Nenhum par cadastrado.</p>}
         {ativos.map((p) => (
           <span
             key={`${p.categoria_a}-${p.categoria_b}`}
-            className="flex items-center gap-2 bg-eclat-areia/60 rounded-full px-3 py-1.5 text-sm"
+            className="flex items-center gap-2 bg-eclat-areia/60 rounded-full px-3 py-1.5 text-corpo"
           >
-            <span className="text-eclat-grafite">
+            <span className="text-eclat-texto">
               {nomeDaCategoria(p.categoria_a)} + {nomeDaCategoria(p.categoria_b)}
             </span>
-            <span className="text-[10px] text-eclat-grafite/40">
+            <span className="text-meta text-eclat-texto/40">
               ({p.categoria_a} + {p.categoria_b})
             </span>
-            <button onClick={() => remover(p)} className="text-eclat-grafite/50 hover:text-red-700">
+            <button onClick={() => remover(p)} className="text-eclat-texto-3 hover:text-red-700">
               ×
             </button>
           </span>
         ))}
       </div>
       {categoriasRaiz.length < 2 ? (
-        <p className="text-xs text-eclat-grafite/50">Cadastre ao menos duas categorias raiz ativas para criar pares.</p>
+        <p className="text-meta text-eclat-texto-3">Cadastre ao menos duas categorias raiz ativas para criar pares.</p>
       ) : (
         <>
           <div className="grid grid-cols-2 gap-3">
@@ -542,14 +542,14 @@ function BlocoPares({
           </button>
         </>
       )}
-      {erro && <p className="text-xs text-red-700">{erro}</p>}
-      {msg && <p className="text-xs text-eclat-grafite/60">{msg}</p>}
+      {erro && <p className="text-meta text-red-700">{erro}</p>}
+      {msg && <p className="text-meta text-eclat-texto-3">{msg}</p>}
       <div className="flex items-center gap-3">
         <button onClick={salvar} disabled={salvando || !sujo} className={btn}>
           {salvando ? "Salvando…" : "Salvar pares"}
         </button>
         {sujo && !salvando && (
-          <span className="text-xs text-eclat-dourado">Alterações não salvas</span>
+          <span className="text-meta text-eclat-dourado">Alterações não salvas</span>
         )}
       </div>
     </section>
@@ -579,8 +579,8 @@ function BlocoReconciliar() {
 
   return (
     <section className="border border-eclat-pedra/40 rounded-lg bg-white/60 p-5 flex flex-col gap-3">
-      <h2 className="font-serif text-xl text-eclat-grafite">Reconciliar</h2>
-      <p className="text-xs text-eclat-grafite/55">
+      <h2 className="font-serif text-xl text-eclat-texto">Reconciliar</h2>
+      <p className="text-meta text-eclat-texto-3">
         Sincroniza as promoções e os cupons do Medusa com as regras e os pares atuais.
       </p>
       {!confirmando ? (
@@ -590,13 +590,13 @@ function BlocoReconciliar() {
             setResultado(null)
             setErro(null)
           }}
-          className="self-start border border-eclat-grafite text-eclat-grafite uppercase tracking-widest text-xs px-6 py-3 rounded-md hover:bg-eclat-grafite hover:text-eclat-luz transition-colors"
+          className="self-start border border-eclat-grafite text-eclat-texto uppercase tracking-widest text-meta px-6 py-3 rounded-md hover:bg-eclat-grafite hover:text-eclat-luz transition-colors"
         >
           Reconciliar promoções e cupons
         </button>
       ) : (
         <div className="flex flex-col gap-2 bg-eclat-areia/30 rounded p-3">
-          <p className="text-sm text-eclat-grafite">Confirmar sincronização de promoções e cupons agora?</p>
+          <p className="text-corpo text-eclat-texto">Confirmar sincronização de promoções e cupons agora?</p>
           <div className="flex gap-3">
             <button onClick={reconciliar} disabled={rodando} className={btn}>
               {rodando ? "Reconciliando…" : "Confirmar"}
@@ -604,16 +604,16 @@ function BlocoReconciliar() {
             <button
               onClick={() => setConfirmando(false)}
               disabled={rodando}
-              className="text-sm text-eclat-grafite/60 underline self-center"
+              className="text-corpo text-eclat-texto-3 underline self-center"
             >
               cancelar
             </button>
           </div>
         </div>
       )}
-      {erro && <p className="text-xs text-red-700">{erro}</p>}
+      {erro && <p className="text-meta text-red-700">{erro}</p>}
       {resultado && (
-        <p className="text-sm text-eclat-grafite/70">
+        <p className="text-corpo text-eclat-texto-2">
           Regras sincronizadas: {resultado.regras} · Cupons convertidos: {resultado.cupons}
         </p>
       )}

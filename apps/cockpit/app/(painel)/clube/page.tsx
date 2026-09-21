@@ -40,11 +40,11 @@ const EXPLICA: Record<string, string> = {
 }
 
 const card = "border border-eclat-pedra/40 rounded-lg p-5 bg-eclat-luz flex flex-col gap-3"
-const input = "w-full border border-eclat-pedra/50 rounded-md px-3 py-2 text-sm bg-white focus:outline-none focus:border-eclat-dourado"
-const label = "text-xs uppercase tracking-wider text-eclat-grafite/60 mb-1 block"
-const hint = "text-xs text-eclat-grafite/55 leading-relaxed"
-const btn = "bg-eclat-grafite text-eclat-luz uppercase tracking-widest text-xs px-4 py-2 rounded-md hover:bg-eclat-dourado hover:text-eclat-grafite disabled:opacity-50"
-const btn2 = "border border-eclat-grafite/30 text-eclat-grafite uppercase tracking-widest text-xs px-4 py-2 rounded-md hover:border-eclat-dourado disabled:opacity-50"
+const input = "w-full border border-eclat-pedra/50 rounded-md px-3 py-2 text-corpo bg-white focus:outline-none focus:border-eclat-dourado"
+const label = "text-meta uppercase tracking-wider text-eclat-texto-3 mb-1 block"
+const hint = "text-meta text-eclat-texto-3 leading-relaxed"
+const btn = "bg-eclat-grafite text-eclat-luz uppercase tracking-widest text-meta px-4 py-2 rounded-md hover:bg-eclat-dourado hover:text-eclat-texto disabled:opacity-50"
+const btn2 = "border border-eclat-grafite/30 text-eclat-texto uppercase tracking-widest text-meta px-4 py-2 rounded-md hover:border-eclat-dourado disabled:opacity-50"
 const chip = (s: string) => ({
   rascunho: "bg-amber-100 text-amber-900", aprovada: "bg-sky-100 text-sky-900", enviada: "bg-emerald-100 text-emerald-900",
   falhou: "bg-red-100 text-red-900", descartada: "bg-gray-200 text-gray-700",
@@ -111,19 +111,19 @@ export default function ClubePage() {
     falhas: msgs.filter((m) => m.status === "falhou").length,
   }), [msgs])
 
-  if (loading && !cfg) return <p className="text-sm text-eclat-grafite/50">Carregando…</p>
+  if (loading && !cfg) return <p className="text-corpo text-eclat-texto-3">Carregando…</p>
 
   return (
     <div className="flex flex-col gap-6 max-w-4xl">
       <div>
-        <h1 className="font-serif text-3xl text-eclat-grafite">Clube Éclat</h1>
-        <p className="text-sm text-eclat-grafite/60 mt-1">
+        <h1 className="font-serif text-3xl text-eclat-texto">Clube Éclat</h1>
+        <p className="text-corpo text-eclat-texto-3 mt-1">
           Tudo que vai para o grupo <strong>CLUB ÉCLAT</strong> passa por aqui. Agenda, gatilhos automáticos e envios manuais
           entram numa fila só; o carteiro roda a cada 5 minutos, dentro da janela de horário, e avisa você no privado se falhar.
         </p>
       </div>
 
-      {aviso && <div className="text-sm text-red-800 bg-red-50 border border-red-200 rounded-md px-4 py-2">{aviso}</div>}
+      {aviso && <div className="text-corpo text-red-800 bg-red-50 border border-red-200 rounded-md px-4 py-2">{aviso}</div>}
 
       <nav className="flex gap-2 flex-wrap">
         {(["painel", "automacoes", "agenda", "aprovacoes", "historico"] as const).map((a) => (
@@ -138,26 +138,26 @@ export default function ClubePage() {
           <div className={card}>
             <div className="flex items-center justify-between gap-4">
               <div>
-                <p className="font-semibold text-eclat-grafite">Automação {cfg.ativo ? "LIGADA" : "DESLIGADA"}</p>
+                <p className="font-semibold text-eclat-texto">Automação {cfg.ativo ? "LIGADA" : "DESLIGADA"}</p>
                 <p className={hint}>Interruptor-mestre. Desligado, nada sai (nem agenda, nem gatilhos). Religar zera o contador de falhas.</p>
               </div>
               <button disabled={busy} onClick={() => api("/api/clube/config", "PUT", { ativo: !cfg.ativo })} className={cfg.ativo ? btn2 : btn}>
                 {cfg.ativo ? "Desligar" : "Ligar"}
               </button>
             </div>
-            <div className="grid grid-cols-2 small:grid-cols-4 gap-3 text-sm">
+            <div className="grid grid-cols-2 small:grid-cols-4 gap-3 text-corpo">
               <Stat rotulo="WhatsApp" valor={p.whatsapp === "open" ? "conectado" : `⚠ ${p.whatsapp || "?"}`} alerta={p.whatsapp !== "open"} />
               <Stat rotulo="Aguardando aprovação" valor={String(contagem.aguardando)} alerta={contagem.aguardando > 0} />
               <Stat rotulo="Agendadas" valor={String(contagem.agendadas)} />
               <Stat rotulo="Enviadas hoje" valor={String(contagem.enviadasHoje)} />
             </div>
             {cfg.falhas_seguidas > 0 && (
-              <p className="text-sm text-red-800">Falhas seguidas: {cfg.falhas_seguidas} (com 3, a automação pausa sozinha).</p>
+              <p className="text-corpo text-red-800">Falhas seguidas: {cfg.falhas_seguidas} (com 3, a automação pausa sozinha).</p>
             )}
           </div>
 
           <div className={card}>
-            <p className="font-semibold text-eclat-grafite">Freios</p>
+            <p className="font-semibold text-eclat-texto">Freios</p>
             <div className="grid grid-cols-2 gap-3">
               <div><label className={label}>Janela: início</label><input type="time" className={input} defaultValue={cfg.janela_inicio.slice(0, 5)} onBlur={(e) => api("/api/clube/config", "PUT", { janela_inicio: e.target.value })} /></div>
               <div><label className={label}>Janela: fim</label><input type="time" className={input} defaultValue={cfg.janela_fim.slice(0, 5)} onBlur={(e) => api("/api/clube/config", "PUT", { janela_fim: e.target.value })} /></div>
@@ -170,14 +170,14 @@ export default function ClubePage() {
 
           <div className={card}>
             <div className="flex items-center justify-between">
-              <p className="font-semibold text-eclat-grafite">Estoque agora (o que o detector vê)</p>
+              <p className="font-semibold text-eclat-texto">Estoque agora (o que o detector vê)</p>
               <button disabled={busy} className={btn2} onClick={() => api("/api/clube/rodar", "POST")}>Rodar detector + carteiro agora</button>
             </div>
-            {p.estoque_erro && <p className="text-sm text-red-800">Erro na leitura: {p.estoque_erro}</p>}
+            {p.estoque_erro && <p className="text-corpo text-red-800">Erro na leitura: {p.estoque_erro}</p>}
             {p.estoque && (
               <div className="overflow-x-auto">
-                <table className="text-sm w-full">
-                  <thead><tr className="text-left text-eclat-grafite/60"><th className="pr-3">Peça</th><th className="pr-3">Cor</th><th className="pr-3">Tam.</th><th className="pr-3 text-right">Qtd.</th></tr></thead>
+                <table className="text-corpo w-full">
+                  <thead><tr className="text-left text-eclat-texto-3"><th className="pr-3">Peça</th><th className="pr-3">Cor</th><th className="pr-3">Tam.</th><th className="pr-3 text-right">Qtd.</th></tr></thead>
                   <tbody>
                     {p.estoque.map((v) => (
                       <tr key={v.variant_id} className={v.qty === 0 ? "text-red-800" : v.qty <= 1 ? "text-amber-800" : ""}>
@@ -223,13 +223,13 @@ export default function ClubePage() {
         <section className="flex flex-col gap-3">
           {msgs.filter((m) => ["enviada", "falhou", "descartada"].includes(m.status)).sort((a, b) => (b.enviado_em || b.criado_em).localeCompare(a.enviado_em || a.criado_em)).map((m) => (
             <div key={m.id} className={card}>
-              <div className="flex items-center gap-2 text-xs">
+              <div className="flex items-center gap-2 text-meta">
                 <span className={`px-2 py-0.5 rounded ${chip(m.status)}`}>{m.status}</span>
-                <span className="text-eclat-grafite/60">{m.origem}{m.tipo ? ` · ${ROTULO[m.tipo] || m.tipo}` : ""} · {fmt(m.enviado_em || m.criado_em)}</span>
+                <span className="text-eclat-texto-3">{m.origem}{m.tipo ? ` · ${ROTULO[m.tipo] || m.tipo}` : ""} · {fmt(m.enviado_em || m.criado_em)}</span>
               </div>
-              <p className="font-medium text-sm">{m.titulo}</p>
-              <pre className="whitespace-pre-wrap text-sm font-sans text-eclat-grafite/80">{m.texto_final || m.texto}</pre>
-              {m.erro && <p className="text-sm text-red-800">Erro: {m.erro}</p>}
+              <p className="font-medium text-corpo">{m.titulo}</p>
+              <pre className="whitespace-pre-wrap text-corpo font-sans text-eclat-texto-2">{m.texto_final || m.texto}</pre>
+              {m.erro && <p className="text-corpo text-red-800">Erro: {m.erro}</p>}
               {m.status === "falhou" && <div><button disabled={busy} className={btn2} onClick={() => api(`/api/clube/mensagens/${m.id}`, "PATCH", { acao: "aprovar" })}>Tentar de novo</button></div>}
             </div>
           ))}
@@ -242,8 +242,8 @@ export default function ClubePage() {
 function Stat({ rotulo, valor, alerta }: { rotulo: string; valor: string; alerta?: boolean }) {
   return (
     <div className={`rounded-md px-3 py-2 ${alerta ? "bg-amber-50 border border-amber-200" : "bg-white border border-eclat-pedra/40"}`}>
-      <div className="text-[11px] uppercase tracking-wider text-eclat-grafite/60">{rotulo}</div>
-      <div className="text-lg font-semibold text-eclat-grafite">{valor}</div>
+      <div className="text-meta uppercase tracking-wider text-eclat-texto-3">{rotulo}</div>
+      <div className="text-lg font-semibold text-eclat-texto">{valor}</div>
     </div>
   )
 }
@@ -255,7 +255,7 @@ function RegraCard({ r, busy, salvar, preview }: { r: Regra; busy: boolean; salv
     <div className={card}>
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="font-semibold text-eclat-grafite">{ROTULO[r.tipo] || r.tipo} {r.ativa ? "" : <span className="text-xs text-eclat-grafite/50">(desligada)</span>}</p>
+          <p className="font-semibold text-eclat-texto">{ROTULO[r.tipo] || r.tipo} {r.ativa ? "" : <span className="text-meta text-eclat-texto-3">(desligada)</span>}</p>
           <p className={hint}>{EXPLICA[r.tipo]}</p>
         </div>
         <button disabled={busy} className={r.ativa ? btn2 : btn} onClick={() => salvar({ ativa: !r.ativa })}>{r.ativa ? "Desligar" : "Ligar"}</button>
@@ -272,7 +272,7 @@ function RegraCard({ r, busy, salvar, preview }: { r: Regra; busy: boolean; salv
           <div><label className={label}>{r.tipo === "ultima_unidade" ? "Limiar (qtd ≤)" : "A cada N reservas"}</label><input type="number" min={1} className={input} defaultValue={r.limiar ?? 1} onBlur={(e) => salvar({ limiar: Number(e.target.value) })} /></div>
         )}
         <div><label className={label}>Não repetir por (h)</label><input type="number" min={1} className={input} defaultValue={r.cooldown_horas} onBlur={(e) => salvar({ cooldown_horas: Number(e.target.value) })} /></div>
-        <div className="flex flex-col gap-1 pt-5 text-sm">
+        <div className="flex flex-col gap-1 pt-5 text-corpo">
           <label className="flex items-center gap-2"><input type="checkbox" checked={r.agrupar} onChange={(e) => salvar({ agrupar: e.target.checked })} /> agrupar numa mensagem</label>
           <label className="flex items-center gap-2"><input type="checkbox" checked={r.anexar_foto} onChange={(e) => salvar({ anexar_foto: e.target.checked })} /> anexar foto da peça</label>
         </div>
@@ -286,7 +286,7 @@ function RegraCard({ r, busy, salvar, preview }: { r: Regra; busy: boolean; salv
         <button disabled={busy || template === r.template} className={btn} onClick={() => salvar({ template })}>Salvar modelo</button>
         <button disabled={busy} className={btn2} onClick={async () => { const d = await preview(template); setPrev(d?.texto_final ?? "(sem texto: nenhum dado real agora)") }}>Prévia com dados de hoje</button>
       </div>
-      {prev !== null && <pre className="whitespace-pre-wrap text-sm font-sans bg-white border border-eclat-pedra/40 rounded-md p-3">{prev}</pre>}
+      {prev !== null && <pre className="whitespace-pre-wrap text-corpo font-sans bg-white border border-eclat-pedra/40 rounded-md p-3">{prev}</pre>}
     </div>
   )
 }
@@ -300,7 +300,7 @@ function NovaMensagem({ busy, criar }: { busy: boolean; criar: (b: unknown) => P
   if (!aberto) return <div><button className={btn} onClick={() => setAberto(true)}>Nova mensagem</button></div>
   return (
     <div className={card}>
-      <p className="font-semibold text-eclat-grafite">Nova mensagem para o grupo</p>
+      <p className="font-semibold text-eclat-texto">Nova mensagem para o grupo</p>
       <div><label className={label}>Título (só para você)</label><input className={input} value={titulo} onChange={(e) => setTitulo(e.target.value)} /></div>
       <div><label className={label}>Texto</label><textarea className={`${input} min-h-[140px]`} value={texto} onChange={(e) => setTexto(e.target.value)} placeholder="*negrito* com asteriscos, como no WhatsApp" /></div>
       <div className="grid grid-cols-2 gap-3">
@@ -325,12 +325,12 @@ function MsgCard({ m, busy, acao, preview }: { m: Msg; busy: boolean; acao: (id:
   const temPreencher = /\[PREENCHER/.test(texto)
   return (
     <div className={card}>
-      <div className="flex items-center gap-2 text-xs flex-wrap">
+      <div className="flex items-center gap-2 text-meta flex-wrap">
         <span className={`px-2 py-0.5 rounded ${chip(m.status)}`}>{m.status}</span>
-        <span className="text-eclat-grafite/60">{m.origem}{m.tipo ? ` · ${ROTULO[m.tipo] || m.tipo}` : ""}</span>
+        <span className="text-eclat-texto-3">{m.origem}{m.tipo ? ` · ${ROTULO[m.tipo] || m.tipo}` : ""}</span>
         {temPreencher && <span className="px-2 py-0.5 rounded bg-red-100 text-red-900">tem [PREENCHER]: edite antes de aprovar</span>}
       </div>
-      <p className="font-medium text-sm">{m.titulo}</p>
+      <p className="font-medium text-corpo">{m.titulo}</p>
       <textarea className={`${input} min-h-[120px]`} value={texto} onChange={(e) => setTexto(e.target.value)} />
       <div className="grid grid-cols-2 gap-3">
         <div><label className={label}>Foto</label><input className={input} value={midia} onChange={(e) => setMidia(e.target.value)} placeholder="produto:handle:Cor, URL, ou vazio" /></div>
@@ -347,7 +347,7 @@ function MsgCard({ m, busy, acao, preview }: { m: Msg; busy: boolean; acao: (id:
       {prev && (
         <div className="bg-white border border-eclat-pedra/40 rounded-md p-3 flex flex-col gap-2">
           {prev.midia_url && <img src={prev.midia_url} alt="" className="max-h-48 w-auto rounded" />}
-          <pre className="whitespace-pre-wrap text-sm font-sans">{prev.texto_final || "(sem texto: nenhum dado real agora)"}</pre>
+          <pre className="whitespace-pre-wrap text-corpo font-sans">{prev.texto_final || "(sem texto: nenhum dado real agora)"}</pre>
         </div>
       )}
     </div>

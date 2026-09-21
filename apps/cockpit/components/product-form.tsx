@@ -283,8 +283,8 @@ export default function ProductForm({
   }
 
   const inputCls =
-    "w-full border border-eclat-pedra/50 rounded-md px-3 py-2 text-sm bg-white focus:outline-none focus:border-eclat-dourado"
-  const labelCls = "text-xs uppercase tracking-wider text-eclat-grafite/60 mb-1 block"
+    "w-full border border-eclat-pedra/50 rounded-md px-3 py-2 text-corpo bg-white focus:outline-none focus:border-eclat-dourado"
+  const labelCls = "text-meta uppercase tracking-wider text-eclat-texto-3 mb-1 block"
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end bg-black/40" onClick={onClose}>
@@ -293,20 +293,20 @@ export default function ProductForm({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="sticky top-0 bg-eclat-luz border-b border-eclat-pedra/30 px-6 py-4 flex items-center justify-between z-10">
-          <h2 className="font-serif text-2xl text-eclat-grafite">
+          <h2 className="font-serif text-2xl text-eclat-texto">
             {mode === "create" ? "Novo produto" : "Editar produto"}
           </h2>
-          <button onClick={onClose} className="text-eclat-grafite/50 hover:text-eclat-grafite text-xl">
+          <button onClick={onClose} className="text-eclat-texto-3 hover:text-eclat-texto text-xl">
             ✕
           </button>
         </div>
 
         {carregando ? (
-          <p className="p-6 text-sm text-eclat-grafite/50">Carregando…</p>
+          <p className="p-6 text-corpo text-eclat-texto-3">Carregando…</p>
         ) : (
           <div className="p-6 flex flex-col gap-4">
             {erro && (
-              <p className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-md p-3">
+              <p className="text-corpo text-red-700 bg-red-50 border border-red-200 rounded-md p-3">
                 {erro}
               </p>
             )}
@@ -358,13 +358,13 @@ export default function ProductForm({
                 {catsArvore.map(({ cat, depth }) => (
                   <label
                     key={cat.id}
-                    className="flex items-center gap-1 text-sm cursor-pointer"
+                    className="flex items-center gap-1 text-corpo cursor-pointer"
                     style={{ paddingLeft: depth * 18 }}
                   >
-                    {depth > 0 && <span className="text-eclat-grafite/30">└</span>}
+                    {depth > 0 && <span className="text-eclat-texto/30">└</span>}
                     <input type="checkbox" checked={catIds.includes(cat.id)} onChange={() => toggleCat(cat.id)} className="accent-eclat-dourado" />
                     {cat.name}
-                    {!cat.is_active && <span className="text-red-700 text-xs">(inativa)</span>}
+                    {!cat.is_active && <span className="text-red-700 text-meta">(inativa)</span>}
                   </label>
                 ))}
               </div>
@@ -381,11 +381,11 @@ export default function ProductForm({
                   type="file"
                   accept="image/*"
                   onChange={(e) => e.target.files?.[0] && enviarImagem(e.target.files[0])}
-                  className="text-xs"
+                  className="text-meta"
                 />
-                {enviandoImg && <span className="text-xs text-eclat-grafite/50">enviando…</span>}
+                {enviandoImg && <span className="text-meta text-eclat-texto-3">enviando…</span>}
                 {thumbnail && (
-                  <button onClick={() => setThumbnail(null)} className="text-xs text-red-700 underline">remover</button>
+                  <button onClick={() => setThumbnail(null)} className="text-meta text-red-700 underline">remover</button>
                 )}
               </div>
             </div>
@@ -403,12 +403,12 @@ export default function ProductForm({
 
             {mode === "create" && (
               <div className="border border-eclat-dourado/40 rounded-lg p-4 bg-white/60 flex flex-col gap-3">
-                <h3 className="text-sm font-medium text-eclat-grafite">Variações</h3>
+                <h3 className="text-corpo font-medium text-eclat-texto">Variações</h3>
                 <div>
                   <label className={labelCls}>
                     Tamanhos
                     {isAccessory && (
-                      <span className="text-xs text-eclat-grafite/50">
+                      <span className="text-meta text-eclat-texto-3">
                         {" "}(opcional para acessórios — deixe vazio se não houver)
                       </span>
                     )}
@@ -418,7 +418,7 @@ export default function ProductForm({
                       <button
                         key={t}
                         onClick={() => toggleTamanho(t)}
-                        className={`text-xs px-3 py-1 rounded-full border ${
+                        className={`text-meta px-3 py-1 rounded-full border ${
                           tamanhos.includes(t)
                             ? "bg-eclat-dourado/30 border-eclat-dourado"
                             : "border-eclat-pedra/40 hover:bg-eclat-areia/40"
@@ -431,9 +431,9 @@ export default function ProductForm({
                   {isAccessory && (
                     <div className="flex flex-wrap gap-2 items-center mt-2">
                       {tamanhos.filter((t) => !TAMANHOS_PADRAO.includes(t)).map((t) => (
-                        <span key={t} className="text-xs bg-eclat-areia/60 rounded-full px-2 py-1 flex items-center gap-1">
+                        <span key={t} className="text-meta bg-eclat-areia/60 rounded-full px-2 py-1 flex items-center gap-1">
                           {t}
-                          <button onClick={() => setTamanhos(tamanhos.filter((x) => x !== t))} className="text-eclat-grafite/50">✕</button>
+                          <button onClick={() => setTamanhos(tamanhos.filter((x) => x !== t))} className="text-eclat-texto-3">✕</button>
                         </span>
                       ))}
                       <input
@@ -448,7 +448,7 @@ export default function ProductForm({
                           }
                         }}
                         placeholder="+ tamanho livre (Enter)"
-                        className="border border-eclat-pedra/50 rounded-md px-2 py-1 text-xs w-32 bg-white focus:outline-none focus:border-eclat-dourado"
+                        className="border border-eclat-pedra/50 rounded-md px-2 py-1 text-meta w-32 bg-white focus:outline-none focus:border-eclat-dourado"
                       />
                     </div>
                   )}
@@ -457,9 +457,9 @@ export default function ProductForm({
                   <label className={labelCls}>Cores</label>
                   <div className="flex flex-wrap gap-2 items-center">
                     {cores.map((c) => (
-                      <span key={c} className="text-xs bg-eclat-areia/60 rounded-full px-2 py-1 flex items-center gap-1">
+                      <span key={c} className="text-meta bg-eclat-areia/60 rounded-full px-2 py-1 flex items-center gap-1">
                         {c}
-                        <button onClick={() => setCores(cores.filter((x) => x !== c))} className="text-eclat-grafite/50">✕</button>
+                        <button onClick={() => setCores(cores.filter((x) => x !== c))} className="text-eclat-texto-3">✕</button>
                       </span>
                     ))}
                     <select
@@ -468,7 +468,7 @@ export default function ProductForm({
                         const c = e.target.value
                         if (c && !cores.includes(c)) setCores([...cores, c])
                       }}
-                      className="border border-eclat-pedra/50 rounded-md px-2 py-1 text-xs bg-white"
+                      className="border border-eclat-pedra/50 rounded-md px-2 py-1 text-meta bg-white"
                     >
                       <option value="">+ cor do mapa</option>
                       {coresMapa.filter((c) => !cores.includes(c)).map((c) => (
@@ -485,7 +485,7 @@ export default function ProductForm({
                         }
                       }}
                       placeholder="outra cor (Enter)"
-                      className="border border-eclat-pedra/50 rounded-md px-2 py-1 text-xs w-28 bg-white focus:outline-none focus:border-eclat-dourado"
+                      className="border border-eclat-pedra/50 rounded-md px-2 py-1 text-meta w-28 bg-white focus:outline-none focus:border-eclat-dourado"
                     />
                   </div>
                 </div>
@@ -503,11 +503,11 @@ export default function ProductForm({
                     <input value={estoqueBase} onChange={(e) => setEstoqueBase(e.target.value)} inputMode="numeric" className={inputCls} />
                   </div>
                 </div>
-                <p className="text-xs text-eclat-grafite/60">
+                <p className="text-meta text-eclat-texto-3">
                   {variantesPreview.length} variação(ões) serão criadas. Preço e estoque ajustáveis depois na lista.
                 </p>
-                {validacao.errors.map((m) => <p key={m} className="text-xs text-red-700">{m}</p>)}
-                {validacao.warnings.map((m) => <p key={m} className="text-xs text-amber-700">{m}</p>)}
+                {validacao.errors.map((m) => <p key={m} className="text-meta text-red-700">{m}</p>)}
+                {validacao.warnings.map((m) => <p key={m} className="text-meta text-amber-700">{m}</p>)}
               </div>
             )}
 
@@ -533,10 +533,10 @@ export default function ProductForm({
                       placeholder="valor"
                       className={inputCls + " flex-1"}
                     />
-                    <button onClick={() => setMeta(meta.filter((_, j) => j !== i))} className="text-eclat-grafite/40 px-1">✕</button>
+                    <button onClick={() => setMeta(meta.filter((_, j) => j !== i))} className="text-eclat-texto/40 px-1">✕</button>
                   </div>
                 ))}
-                <button onClick={() => setMeta([...meta, { k: "", v: "" }])} className="text-xs text-eclat-dourado underline self-start">
+                <button onClick={() => setMeta([...meta, { k: "", v: "" }])} className="text-meta text-eclat-dourado underline self-start">
                   + adicionar campo
                 </button>
               </div>
@@ -556,11 +556,11 @@ export default function ProductForm({
               <button
                 onClick={salvar}
                 disabled={salvando || validacao.errors.length > 0}
-                className="bg-eclat-grafite text-eclat-luz uppercase tracking-widest text-xs px-6 py-3 rounded-md hover:bg-eclat-dourado hover:text-eclat-grafite transition-colors disabled:opacity-50"
+                className="bg-eclat-grafite text-eclat-luz uppercase tracking-widest text-meta px-6 py-3 rounded-md hover:bg-eclat-dourado hover:text-eclat-texto transition-colors disabled:opacity-50"
               >
                 {salvando ? "Salvando…" : mode === "create" ? "Criar produto" : "Salvar alterações"}
               </button>
-              <button onClick={onClose} className="text-sm text-eclat-grafite/60 underline">
+              <button onClick={onClose} className="text-corpo text-eclat-texto-3 underline">
                 cancelar
               </button>
             </div>

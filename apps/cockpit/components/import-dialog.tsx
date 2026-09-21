@@ -116,7 +116,7 @@ export default function ImportDialog({
   }
 
   const selectCls =
-    "border border-eclat-pedra/50 rounded px-2 py-1 text-xs bg-white focus:outline-none focus:border-eclat-dourado"
+    "border border-eclat-pedra/50 rounded px-2 py-1 text-meta bg-white focus:outline-none focus:border-eclat-dourado"
 
   return (
     <div className="fixed inset-0 z-50 flex justify-center items-start bg-black/40 overflow-y-auto p-6" onClick={onClose}>
@@ -125,23 +125,23 @@ export default function ImportDialog({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="sticky top-0 bg-eclat-luz border-b border-eclat-pedra/30 px-6 py-4 flex items-center justify-between rounded-t-lg">
-          <h2 className="font-serif text-2xl text-eclat-grafite">Importar planilha de produtos</h2>
-          <button onClick={onClose} className="text-eclat-grafite/50 hover:text-eclat-grafite text-xl">✕</button>
+          <h2 className="font-serif text-2xl text-eclat-texto">Importar planilha de produtos</h2>
+          <button onClick={onClose} className="text-eclat-texto-3 hover:text-eclat-texto text-xl">✕</button>
         </div>
 
         <div className="p-6 flex flex-col gap-4">
           {erro && (
-            <p className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-md p-3">{erro}</p>
+            <p className="text-corpo text-red-700 bg-red-50 border border-red-200 rounded-md p-3">{erro}</p>
           )}
 
           {resultado ? (
             <div className="flex flex-col gap-3">
-              <div className="bg-green-50 border border-green-200 rounded-md p-4 text-sm text-green-900">
+              <div className="bg-green-50 border border-green-200 rounded-md p-4 text-corpo text-green-900">
                 ✓ Importação concluída — <b>{resultado.atualizados}</b> variação(ões) atualizada(s),{" "}
                 <b>{resultado.criados}</b> produto(s) criado(s), <b>{resultado.custos}</b> custo(s) gravado(s).
               </div>
               {resultado.pulados.length > 0 && (
-                <div className="border border-amber-300 bg-amber-50 rounded-md p-3 text-xs text-amber-900 max-h-48 overflow-y-auto">
+                <div className="border border-amber-300 bg-amber-50 rounded-md p-3 text-meta text-amber-900 max-h-48 overflow-y-auto">
                   <p className="font-medium mb-1">{resultado.pulados.length} linha(s)/grupo(s) pulado(s):</p>
                   <ul className="list-disc pl-4 space-y-0.5">
                     {resultado.pulados.map((p, i) => (
@@ -150,7 +150,7 @@ export default function ImportDialog({
                   </ul>
                 </div>
               )}
-              <button onClick={onClose} className="self-start bg-eclat-grafite text-eclat-luz uppercase tracking-widest text-xs px-6 py-3 rounded-md hover:bg-eclat-dourado hover:text-eclat-grafite">
+              <button onClick={onClose} className="self-start bg-eclat-grafite text-eclat-luz uppercase tracking-widest text-meta px-6 py-3 rounded-md hover:bg-eclat-dourado hover:text-eclat-texto">
                 Fechar
               </button>
             </div>
@@ -161,21 +161,21 @@ export default function ImportDialog({
                   type="file"
                   accept=".csv,.xlsx,.xls,text/csv"
                   onChange={(e) => e.target.files?.[0] && lerArquivo(e.target.files[0])}
-                  className="text-sm"
+                  className="text-corpo"
                 />
-                {fileName && <span className="text-xs text-eclat-grafite/50 ml-2">{fileName} · {linhas.length} linha(s)</span>}
+                {fileName && <span className="text-meta text-eclat-texto-3 ml-2">{fileName} · {linhas.length} linha(s)</span>}
               </div>
 
               {headers.length > 0 && (
                 <>
                   <div>
-                    <p className="text-xs uppercase tracking-wider text-eclat-grafite/60 mb-2">
-                      Mapeamento de colunas <span className="text-eclat-grafite/40">(casa por SKU: existente atualiza; novo cria produto)</span>
+                    <p className="text-meta uppercase tracking-wider text-eclat-texto-3 mb-2">
+                      Mapeamento de colunas <span className="text-eclat-texto/40">(casa por SKU: existente atualiza; novo cria produto)</span>
                     </p>
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                       {CAMPOS.map((campo) => (
                         <label key={campo.key} className="flex flex-col gap-1">
-                          <span className="text-xs text-eclat-grafite/70">
+                          <span className="text-meta text-eclat-texto-2">
                             {campo.label}
                             {campo.key === "sku" && <span className="text-red-600"> *</span>}
                           </span>
@@ -202,9 +202,9 @@ export default function ImportDialog({
                   </div>
 
                   <div>
-                    <p className="text-xs uppercase tracking-wider text-eclat-grafite/60 mb-2">Pré-visualização (até 8 linhas)</p>
+                    <p className="text-meta uppercase tracking-wider text-eclat-texto-3 mb-2">Pré-visualização (até 8 linhas)</p>
                     <div className="overflow-x-auto border border-eclat-pedra/40 rounded-md">
-                      <table className="w-full text-xs">
+                      <table className="w-full text-meta">
                         <thead>
                           <tr className="bg-eclat-areia/40 text-left">
                             {CAMPOS.filter((c) => mapa[c.key] !== undefined).map((c) => (
@@ -216,7 +216,7 @@ export default function ImportDialog({
                           {preview.map((l, i) => (
                             <tr key={i} className="border-t border-eclat-pedra/15">
                               {CAMPOS.filter((c) => mapa[c.key] !== undefined).map((c) => (
-                                <td key={c.key} className="px-2 py-1 whitespace-nowrap">{cel(l, c.key) || <span className="text-eclat-grafite/30">—</span>}</td>
+                                <td key={c.key} className="px-2 py-1 whitespace-nowrap">{cel(l, c.key) || <span className="text-eclat-texto/30">—</span>}</td>
                               ))}
                             </tr>
                           ))}
@@ -229,12 +229,12 @@ export default function ImportDialog({
                     <button
                       onClick={importar}
                       disabled={importando || semSku}
-                      className="bg-eclat-grafite text-eclat-luz uppercase tracking-widest text-xs px-6 py-3 rounded-md hover:bg-eclat-dourado hover:text-eclat-grafite disabled:opacity-50"
+                      className="bg-eclat-grafite text-eclat-luz uppercase tracking-widest text-meta px-6 py-3 rounded-md hover:bg-eclat-dourado hover:text-eclat-texto disabled:opacity-50"
                     >
                       {importando ? "Importando…" : `Importar ${linhas.length} linha(s)`}
                     </button>
-                    {semSku && <span className="text-xs text-red-600">Mapeie o SKU para continuar.</span>}
-                    <span className="text-xs text-eclat-grafite/50">Produtos novos entram como rascunho.</span>
+                    {semSku && <span className="text-meta text-red-600">Mapeie o SKU para continuar.</span>}
+                    <span className="text-meta text-eclat-texto-3">Produtos novos entram como rascunho.</span>
                   </div>
                 </>
               )}

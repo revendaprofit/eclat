@@ -14,18 +14,18 @@ type Marketing = {
 const STORE_URL = "https://www.useeclat.com.br"
 
 const input =
-  "w-full border border-eclat-pedra/50 rounded-md px-3 py-2 text-sm bg-white focus:outline-none focus:border-eclat-dourado font-mono"
-const label = "text-xs uppercase tracking-wider text-eclat-grafite/60 mb-1 block"
-const hint = "text-xs text-eclat-grafite/55 mt-1 leading-relaxed"
+  "w-full border border-eclat-pedra/50 rounded-md px-3 py-2 text-corpo bg-white focus:outline-none focus:border-eclat-dourado font-mono"
+const label = "text-meta uppercase tracking-wider text-eclat-texto-3 mb-1 block"
+const hint = "text-meta text-eclat-texto-3 mt-1 leading-relaxed"
 const btn =
-  "self-start bg-eclat-grafite text-eclat-luz uppercase tracking-widest text-xs px-6 py-3 rounded-md hover:bg-eclat-dourado hover:text-eclat-grafite disabled:opacity-50"
+  "self-start bg-eclat-grafite text-eclat-luz uppercase tracking-widest text-meta px-6 py-3 rounded-md hover:bg-eclat-dourado hover:text-eclat-texto disabled:opacity-50"
 const code =
-  "px-1.5 py-0.5 bg-eclat-areia/60 rounded text-[12px] font-mono text-eclat-grafite break-all"
+  "px-1.5 py-0.5 bg-eclat-areia/60 rounded text-meta font-mono text-eclat-texto break-all"
 
 // item de checklist (visual, não persiste — é um guia)
 function Step({ children }: { children: React.ReactNode }) {
   return (
-    <li className="flex gap-2 text-sm text-eclat-grafite/80 leading-relaxed">
+    <li className="flex gap-2 text-corpo text-eclat-texto-2 leading-relaxed">
       <span className="text-eclat-dourado mt-0.5">☐</span>
       <span>{children}</span>
     </li>
@@ -75,13 +75,13 @@ function PrevendaSection() {
 
   return (
     <section className="flex flex-col gap-4 border border-eclat-pedra/40 rounded-lg p-6 bg-eclat-luz">
-      <h2 className="font-serif text-xl text-eclat-grafite">Pré-venda</h2>
+      <h2 className="font-serif text-xl text-eclat-texto">Pré-venda</h2>
       <p className={hint}>
         Ligada: barra no topo da loja, aviso abaixo de &quot;Adicionar à sacola&quot;, texto no pedido concluído e
         produtos marcados como <code className={code}>preorder</code> no feed (Google Merchant e catálogo da Meta),
         com a data dos envios. Desligue no dia em que as peças começarem a sair.
       </p>
-      <label className="flex items-center gap-3 text-sm text-eclat-grafite">
+      <label className="flex items-center gap-3 text-corpo text-eclat-texto">
         <input type="checkbox" checked={!!p.ativa} onChange={(e) => setP({ ...p, ativa: e.target.checked })} />
         Pré-venda ativa
       </label>
@@ -142,13 +142,13 @@ export default function MarketingPage() {
     }
   }
 
-  if (loading) return <p className="text-sm text-eclat-grafite/50">Carregando…</p>
+  if (loading) return <p className="text-corpo text-eclat-texto-3">Carregando…</p>
 
   return (
     <div className="flex flex-col gap-8 max-w-2xl">
       <div>
-        <h1 className="font-serif text-3xl text-eclat-grafite">Marketing &amp; Rastreamento</h1>
-        <p className="text-sm text-eclat-grafite/60 mt-1">
+        <h1 className="font-serif text-3xl text-eclat-texto">Marketing &amp; Rastreamento</h1>
+        <p className="text-corpo text-eclat-texto-3 mt-1">
           A estrutura de tráfego já está construída no site. Esta tela é o painel de{" "}
           <strong>ativação</strong>: cole os IDs quando for rodar anúncios. Enquanto não
           preencher, nada é rastreado (e nada quebra).
@@ -156,7 +156,7 @@ export default function MarketingPage() {
       </div>
 
       {/* AVISO: construir primeiro */}
-      <div className="rounded-lg bg-eclat-dourado/10 border border-eclat-dourado/40 p-4 text-sm text-eclat-grafite/80 leading-relaxed">
+      <div className="rounded-lg bg-eclat-dourado/10 border border-eclat-dourado/40 p-4 text-corpo text-eclat-texto-2 leading-relaxed">
         <strong>Como usar:</strong> você pode deixar tudo em branco por enquanto. Quando for
         ativar o tráfego, siga o <strong>Checklist de ativação</strong> no fim desta página —
         ele diz exatamente onde pegar cada ID e o que fazer em cada plataforma.
@@ -164,7 +164,7 @@ export default function MarketingPage() {
 
       {/* CONFIG */}
       <section className="border border-eclat-dourado/40 rounded-lg bg-white/60 p-5 flex flex-col gap-5">
-        <h2 className="font-serif text-xl text-eclat-grafite">IDs de rastreamento</h2>
+        <h2 className="font-serif text-xl text-eclat-texto">IDs de rastreamento</h2>
 
         <div>
           <label className={label}>Google Tag Manager (container)</label>
@@ -241,8 +241,8 @@ export default function MarketingPage() {
       <PrevendaSection />
 
       {/* CAPI TOKEN */}
-      <section className="border border-eclat-pedra/40 rounded-lg bg-white/60 p-5 text-sm text-eclat-grafite/75 flex flex-col gap-2">
-        <h2 className="font-serif text-lg text-eclat-grafite">API de Conversões (CAPI) — token secreto</h2>
+      <section className="border border-eclat-pedra/40 rounded-lg bg-white/60 p-5 text-corpo text-eclat-texto-2 flex flex-col gap-2">
+        <h2 className="font-serif text-lg text-eclat-texto">API de Conversões (CAPI) — token secreto</h2>
         <p className="leading-relaxed">
           O <strong>token da CAPI</strong> é um segredo e <strong>não fica aqui</strong> (esta
           config é pública). Configure uma vez na Vercel:
@@ -260,8 +260,8 @@ export default function MarketingPage() {
       </section>
 
       {/* FEED */}
-      <section className="border border-eclat-pedra/40 rounded-lg bg-white/60 p-5 text-sm text-eclat-grafite/75 flex flex-col gap-2">
-        <h2 className="font-serif text-lg text-eclat-grafite">Feed de produtos (Shopping / Catálogo)</h2>
+      <section className="border border-eclat-pedra/40 rounded-lg bg-white/60 p-5 text-corpo text-eclat-texto-2 flex flex-col gap-2">
+        <h2 className="font-serif text-lg text-eclat-texto">Feed de produtos (Shopping / Catálogo)</h2>
         <p className="leading-relaxed">
           O feed já é gerado automaticamente a partir dos produtos do Medusa. URL:
         </p>
@@ -269,7 +269,7 @@ export default function MarketingPage() {
           <code className={code}>{STORE_URL}/feed.xml</code>
           <button
             onClick={() => navigator.clipboard?.writeText(`${STORE_URL}/feed.xml`)}
-            className="text-[10px] uppercase tracking-widest text-eclat-dourado hover:underline"
+            className="text-meta uppercase tracking-widest text-eclat-dourado hover:underline"
           >
             copiar
           </button>
@@ -283,36 +283,36 @@ export default function MarketingPage() {
 
       {/* CHECKLIST */}
       <section className="border border-eclat-dourado/40 rounded-lg bg-eclat-areia/20 p-5 flex flex-col gap-3">
-        <h2 className="font-serif text-xl text-eclat-grafite">Checklist de ativação</h2>
-        <p className="text-xs text-eclat-grafite/55">Siga na ordem quando for rodar anúncios.</p>
+        <h2 className="font-serif text-xl text-eclat-texto">Checklist de ativação</h2>
+        <p className="text-meta text-eclat-texto-3">Siga na ordem quando for rodar anúncios.</p>
 
-        <p className="text-xs uppercase tracking-wider text-eclat-grafite/60 mt-2">Aqui no Cockpit</p>
+        <p className="text-meta uppercase tracking-wider text-eclat-texto-3 mt-2">Aqui no Cockpit</p>
         <ul className="flex flex-col gap-1.5">
           <Step>Colar <strong>GTM ID</strong> e salvar.</Step>
           <Step>Colar <strong>Meta Pixel ID</strong> e salvar.</Step>
           <Step>Colar <strong>verificação do Search Console</strong> e salvar.</Step>
         </ul>
 
-        <p className="text-xs uppercase tracking-wider text-eclat-grafite/60 mt-2">Na Vercel (eclat-loja)</p>
+        <p className="text-meta uppercase tracking-wider text-eclat-texto-3 mt-2">Na Vercel (eclat-loja)</p>
         <ul className="flex flex-col gap-1.5">
           <Step>Adicionar env <code className={code}>META_CAPI_TOKEN</code> + Redeploy.</Step>
         </ul>
 
-        <p className="text-xs uppercase tracking-wider text-eclat-grafite/60 mt-2">No GTM (gestor)</p>
+        <p className="text-meta uppercase tracking-wider text-eclat-texto-3 mt-2">No GTM (gestor)</p>
         <ul className="flex flex-col gap-1.5">
           <Step>Criar tags <strong>GA4</strong>, <strong>Meta Pixel</strong> e <strong>Google Ads</strong>.</Step>
           <Step>No Pixel, usar <strong>Event ID = variável <code className={code}>event_id</code></strong> do dataLayer (dedup com a CAPI).</Step>
           <Step>Testar no modo <em>Preview</em> e publicar o contêiner.</Step>
         </ul>
 
-        <p className="text-xs uppercase tracking-wider text-eclat-grafite/60 mt-2">Google / Meta</p>
+        <p className="text-meta uppercase tracking-wider text-eclat-texto-3 mt-2">Google / Meta</p>
         <ul className="flex flex-col gap-1.5">
           <Step>Merchant Center → cadastrar o feed <code className={code}>{STORE_URL}/feed.xml</code>.</Step>
           <Step>Catálogo Meta → mesma URL do feed.</Step>
           <Step>Search Console → verificar domínio + enviar <code className={code}>{STORE_URL}/sitemap.xml</code>.</Step>
         </ul>
 
-        <p className="text-xs uppercase tracking-wider text-eclat-grafite/60 mt-2">Externo (você / gestor)</p>
+        <p className="text-meta uppercase tracking-wider text-eclat-texto-3 mt-2">Externo (você / gestor)</p>
         <ul className="flex flex-col gap-1.5">
           <Step>Business Manager (Meta) e conta Google Ads criados e verificados.</Step>
           <Step>Formas de pagamento aprovadas no Meta Ads e Google Ads.</Step>

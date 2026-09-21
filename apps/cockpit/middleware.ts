@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr"
 import { NextResponse, type NextRequest } from "next/server"
+import { rotaLiberada } from "@/lib/rotas-publicas"
 
 // Renova a sessão e protege as rotas: sem usuário → /login.
 export async function middleware(request: NextRequest) {
@@ -39,7 +40,7 @@ export async function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname
   const isLogin = path.startsWith("/login")
 
-  if (!user && !isLogin) {
+  if (!user && !rotaLiberada(path)) {
     const url = request.nextUrl.clone()
     url.pathname = "/login"
     return NextResponse.redirect(url)

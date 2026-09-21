@@ -37,7 +37,7 @@ export default function ConnectionsPanel() {
         <h2 className="font-serif text-2xl">Conexões</h2>
         <button
           onClick={load}
-          className="uppercase tracking-widest text-[10px] text-eclat-grafite/70 hover:text-eclat-dourado"
+          className="uppercase tracking-widest text-meta text-eclat-texto-2 hover:text-eclat-dourado"
         >
           {loading ? "Verificando…" : "Recarregar"}
         </button>
@@ -61,9 +61,9 @@ export default function ConnectionsPanel() {
                       : "bg-red-500"
                   }`}
                 />
-                <span className="text-sm font-medium">{LABELS[key]}</span>
+                <span className="text-corpo font-medium">{LABELS[key]}</span>
               </div>
-              <p className="text-xs text-eclat-grafite/60 mt-2">
+              <p className="text-meta text-eclat-texto-3 mt-2">
                 {loading ? "…" : c?.detail ?? "sem resposta"}
               </p>
             </div>

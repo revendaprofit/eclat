@@ -150,17 +150,17 @@ export default function MedidasEditor() {
   }
 
   const inputCls =
-    "w-full border border-eclat-pedra/50 rounded-md px-2 py-1 text-sm bg-white focus:outline-none focus:border-eclat-dourado"
-  if (loading) return <p className="text-sm text-eclat-grafite/50">Carregando medidas…</p>
+    "w-full border border-eclat-pedra/50 rounded-md px-2 py-1 text-corpo bg-white focus:outline-none focus:border-eclat-dourado"
+  if (loading) return <p className="text-corpo text-eclat-texto-3">Carregando medidas…</p>
 
   if (loadError) {
     return (
       <div className="flex flex-col gap-2">
-        <p className="text-sm text-red-700">
+        <p className="text-corpo text-red-700">
           Não foi possível carregar as medidas atuais ({loadError}). Salvar agora poderia apagar dados já cadastrados,
           então isso foi bloqueado.
         </p>
-        <button onClick={carregar} className="self-start text-xs text-eclat-dourado underline">
+        <button onClick={carregar} className="self-start text-meta text-eclat-dourado underline">
           tentar novamente
         </button>
       </div>
@@ -170,36 +170,36 @@ export default function MedidasEditor() {
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center gap-3">
-        <label className="text-xs uppercase tracking-wider text-eclat-grafite/60">Categoria</label>
+        <label className="text-meta uppercase tracking-wider text-eclat-texto-3">Categoria</label>
         <select value={sel} onChange={(e) => setSel(e.target.value)} className={inputCls + " max-w-xs"}>
           {caminhos.map((c) => (
             <option key={c.key} value={c.key}>{c.depth ? "   " : ""}{c.label} ({c.key})</option>
           ))}
         </select>
         {map[sel] ? (
-          <span className="text-xs text-green-700">tem tabela própria</span>
+          <span className="text-meta text-green-700">tem tabela própria</span>
         ) : (
-          <span className="text-xs text-eclat-grafite/50">sem tabela (herda da mãe, se houver)</span>
+          <span className="text-meta text-eclat-texto-3">sem tabela (herda da mãe, se houver)</span>
         )}
       </div>
 
       {!tabela ? (
-        <button onClick={criar} className="self-start text-xs text-eclat-dourado underline">+ criar tabela para esta categoria</button>
+        <button onClick={criar} className="self-start text-meta text-eclat-dourado underline">+ criar tabela para esta categoria</button>
       ) : (
         <div className="flex flex-col gap-2">
-          <table className="w-full text-sm">
+          <table className="w-full text-corpo">
             <thead>
               <tr>
-                <th className="text-left text-xs uppercase tracking-wider text-eclat-grafite/60 px-1">Tamanho</th>
+                <th className="text-left text-meta uppercase tracking-wider text-eclat-texto-3 px-1">Tamanho</th>
                 {tabela.columns.map((c, i) => (
                   <th key={i} className="px-1">
                     <div className="flex items-center gap-1">
                       <input value={c} onChange={(e) => setCol(i, e.target.value)} className={inputCls} />
-                      <button onClick={() => delCol(i)} className="text-eclat-grafite/40 hover:text-red-700" title="Remover coluna">✕</button>
+                      <button onClick={() => delCol(i)} className="text-eclat-texto/40 hover:text-red-700" title="Remover coluna">✕</button>
                     </div>
                   </th>
                 ))}
-                <th><button onClick={addCol} className="text-xs text-eclat-dourado underline">+ coluna</button></th>
+                <th><button onClick={addCol} className="text-meta text-eclat-dourado underline">+ coluna</button></th>
               </tr>
             </thead>
             <tbody>
@@ -210,14 +210,14 @@ export default function MedidasEditor() {
                       <input value={cell} onChange={(e) => setCell(row.id, c, e.target.value)} className={inputCls} placeholder={c === 0 ? "P" : "62–68 cm"} />
                     </td>
                   ))}
-                  <td><button onClick={() => delRow(row.id)} className="text-eclat-grafite/40 hover:text-red-700" title="Remover linha">✕</button></td>
+                  <td><button onClick={() => delRow(row.id)} className="text-eclat-texto/40 hover:text-red-700" title="Remover linha">✕</button></td>
                 </tr>
               ))}
             </tbody>
           </table>
           <div className="flex gap-3">
-            <button onClick={addRow} className="text-xs text-eclat-dourado underline">+ linha (tamanho)</button>
-            <button onClick={() => setTabela(null)} className="text-xs text-red-700 underline">remover tabela desta categoria</button>
+            <button onClick={addRow} className="text-meta text-eclat-dourado underline">+ linha (tamanho)</button>
+            <button onClick={() => setTabela(null)} className="text-meta text-red-700 underline">remover tabela desta categoria</button>
           </div>
         </div>
       )}
@@ -225,7 +225,7 @@ export default function MedidasEditor() {
       <button
         onClick={salvar}
         disabled={saving}
-        className="self-start bg-eclat-grafite text-eclat-luz uppercase tracking-widest text-xs px-5 py-2 rounded-md hover:bg-eclat-dourado hover:text-eclat-grafite transition-colors disabled:opacity-50"
+        className="self-start bg-eclat-grafite text-eclat-luz uppercase tracking-widest text-meta px-5 py-2 rounded-md hover:bg-eclat-dourado hover:text-eclat-texto transition-colors disabled:opacity-50"
       >
         {saving ? "Salvando…" : "Salvar medidas"}
       </button>

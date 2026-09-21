@@ -64,7 +64,7 @@ type Piece = {
 }
 
 const input =
-  "w-full border border-eclat-pedra/50 rounded px-2 py-1.5 text-sm bg-white/80 text-eclat-grafite focus:outline-none focus:border-eclat-dourado"
+  "w-full border border-eclat-pedra/50 rounded px-2 py-1.5 text-corpo bg-white/80 text-eclat-texto focus:outline-none focus:border-eclat-dourado"
 const money = (c: number) =>
   (c / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
 const parseMoney = (s: string) =>
@@ -348,10 +348,10 @@ export default function CustosPage() {
     <div className="flex flex-col gap-5">
       <div className="flex items-center justify-between max-w-6xl">
         <div>
-          <h1 className="font-serif text-3xl text-eclat-grafite">
+          <h1 className="font-serif text-3xl text-eclat-texto">
             Custos de Coleção
           </h1>
-          <p className="text-xs text-eclat-dourado mt-1 max-w-2xl">
+          <p className="text-meta text-eclat-dourado mt-1 max-w-2xl">
             Convenção ÉCLAT: modelagem NÃO entra no custo da peça — lance em
             Financeiro → Despesas (&quot;Desenvolvimento de coleção&quot;).
             Molde reaproveitado em nova cor/coleção = custo zero.
@@ -359,7 +359,7 @@ export default function CustosPage() {
         </div>
         <button
           onClick={novaColecao}
-          className="shrink-0 bg-eclat-dourado/90 hover:bg-eclat-dourado text-white text-sm px-4 py-2 rounded"
+          className="shrink-0 bg-eclat-dourado/90 hover:bg-eclat-dourado text-white text-corpo px-4 py-2 rounded"
         >
           + Nova coleção
         </button>
@@ -400,12 +400,12 @@ export default function CustosPage() {
               <option value="arquivada">arquivada</option>
             </select>
           )}
-          <span className="text-xs text-eclat-grafite/50">
+          <span className="text-meta text-eclat-texto-3">
             {colPieces.length} peça(s)
           </span>
         </div>
         {col && (
-          <div className="flex flex-wrap items-end gap-3 text-xs text-eclat-grafite/60">
+          <div className="flex flex-wrap items-end gap-3 text-meta text-eclat-texto-3">
             <label>
               Perda (%)
               <input className={`${input} w-20`} type="number" step="0.5" value={col.perda_pct}
@@ -439,7 +439,7 @@ export default function CustosPage() {
             </label>
             <button
               onClick={salvarParametros}
-              className="border border-eclat-pedra/60 text-eclat-grafite text-xs px-3 py-2 rounded hover:bg-eclat-areia/40"
+              className="border border-eclat-pedra/60 text-eclat-texto text-meta px-3 py-2 rounded hover:bg-eclat-areia/40"
             >
               Salvar parâmetros da coleção
             </button>
@@ -447,7 +447,7 @@ export default function CustosPage() {
         )}
         {/* adicionar modelo */}
         {col && (
-          <div className="flex flex-wrap items-end gap-3 text-xs text-eclat-grafite/60 border-t border-eclat-pedra/30 pt-3">
+          <div className="flex flex-wrap items-end gap-3 text-meta text-eclat-texto-3 border-t border-eclat-pedra/30 pt-3">
             <label>
               Modelo do catálogo
               <select className={`${input} w-56`} value={addModelId}
@@ -471,7 +471,7 @@ export default function CustosPage() {
             </label>
             <button
               onClick={adicionarModelo}
-              className="bg-eclat-dourado/90 hover:bg-eclat-dourado text-white text-xs px-3 py-2 rounded"
+              className="bg-eclat-dourado/90 hover:bg-eclat-dourado text-white text-meta px-3 py-2 rounded"
             >
               + Adicionar à coleção
             </button>
@@ -483,7 +483,7 @@ export default function CustosPage() {
         {/* peças da coleção (com foto) */}
         <ul className="w-80 shrink-0 flex flex-col divide-y divide-eclat-pedra/30 border border-eclat-pedra/30 rounded-lg bg-white/60">
           {colPieces.length === 0 && (
-            <li className="p-4 text-sm text-eclat-grafite/50">
+            <li className="p-4 text-corpo text-eclat-texto-3">
               Nenhuma peça nesta coleção — adicione um modelo acima.
             </li>
           )}
@@ -504,13 +504,13 @@ export default function CustosPage() {
                   <div className="w-14 h-14 rounded bg-eclat-areia/40 shrink-0" />
                 )}
                 <div className="min-w-0">
-                  <p className="text-sm text-eclat-grafite truncate">
+                  <p className="text-corpo text-eclat-texto truncate">
                     {p.costing_model?.name || p.name}
                   </p>
-                  <p className="text-xs text-eclat-grafite/50 truncate">
+                  <p className="text-meta text-eclat-texto-3 truncate">
                     {p.colorway || "—"}
                   </p>
-                  <p className="text-xs text-eclat-grafite/50">
+                  <p className="text-meta text-eclat-texto-3">
                     custo {money(Math.round(pc.industrial))} ·{" "}
                     <span className={p.status === "aprovada" ? "text-green-700" : "text-eclat-dourado"}>
                       {p.status}
@@ -549,12 +549,12 @@ export default function CustosPage() {
                   </select>
                   <button
                     onClick={() => excluir(sel.id)}
-                    className="text-sm text-red-700/70 hover:text-red-700 underline shrink-0"
+                    className="text-corpo text-red-700/70 hover:text-red-700 underline shrink-0"
                   >
                     excluir
                   </button>
                 </div>
-                <div className="flex gap-3 items-center text-xs text-eclat-grafite/60">
+                <div className="flex gap-3 items-center text-meta text-eclat-texto-3">
                   <span className="shrink-0">
                     Modelo: <strong>{sel.costing_model?.name || "—"}</strong>
                   </span>
@@ -573,7 +573,7 @@ export default function CustosPage() {
             {/* BOM */}
             <div>
               <div className="flex items-center justify-between mb-1">
-                <h2 className="text-sm font-medium text-eclat-grafite">
+                <h2 className="text-corpo font-medium text-eclat-texto">
                   Materiais e aviamentos (por peça)
                 </h2>
                 <button
@@ -583,14 +583,14 @@ export default function CustosPage() {
                       { kind: "material", name: "", unit: "un", consumption: 1, unit_price_centavos: 0 },
                     ])
                   }
-                  className="text-xs text-eclat-dourado hover:underline"
+                  className="text-meta text-eclat-dourado hover:underline"
                 >
                   + item
                 </button>
               </div>
-              <table className="w-full text-sm">
+              <table className="w-full text-corpo">
                 <thead>
-                  <tr className="text-xs text-eclat-grafite/50 text-left">
+                  <tr className="text-meta text-eclat-texto-3 text-left">
                     <th className="py-1 pr-2">Tipo</th>
                     <th className="pr-2">Item</th>
                     <th className="pr-2 w-16">Un.</th>
@@ -631,7 +631,7 @@ export default function CustosPage() {
                         <input className={input} defaultValue={(it.unit_price_centavos / 100).toFixed(2)}
                           onBlur={(e) => { const v = [...items]; v[i] = { ...it, unit_price_centavos: parseMoney(e.target.value) }; setItems(v) }} />
                       </td>
-                      <td className="text-right text-eclat-grafite/70">
+                      <td className="text-right text-eclat-texto-2">
                         {money(Math.round(it.consumption * it.unit_price_centavos))}
                       </td>
                       <td className="text-right">
@@ -645,7 +645,7 @@ export default function CustosPage() {
             </div>
 
             {/* mão de obra */}
-            <div className="grid grid-cols-2 small:grid-cols-5 gap-3 text-xs text-eclat-grafite/60">
+            <div className="grid grid-cols-2 small:grid-cols-5 gap-3 text-meta text-eclat-texto-3">
               <label>
                 Facção (R$/peça)
                 <input className={input} defaultValue={(sel.faccao_centavos / 100).toFixed(2)}
@@ -673,7 +673,7 @@ export default function CustosPage() {
               </label>
             </div>
 
-            <div className="bg-eclat-areia/30 rounded p-3 text-sm flex flex-wrap gap-x-6 gap-y-1">
+            <div className="bg-eclat-areia/30 rounded p-3 text-corpo flex flex-wrap gap-x-6 gap-y-1">
               <span>Materiais c/ perda: <strong>{money(Math.round(c.materiais))}</strong></span>
               <span>Modelagem diluída: <strong>{money(Math.round(c.modelagem))}</strong></span>
               <span className="text-eclat-terracota">
@@ -682,7 +682,7 @@ export default function CustosPage() {
             </div>
 
             {/* precificação */}
-            <div className="grid grid-cols-2 small:grid-cols-6 gap-3 text-xs text-eclat-grafite/60">
+            <div className="grid grid-cols-2 small:grid-cols-6 gap-3 text-meta text-eclat-texto-3">
               <label>
                 Impostos (%)
                 <input className={input} type="number" step="0.5" value={sel.imposto_pct}
@@ -719,7 +719,7 @@ export default function CustosPage() {
               </label>
             </div>
 
-            <div className={`rounded p-3 text-sm flex flex-wrap gap-x-6 gap-y-1 ${c.margemPct >= 55 ? "bg-green-50" : c.margemPct >= 40 ? "bg-yellow-50" : "bg-red-50"}`}>
+            <div className={`rounded p-3 text-corpo flex flex-wrap gap-x-6 gap-y-1 ${c.margemPct >= 55 ? "bg-green-50" : c.margemPct >= 40 ? "bg-yellow-50" : "bg-red-50"}`}>
               <span>Preço sugerido ({sel.markup}×): <strong>{money(Math.round(c.sugerido))}</strong></span>
               <span>Preço em uso: <strong>{money(c.preco)}</strong></span>
               <span>Impostos+taxas+CAC: <strong>{money(Math.round(c.custosPct))}</strong></span>
@@ -729,7 +729,7 @@ export default function CustosPage() {
               </span>
             </div>
 
-            <label className="text-xs text-eclat-grafite/60">
+            <label className="text-meta text-eclat-texto-3">
               IDs das variações no Medusa (separados por vírgula — em Produtos, copie o ID da variação)
               <input className={input}
                 value={(sel.medusa_variant_ids || []).join(", ")}
@@ -739,21 +739,21 @@ export default function CustosPage() {
                 placeholder="variant_01ABC…, variant_01DEF…" />
             </label>
 
-            {msg && <p className="text-sm text-eclat-grafite">{msg}</p>}
+            {msg && <p className="text-corpo text-eclat-texto">{msg}</p>}
             <div className="flex gap-2">
               <button onClick={salvar} disabled={saving}
-                className="bg-eclat-dourado/90 hover:bg-eclat-dourado text-white text-sm px-4 py-2 rounded disabled:opacity-50">
+                className="bg-eclat-dourado/90 hover:bg-eclat-dourado text-white text-corpo px-4 py-2 rounded disabled:opacity-50">
                 {saving ? "Salvando…" : "Salvar ficha"}
               </button>
               <button onClick={aplicarCogs}
-                className="border border-eclat-pedra/60 text-eclat-grafite text-sm px-4 py-2 rounded hover:bg-eclat-areia/40">
+                className="border border-eclat-pedra/60 text-eclat-texto text-corpo px-4 py-2 rounded hover:bg-eclat-areia/40">
                 Aplicar custo como COGS do produto
               </button>
             </div>
           </div>
         )}
       </div>
-      {msg && !sel && <p className="text-sm text-eclat-grafite max-w-6xl">{msg}</p>}
+      {msg && !sel && <p className="text-corpo text-eclat-texto max-w-6xl">{msg}</p>}
     </div>
   )
 }
