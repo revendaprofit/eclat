@@ -132,3 +132,20 @@ describe("ClienteSuperfrete.consultarEtiqueta", () => {
     await expect(new ClienteSuperfrete({ ...opcoes, timeoutMs: 20 }).consultarEtiqueta("ord_1")).rejects.toBeInstanceOf(ErroSuperfrete)
   })
 })
+
+describe("ClienteSuperfrete.consultarEtiqueta — timeout cobre a leitura do corpo", () => {
+  const fetchOriginal = global.fetch
+  afterEach(() => {
+    global.fetch = fetchOriginal
+  })
+
+  it("corpo que nunca termina de chegar também é abortado pelo timeout", async () => {
+    global.fetch = jest.fn(async (_u: string, init: RequestInit) => ({
+      ok: true,
+      status: 200,
+      json: () => new Promise((_r, rejeita) => init.signal?.addEventListener("abort", () => rejeita(new Error("aborted")))),
+      text: async () => "",
+    })) as unknown as typeof fetch
+    await expect(new ClienteSuperfrete({ ...opcoes, timeoutMs: 20 }).consultarEtiqueta("ord_1")).rejects.toBeInstanceOf(ErroSuperfrete)
+  }, 2000)
+})

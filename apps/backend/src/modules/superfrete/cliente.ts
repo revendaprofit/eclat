@@ -57,27 +57,35 @@ export class ClienteSuperfrete {
   // (nome, endereço) nesta rota, e a mensagem do erro pode acabar num log.
   async consultarEtiqueta(id: string): Promise<InfoEtiqueta> {
     const controle = new AbortController()
+    // O relógio cobre a chamada E a leitura do corpo: um corpo que para de chegar no meio também é
+    // cortado. Só é desligado depois do `json()`.
     const relogio = setTimeout(() => controle.abort(), this.o.timeoutMs ?? 8000)
-    let resposta: Response
-    try {
-      resposta = await fetch(`${this.base}/api/v0/order/info/${encodeURIComponent(id)}`, {
-        method: "GET",
-        signal: controle.signal,
-        headers: this.headers(),
-      })
-    } catch (e) {
-      throw new ErroSuperfrete(`SuperFrete order/info fora do ar ou sem resposta (${(e as Error)?.name ?? "erro"})`)
-    } finally {
-      clearTimeout(relogio)
-    }
-    if (!resposta.ok) {
-      throw new ErroSuperfrete(`SuperFrete order/info → HTTP ${resposta.status}`)
-    }
     let corpo: { status?: unknown; tracking?: unknown; tags?: unknown } | null
     try {
-      corpo = (await resposta.json()) as typeof corpo
-    } catch {
-      throw new ErroSuperfrete("SuperFrete order/info devolveu uma resposta que não é JSON.")
+      let resposta: Response
+      try {
+        resposta = await fetch(`${this.base}/api/v0/order/info/${encodeURIComponent(id)}`, {
+          method: "GET",
+          signal: controle.signal,
+          headers: this.headers(),
+        })
+      } catch (e) {
+        throw new ErroSuperfrete(`SuperFrete order/info fora do ar ou sem resposta (${(e as Error)?.name ?? "erro"})`)
+      }
+      if (!resposta.ok) {
+        throw new ErroSuperfrete(`SuperFrete order/info → HTTP ${resposta.status}`)
+      }
+      try {
+        corpo = (await resposta.json()) as typeof corpo
+      } catch {
+        throw new ErroSuperfrete(
+          controle.signal.aborted
+            ? "SuperFrete order/info: tempo esgotado lendo a resposta."
+            : "SuperFrete order/info devolveu uma resposta que não é JSON."
+        )
+      }
+    } finally {
+      clearTimeout(relogio)
     }
     const tracking = typeof corpo?.tracking === "string" && corpo.tracking.trim() ? corpo.tracking.trim() : null
     const tags = Array.isArray(corpo?.tags)

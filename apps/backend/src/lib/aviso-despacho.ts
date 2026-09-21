@@ -90,7 +90,7 @@ export async function mesclarNoFrete(
   }
   const json = JSON.stringify(campos)
   const novoFrete = opcoes.em
-    ? `coalesce(metadata->'frete','{}'::jsonb) || jsonb_build_object(?::text, coalesce(metadata->'frete'->?,'{}'::jsonb) || ?::jsonb)`
+    ? `coalesce(metadata->'frete','{}'::jsonb) || jsonb_build_object(?::text, coalesce(metadata->'frete'->?::text,'{}'::jsonb) || ?::jsonb)`
     : `coalesce(metadata->'frete','{}'::jsonb) || ?::jsonb`
   const bindings: unknown[] = opcoes.em ? [opcoes.em, opcoes.em, json, orderId] : [json, orderId]
   const { rows } = await pg.raw(
@@ -178,10 +178,46 @@ function clienteSuperfreteDoAmbiente(): ClienteSuperfrete | null {
   })
 }
 
+// Erros de rede que PROVAM que a conexão nunca se estabeleceu — nada chegou à Evolution, então a
+// mensagem não saiu e é seguro voltar para "pendente". ECONNRESET fica de fora de propósito: ele
+// também acontece com a resposta a caminho (a Evolution já entregou), e não dá para separar os dois
+// casos com segurança.
+const REDE_SEM_CONEXAO = new Set(["ECONNREFUSED", "ENOTFOUND", "EAI_AGAIN", "UND_ERR_CONNECT_TIMEOUT"])
+
+// Código do erro de rede do fetch (undici): `TypeError("fetch failed")` com `cause.code`, ou um
+// `AggregateError` em `cause` quando havia mais de um endereço (aí só vale se TODOS são sem conexão).
+function codigoDeRede(e: unknown): string {
+  const causa = (e as { cause?: { code?: unknown; errors?: unknown[] } } | null)?.cause
+  if (typeof causa?.code === "string") return causa.code
+  if (Array.isArray(causa?.errors) && causa.errors.length) {
+    const codigos = causa.errors.map((x) => String((x as { code?: unknown })?.code ?? ""))
+    return codigos.every((c) => REDE_SEM_CONEXAO.has(c)) ? codigos[0] : "misto"
+  }
+  return ""
+}
+
+// True só quando é CERTO que a mensagem não saiu:
+//  - `EvolutionHttpError`: a Evolution respondeu 4xx/5xx (o `numeroInexistente` é tratado antes).
+//    TROCA ACEITA no 5xx: um proxy na frente da Evolution poderia devolver 5xx depois de ela ter
+//    entregado, e aí a cliente receberia duas vezes. O dono prefere a retentativa a um aviso perdido
+//    em silêncio — 5xx volta para "pendente".
+//  - erro de rede que prova que a conexão nunca aconteceu (REDE_SEM_CONEXAO).
+// Todo o resto — timeout, ECONNRESET, 2xx com corpo que não é JSON, `terminated` lendo o corpo — é
+// AMBÍGUO (o erro pode ter nascido depois da entrega) e vira "incerto".
+function naoChegouAEntregar(e: unknown): boolean {
+  if (e instanceof EvolutionHttpError) return true
+  return REDE_SEM_CONEXAO.has(codigoDeRede(e))
+}
+
 /**
  * Tenta mandar a mensagem de despacho pendente de um pedido. Retorna o `aviso_despacho` final (ou
  * null se o pedido não existe ou não tem aviso). Nunca manda duas vezes, nem com chamadores
- * simultâneos. Só lança em erro do NOSSO banco antes de qualquer envio.
+ * simultâneos.
+ *
+ * Quando lança: só em erro do NOSSO banco ANTES da reserva (ler o pedido, expirar, virar incerto,
+ * gravar o código, a própria reserva). Nesses casos nada foi enviado e o aviso segue como estava.
+ * Da reserva em diante NUNCA lança: uma gravação que falhar vira log de `error`, o aviso fica em
+ * "enviando" e vira "incerto" em 10 min — ninguém reenvia.
  */
 export async function tentarAvisoDeDespacho(
   container: MedusaContainer,
@@ -279,12 +315,29 @@ export async function tentarAvisoDeDespacho(
     return avisoAtual(container, orderId)
   }
 
+  // Da reserva em diante nenhuma gravação relança (ver o docstring): se falhar, loga `error`, o aviso
+  // fica em "enviando" e vira "incerto" em 10 min. Devolve o que a gravação devolveu, o que houver no
+  // banco, ou `plano` se nem a leitura funcionar.
+  const depoisDaReserva = async (gravar: () => Promise<AvisoDespacho | null>, plano: AvisoDespacho): Promise<AvisoDespacho> => {
+    try {
+      return (await gravar()) ?? (await avisoAtual(container, orderId)) ?? plano
+    } catch (e) {
+      logger.error(
+        `[aviso-despacho] pedido #${n}: gravação do aviso de despacho falhou depois da reserva (${(e as Error)?.name ?? "erro"}) — ` +
+          `fica "enviando" e vira "incerto" em 10 min; ninguém reenvia (${origem})`
+      )
+      return plano
+    }
+  }
+
   // 5. Sem telefone (defesa: o Cockpit normalmente não grava "pendente" sem telefone).
   const telefone = pedido.shipping_address?.phone?.trim()
   if (!telefone) {
-    const sem = await mudarAvisoDespacho(pg, orderId, "enviando", { status: "sem_telefone", em: new Date().toISOString() }, ["desde_envio"])
     logger.warn(`[aviso-despacho] pedido #${n}: pedido sem telefone — aviso de despacho não enviado (${origem})`)
-    return sem ?? avisoAtual(container, orderId)
+    return depoisDaReserva(
+      () => mudarAvisoDespacho(pg, orderId, "enviando", { status: "sem_telefone", em: new Date().toISOString() }, ["desde_envio"]),
+      reservado
+    )
   }
 
   // 6. Envia.
@@ -294,26 +347,28 @@ export async function tentarAvisoDeDespacho(
   } catch (e) {
     // 7b. Falhou. Três desfechos, todos condicionais em "enviando".
     if (e instanceof EvolutionHttpError && e.numeroInexistente) {
-      const sem = await mudarAvisoDespacho(pg, orderId, "enviando", { status: "sem_whatsapp", em: new Date().toISOString() }, ["desde_envio"])
       logger.warn(`[aviso-despacho] pedido #${n}: número da cliente não tem WhatsApp — aviso de despacho não enviado (${origem})`)
-      return sem ?? avisoAtual(container, orderId)
+      return depoisDaReserva(
+        () => mudarAvisoDespacho(pg, orderId, "enviando", { status: "sem_whatsapp", em: new Date().toISOString() }, ["desde_envio"]),
+        reservado
+      )
     }
-    if ((e as Error)?.name === "TimeoutError" || (e as Error)?.name === "AbortError") {
-      // A Evolution pode ter entregado e respondido tarde. Reenviar arriscaria duplicar: `incerto`.
-      const incerto = await mudarAvisoDespacho(pg, orderId, "enviando", {
-        status: "incerto",
-        incerto_em: new Date().toISOString(),
-        motivo: "tempo esgotado no envio do WhatsApp",
-      })
-      logger.error(`[aviso-despacho] pedido #${n}: envio do WhatsApp estourou o tempo — aviso INCERTO, conferir se a cliente recebeu (${origem})`)
-      return incerto ?? avisoAtual(container, orderId)
+    if (naoChegouAEntregar(e)) {
+      // A mensagem com CERTEZA não saiu (4xx/5xx da Evolution, ou conexão que nunca aconteceu):
+      // volta para pendente e o job tenta de novo em 5 min.
+      const motivo = e instanceof EvolutionHttpError ? `HTTP ${e.status}` : `sem conexão: ${codigoDeRede(e)}`
+      logger.error(`[aviso-despacho] pedido #${n}: WhatsApp falhou (${motivo}) — aviso de despacho volta para pendente (${origem})`)
+      return depoisDaReserva(() => mudarAvisoDespacho(pg, orderId, "enviando", { status: "pendente" }, ["desde_envio", "por"]), reservado)
     }
-    // Qualquer outro erro (401/403/404/429/5xx/rede): a mensagem NÃO saiu. Volta para pendente e o
-    // job tenta de novo em 5 min.
-    const motivo = e instanceof EvolutionHttpError ? `HTTP ${e.status}` : "erro de rede"
-    const devolvido = await mudarAvisoDespacho(pg, orderId, "enviando", { status: "pendente" }, ["desde_envio", "por"])
-    logger.error(`[aviso-despacho] pedido #${n}: WhatsApp falhou (${motivo}) — aviso de despacho volta para pendente (${origem})`)
-    return devolvido ?? avisoAtual(container, orderId)
+    // Todo o resto é AMBÍGUO — timeout, conexão caída no meio, 2xx com corpo ilegível, erro
+    // desconhecido: a Evolution pode ter entregado. Reenviar arriscaria duplicar: `incerto`.
+    const nome = (e as Error)?.name ?? "erro"
+    const motivo = nome === "TimeoutError" || nome === "AbortError" ? "tempo esgotado no envio do WhatsApp" : "resposta ambígua do WhatsApp"
+    logger.error(`[aviso-despacho] pedido #${n}: ${motivo} (${nome}) — aviso INCERTO, conferir se a cliente recebeu (${origem})`)
+    return depoisDaReserva(
+      () => mudarAvisoDespacho(pg, orderId, "enviando", { status: "incerto", incerto_em: new Date().toISOString(), motivo }),
+      reservado
+    )
   }
 
   // 7a. Saiu. Marca "enviado". Se ESTA gravação falhar, NÃO relança e devolve "enviado" para quem
@@ -321,8 +376,15 @@ export async function tentarAvisoDeDespacho(
   const enviado = { ...reservado, status: "enviado", em: new Date().toISOString(), por: origem }
   try {
     const marcado = await mudarAvisoDespacho(pg, orderId, "enviando", { status: "enviado", em: enviado.em, por: origem })
-    logger.info(`[aviso-despacho] pedido #${n}: aviso de despacho enviado (${origem})`)
-    return marcado ?? (await avisoAtual(container, orderId)) ?? enviado
+    if (marcado) {
+      logger.info(`[aviso-despacho] pedido #${n}: aviso de despacho enviado (${origem})`)
+      return marcado
+    }
+    // Zero linhas: o aviso deixou de estar "enviando" durante o envio (o operador mexeu, ou a reserva
+    // foi dada como incerta). A mensagem SAIU mesmo assim — o operador precisa saber.
+    const atual = await avisoAtual(container, orderId)
+    logger.error(`[aviso-despacho] pedido #${n}: mensagem de despacho SAIU; aviso agora está em "${String(atual?.status ?? "ausente")}" — conferir (${origem})`)
+    return atual ?? enviado
   } catch (e) {
     logger.error(
       `[aviso-despacho] pedido #${n}: mensagem de despacho SAIU, mas a marca não foi gravada (${(e as Error)?.name ?? "erro"}) — ` +

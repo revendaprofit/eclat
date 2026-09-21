@@ -26,7 +26,9 @@ const ETIQUETA = "sfid_aviso_teste"
 const CODIGO = "AA123456789BR"
 
 // ---- Evolution simulada ----
-let modoEvolution: "ok" | "401" | "400" | "pendurado" = "ok"
+// "200-nao-json": a Evolution ENTREGA (registra a mensagem) e responde 2xx com corpo ilegível — o
+// erro nasce DEPOIS da entrega. "503": falha do lado dela, antes de entregar.
+let modoEvolution: "ok" | "401" | "400" | "503" | "200-nao-json" | "pendurado" = "ok"
 // Atraso antes de responder "ok": alarga a janela em que chamadores simultâneos se sobrepõem.
 let atrasoEvolutionMs = 0
 const pendurados: ServerResponse[] = []
@@ -55,11 +57,20 @@ async function subirSimulados(): Promise<void> {
         res.writeHead(401, { "content-type": "application/json" }).end(JSON.stringify({ status: 401, error: "Unauthorized" }))
         return
       }
+      if (modoEvolution === "503") {
+        res.writeHead(503, { "content-type": "application/json" }).end("{}")
+        return
+      }
       if (modoEvolution === "pendurado") {
         pendurados.push(res)
         return
       }
       const { number, text } = JSON.parse(corpo || "{}")
+      if (modoEvolution === "200-nao-json") {
+        whatsappEnviados.push({ number, text })
+        res.writeHead(200, { "content-type": "text/html" }).end("<html>ok</html>")
+        return
+      }
       if (modoEvolution === "400") {
         res.writeHead(400, { "content-type": "application/json" }).end(JSON.stringify({ response: { message: [{ exists: false, jid: `${number}@s.whatsapp.net` }] } }))
         return
@@ -383,6 +394,101 @@ medusaIntegrationTestRunner({
       expect((await tentar(getContainer(), p.id, "job"))?.status).toBe("enviando")
       expect(whatsappEnviados).toHaveLength(1)
       await freteDoCockpitIntacto(p.id)
+    })
+
+    // ---- Fix round 1 da Task 3 ----
+
+    // Um container igual ao real, com o knex e/ou o logger trocados — o `raw` do knex é somente-leitura
+    // e o logger do container não é capturável de outro jeito.
+    function containerCom(troca: { pg?: unknown; logger?: unknown }) {
+      const container = getContainer()
+      return {
+        resolve: (chave: string) =>
+          chave === ContainerRegistrationKeys.PG_CONNECTION && troca.pg
+            ? troca.pg
+            : chave === ContainerRegistrationKeys.LOGGER && troca.logger
+              ? troca.logger
+              : container.resolve(chave),
+      } as unknown as typeof container
+    }
+    function loggerEspiao() {
+      return { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn(), log: jest.fn() }
+    }
+    const pgReal = () => getContainer().resolve(ContainerRegistrationKeys.PG_CONNECTION) as unknown as { raw: (sql: string, b?: unknown[]) => Promise<any> }
+
+    it("Evolution responde 2xx com corpo que não é JSON (a mensagem SAIU) → incerto, e a chamada seguinte não reenvia", async () => {
+      const p = await criarPedido({ ...pendente(), tracking_number: CODIGO })
+      modoEvolution = "200-nao-json"
+      const final = await tentar(getContainer(), p.id, "job")
+      expect(final?.status).toBe("incerto")
+      expect(whatsappEnviados).toHaveLength(1)
+      modoEvolution = "ok"
+      expect((await tentar(getContainer(), p.id, "job"))?.status).toBe("incerto")
+      expect(whatsappEnviados).toHaveLength(1)
+      await freteDoCockpitIntacto(p.id)
+    })
+
+    it("Evolution 5xx → volta para pendente (o dono prefere retentar a perder o aviso)", async () => {
+      const desde = minutosAtras(2)
+      const p = await criarPedido({ ...pendente(desde), tracking_number: CODIGO })
+      modoEvolution = "503"
+      expect(await tentar(getContainer(), p.id, "job")).toEqual({ status: "pendente", desde })
+      expect(whatsappEnviados).toHaveLength(0)
+    })
+
+    it("conexão recusada (Evolution fora do ar, nada chegou a ela) → volta para pendente", async () => {
+      const desde = minutosAtras(2)
+      const p = await criarPedido({ ...pendente(desde), tracking_number: CODIGO })
+      // lib/evolution.ts guarda a URL no carregamento; para recusar a conexão, o servidor falso sai da
+      // porta e volta a ela depois.
+      const porta = (servidorEvolution.address() as AddressInfo).port
+      servidorEvolution.closeAllConnections()
+      await new Promise((ok) => servidorEvolution.close(() => ok(undefined)))
+      await new Promise((r) => setTimeout(r, 200))
+      try {
+        expect(await tentar(getContainer(), p.id, "job")).toEqual({ status: "pendente", desde })
+      } finally {
+        await new Promise((ok) => servidorEvolution.listen(porta, "127.0.0.1", () => ok(undefined)))
+      }
+      expect(whatsappEnviados).toHaveLength(0)
+    })
+
+    it("a marca enviando → enviado não acha a linha (o aviso mudou no meio) → log de ERRO para o operador, sem reenviar", async () => {
+      const p = await criarPedido({ ...pendente(), tracking_number: CODIGO })
+      const pg = pgReal()
+      const logger = loggerEspiao()
+      const pgQueMudaOAviso = {
+        raw: async (sql: string, bindings?: unknown[]) => {
+          if (Array.isArray(bindings) && bindings.some((b) => typeof b === "string" && b.includes('"status":"enviado"'))) {
+            // Outro escritor muda o aviso durante o envio: a marca condicional não acha "enviando".
+            await pg.raw(`UPDATE "order" SET metadata = jsonb_set(metadata, '{frete,aviso_despacho,status}', '"dispensado"') WHERE id = ?`, [p.id])
+          }
+          return pg.raw(sql, bindings)
+        },
+      }
+      const final = await tentar(containerCom({ pg: pgQueMudaOAviso, logger }), p.id, "job")
+      expect(final?.status).toBe("dispensado")
+      expect(whatsappEnviados).toHaveLength(1)
+      const erros = logger.error.mock.calls.map((c) => String(c[0]))
+      expect(erros.some((m) => m.includes("SAIU") && m.includes("dispensado"))).toBe(true)
+      expect(logger.info.mock.calls.map((c) => String(c[0])).some((m) => m.includes("enviado ("))).toBe(false)
+    })
+
+    it("gravação DEPOIS do envio falha (volta a pendente após 5xx) → a função não lança; fica enviando (vira incerto)", async () => {
+      const p = await criarPedido({ ...pendente(), tracking_number: CODIGO })
+      const pg = pgReal()
+      const logger = loggerEspiao()
+      const pgQueFalhaDepois = {
+        raw: (sql: string, bindings?: unknown[]) =>
+          Array.isArray(bindings) && bindings.some((b) => typeof b === "string" && b.includes('"status":"pendente"'))
+            ? Promise.reject(new Error("banco fora do ar"))
+            : pg.raw(sql, bindings),
+      }
+      modoEvolution = "503"
+      const final = await tentar(containerCom({ pg: pgQueFalhaDepois, logger }), p.id, "job")
+      expect(final?.status).toBe("enviando")
+      expect((await lerFrete(p.id)).aviso_despacho.status).toBe("enviando")
+      expect(logger.error).toHaveBeenCalled()
     })
   },
 })
