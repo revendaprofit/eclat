@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { avisoAoDespacharComEtiqueta, avisoPedeAtencao, avisoPeloBackend, lerAvisoDespacho, textoDoAviso, type StatusAviso } from "./aviso-despacho"
+import { avisoAoDespacharComEtiqueta, avisoPedeAtencao, lerRespostaDoBackend, avisoPeloBackend, lerAvisoDespacho, textoDoAviso, type StatusAviso } from "./aviso-despacho"
 
 const AGORA = "2026-09-21T15:07:00.000Z"
 
@@ -170,5 +170,24 @@ describe("avisoPedeAtencao (tom de atenção na tela)", () => {
       expect([status, avisoPedeAtencao({ status })]).toEqual([status, false])
     }
     expect(avisoPedeAtencao(null)).toBe(false)
+  })
+})
+
+describe("lerRespostaDoBackend (POST /admin/frete/aviso-despacho/{id} → { aviso_despacho })", () => {
+  it("{ aviso_despacho: null } é resposta VÁLIDA (o pedido não tem aviso) — não é 'fora do formato'", () => {
+    expect(lerRespostaDoBackend({ aviso_despacho: null })).toEqual({ valida: true, aviso: null })
+  })
+
+  it("aviso conhecido → válida com o aviso lido", () => {
+    expect(lerRespostaDoBackend({ aviso_despacho: { status: "incerto", motivo: "x" } })).toEqual({
+      valida: true,
+      aviso: { status: "incerto" },
+    })
+  })
+
+  it("fora do formato → inválida", () => {
+    for (const dados of [null, undefined, "x", [], {}, { aviso_despacho: "enviado" }, { aviso_despacho: { status: "atrasado" } }]) {
+      expect([dados, lerRespostaDoBackend(dados)]).toEqual([dados, { valida: false }])
+    }
   })
 })

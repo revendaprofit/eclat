@@ -113,3 +113,15 @@ const PEDE_ATENCAO: ReadonlySet<StatusAviso> = new Set<StatusAviso>(["pendente",
 export function avisoPedeAtencao(a: AvisoDespacho | null): boolean {
   return !!a && PEDE_ATENCAO.has(a.status)
 }
+
+/**
+ * Lê a resposta da rota do backend (`POST /admin/frete/aviso-despacho/{id}` → `{ aviso_despacho }`).
+ * `aviso_despacho: null` é resposta VÁLIDA (o pedido não tem aviso) e não pode virar log de "fora do
+ * formato". Inválida só quando não é `{ aviso_despacho: null | aviso conhecido }`.
+ */
+export function lerRespostaDoBackend(dados: unknown): { valida: true; aviso: AvisoDespacho | null } | { valida: false } {
+  if (!ehObjeto(dados) || !("aviso_despacho" in dados)) return { valida: false }
+  if (dados.aviso_despacho === null) return { valida: true, aviso: null }
+  const aviso = lerAvisoDespacho({ frete: dados })
+  return aviso ? { valida: true, aviso } : { valida: false }
+}

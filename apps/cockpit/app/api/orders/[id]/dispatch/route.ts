@@ -11,7 +11,7 @@ import {
   carrierConsultarFrete,
   MSG_CARRIER_NAO_CONFIGURADO,
 } from "@/lib/shipping"
-import { avisoAoDespacharComEtiqueta, avisoPeloBackend, lerAvisoDespacho, type AvisoDespacho } from "@/lib/aviso-despacho"
+import { avisoAoDespacharComEtiqueta, avisoPeloBackend, lerRespostaDoBackend, type AvisoDespacho } from "@/lib/aviso-despacho"
 import { garantirEtiqueta, lerEstadoDoFrete } from "@/lib/etiqueta-segura"
 import { executarComTrava, DespachoEmAndamento } from "@/lib/trava-despacho"
 import { lerDadosFiscais } from "@/lib/dados-fiscais"
@@ -109,11 +109,13 @@ async function pedirAvisoAoBackend(id: string): Promise<AvisoDespacho | null> {
       return null
     }
     const dados: unknown = await r.json().catch(() => null)
-    // lerAvisoDespacho lê metadata.frete.aviso_despacho; a resposta é { aviso_despacho }, então
-    // embrulha em { frete } para reaproveitar a mesma validação defensiva.
-    const aviso = lerAvisoDespacho({ frete: dados })
-    if (!aviso) console.warn(`[aviso-despacho] pedido ${id}: resposta do backend fora do formato — ignorada`)
-    return aviso
+    // `{ aviso_despacho: null }` é resposta válida (o pedido não tem aviso): devolve null sem log.
+    const resposta = lerRespostaDoBackend(dados)
+    if (!resposta.valida) {
+      console.warn(`[aviso-despacho] pedido ${id}: resposta do backend fora do formato — ignorada`)
+      return null
+    }
+    return resposta.aviso
   })().catch((e) => {
     if (!ctrl.signal.aborted) {
       console.warn(`[aviso-despacho] pedido ${id}: chamada ao backend falhou (${(e as Error).name}) — o job do backend tenta de novo`)
