@@ -10,7 +10,7 @@ import { DadosFiscaisDoPedido } from "@/components/dados-fiscais-do-pedido"
 import { resumoDoPagamento, type PagamentoDoPedido } from "@/lib/pagamento"
 import { AVISO_PAGAMENTO, pagamentoConfirmado } from "@/lib/pagamento-despacho"
 import { aceiteDaEntregaApp, ehEntregaPorApp } from "@/lib/entrega-app"
-import { lerAvisoDespacho, textoDoAviso, type AvisoDespacho, type StatusAviso } from "@/lib/aviso-despacho"
+import { avisoPedeAtencao, lerAvisoDespacho, textoDoAviso, type AvisoDespacho, type StatusAviso } from "@/lib/aviso-despacho"
 // `podeDespachar` já é o nome da variável local da conferência das peças nesta tela.
 import { podeDespachar as travaDeDespacho } from "@/lib/despacho-permitido"
 import {
@@ -107,10 +107,11 @@ const brlCent = (cent: number) => brl(cent / 100)
 const dataHora = (iso: string) =>
   new Date(iso).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })
 
-// Tom do selo do aviso de despacho (etiqueta SuperFrete). "pendente", "expirado" e "sem_telefone"
-// não são selo: viram Aviso de atenção — as frases são longas demais para o Selo, que não quebra
-// linha (estouraria no celular), e dois deles pedem ação do operador (avisar a cliente à mão).
-const TOM_AVISO_DESPACHO: Record<Exclude<StatusAviso, "pendente" | "expirado" | "sem_telefone">, TomDoSelo> = {
+// Tom do selo do aviso de despacho (etiqueta SuperFrete). Quem vira caixa de atenção em vez de selo
+// decide `avisoPedeAtencao` (pendente, expirado, sem_telefone, sem_whatsapp, incerto): as frases são
+// longas demais para o Selo, que não quebra linha, e quase todas pedem ação do operador.
+const TOM_AVISO_DESPACHO: Partial<Record<StatusAviso, TomDoSelo>> = {
+  enviando: "andamento",
   enviado: "ok",
   dispensado: "neutro",
 }
@@ -675,11 +676,11 @@ export default function PedidosPage() {
                         const aviso = lerAvisoDespacho(det.metadata)
                         const texto = textoDoAviso(aviso)
                         if (!aviso || !texto) return null
-                        return aviso.status === "pendente" || aviso.status === "expirado" || aviso.status === "sem_telefone" ? (
+                        return avisoPedeAtencao(aviso) ? (
                           <Aviso tom="atencao">{texto}</Aviso>
                         ) : (
                           <span data-testid="aviso-despacho">
-                            <Selo tom={TOM_AVISO_DESPACHO[aviso.status]}>{texto}</Selo>
+                            <Selo tom={TOM_AVISO_DESPACHO[aviso.status] ?? "neutro"}>{texto}</Selo>
                           </span>
                         )
                       })()}

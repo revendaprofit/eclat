@@ -22,10 +22,32 @@ export function avisoPeloBackend(env: Record<string, string | undefined> = proce
   return (env.SUPERFRETE_AVISO_PELO_BACKEND ?? "").trim().toLowerCase() === "true"
 }
 
-export type StatusAviso = "pendente" | "enviado" | "dispensado" | "sem_telefone" | "expirado"
-export type AvisoDespacho = { status: StatusAviso; desde?: string; em?: string; por?: string }
+// Os estados de `metadata.frete.aviso_despacho.status`. Os três últimos só o remetente único do
+// backend grava (apps/backend/src/lib/aviso-despacho.ts, que documenta cada um):
+//   enviando     — o backend reservou e está mandando agora (transitório);
+//   sem_whatsapp — a Evolution disse que o número não tem WhatsApp (final);
+//   incerto      — o envio pode ter saído ou não; o operador confere antes de mandar de novo (final).
+export type StatusAviso =
+  | "pendente"
+  | "enviado"
+  | "dispensado"
+  | "sem_telefone"
+  | "expirado"
+  | "enviando"
+  | "sem_whatsapp"
+  | "incerto"
+export type AvisoDespacho = { status: StatusAviso; desde?: string; desde_envio?: string; em?: string; por?: string }
 
-const STATUS: ReadonlySet<string> = new Set<StatusAviso>(["pendente", "enviado", "dispensado", "sem_telefone", "expirado"])
+const STATUS: ReadonlySet<string> = new Set<StatusAviso>([
+  "pendente",
+  "enviado",
+  "dispensado",
+  "sem_telefone",
+  "expirado",
+  "enviando",
+  "sem_whatsapp",
+  "incerto",
+])
 
 /** O que gravar logo depois de despachar com etiqueta da SuperFrete. */
 export function avisoAoDespacharComEtiqueta(p: { notificar: boolean; temTelefone: boolean; agora: string }): AvisoDespacho {
@@ -42,7 +64,7 @@ export function lerAvisoDespacho(metadata: unknown): AvisoDespacho | null {
   const a = metadata.frete.aviso_despacho
   if (!ehObjeto(a) || typeof a.status !== "string" || !STATUS.has(a.status)) return null
   const aviso: AvisoDespacho = { status: a.status as StatusAviso }
-  for (const k of ["desde", "em", "por"] as const) {
+  for (const k of ["desde", "desde_envio", "em", "por"] as const) {
     if (typeof a[k] === "string") aviso[k] = a[k] as string
   }
   return aviso
@@ -72,5 +94,22 @@ export function textoDoAviso(a: AvisoDespacho | null): string | null {
       return "Pedido sem telefone: a cliente não será avisada pelo WhatsApp."
     case "expirado":
       return "O código de rastreio não apareceu em 24 h. Avise a cliente à mão."
+    case "enviando":
+      return "Aviso à cliente sendo enviado agora."
+    case "sem_whatsapp":
+      return "O número da cliente não tem WhatsApp. Avise por outro canal."
+    case "incerto":
+      return "Não deu para confirmar se o aviso saiu. Confira na conversa antes de mandar de novo."
   }
+}
+
+// Tom de atenção na tela (caixa âmbar, não selo). Quatro estados pedem ação do operador: avisar a
+// cliente à mão (expirado, sem_telefone, sem_whatsapp) ou conferir a conversa antes de reenviar
+// (incerto). O pendente também vai na caixa — decisão da Task 5: a frase é longa demais para o
+// selo, que não quebra linha. enviando, enviado e dispensado são selo.
+const PEDE_ATENCAO: ReadonlySet<StatusAviso> = new Set<StatusAviso>(["pendente", "expirado", "sem_telefone", "sem_whatsapp", "incerto"])
+
+/** True quando a tela mostra o aviso com tom de atenção (caixa âmbar) em vez de selo. */
+export function avisoPedeAtencao(a: AvisoDespacho | null): boolean {
+  return !!a && PEDE_ATENCAO.has(a.status)
 }

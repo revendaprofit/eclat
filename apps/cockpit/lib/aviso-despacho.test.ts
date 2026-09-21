@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { avisoAoDespacharComEtiqueta, avisoPeloBackend, lerAvisoDespacho, textoDoAviso } from "./aviso-despacho"
+import { avisoAoDespacharComEtiqueta, avisoPedeAtencao, avisoPeloBackend, lerAvisoDespacho, textoDoAviso, type StatusAviso } from "./aviso-despacho"
 
 const AGORA = "2026-09-21T15:07:00.000Z"
 
@@ -116,5 +116,59 @@ describe("avisoPeloBackend (interruptor SUPERFRETE_AVISO_PELO_BACKEND)", () => {
     expect(avisoPeloBackend({ SUPERFRETE_AVISO_PELO_BACKEND: "true" })).toBe(true)
     expect(avisoPeloBackend({ SUPERFRETE_AVISO_PELO_BACKEND: " true " })).toBe(true)
     expect(avisoPeloBackend({ SUPERFRETE_AVISO_PELO_BACKEND: "TRUE" })).toBe(true)
+  })
+})
+
+// Estados que o remetente único do backend grava (Task 3/4): a tela e o alerta pós-despacho
+// precisam conhecê-los — a resposta da rota do backend pode vir com qualquer um deles.
+describe("estados do remetente único do backend", () => {
+  it("lerAvisoDespacho aceita enviando, sem_whatsapp e incerto (e lê desde_envio)", () => {
+    expect(
+      lerAvisoDespacho({ frete: { aviso_despacho: { status: "enviando", desde: AGORA, desde_envio: AGORA, por: "cockpit" } } })
+    ).toEqual({ status: "enviando", desde: AGORA, desde_envio: AGORA, por: "cockpit" })
+    expect(lerAvisoDespacho({ frete: { aviso_despacho: { status: "sem_whatsapp", em: AGORA } } })).toEqual({
+      status: "sem_whatsapp",
+      em: AGORA,
+    })
+    expect(
+      lerAvisoDespacho({ frete: { aviso_despacho: { status: "incerto", incerto_em: AGORA, motivo: "x", desde_envio: 3 } } })
+    ).toEqual({ status: "incerto" })
+  })
+
+  it("a resposta da rota do backend ({ aviso_despacho }) é lida com os estados novos", () => {
+    for (const status of ["enviando", "enviado", "sem_whatsapp", "incerto"]) {
+      expect(lerAvisoDespacho({ frete: { aviso_despacho: { status } } })?.status).toBe(status)
+    }
+  })
+
+  it("textoDoAviso: enviando", () => {
+    expect(textoDoAviso({ status: "enviando", desde_envio: AGORA })).toBe("Aviso à cliente sendo enviado agora.")
+  })
+
+  it("textoDoAviso: sem_whatsapp", () => {
+    expect(textoDoAviso({ status: "sem_whatsapp", em: AGORA })).toBe(
+      "O número da cliente não tem WhatsApp. Avise por outro canal."
+    )
+  })
+
+  it("textoDoAviso: incerto", () => {
+    expect(textoDoAviso({ status: "incerto" })).toBe(
+      "Não deu para confirmar se o aviso saiu. Confira na conversa antes de mandar de novo."
+    )
+  })
+})
+
+describe("avisoPedeAtencao (tom de atenção na tela)", () => {
+  it("atenção: o operador precisa agir (expirado, sem_telefone, sem_whatsapp, incerto) e o pendente (frase longa, decisão da Task 5)", () => {
+    for (const status of ["pendente", "expirado", "sem_telefone", "sem_whatsapp", "incerto"] as StatusAviso[]) {
+      expect([status, avisoPedeAtencao({ status })]).toEqual([status, true])
+    }
+  })
+
+  it("sem atenção: enviando, enviado, dispensado e ausente", () => {
+    for (const status of ["enviando", "enviado", "dispensado"] as StatusAviso[]) {
+      expect([status, avisoPedeAtencao({ status })]).toEqual([status, false])
+    }
+    expect(avisoPedeAtencao(null)).toBe(false)
   })
 })
