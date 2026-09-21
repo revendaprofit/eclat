@@ -74,3 +74,61 @@ describe("ClienteSuperfrete.cotar", () => {
     await expect(new ClienteSuperfrete({ ...opcoes, timeoutMs: 20 }).cotar("30130010", PACOTE)).rejects.toBeInstanceOf(ErroSuperfrete)
   })
 })
+
+describe("ClienteSuperfrete.consultarEtiqueta", () => {
+  const fetchOriginal = global.fetch
+  afterEach(() => {
+    global.fetch = fetchOriginal
+  })
+
+  it("faz GET em /api/v0/order/info/{id} com os mesmos headers da cotação", async () => {
+    const chamado = jest.fn().mockResolvedValue(respostaFetch(200, { status: "released", tracking: "AA123456789BR", tags: [{ tag: "21" }] }))
+    global.fetch = chamado as unknown as typeof fetch
+    await new ClienteSuperfrete({ ...opcoes, sandbox: true }).consultarEtiqueta("ord_1")
+
+    const [url, init] = chamado.mock.calls[0]
+    expect(url).toBe("https://sandbox.superfrete.com/api/v0/order/info/ord_1")
+    expect(init.method).toBe("GET")
+    expect(init.headers.Authorization).toBe("Bearer tok-teste")
+    expect(init.headers["User-Agent"]).toBe("use.ECLAT (teste@example.com)")
+    expect(init.signal).toBeDefined()
+  })
+
+  it("o id vai codificado na URL (vem do metadata, não é confiável)", async () => {
+    const chamado = jest.fn().mockResolvedValue(respostaFetch(200, {}))
+    global.fetch = chamado as unknown as typeof fetch
+    await new ClienteSuperfrete(opcoes).consultarEtiqueta("a/../b?x=1")
+    expect(chamado.mock.calls[0][0]).toBe("https://api.superfrete.com/api/v0/order/info/a%2F..%2Fb%3Fx%3D1")
+  })
+
+  it("devolve só status, código e tags (como texto)", async () => {
+    global.fetch = jest.fn().mockResolvedValue(
+      respostaFetch(200, { id: "ord_1", status: "released", tracking: "AA123456789BR", tags: [{ tag: "21", url: null }, { tag: 7 }], price: 17.4 })
+    ) as unknown as typeof fetch
+    expect(await new ClienteSuperfrete(opcoes).consultarEtiqueta("ord_1")).toEqual({ status: "released", tracking: "AA123456789BR", tags: ["21", "7"] })
+  })
+
+  it("campos ausentes ou estranhos viram null / lista vazia; código vazio vira null", async () => {
+    global.fetch = jest.fn().mockResolvedValue(respostaFetch(200, { tracking: "", tags: "21" })) as unknown as typeof fetch
+    expect(await new ClienteSuperfrete(opcoes).consultarEtiqueta("ord_1")).toEqual({ status: "", tracking: null, tags: [] })
+    global.fetch = jest.fn().mockResolvedValue(respostaFetch(200, null)) as unknown as typeof fetch
+    expect(await new ClienteSuperfrete(opcoes).consultarEtiqueta("ord_1")).toEqual({ status: "", tracking: null, tags: [] })
+  })
+
+  it("HTTP de erro vira ErroSuperfrete com o status, SEM o corpo da resposta nem o token", async () => {
+    global.fetch = jest.fn().mockResolvedValue(respostaFetch(404, { message: "order not found", destinatario: "Fulana de Tal" })) as unknown as typeof fetch
+    const erro = await new ClienteSuperfrete(opcoes).consultarEtiqueta("ord_1").catch((e) => e)
+    expect(erro).toBeInstanceOf(ErroSuperfrete)
+    expect(erro.message).toContain("404")
+    expect(erro.message).not.toContain("Fulana")
+    expect(erro.message).not.toContain("not found")
+    expect(erro.message).not.toContain("tok-teste")
+  })
+
+  it("timeout aborta a chamada (padrão 8 s, configurável)", async () => {
+    global.fetch = jest.fn((_u: string, init: RequestInit) =>
+      new Promise((_r, rejeita) => init.signal?.addEventListener("abort", () => rejeita(new Error("aborted"))))
+    ) as unknown as typeof fetch
+    await expect(new ClienteSuperfrete({ ...opcoes, timeoutMs: 20 }).consultarEtiqueta("ord_1")).rejects.toBeInstanceOf(ErroSuperfrete)
+  })
+})

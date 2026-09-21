@@ -2,6 +2,7 @@ import type { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import type { IOrderModuleService } from "@medusajs/framework/types"
 import { ContainerRegistrationKeys, Modules } from "@medusajs/framework/utils"
 import { EvolutionHttpError, evolutionConfigured, sendWhatsappText } from "../../../lib/evolution"
+import { normalizaWhatsapp, textoDespacho, textoEntregue, textoPostado } from "../../../lib/superfrete-avisos"
 import { acaoDoEvento, assinaturaSuperfreteValida, numeroDoPedido, rastreioDoEvento } from "../../../lib/superfrete-webhook"
 
 // Webhook de status da SuperFrete (spec 2026-09-20-avisos-entrega-superfrete-design.md §4.2–§4.4).
@@ -181,8 +182,10 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
 
   const codigo = String(freteNovo.tracking_number ?? "")
   const link = String(freteNovo.tracking_url ?? "")
-  const nome = (pedido.shipping_address?.first_name as string | undefined) || "tudo bem"
-  const texto = mensagem(aviso, nome, Number(pedido.display_id), codigo, link)
+  const nome = (pedido.shipping_address?.first_name as string | undefined) || ""
+  // Os textos vivem em lib/superfrete-avisos.ts — um arquivo só, para o dono revisar sem mexer em código.
+  const dadosDoAviso = { nome, numero: Number(pedido.display_id), codigo, link }
+  const texto = aviso === "generated" ? textoDespacho(dadosDoAviso) : aviso === "posted" ? textoPostado(dadosDoAviso) : textoEntregue(dadosDoAviso)
 
   let tentados = 0
   let entregues = 0
@@ -301,28 +304,4 @@ const TIMEOUT_WHATSAPP_MS = 15_000
 // Lê um valor do metadata como objeto plano; qualquer outra coisa (ausente, string, array) vira {}.
 function objeto(v: unknown): Record<string, unknown> {
   return v && typeof v === "object" && !Array.isArray(v) ? (v as Record<string, unknown>) : {}
-}
-
-// Mesma regra da rota de despacho do Cockpit (app/api/orders/[id]/dispatch/route.ts): a Evolution
-// espera o número com DDI e só dígitos. Replicada, não inventada — dois normalizadores diferentes
-// para o mesmo número seria a origem de "a mensagem não chegou" sem explicação.
-function normalizaWhatsapp(phone: string): string {
-  const d = phone.replace(/\D/g, "")
-  if (d.startsWith("55")) return d
-  if (d.length === 10 || d.length === 11) return "55" + d
-  return d
-}
-
-// TODO(Task 3): textos provisórios. A Task 3 move os três para `src/lib/superfrete-avisos.ts`, um
-// arquivo só para o dono revisar sem mexer em código (spec §4.5 e §9.3).
-function mensagem(aviso: "generated" | "posted" | "delivered", nome: string, displayId: number, codigo: string, link: string): string {
-  const rastreio = codigo ? `\n\n📦 Código de rastreio: *${codigo}*${link ? `\nAcompanhe: ${link}` : ""}` : ""
-  if (aviso === "delivered") {
-    return `Oi, ${nome}! 💛\nSeu pedido *#${displayId}* da use.ÉCLAT foi entregue.\n\nEsperamos que você ame. Obrigada por vestir a sua luz. ✨`
-  }
-  if (aviso === "generated") {
-    // Mensagem de DESPACHO completa (§9.3): a mesma que o Cockpit manda quando a etiqueta já sai com código.
-    return `Oi, ${nome}! 💛\nSeu pedido *#${displayId}* da use.ÉCLAT acabou de ser enviado.${rastreio}\n\nQualquer dúvida, é só chamar por aqui. Obrigada por vestir a sua luz. ✨`
-  }
-  return `Oi, ${nome}! 💛\nSeu pedido *#${displayId}* da use.ÉCLAT já foi postado e está a caminho.${rastreio}\n\nQualquer dúvida, é só chamar por aqui. ✨`
 }
