@@ -8,11 +8,24 @@ export function evolutionConfigured(): boolean {
   return Boolean(EVO_URL && EVO_KEY)
 }
 
+// Erro HTTP da Evolution com o status exposto. A mensagem é a MESMA de antes (quem já tratava
+// `Error` segue igual); o `status` existe para quem precisa separar recusa permanente (4xx: número
+// fora do WhatsApp, por exemplo) de falha passageira (5xx). Atenção: `message` carrega o corpo da
+// resposta, que pode ecoar o número da cliente — quem loga dado pessoal deve logar só o `status`.
+export class EvolutionHttpError extends Error {
+  constructor(message: string, readonly status: number) {
+    super(message)
+    this.name = "EvolutionHttpError"
+  }
+}
+
 // Envia uma mensagem de texto via WhatsApp.
 // `number` deve ser o telefone com DDI (ex.: 5531999999999), sem +, sem @s.whatsapp.net.
 // `delayMs`: a Evolution mostra "digitando…" e espera esse tempo antes de enviar —
 // ritmo humano, que é o que protege o número em automações de resposta.
-export async function sendWhatsappText(number: string, text: string, delayMs = 0) {
+// `opcoes.timeoutMs` (opcional): aborta a chamada depois desse tempo. Sem ele, nada muda para quem
+// já chamava (sem timeout, como sempre foi).
+export async function sendWhatsappText(number: string, text: string, delayMs = 0, opcoes: { timeoutMs?: number } = {}) {
   const res = await fetch(`${EVO_URL}/message/sendText/${INSTANCE}`, {
     method: "POST",
     headers: {
@@ -20,9 +33,10 @@ export async function sendWhatsappText(number: string, text: string, delayMs = 0
       "Content-Type": "application/json",
     },
     body: JSON.stringify({ number, text, ...(delayMs > 0 ? { delay: delayMs } : {}) }),
+    ...(opcoes.timeoutMs ? { signal: AbortSignal.timeout(opcoes.timeoutMs) } : {}),
   })
   if (!res.ok) {
-    throw new Error(`Evolution sendText falhou: ${res.status} ${await res.text()}`)
+    throw new EvolutionHttpError(`Evolution sendText falhou: ${res.status} ${await res.text()}`, res.status)
   }
   return res.json()
 }

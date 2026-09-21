@@ -1,7 +1,7 @@
 import type { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import type { IOrderModuleService } from "@medusajs/framework/types"
 import { ContainerRegistrationKeys, Modules } from "@medusajs/framework/utils"
-import { evolutionConfigured, sendWhatsappText } from "../../../lib/evolution"
+import { EvolutionHttpError, evolutionConfigured, sendWhatsappText } from "../../../lib/evolution"
 import { acaoDoEvento, assinaturaSuperfreteValida, numeroDoPedido, rastreioDoEvento } from "../../../lib/superfrete-webhook"
 
 // Webhook de status da SuperFrete (spec 2026-09-20-avisos-entrega-superfrete-design.md §4.2–§4.4).
@@ -25,7 +25,13 @@ import { acaoDoEvento, assinaturaSuperfreteValida, numeroDoPedido, rastreioDoEve
 //   500 — DE PROPÓSITO, e só num caso: havia mensagem para sair, todos os canais tentados
 //         falharam e o aviso NÃO foi marcado. O 500 é o pedido de "tenta de novo em 15 minutos".
 //         Canal indisponível (sem telefone, Evolution desligada, Resend desligado) não é falha:
-//         não há o que retentar, então é 200 — e o aviso segue sem marca, de propósito.
+//         não há o que retentar, então é 200 — e o aviso segue sem marca, de propósito. Recusa
+//         4xx da Evolution (número fora do WhatsApp) também é indisponível, não falha.
+//   500 — também, de propósito, quando o NOSSO banco falha (ler o pedido ou gravar o estado): o
+//         erro sobe e a retentativa da SuperFrete cobre a instabilidade passageira. As regras de
+//         "nunca 500" da §4.4 são sobre eventos ignorados ou que não são nossos, não sobre queda nossa.
+//   200 — e NUNCA 500 — quando a mensagem já saiu e só a marca falhou: um 500 faria a SuperFrete
+//         reenviar e a cliente receberia a mensagem duas vezes (`marcado: false` na resposta).
 //
 // A marca de "já avisei" (`metadata.frete.avisos[...]`) só é gravada DEPOIS do envio dar certo.
 // O estado (`status_transportadora`, `eventos`) é gravado antes e independe do envio: saber por
@@ -101,32 +107,37 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
   }
 
   const agora = new Date().toISOString()
-  const tinhaRastreio = Boolean(freteAtual.tracking_number)
   const rastreio = rastreioDoEvento(data)
 
-  // Um único write do estado, preservando TODO o resto de `metadata` e de `metadata.frete` — o
-  // Cockpit é dono de `superfrete_id`, `status`, `tracking_number`, `label_url` e não pode perder
-  // nenhuma chave que esta rota não escreveu.
+  // O estado vai num único write de `metadata.frete`, espalhando TUDO o que já estava lá: o Cockpit
+  // é dono de `superfrete_id`, `status`, `tracking_number`, `label_url` e `aviso_despacho`, e
+  // nenhuma chave que esta rota não escreveu pode sumir.
   const freteNovo: Record<string, unknown> = {
     ...freteAtual,
     status_transportadora: event,
-    eventos: { ...((freteAtual.eventos && typeof freteAtual.eventos === "object" ? freteAtual.eventos : {}) as Record<string, unknown>), [String(event)]: agora },
+    eventos: { ...objeto(freteAtual.eventos), [String(event)]: agora },
   }
 
   // §4.1: o rastreio nasce segundos depois do pagamento da etiqueta (~24 s na primeira etiqueta
-  // real, pedido #21), então o despacho pode ter saído sem ele. `order.generated` preenche o que
-  // faltou — SEMPRE que o evento traz o código e o pedido não tem — e nunca sobrescreve o que existe.
+  // real, pedido #21), então o despacho pode ter saído sem ele. QUALQUER evento que traga o código
+  // preenche o que falta — se o `order.generated` se perdeu, o `order.posted` ainda completa — e
+  // nenhum sobrescreve um código que já existe.
   //
   // NOTA DE ESCOPO: o rastreio do FULFILLMENT no Medusa não é reescrito aqui. Quem grava o `label`
   // no envio é o Cockpit, na hora de despachar. Esta fase registra o código no `metadata.frete`; o
   // Cockpit passa a exibi-lo de lá numa fase futura.
-  if (event === "order.generated" && !tinhaRastreio && rastreio.tracking) {
+  if (!freteAtual.tracking_number && rastreio.tracking) {
     freteNovo.tracking_number = rastreio.tracking
     if (rastreio.tracking_url) freteNovo.tracking_url = rastreio.tracking_url
   }
 
+  // SÓ a chave `frete` vai no update. O Medusa 2.15.5 (MedusaInternalService.update → mergeMetadata)
+  // faz merge RASO do `metadata` enviado sobre a linha como ela está no banco NA HORA do write: cada
+  // chave de primeiro nível enviada substitui a do banco, e as não enviadas ficam como estão. Mandar
+  // `{ ...metadata, frete }` reescreveria `fiscal`, `conferencia` etc. com o valor lido no começo da
+  // requisição, desfazendo o que outro escritor (webhook da Brasil NFe, Cockpit) gravou no meio.
   const orderModule = req.scope.resolve<IOrderModuleService>(Modules.ORDER)
-  await orderModule.updateOrders(pedido.id, { metadata: { ...metadata, frete: freteNovo } })
+  await orderModule.updateOrders(pedido.id, { metadata: { frete: freteNovo } })
 
   // `order.generated` (spec §9, decisão do dono em 2026-09-21): quando a etiqueta sai sem código, o
   // Cockpit despacha mas SEGURA o WhatsApp e grava `aviso_despacho = { status: "pendente" }`. Aqui,
@@ -134,8 +145,7 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
   // código + link) — a mesma de sempre, não um segundo aviso. `aviso_despacho` ausente (despacho
   // antigo ou manual) ou já "enviado" (pelo Cockpit, pelo job de 5 min ou por um webhook anterior)
   // → só grava o rastreio e não manda nada.
-  const avisoDespacho = (freteAtual.aviso_despacho && typeof freteAtual.aviso_despacho === "object" ? freteAtual.aviso_despacho : {}) as Record<string, unknown>
-  const despachoPendente = avisoDespacho.status === "pendente" && Boolean(freteNovo.tracking_number)
+  const despachoPendente = objeto(freteAtual.aviso_despacho).status === "pendente" && Boolean(freteNovo.tracking_number)
   const aviso = event === "order.generated" ? (despachoPendente ? acao.aviso : null) : acao.aviso
   if (!aviso) {
     logger.info(`[frete] webhook ${event} do pedido #${displayId} registrado (sem mensagem para a cliente)`)
@@ -150,6 +160,9 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
   let tentados = 0
   let entregues = 0
 
+  // DADO PESSOAL: nenhum log daqui para baixo leva `message` de erro de canal. O erro da Evolution
+  // traz o corpo da resposta, e ela ecoa o número (ou o JID) quando recusa — com 5 retentativas da
+  // SuperFrete, seriam 5 cópias do telefone da cliente no log. Loga-se só o status HTTP ou o tipo.
   if (acao.canais.includes("whatsapp")) {
     const telefone = (pedido.shipping_address?.phone as string | undefined)?.trim()
     if (!telefone || !evolutionConfigured()) {
@@ -158,10 +171,19 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
     } else {
       tentados++
       try {
-        await sendWhatsappText(normalizaWhatsapp(telefone), texto)
+        await sendWhatsappText(normalizaWhatsapp(telefone), texto, 0, { timeoutMs: TIMEOUT_WHATSAPP_MS })
         entregues++
       } catch (e) {
-        logger.error(`[frete] aviso ${aviso} do pedido #${displayId}: WhatsApp falhou: ${(e as Error).message}`)
+        if (e instanceof EvolutionHttpError && e.status >= 400 && e.status < 500) {
+          // 4xx é recusa PERMANENTE (número fora do WhatsApp, número inválido): retentar em 15 min
+          // dá o mesmo resultado. Vira "canal indisponível" — sai da conta de tentativas.
+          tentados--
+          logger.warn(`[frete] aviso ${aviso} do pedido #${displayId}: WhatsApp recusado pela Evolution (HTTP ${e.status}) — canal indisponível`)
+        } else {
+          // 5xx, rede ou timeout: passageiro, conta como falha (→ 500 → a SuperFrete retenta).
+          const motivo = e instanceof EvolutionHttpError ? `HTTP ${e.status}` : (e as Error)?.name === "TimeoutError" ? "timeout" : "erro de rede"
+          logger.error(`[frete] aviso ${aviso} do pedido #${displayId}: WhatsApp falhou (${motivo})`)
+        }
       }
     }
   }
@@ -191,7 +213,8 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
         })
         entregues++
       } catch (e) {
-        logger.error(`[frete] aviso ${aviso} do pedido #${displayId}: e-mail falhou: ${(e as Error).message}`)
+        // Só o tipo do erro: a mensagem do provider pode repetir o endereço de e-mail.
+        logger.error(`[frete] aviso ${aviso} do pedido #${displayId}: e-mail falhou (${(e as Error)?.name ?? "erro"})`)
       }
     }
   }
@@ -212,15 +235,42 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
 
   // A marca só depois do envio. No despacho ela é `aviso_despacho` (o mesmo campo que o Cockpit e o
   // job de avisos pendentes leem para não repetir); nos demais, `avisos[aviso]`.
-  const marcadoEm = new Date().toISOString()
-  const freteMarcado =
-    aviso === "generated"
-      ? { ...freteNovo, aviso_despacho: { ...avisoDespacho, status: "enviado", em: marcadoEm, por: "webhook" } }
-      : { ...freteNovo, avisos: { ...avisosAtuais, [aviso]: marcadoEm } }
-  await orderModule.updateOrders(pedido.id, { metadata: { ...metadata, frete: freteMarcado } })
+  //
+  // Daqui em diante a mensagem JÁ SAIU. Duas regras:
+  //  - `metadata.frete` é relido AGORA e só a marca é aplicada por cima: o envio levou segundos, e
+  //    o Cockpit pode ter gravado no `frete` nesse meio-tempo (o merge do Medusa é raso — `frete`
+  //    inteiro é substituído pelo que mandarmos).
+  //  - Falha aqui NUNCA vira 500: um 500 faria a SuperFrete reenviar, o reenvio não veria a marca e
+  //    a cliente receberia a mensagem de novo. Responde 200 com `marcado: false` e loga para o
+  //    operador — uma marca faltando é bem menos grave que uma mensagem duplicada.
+  try {
+    const marcadoEm = new Date().toISOString()
+    const fresco = await orderModule.retrieveOrder(pedido.id, { select: ["id", "metadata"] })
+    const freteFresco = objeto(objeto(fresco.metadata).frete)
+    const freteMarcado =
+      aviso === "generated"
+        ? { ...freteFresco, aviso_despacho: { ...objeto(freteFresco.aviso_despacho), status: "enviado", em: marcadoEm, por: "webhook" } }
+        : { ...freteFresco, avisos: { ...objeto(freteFresco.avisos), [aviso]: marcadoEm } }
+    await orderModule.updateOrders(pedido.id, { metadata: { frete: freteMarcado } })
+  } catch (e) {
+    logger.error(
+      `[frete] aviso ${aviso} do pedido #${displayId} ENVIADO, mas a marca não foi gravada (${(e as Error)?.name ?? "erro"}) — ` +
+        `conferir o pedido: um reenvio da SuperFrete pode repetir a mensagem`
+    )
+    return res.status(200).json({ ok: true, gravado: true, enviado: true, marcado: false })
+  }
 
   logger.info(`[frete] aviso ${aviso} do pedido #${displayId} enviado (${entregues}/${tentados} canais)`)
-  return res.status(200).json({ ok: true, gravado: true, enviado: true })
+  return res.status(200).json({ ok: true, gravado: true, enviado: true, marcado: true })
+}
+
+// Timeout do WhatsApp: a SuperFrete desiste da chamada em 30 s; uma Evolution pendurada não pode
+// segurar a resposta além disso. Estourar conta como falha passageira (→ 500 → retentativa).
+const TIMEOUT_WHATSAPP_MS = 15_000
+
+// Lê um valor do metadata como objeto plano; qualquer outra coisa (ausente, string, array) vira {}.
+function objeto(v: unknown): Record<string, unknown> {
+  return v && typeof v === "object" && !Array.isArray(v) ? (v as Record<string, unknown>) : {}
 }
 
 // Mesma regra da rota de despacho do Cockpit (app/api/orders/[id]/dispatch/route.ts): a Evolution

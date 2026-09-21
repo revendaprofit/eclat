@@ -26,26 +26,44 @@ const TELEFONE = "31999990000"
 const ETIQUETA = "sfid_teste_1"
 
 let servidorEvolution: Server
-let evolutionForaDoAr = false
+// "ok" entrega; "503" é falha passageira; "400" é a recusa permanente (número fora do WhatsApp — a
+// Evolution de verdade ecoa o número no corpo, e é isso que o 400 daqui faz também); "pendurado"
+// nunca responde, para o timeout da rota estourar.
+let modoEvolution: "ok" | "503" | "400" | "pendurado" = "ok"
+// Roda DURANTE o envio, antes da resposta: é como o teste simula outro escritor gravando no pedido
+// enquanto a mensagem está saindo.
+let duranteOEnvio: (() => Promise<void>) | null = null
+const pendurados: import("node:http").ServerResponse[] = []
 const whatsappEnviados: { number: string; text: string }[] = []
 
 // Evolution simulada: `sendWhatsappText` faz POST /message/sendText/<instancia> e só considera
-// entregue quando a resposta é 2xx. `evolutionForaDoAr` deixa o canal falhar de propósito.
+// entregue quando a resposta é 2xx.
 function subirEvolutionSimulada(): Promise<void> {
   servidorEvolution = createServer((req, res) => {
-    if (evolutionForaDoAr || !req.url?.startsWith("/message/sendText/")) {
-      res.writeHead(503, { "content-type": "application/json" }).end("{}")
-      return
-    }
     let corpo = ""
     req.on("data", (p) => (corpo += p))
-    req.on("end", () => {
+    req.on("end", async () => {
+      if (!req.url?.startsWith("/message/sendText/") || modoEvolution === "503") {
+        res.writeHead(503, { "content-type": "application/json" }).end("{}")
+        return
+      }
+      if (modoEvolution === "pendurado") {
+        pendurados.push(res)
+        return
+      }
+      let numero = ""
       try {
         const { number, text } = JSON.parse(corpo || "{}")
-        whatsappEnviados.push({ number, text })
+        numero = number
+        if (modoEvolution === "ok") whatsappEnviados.push({ number, text })
       } catch {
         /* corpo ilegível não deve derrubar o teste; a asserção de contagem acusa */
       }
+      if (modoEvolution === "400") {
+        res.writeHead(400, { "content-type": "application/json" }).end(JSON.stringify({ response: { message: [{ exists: false, jid: `${numero}@s.whatsapp.net` }] } }))
+        return
+      }
+      if (duranteOEnvio) await duranteOEnvio()
       res.writeHead(200, { "content-type": "application/json" }).end(JSON.stringify({ key: { id: "msg_1" } }))
     })
   })
@@ -80,10 +98,15 @@ medusaIntegrationTestRunner({
       pedidos = getContainer().resolve(Modules.ORDER)
     })
 
-    afterAll(() => servidorEvolution.close())
+    afterAll(() => {
+      for (const r of pendurados) r.destroy()
+      servidorEvolution.close()
+    })
 
     beforeEach(() => {
-      evolutionForaDoAr = false
+      modoEvolution = "ok"
+      duranteOEnvio = null
+      for (const r of pendurados.splice(0)) r.destroy()
       whatsappEnviados.length = 0
     })
 
@@ -229,14 +252,14 @@ medusaIntegrationTestRunner({
 
     it("order.generated com aviso_despacho pendente e WhatsApp fora do ar → 500, segue pendente; o reenvio manda", async () => {
       const p = await criarPedido(PENDENTE)
-      evolutionForaDoAr = true
+      modoEvolution = "503"
       const r1 = await chamar(corpoDe(p.display_id, "order.generated", COM_CODIGO))
       expect(r1.status).toBe(500)
       const falhou = await lerFrete(p.id)
       expect(falhou.tracking_number).toBe("AA123456789BR")
       expect(falhou.aviso_despacho.status).toBe("pendente")
 
-      evolutionForaDoAr = false
+      modoEvolution = "ok"
       const r2 = await chamar(corpoDe(p.display_id, "order.generated", COM_CODIGO))
       expect(r2.status).toBe(200)
       expect((await lerFrete(p.id)).aviso_despacho.status).toBe("enviado")
@@ -323,7 +346,7 @@ medusaIntegrationTestRunner({
     it("todos os canais falharam → 500 de propósito, sem marcar; o reenvio seguinte funciona", async () => {
       const p = await criarPedido({ tracking_number: "AA123456789BR" })
 
-      evolutionForaDoAr = true
+      modoEvolution = "503"
       const r1 = await chamar(corpoDe(p.display_id, "order.posted"))
       expect(r1.status).toBe(500)
       const falhou = await lerFrete(p.id)
@@ -331,7 +354,7 @@ medusaIntegrationTestRunner({
       expect(falhou.eventos["order.posted"]).toEqual(expect.any(String))
       expect(falhou.avisos).toBeUndefined()
 
-      evolutionForaDoAr = false
+      modoEvolution = "ok"
       const r2 = await chamar(corpoDe(p.display_id, "order.posted"))
       expect(r2.status).toBe(200)
       expect((await lerFrete(p.id)).avisos.posted).toEqual(expect.any(String))
@@ -352,6 +375,110 @@ medusaIntegrationTestRunner({
       expect(frete.eventos["order.posted"]).toEqual(expect.any(String))
       expect(frete.avisos).toBeUndefined()
       expect(whatsappEnviados).toHaveLength(0)
+    })
+
+    // ---- Revisão da Task 2 (fix round 1) ----
+
+    it("aviso_despacho pendente, pedido JÁ com rastreio e evento SEM código: manda o despacho e marca", async () => {
+      const p = await criarPedido({ ...PENDENTE, tracking_number: "ZZ000000000BR", tracking_url: "https://exemplo.invalid/ZZ" })
+      const r = await chamar(corpoDe(p.display_id, "order.generated", { tracking: "" }))
+      expect(r.status).toBe(200)
+      const frete = await lerFrete(p.id)
+      expect(frete.tracking_number).toBe("ZZ000000000BR")
+      expect(frete.aviso_despacho.status).toBe("enviado")
+      expect(whatsappEnviados).toHaveLength(1)
+      expect(whatsappEnviados[0].text).toContain("ZZ000000000BR")
+    })
+
+    it("order.posted com código preenche o rastreio que faltou (o generated pode ter se perdido)", async () => {
+      const p = await criarPedido()
+      const r = await chamar(corpoDe(p.display_id, "order.posted", COM_CODIGO))
+      expect(r.status).toBe(200)
+      const frete = await lerFrete(p.id)
+      expect(frete.tracking_number).toBe("AA123456789BR")
+      expect(frete.tracking_url).toBe("https://exemplo.invalid/AA123456789BR")
+      expect(whatsappEnviados[0].text).toContain("AA123456789BR")
+    })
+
+    it("order.delivered com outro código NÃO sobrescreve o rastreio existente", async () => {
+      const p = await criarPedido({ tracking_number: "ZZ000000000BR" })
+      await chamar(corpoDe(p.display_id, "order.delivered", COM_CODIGO))
+      expect((await lerFrete(p.id)).tracking_number).toBe("ZZ000000000BR")
+    })
+
+    it("Evolution recusa com 4xx (número fora do WhatsApp) → 200, sem marca, sem retentativa", async () => {
+      const p = await criarPedido({ tracking_number: "AA123456789BR" })
+      modoEvolution = "400"
+      const r = await chamar(corpoDe(p.display_id, "order.posted"))
+      expect(r.status).toBe(200)
+      expect(r.data).toMatchObject({ enviado: false })
+      const frete = await lerFrete(p.id)
+      expect(frete.eventos["order.posted"]).toEqual(expect.any(String))
+      expect(frete.avisos).toBeUndefined()
+    })
+
+    it("Evolution pendurada: o timeout da rota estoura antes dos 30 s da SuperFrete → 500, sem marca", async () => {
+      const p = await criarPedido({ tracking_number: "AA123456789BR" })
+      modoEvolution = "pendurado"
+      const inicio = Date.now()
+      const r = await chamar(corpoDe(p.display_id, "order.posted"))
+      expect(r.status).toBe(500)
+      expect(Date.now() - inicio).toBeLessThan(30_000)
+      expect((await lerFrete(p.id)).avisos).toBeUndefined()
+    })
+
+    it("chave de primeiro nível gravada por outro escritor no meio da requisição sobrevive (só `frete` vai no update)", async () => {
+      const p = await criarPedido({ tracking_number: "AA123456789BR" })
+      await pedidos.updateOrders(p.id, { metadata: { fiscal: { status: "pendente" } } })
+      // Outro escritor (ex.: o webhook da Brasil NFe) MUDA `fiscal` enquanto a mensagem sai — DEPOIS
+      // de a rota ter lido o pedido. Antes da correção, o write da marca mandava `{ ...metadata }`
+      // lido no começo, e o merge raso do Medusa devolvia `fiscal` ao valor velho ("pendente").
+      duranteOEnvio = async () => {
+        await pedidos.updateOrders(p.id, { metadata: { fiscal: { status: "autorizada" } } })
+      }
+      const r = await chamar(corpoDe(p.display_id, "order.posted"))
+      expect(r.status).toBe(200)
+      const md = (await pedidos.retrieveOrder(p.id)).metadata as Record<string, any>
+      expect(md.fiscal).toEqual({ status: "autorizada" })
+      expect(md.observacao).toBe("não mexer")
+      expect(md.frete.avisos.posted).toEqual(expect.any(String))
+    })
+
+    it("chave de `frete` gravada pelo Cockpit durante o envio sobrevive à marca (frete relido antes de marcar)", async () => {
+      const p = await criarPedido(PENDENTE)
+      duranteOEnvio = async () => {
+        const atual = (await pedidos.retrieveOrder(p.id)).metadata as Record<string, any>
+        await pedidos.updateOrders(p.id, { metadata: { frete: { ...atual.frete, label_url: "https://exemplo.invalid/etiqueta.pdf" } } })
+      }
+      const r = await chamar(corpoDe(p.display_id, "order.generated", COM_CODIGO))
+      expect(r.status).toBe(200)
+      const frete = await lerFrete(p.id)
+      expect(frete.label_url).toBe("https://exemplo.invalid/etiqueta.pdf")
+      expect(frete.aviso_despacho.status).toBe("enviado")
+      expect(frete.tracking_number).toBe("AA123456789BR")
+    })
+
+    it("mensagem enviada mas a marca falha ao gravar → 200 com marcado: false (nunca 500, que duplicaria a mensagem)", async () => {
+      const p = await criarPedido({ tracking_number: "AA123456789BR" })
+      // Espião no serviço de pedidos REAL do container: deixa o write do estado passar e derruba só
+      // o seguinte (o da marca). O app roda no mesmo processo (inApp), então é a mesma instância.
+      const original = pedidos.updateOrders.bind(pedidos)
+      let chamadas = 0
+      const espiao = jest.spyOn(pedidos, "updateOrders").mockImplementation(((...args: unknown[]) => {
+        chamadas++
+        if (chamadas === 2) return Promise.reject(new Error("banco fora do ar"))
+        return (original as (...a: unknown[]) => unknown)(...args)
+      }) as never)
+      try {
+        const r = await chamar(corpoDe(p.display_id, "order.posted"))
+        expect(chamadas).toBe(2)
+        expect(r.status).toBe(200)
+        expect(r.data).toMatchObject({ enviado: true, marcado: false })
+      } finally {
+        espiao.mockRestore()
+      }
+      expect(whatsappEnviados).toHaveLength(1)
+      expect((await lerFrete(p.id)).avisos).toBeUndefined()
     })
   },
 })
