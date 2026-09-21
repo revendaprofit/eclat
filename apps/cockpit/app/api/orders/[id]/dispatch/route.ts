@@ -7,6 +7,7 @@ import { carrierCriarFrete, carrierPagarFrete, carrierConsultarFrete } from "@/l
 import { garantirEtiqueta, lerEstadoDoFrete } from "@/lib/etiqueta-segura"
 import { executarComTrava, DespachoEmAndamento } from "@/lib/trava-despacho"
 import { lerDadosFiscais } from "@/lib/dados-fiscais"
+import { AVISO_PAGAMENTO, pagamentoConfirmado } from "@/lib/pagamento-despacho"
 import { sendWhatsappText } from "@/lib/evolution"
 
 // Despacha um pedido: confere as peças (leitor) + emite a NF-e + cria fulfillment + marca envio
@@ -63,6 +64,7 @@ export async function POST(
     notify?: boolean
     conferencia?: ConferenciaEnviada
     emitir_nfe?: boolean
+    pagamento_conferido?: boolean
   }
 
   try {
@@ -71,9 +73,8 @@ export async function POST(
       if (order.fulfillment_status !== "not_fulfilled") {
         return NextResponse.json({ error: "Este pedido já foi despachado." }, { status: 400 })
       }
-      const items = order.items.map((i) => ({ id: i.id, quantity: i.quantity }))
-
-      // 0) conferência das peças (leitor de código de barras)
+      // Quem está operando: resolvido já aqui no topo porque a guarda de pagamento logo abaixo
+      // precisa registrar quem confirmou o despacho de um pedido que não consta como pago.
       let operador: string | null = null
       try {
         const { data } = await (await createSupabaseServer()).auth.getUser()
@@ -81,6 +82,29 @@ export async function POST(
       } catch {
         operador = null
       }
+
+      // Pagamento antes de qualquer efeito (Task 16): a etiqueta da SuperFrete gasta saldo REAL da
+      // carteira, e o `payment_status` não reflete a realidade enquanto o Pix é confirmado por fora (provider
+      // manual). Por isso não é bloqueio: é aviso + confirmação explícita do operador. A guarda
+      // fica aqui, logo depois do fulfillment_status — ANTES da gravação da conferência, ANTES da
+      // emissão da NF-e e muito antes da compra: quando ela recusa, nada foi gravado, nada foi
+      // emitido e nada foi comprado. O caminho manual não gasta dinheiro e segue como sempre.
+      if (body.use_carrier && !pagamentoConfirmado(order.payment_status)) {
+        if (body.pagamento_conferido !== true) {
+          return NextResponse.json(
+            { error: `${AVISO_PAGAMENTO} Confirme que o pagamento foi verificado para continuar.` },
+            { status: 400 }
+          )
+        }
+        console.warn(
+          `[pagamento] pedido ${id} teve etiqueta gerada SEM pagamento confirmado ` +
+            `(payment_status=${order.payment_status}) — confirmado por ${operador ?? "operador não identificado"}`
+        )
+      }
+
+      const items = order.items.map((i) => ({ id: i.id, quantity: i.quantity }))
+
+      // 0) conferência das peças (leitor de código de barras)
       const conferencia = validarConferencia(
         order.items.map((i) => ({ item_id: i.id, sku: i.variant_sku ?? null, titulo: i.title, variante: i.variant_title, quantidade: i.quantity })),
         body.conferencia,

@@ -8,6 +8,7 @@ import { FiscalDoPedido, type DocumentoFiscal } from "@/components/fiscal-do-ped
 import { NfdDoPedido } from "@/components/nfd-do-pedido"
 import { DadosFiscaisDoPedido } from "@/components/dados-fiscais-do-pedido"
 import { resumoDoPagamento, type PagamentoDoPedido } from "@/lib/pagamento"
+import { AVISO_PAGAMENTO, pagamentoConfirmado } from "@/lib/pagamento-despacho"
 
 type Order = {
   id: string
@@ -126,6 +127,9 @@ export default function PedidosPage() {
   // Conferência com o leitor de código de barras (spec leitor-codigo-barras F1)
   const [leituras, setLeituras] = useState<string[]>([])
   const [motivo, setMotivo] = useState("")
+  // Confirmação do operador para gerar etiqueta de pedido que não consta como pago (Task 16):
+  // a etiqueta gasta saldo real da SuperFrete.
+  const [pagamentoConferido, setPagamentoConferido] = useState(false)
   // Fiscal (Task 14): documento de venda do pedido, buscado à parte via o proxy fiscal
   const [docFiscal, setDocFiscal] = useState<DocumentoFiscal | null>(null)
   // Falha ao CONSULTAR (rede/servidor) — nunca vira "nenhuma nota emitida" na tela: são situações
@@ -177,6 +181,7 @@ export default function PedidosPage() {
     setNotify(true)
     setLeituras([])
     setMotivo("")
+    setPagamentoConferido(false)
     setDocFiscal(null)
     setDetLoading(true)
     fetch(`/api/orders/${detId}`, { cache: "no-store" })
@@ -199,6 +204,7 @@ export default function PedidosPage() {
           use_carrier: useCarrier,
           notify,
           conferencia: { leituras, motivo },
+          pagamento_conferido: pagamentoConferido,
         }),
       })
       const d = await r.json()
@@ -239,6 +245,9 @@ export default function PedidosPage() {
   )
   const conferenciaCompleta = useMemo(() => resumoConferencia(itensConferencia, leituras).completa, [itensConferencia, leituras])
   const podeDespachar = conferenciaCompleta || motivo.trim().length > 0
+  // Só a etiqueta é travada pelo pagamento: ela gasta saldo da SuperFrete. O despacho manual não.
+  const pagamentoOk = pagamentoConfirmado(det?.payment_status)
+  const podeGerarEtiqueta = podeDespachar && (pagamentoOk || pagamentoConferido)
 
   const itensParaDevolucao = useMemo(
     () =>
@@ -506,6 +515,26 @@ export default function PedidosPage() {
                 {det.fulfillment_status === "not_fulfilled" ? (
                   <section className="border border-eclat-dourado/40 rounded-lg p-4 bg-white/60 flex flex-col gap-3">
                     <h4 className="text-sm font-medium text-eclat-grafite">Despachar pedido</h4>
+                    {!pagamentoOk && (
+                      <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-md p-3 flex flex-col gap-2">
+                        <p>
+                          ⚠️ {AVISO_PAGAMENTO}{" "}
+                          <span className="whitespace-nowrap">
+                            Status do pagamento: {badge(PAGAMENTO, det.payment_status)}
+                          </span>
+                        </p>
+                        <label className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            checked={pagamentoConferido}
+                            disabled={despachando}
+                            onChange={(e) => setPagamentoConferido(e.target.checked)}
+                            className="accent-eclat-dourado"
+                          />
+                          Confirmo que o pagamento foi verificado
+                        </label>
+                      </div>
+                    )}
                     <ConferenciaPedido
                       itens={itensConferencia}
                       leituras={leituras}
@@ -550,8 +579,14 @@ export default function PedidosPage() {
                       </button>
                       <button
                         onClick={() => despachar(true)}
-                        disabled={despachando || !podeDespachar}
-                        title="Gera a etiqueta na transportadora (requer credenciais configuradas)"
+                        disabled={despachando || !podeGerarEtiqueta}
+                        title={
+                          !podeDespachar
+                            ? "Confira as peças com o leitor ou informe o motivo"
+                            : !podeGerarEtiqueta
+                              ? "Marque a confirmação de pagamento: a etiqueta gasta saldo da SuperFrete"
+                              : "Gera a etiqueta na transportadora (requer credenciais configuradas)"
+                        }
                         className="border border-eclat-grafite/40 text-xs uppercase tracking-widest px-4 py-2.5 rounded-md hover:bg-eclat-areia/40 disabled:opacity-50"
                       >
                         Gerar etiqueta (SuperFrete)
