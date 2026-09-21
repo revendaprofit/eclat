@@ -133,7 +133,7 @@ export default function ConjuntoBuilder({
   }
 
   return (
-    <div className="flex flex-col small:flex-row gap-8 pb-28 small:pb-0" data-testid="conjunto-builder">
+    <div className="flex flex-col small:flex-row gap-8" data-testid="conjunto-builder">
       <div className="grid grid-cols-1 small:grid-cols-2 gap-10 flex-1">
         {produtos.map((produto, i) => (
           <ProductSelectionProvider key={produto.id} product={produto} initialColor={corDaPeca(produto, corInicial)}>

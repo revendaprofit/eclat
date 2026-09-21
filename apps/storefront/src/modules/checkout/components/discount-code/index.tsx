@@ -4,6 +4,7 @@ import { Badge, Heading, Input, Label, Text } from "@modules/common/components/u
 import React from "react"
 
 import { applyPromotions } from "@lib/data/cart"
+import { CHAVE_CUPOM_GUARDADO } from "@lib/util/boas-vindas"
 import { avisoCupom, cuponsVisiveis } from "@lib/util/carrinho-conjunto"
 import { convertToLocale } from "@lib/util/money"
 import { HttpTypes } from "@medusajs/types"
@@ -20,6 +21,22 @@ const DiscountCode: React.FC<DiscountCodeProps> = ({ cart }) => {
   const [errorMessage, setErrorMessage] = React.useState("")
 
   const promotions = cuponsVisiveis(cart.promotions)
+
+  // Cupom do aviso de boas-vindas guardado neste aparelho: o campo já abre preenchido — a cliente
+  // só toca em "Aplicar". Deixa de preencher quando o cupom já está na sacola.
+  const [guardado, setGuardado] = React.useState("")
+  const jaAplicado = promotions.some((p) => p.code === guardado)
+  React.useEffect(() => {
+    try {
+      const c = localStorage.getItem(CHAVE_CUPOM_GUARDADO) ?? ""
+      if (c) {
+        setGuardado(c)
+        setIsOpen(true)
+      }
+    } catch {
+      /* navegação privada */
+    }
+  }, [])
   const mostrarAviso = avisoCupom(cart)
   const removePromotionCode = async (code: string) => {
     const validPromotions = promotions.filter(
@@ -80,6 +97,8 @@ const DiscountCode: React.FC<DiscountCodeProps> = ({ cart }) => {
                   name="code"
                   type="text"
                   autoFocus={false}
+                  defaultValue={jaAplicado ? "" : guardado}
+                  key={jaAplicado ? "vazio" : guardado}
                   data-testid="discount-input"
                 />
                 <SubmitButton

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { buildNavData } from "./navigation"
+import { buildNavData, paginasDeNavegacao } from "./navigation"
 
 const cat = (id: string, name: string, handle: string, rank: number, parent: string | null = null, meta: Record<string, unknown> = {}) =>
   ({ id, name, handle, rank, parent_category_id: parent, metadata: meta })
@@ -67,7 +67,32 @@ describe("buildNavData", () => {
       { id: "col_lum", title: "Lumière", handle: "lumiere", image_url: "lum.jpg" }, // metadata.image_url vence a thumb do p5
     ])
   })
+  it("Conjuntos aparece quando há conjunto montado com peça visível, mesmo sem produto na categoria", () => {
+    const n = buildNavData({ categories: CATS as any, products: PRODUCTS as any, collections: COLLECTIONS, colorMap: MAP, conjuntoProductIds: ["p1", "p3"] })
+    expect(n.roots.map((r) => r.handle)).toEqual(["tops", "leggings", "conjuntos", "acessorios"])
+    const conj = n.roots.find((r) => r.handle === "conjuntos")!
+    expect(conj.hasProducts).toBe(true)
+    expect(conj.colors.map((c) => c.name)).toEqual(["Licor", "Blackout"]) // cores das peças dos conjuntos, só disponíveis
+    expect(n.feminine.map((c) => c.handle)).toEqual(["tops", "leggings", "conjuntos"])
+  })
+  it("Conjuntos continua fora se as peças do conjunto não estão entre os produtos visíveis (despublicado/oculto)", () => {
+    const n = buildNavData({ categories: CATS as any, products: PRODUCTS as any, collections: COLLECTIONS, colorMap: MAP, conjuntoProductIds: ["p_sumiu"] })
+    expect(n.roots.map((r) => r.handle)).toEqual(["tops", "leggings", "acessorios"])
+  })
   it("entrada vazia devolve vazio", () => {
     expect(buildNavData({ categories: [], products: [], collections: [], colorMap: {} })).toEqual({ roots: [], feminine: [], collections: [] })
+  })
+})
+
+describe("paginasDeNavegacao", () => {
+  it("raízes visíveis + só as filhas com produto; coleções com produto; Conjuntos entra quando tem conjunto", () => {
+    const n = buildNavData({ categories: CATS as any, products: PRODUCTS as any, collections: COLLECTIONS, colorMap: MAP, conjuntoProductIds: ["p1"] })
+    expect(paginasDeNavegacao(n)).toEqual({
+      categorias: ["tops", "leggings", "conjuntos", "acessorios", "meias"], // Óculos (vazia) fica fora; Short, Masculino e Bermudas também
+      colecoes: ["familia-blackout", "lumiere"],
+    })
+  })
+  it("navegação vazia → nada", () => {
+    expect(paginasDeNavegacao({ roots: [], feminine: [], collections: [] })).toEqual({ categorias: [], colecoes: [] })
   })
 })

@@ -5,9 +5,9 @@ import { HttpTypes } from "@medusajs/types"
 // Perguntas específicas do produto vêm de product.metadata.faq (JSON [{q,a}]);
 // sem metadata, usa o FAQ padrão da marca. <details> nativo = zero JS.
 
-type QA = { q: string; a: string }
+export type QA = { q: string; a: string }
 
-const DEFAULT_FAQ: QA[] = [
+export const DEFAULT_FAQ: QA[] = [
   {
     q: "Como escolho meu tamanho?",
     a: "Use a tabela de medidas acima, medindo busto na parte mais cheia, cintura na parte mais fina e quadril na parte mais cheia, sempre com a fita paralela ao chão. Entre dois tamanhos: o menor sustenta mais, o maior é mais confortável.",
@@ -46,7 +46,11 @@ export default function ProductFaq({
 }: {
   product: HttpTypes.StoreProduct
 }) {
-  const items = parseMetaFaq(product.metadata) ?? DEFAULT_FAQ
+  return <FaqLista items={parseMetaFaq(product.metadata) ?? DEFAULT_FAQ} />
+}
+
+// A lista em si (título + <details> + schema FAQPage) — a página do conjunto usa com as perguntas dela.
+export function FaqLista({ items }: { items: QA[] }) {
   return (
     <section>
       <FaqJsonLd items={items} />

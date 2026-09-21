@@ -7,6 +7,7 @@ import { getBaseURL } from "@lib/util/env"
 import { StoreCartShippingOption } from "@medusajs/types"
 import CartMismatchBanner from "@modules/layout/components/cart-mismatch-banner"
 import Footer from "@modules/layout/templates/footer"
+import BoasVindas from "@modules/layout/components/boas-vindas"
 import Nav from "@modules/layout/templates/nav"
 import PrevendaBar from "@modules/layout/components/prevenda-bar"
 import Wizard from "@modules/personalization/wizard"
@@ -47,6 +48,7 @@ export default async function PageLayout(props: { children: React.ReactNode }) {
       )}
       {props.children}
       <Footer />
+      <BoasVindas />
       {personasLigadas && personas.length > 0 && <Wizard personas={personas} />}
       <ToastHost />
     </>

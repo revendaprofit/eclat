@@ -14,6 +14,7 @@ const GRUPOS: { titulo: string | null; itens: { href: string; label: string }[] 
     titulo: "Vender",
     itens: [
       { href: "/pedidos", label: "Pedidos" },
+      { href: "/carrinhos", label: "Carrinhos abandonados" },
       { href: "/conversas", label: "Conversas" },
       { href: "/clientes", label: "Clientes" },
       { href: "/leads", label: "Leads" },

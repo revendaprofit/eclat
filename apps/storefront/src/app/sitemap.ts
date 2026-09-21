@@ -1,8 +1,8 @@
 import { MetadataRoute } from "next"
 import { getBaseURL } from "@lib/util/env"
 import { listProducts } from "@lib/data/products"
-import { listCollections } from "@lib/data/collections"
-import { listCategories } from "@lib/data/categories"
+import { getNavigation } from "@lib/data/navigation"
+import { paginasDeNavegacao } from "@lib/util/navigation"
 import { listEditorialPosts } from "@lib/data/editorial"
 import { INSTITUTIONAL_PAGES } from "@modules/content/institutional"
 import { COMING_SOON, COMING_SOON_PATH } from "@lib/coming-soon"
@@ -93,31 +93,27 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     /* ignora se a API falhar */
   }
 
+  // Coleções e categorias: só as que o menu mostra (getNavigation). Listagem vazia no sitemap faz o
+  // Google julgar o site raso e visitar menos as páginas boas (Search Console, 2026-09-21: 23
+  // "detectadas, mas não indexadas" com 7 listagens vazias no mapa). A categoria Conjuntos entra
+  // quando há conjunto montado, mesmo sem produto cadastrado nela.
   try {
-    const { collections } = await listCollections({ fields: "handle" })
-    for (const c of collections ?? []) {
-      if (c.handle)
-        urls.push({
-          url: `${base}/${CC}/collections/${enc(c.handle)}`,
-          lastModified: now,
-          changeFrequency: "weekly",
-          priority: 0.7,
-        })
+    const { categorias, colecoes } = paginasDeNavegacao(await getNavigation(CC))
+    for (const handle of colecoes) {
+      urls.push({
+        url: `${base}/${CC}/collections/${enc(handle)}`,
+        lastModified: now,
+        changeFrequency: "weekly",
+        priority: 0.7,
+      })
     }
-  } catch {
-    /* ignora */
-  }
-
-  try {
-    const cats = await listCategories()
-    for (const c of (cats ?? []) as { handle?: string }[]) {
-      if (c.handle)
-        urls.push({
-          url: `${base}/${CC}/categories/${enc(c.handle)}`,
-          lastModified: now,
-          changeFrequency: "weekly",
-          priority: 0.6,
-        })
+    for (const handle of categorias) {
+      urls.push({
+        url: `${base}/${CC}/categories/${enc(handle)}`,
+        lastModified: now,
+        changeFrequency: "weekly",
+        priority: 0.6,
+      })
     }
   } catch {
     /* ignora */

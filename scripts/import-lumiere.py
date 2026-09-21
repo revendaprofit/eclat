@@ -131,12 +131,20 @@ GALERIA = {
     ("macaquinho-solaris", "telha"): [("macaquinho solaris", n) for n in [33, 26, 23, 29, 27, 24]],
     ("macaquinho-solaris", "grafitti"): [("macaquinho solaris", n) for n in [105, 101, 104, 103, 102]],   # fotos refeitas na cor real (14/09)
     ("top-aurora", "telha"): [("conjunto aurora", 1), ("top aurora", 2), ("top aurora", 1), ("top aurora", 8), ("top aurora", 5), ("top aurora", 6)],
-    ("top-aurora", "grafitti"): [("conjunto aurora", 9, (0.20, 0.08, 0.92, 0.80)), ("conjunto aurora", 5), ("conjunto aurora", 4), ("conjunto aurora", 10), ("conjunto aurora", 8), ("conjunto aurora", 1)],
+    # Grafitti (sócia, 19/09/2026): fotos reeditadas na cor real (2NN = reedição do quadro NN), usadas INTEIRAS,
+    # sem recorte. A 1ª e a 2ª foto viram card 9:16 (corta ~8% de cada lado): cabeça, peça e logo ficam dentro.
+    # Tops Grafitti: o short que aparece junto é o do OUTRO modelo (ver ATENÇÃO abaixo). Ficam só as fotos em que
+    # o logo da barra do short não aparece; saíram 208/201 (Aurora) e 214/212/209 (Orvalho).
+    ("top-aurora", "grafitti"): [("conjunto aurora", n) for n in [204, 205, 203, 206]],
     ("short-aurora", "telha"): [("conjunto aurora", 7), ("short aurora", 1), ("short aurora", 2), ("short aurora", 4), ("conjunto aurora", 2), ("conjunto aurora", 6)],
-    ("short-aurora", "grafitti"): [("conjunto aurora", 3, (0.285, 0.45, 0.835, 1.0)), ("conjunto aurora", 7), ("conjunto aurora", 8), ("conjunto aurora", 5), ("conjunto aurora", 2), ("conjunto aurora", 1)],
-    ("top-orvalho", "grafitti"): [("conjunto orvalho", 5, (0.195, 0.03, 0.865, 0.70)), ("conjunto orvalho", 8), ("top orvalho", 2), ("conjunto orvalho", 13), ("conjunto orvalho", 9), ("top orvalho", 1)],
+    # ATENÇÃO (sócia, 19/09/2026): no ensaio Grafitti os SHORTS foram fotografados trocados entre os conjuntos.
+    # Short Orvalho = cós LARGO + "ÉCLAT" na barra -> aparece nas fotos "Conjunto Aurora" Grafitti (top de zíper).
+    # Short Aurora  = cós ESTREITO + nó na barra   -> aparece nas fotos "Conjunto Orvalho" Grafitti (top de alças).
+    # Em Telha não há troca. Os tops seguem o nome do conjunto da foto.
+    ("short-aurora", "grafitti"): [("conjunto orvalho", n) for n in [210, 206, 218, 209, 212, 204]],
+    ("top-orvalho", "grafitti"): [("conjunto orvalho", n) for n in [211, 207, 216, 205, 204]],   # 216 = close do top, sem short
     ("top-orvalho", "telha"): [("arquivo", "050"), ("arquivo", "060"), ("arquivo", "052"), ("arquivo", "056"), ("conjunto orvalho", 1), ("conjunto orvalho", 2)],   # 050/060/052/056: top Telha com short Grafitti
-    ("short-orvalho", "grafitti"): [("short orvalho", 3), ("short orvalho", 1), ("conjunto orvalho", 9), ("conjunto orvalho", 6), ("conjunto orvalho", 12), ("conjunto orvalho", 4)],
+    ("short-orvalho", "grafitti"): [("conjunto aurora", n) for n in [208, 205, 207, 203, 202, 201]],
     ("short-orvalho", "telha"): [("conjunto orvalho", 1, (0.285, 0.45, 0.755, 0.92)), ("conjunto orvalho", 1), ("conjunto orvalho", 2)],   # CO3 saiu: corta o short
 }
 
@@ -146,7 +154,8 @@ CONJUNTOS = [
     {"nome": "Aurora", "handle": "conjunto-aurora", "produtos": ["top-aurora", "short-aurora"],
      "capa": ("conjunto aurora", "telha", 2), "tipo_desconto": "total_percentual", "valor": 10, "ordem": 0},
     {"nome": "Orvalho", "handle": "conjunto-orvalho", "produtos": ["top-orvalho", "short-orvalho"],
-     "capa": ("conjunto orvalho", "grafitti", 5), "tipo_desconto": "total_percentual", "valor": 10, "ordem": 1},
+     # capa em Telha: em Grafitti a foto do conjunto mostra o short do outro modelo
+     "capa": ("conjunto orvalho", "telha", 1), "tipo_desconto": "total_percentual", "valor": 10, "ordem": 1},
 ]
 
 # Cores: chave = como o dono escreve no arquivo (normalizado); nome = como aparece no site;
@@ -287,15 +296,18 @@ def sincronizar_conjuntos(api, st, idx, dry):
             ids.append(ps[0]["id"])
         mod, cor, n = cj["capa"]
         caminho = idx[(norm(mod), cor, n)]
-        dest = "conjuntos/%s.jpg" % cj["handle"]
+        # sufixo = hash do arquivo de origem: trocar a foto da capa gera URL nova (sem cache velho)
+        dest = "conjuntos/%s-%s.jpg" % (cj["handle"], hashlib.md5(os.path.basename(caminho).encode("utf-8")).hexdigest()[:8])
         capa = st.url + "/storage/v1/object/public/site/" + dest if dry else st.upload(dest, otimizar(caminho))
         corpo = {"nome": cj["nome"], "capa_url": capa, "product_ids": ids, "tipo_desconto": cj["tipo_desconto"],
                  "valor": cj["valor"], "ativo": True, "ordem": cj["ordem"]}
         atual = existentes.get(cj["handle"])
         if dry:
-            print("\n[dry-run] conjunto %s (%s): %s" % (cj["nome"], "atualizar" if atual else "criar", corpo)); continue
+            print("\n[dry-run] conjunto %s (%s): %s" % (cj["nome"], "atualizar só capa e produtos" if atual else "criar", corpo)); continue
         if atual:
-            api.put("/admin/conjuntos/curados/%s" % atual["id"], corpo)
+            # curado existente: só capa e produtos. Nome, desconto, ativo e ordem são do Cockpit (em 19/09 a
+            # regra em produção era total_valor R$ 19, não os 10% daqui) — reenviar reverteria o ajuste do dono.
+            api.put("/admin/conjuntos/curados/%s" % atual["id"], {"capa_url": capa, "product_ids": ids})
             print("\nconjunto atualizado: %s (%s)" % (cj["nome"], atual["id"]))
         else:
             novo = api.post("/admin/conjuntos/curados", dict(corpo, handle=cj["handle"]))
@@ -453,6 +465,10 @@ def main():
     # 6) conjuntos montados pelo admin (curados do Benefício Conjunto)
     if not a.modelo:
         sincronizar_conjuntos(api, st, idx, dry)
+    # versões leves (.w480/.w960) que a vitrine pede no modo "direto" do loader — sem elas a foto nova aparece quebrada
+    if not dry:
+        import subprocess
+        subprocess.run([sys.executable, "-B", os.path.join(RAIZ, "scripts", "gerar-variantes-fotos.py"), "--apply"], check=False)
     print("\nConcluído. Rode: python scripts/check-catalog-options.py")
 
 if __name__ == "__main__":

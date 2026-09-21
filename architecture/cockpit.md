@@ -233,3 +233,15 @@ Cockpit: é só apresentação dentro do detalhe de pedido que já existia em `/
   inspecionar** — o contrato dos campos novos foi conferido por tipo contra o schema da Admin API do Medusa
   v2, e a conferência na tela fica com o dono no primeiro pedido real (ruling 7; roteiro em `progress.md`,
   entrada "Benefício Conjunto F4").
+
+## Carrinhos abandonados (2026-09-20)
+Tela `/carrinhos` do Cockpit (menu logo abaixo de Pedidos). Só leitura.
+- **Fonte:** Medusa. A Admin API padrão (2.15) não lista carrinhos, então o backend expõe
+  `GET /admin/carrinhos-abandonados?dias=30&min_parado_min=60` (`apps/backend/src/api/admin/carrinhos-abandonados/route.ts`):
+  carrinhos com `completed_at` nulo, com item, parados há `min_parado_min` minutos e mexidos nos últimos `dias` dias.
+  O selo "pagamento iniciado" vem de uma segunda consulta (carrinho → `payment_collection.payment_sessions`), tolerante a falha.
+- **Regra de negócio testada:** `apps/cockpit/lib/carrinhos.ts` (+ `.test.ts`): valor = Σ preço×qtd − ajustes; estágio
+  `sacola` (sem contato) / `identificado` (e-mail ou telefone) / `pagamento`; telefone → `wa.me/55…` com mensagem pronta.
+- **Nada é enviado sozinho:** o botão abre o WhatsApp de quem está operando, com o texto para revisar. Automação de
+  recuperação (pela Evolution/Clube) é decisão à parte, por causa das regras de proteção do número.
+- **Deploy:** precisa do backend no ar (Railway, `railway up`) ANTES do Cockpit; sem a rota, a tela avisa que falta o deploy.

@@ -40,8 +40,8 @@ PESO_G = 46              # gramas por par (sócia, 2026-09-19); entra na cotaç�
 # Cores: nome na vitrine; slug = prefixo do arquivo de foto; sku = 3 letras; a/b = as duas metades da bolinha (corpo, punho).
 CORES = [
     {"nome": "Cinza & Grafitti", "slug": "cinza-grafitti", "sku": "CGR", "a": "#434750", "b": "#BCC0C9"},
-    {"nome": "Branco & Brown", "slug": "branco-brown", "sku": "BBR", "a": "#F4F4F2", "b": "#3A2621"},
-    {"nome": "Exército & Brown", "slug": "exercito-brown", "sku": "EBR", "a": "#2F4A3E", "b": "#5A4036"},
+    {"nome": "Branco & Choco", "slug": "branco-brown", "sku": "BBR", "a": "#F4F4F2", "b": "#3A2621"},
+    {"nome": "Exército & Choco", "slug": "exercito-brown", "sku": "EBR", "a": "#2F4A3E", "b": "#5A4036"},
 ]
 
 def descricao():
@@ -209,6 +209,9 @@ def main():
                 if not existente:
                     api.post("/admin/inventory-items/%s/location-levels/%s" % (iid, sloc["id"]), {"stocked_quantity": ESTOQUE})
     print("estoque: %d pares por variante em \"%s\"\nlink: /br/products/%s" % (ESTOQUE, sloc["name"], HANDLE))
+    # versões leves (.w480/.w960) que a vitrine pede no modo "direto" do loader — sem elas a foto nova aparece quebrada
+    import subprocess
+    subprocess.run([sys.executable, "-B", os.path.join(RAIZ, "scripts", "gerar-variantes-fotos.py"), "--apply"], check=False)
 
 if __name__ == "__main__":
     main()
