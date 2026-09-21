@@ -51,8 +51,10 @@ describe("serviço e pacote lidos do pedido", () => {
 
   // Os pesos abaixo TÊM que bater com apps/backend/src/modules/superfrete/embalagem.ts (a fonte da
   // verdade): PESO_PADRAO_G = 300 por peça, SAQUINHO_G = 50 (1 ou 2 peças) e CAIXA_G = 115 (3 ou
-  // mais). Se alguém mudar lá e esquecer da cópia do Cockpit, este teste quebra em vez de a
-  // divergência passar em silêncio até a transportadora cobrar a diferença.
+  // mais). Este teste segura a CÓPIA do Cockpit nesses números — ele não enxerga o backend (não há
+  // import entre os apps) e NÃO quebra se alguém mudar só o embalagem.ts. Quem mudar lá precisa vir
+  // aqui e mudar a cópia e este teste juntos, senão a divergência passa em silêncio até a
+  // transportadora cobrar a diferença.
   it("sem pacote gravado, ou com contagem divergente, cai na tabela da spec §4.3 (300 g por peça)", () => {
     expect(pacoteDoPedido(null, 1)).toEqual({ width: 15, height: 5, length: 15, weight: 0.35 })
     expect(pacoteDoPedido(null, 2)).toEqual({ width: 20, height: 5, length: 20, weight: 0.65 })

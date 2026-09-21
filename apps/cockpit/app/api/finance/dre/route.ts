@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { medusaOrdersForDre } from "@/lib/medusa"
 import { sb } from "@/lib/sb-admin"
 import { taxasDePagamento } from "@/lib/pagamento"
+import { PAGAMENTOS_CONFIRMADOS } from "@/lib/pagamento-despacho"
 
 // DRE do período (tudo em CENTAVOS):
 //   Receita produtos + Frete − COGS − Taxas de pagamento − Despesas = Resultado
@@ -9,7 +10,6 @@ import { taxasDePagamento } from "@/lib/pagamento"
 // Taxas de pagamento = tarifa REAL cobrada pelo gateway em cada pedido (Parte 4, spec §10) —
 // despesa financeira, não COGS (decisão de 2026-06-15).
 const reais2cent = (v: number) => Math.round((v ?? 0) * 100)
-const PAGOS = new Set(["captured", "authorized", "partially_captured"])
 
 export async function GET(req: Request) {
   const u = new URL(req.url)
@@ -20,7 +20,7 @@ export async function GET(req: Request) {
   try {
     // 1) pedidos qualificados
     const orders = (await medusaOrdersForDre(de, ate)).filter(
-      (o) => o.status !== "canceled" && PAGOS.has(o.payment_status)
+      (o) => o.status !== "canceled" && PAGAMENTOS_CONFIRMADOS.has(o.payment_status)
     )
 
     // 2) custos (COGS) — mapa variant_id → centavos

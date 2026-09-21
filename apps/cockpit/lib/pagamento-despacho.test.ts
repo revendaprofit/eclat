@@ -24,9 +24,11 @@ describe("pagamentoConfirmado", () => {
 })
 
 describe("PAGAMENTOS_CONFIRMADOS", () => {
-  // Trava de regressão: é este o conjunto que o dashboard importa para somar receita
-  // (app/api/dashboard/route.ts). Se alguém afrouxar aqui, o teste quebra.
-  it("tem exatamente os três status pagos do dashboard", () => {
+  // Trava de regressão: é este o conjunto que o despacho usa para a guarda de pagamento
+  // (app/api/orders/[id]/dispatch/route.ts e a tela de pedidos) e que o dashboard e o DRE importam
+  // para somar receita (app/api/dashboard/route.ts, app/api/finance/dre/route.ts). Se alguém
+  // afrouxar aqui, o teste quebra.
+  it("tem exatamente os três status pagos (despacho, dashboard e DRE)", () => {
     expect([...PAGAMENTOS_CONFIRMADOS].sort()).toEqual(["authorized", "captured", "partially_captured"])
   })
 })
