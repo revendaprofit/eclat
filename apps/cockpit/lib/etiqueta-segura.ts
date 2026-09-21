@@ -111,7 +111,13 @@ async function salvarPaga(deps: Deps, agora: () => Date, id: string, label: Carr
 
 // Regra C: procura o rastreio depois de uma compra confirmada (pagamento já registrado como "paga",
 // com ou sem rastreio). Nunca falha a compra: se `consultar` der erro, para de procurar e devolve o
-// que já tem (o dinheiro já foi gasto — o operador precisa conseguir terminar o despacho).
+// que já tem (o dinheiro já foi gasto — o operador precisa conseguir terminar o despacho). O `salvar`
+// que grava o rastreio encontrado AQUI DENTRO é MELHOR-ESFORÇO — se falhar, devolve o rastreio pro
+// operador do mesmo jeito (achado 1, revisão round 5): o dinheiro já foi gasto e o rastreio já foi
+// encontrado, então perder só a gravação não pode virar um 502 no meio de um despacho que já deu
+// certo. Isso é DIFERENTE do `salvarPaga` logo depois de `pagar` (em `pagarComRastreio`) e do
+// `salvarPaga` na regra B depois de uma consulta positiva: aqueles SEMPRE propagam o erro, porque são
+// o único registro de que o id existe e foi pago — perdê-los silenciosamente esconderia o gasto.
 // `lancarSeCancelada`: só a regra A usa (uma etiqueta já paga que a SuperFrete diz ter cancelado é
 // uma situação que precisa de atenção manual, nunca uma compra automática de outra por cima).
 async function buscarRastreio(
@@ -143,7 +149,11 @@ async function buscarRastreio(
         label_url: consulta.label.label_url || resultado.label_url,
         carrier_order_id: id,
       }
-      await salvarPaga(deps, agora, id, resultado)
+      try {
+        await salvarPaga(deps, agora, id, resultado)
+      } catch {
+        // Melhor-esforço (ver comentário da função): não falha o despacho por causa disso.
+      }
       break
     }
     // Sem rastreio ainda (status "pending", "released" sem tracking, ou qualquer outro) — tenta de
@@ -183,6 +193,16 @@ export async function garantirEtiqueta(deps: Deps, atual: EstadoDoFrete | null):
     return buscarRastreio(deps, agora, esperar, atual.superfrete_id, labelDoEstado(atual), { lancarSeCancelada: true })
   }
 
+  // Guarda (round 5, achado 2): "paga" ou "pendente" SEM superfrete_id não deveria acontecer vindo
+  // das próprias gravações desta função — mas se o metadata foi editado à mão ou corrompido de outra
+  // forma, essa é a ÚNICA forma de um "paga" virar silenciosamente uma compra nova por cima. Nunca
+  // compra: pede conferência manual.
+  if ((atual?.status === "paga" || atual?.status === "pendente") && !atual.superfrete_id) {
+    throw new Error(
+      `O pedido tem um frete marcado como "${atual.status}" mas sem o id da SuperFrete. Confira o painel da SuperFrete antes de gerar outra etiqueta.`
+    )
+  }
+
   // Regra B: já existe um frete criado na SuperFrete (id presente, ainda "pendente") — confere o
   // status, e se disser "pending" espera e confere de NOVO antes de decidir pagar (o status é
   // eventualmente consistente: um único "pending" não prova que o pagamento não foi feito).
@@ -201,8 +221,16 @@ export async function garantirEtiqueta(deps: Deps, atual: EstadoDoFrete | null):
         return consulta.label
       }
       if (consulta.status === "pending") {
-        // Ainda "pending" depois de esperar — agora sim, não foi pago de verdade. Paga com o MESMO
-        // id (não cria outro frete).
+        // Duas consultas "pending" com 8s de intervalo é um sinal forte, mas NÃO é prova — é uma
+        // aposta probabilística sobre um atraso de poucos segundos observado em UMA verificação
+        // real. Se a resposta do /checkout tiver se perdido (ex.: timeout) E o atraso do status
+        // passar dos 8s de espera, isto paga uma SEGUNDA vez. Na prática, quando chegamos aqui o
+        // pedido já esperou os 20s de timeout de carrierPagarFrete/carrierConsultarFrete
+        // (lib/shipping.ts) MAIS o tempo até o operador clicar de novo — normalmente 20-30s ou mais,
+        // contra o atraso de poucos segundos observado. As constantes (ESPERA_STATUS_MS etc.) estão
+        // centralizadas no topo do arquivo pra recalibrar se a SuperFrete se mostrar mais lenta que
+        // isso em produção. (O dono está avaliando webhooks da SuperFrete, o que mudaria esse
+        // desenho — não mexer nisso agora.) Paga com o MESMO id (não cria outro frete).
         return pagarComRastreio(deps, agora, esperar, id)
       }
     }

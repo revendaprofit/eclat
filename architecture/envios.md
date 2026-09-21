@@ -53,7 +53,9 @@ Spec: `docs/superpowers/specs/2026-09-18-frete-superfrete-design.md`. Provider `
 - Ligar/desligar na região: `node apps/backend/ativar-superfrete.mjs` (simula) · `--aplicar` ·
   `--aplicar --desfazer`. Preserva as regras que a opção já tinha e aborta sem gravar nada se houver mais
   de um candidato (local, zona ou opção fixa "Entrega Padrão" — o script nunca adivinha). Em produção, só
-  com o "pode aplicar" do dono, depois do `railway up` com o módulo novo.
+  com o "pode aplicar" do dono, depois do `railway up` com o módulo novo. O script NUNCA usa
+  `process.exit` (lacuna da Task 15): num ambiente com Node 24 no Windows, `process.exit` matava o
+  processo com código de saída 127 logo depois de um `fetch`, sem deixar o script terminar sozinho.
 - Teste de integração: `apps/backend/integration-tests/http/frete-superfrete.spec.ts` (13 casos, SuperFrete
   simulada por um servidor HTTP local; precisa do contêiner `eclat-pg-test`, `npm run test:db:up`).
 
@@ -83,7 +85,12 @@ antes de qualquer chamada — erro de dado não gasta saldo).
   - **O status da SuperFrete atrasa alguns segundos em relação ao pagamento** (`GET .../order/info/{id}`
     respondeu `pending` por alguns segundos logo depois de um `/checkout` que já tinha sido aceito). Por
     isso um pedido `pendente` que a consulta diz `pending` espera 8s e confere de novo antes de decidir
-    pagar — um único `pending` não prova que não foi pago.
+    pagar — um único `pending` não prova que não foi pago. Honestidade sobre o residual: duas consultas
+    "pending" com 8s de intervalo é um sinal forte, não uma prova — se a resposta do `/checkout` se
+    perder E o atraso do status passar dos 8s, isso paga uma segunda vez. Na prática já se passaram
+    20-30s ou mais (o timeout de 20s de cada chamada, mais o tempo até o operador clicar de novo) contra
+    um atraso observado de poucos segundos; as constantes (`ESPERA_STATUS_MS` etc.) estão centralizadas
+    em `lib/etiqueta-segura.ts` pra recalibrar se a SuperFrete se mostrar mais lenta em produção.
   - **Uma etiqueta já registrada como `paga` nunca volta a pagar nem a criar outra**, não importa o que a
     consulta diga depois (inclusive `pending`) — só `canceled` é motivo pra parar e pedir conferência
     manual; qualquer outro status vira só uma tentativa a mais de achar o rastreio.
@@ -110,3 +117,6 @@ antes de qualquer chamada — erro de dado não gasta saldo).
   /api/v0/order/cancel`, só antes de postar, com estorno na carteira). A busca de rastreio só acontece
   durante a compra (até ~12s); se ainda faltar depois disso, não há uma re-consulta automática depois do
   despacho — o operador confere manualmente no painel da SuperFrete e atualiza o pedido, se precisar.
+  A mensagem de erro de etiqueta cancelada (`garantirEtiqueta`, regra A) pede pra "limpar o frete do
+  pedido" antes de gerar outra — hoje isso é um passo MANUAL, sem botão no Cockpit: apagar/zerar
+  `metadata.frete` do pedido pelo admin do Medusa ou por um script.

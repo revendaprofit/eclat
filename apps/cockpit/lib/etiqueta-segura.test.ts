@@ -175,6 +175,28 @@ describe("garantirEtiqueta — segurança contra pagar em dobro", () => {
     expect(d.criar).not.toHaveBeenCalled()
   })
 
+  it("achado 2 (round 5): 'paga' SEM superfrete_id — nunca deveria acontecer vindo desta própria função, mas se acontecer (metadata editado à mão, dado corrompido) NUNCA compra por cima: lança erro pedindo conferência manual", async () => {
+    const atual: EstadoDoFrete = { transportadora: "superfrete", status: "paga", em: "2026-09-19T10:00:00.000Z" }
+    const d = deps()
+    await expect(garantirEtiqueta(d, atual)).rejects.toThrow(
+      'O pedido tem um frete marcado como "paga" mas sem o id da SuperFrete. Confira o painel da SuperFrete antes de gerar outra etiqueta.'
+    )
+    expect(d.criar).not.toHaveBeenCalled()
+    expect(d.pagar).not.toHaveBeenCalled()
+    expect(d.consultar).not.toHaveBeenCalled()
+  })
+
+  it("achado 2 (round 5): 'pendente' SEM superfrete_id — mesma proteção", async () => {
+    const atual: EstadoDoFrete = { transportadora: "superfrete", status: "pendente", em: "2026-09-19T10:00:00.000Z" }
+    const d = deps()
+    await expect(garantirEtiqueta(d, atual)).rejects.toThrow(
+      'O pedido tem um frete marcado como "pendente" mas sem o id da SuperFrete. Confira o painel da SuperFrete antes de gerar outra etiqueta.'
+    )
+    expect(d.criar).not.toHaveBeenCalled()
+    expect(d.pagar).not.toHaveBeenCalled()
+    expect(d.consultar).not.toHaveBeenCalled()
+  })
+
   // ---- Regra B (antiga regra 2): "pendente" + id — agora com 2ª checagem depois de esperar --------
 
   it("regra B: '1ª consulta released' — confere e NÃO paga de novo (sem precisar esperar)", async () => {
@@ -229,6 +251,44 @@ describe("garantirEtiqueta — segurança contra pagar em dobro", () => {
     expect(d.pagar).toHaveBeenCalledTimes(1)
     expect(d.pagar).toHaveBeenCalledWith("ord_1")
     expect(d.criar).not.toHaveBeenCalled()
+    expect(d.salvar).toHaveBeenCalledTimes(1)
+  })
+
+  it("regra C alcançada PELA regra B: 'pending' nas duas consultas, paga sem rastreio ainda — a busca de rastreio (regra C) roda em seguida, na mesma ordem", async () => {
+    const atual: EstadoDoFrete = { transportadora: "superfrete", status: "pendente", superfrete_id: "ord_1", em: "2026-09-19T10:00:00.000Z" }
+    const ordem: string[] = []
+    let chamadaConsulta = 0
+    const d = deps({
+      consultar: vi.fn(async () => {
+        chamadaConsulta++
+        ordem.push(`consultar:${chamadaConsulta}`)
+        if (chamadaConsulta <= 2) return { status: "pending", label: null } // as 2 checagens da regra B
+        return { status: "released", label: LABEL } // já dentro da busca de rastreio (regra C)
+      }),
+      pagar: vi.fn(async () => {
+        ordem.push("pagar")
+        return SEM_RASTREIO
+      }),
+      esperar: vi.fn(async (ms: number) => {
+        ordem.push(`esperar:${ms}`)
+      }),
+      salvar: vi.fn(async (estado: EstadoDoFrete) => {
+        ordem.push(`salvar:${estado.status}:${estado.tracking_number ? "com-rastreio" : "sem-rastreio"}`)
+      }),
+    })
+    const label = await garantirEtiqueta(d, atual)
+    expect(label).toEqual(LABEL)
+    expect(ordem).toEqual([
+      "consultar:1", // regra B, 1ª checagem: pending
+      "esperar:8000", // regra B espera antes da 2ª checagem
+      "consultar:2", // regra B, 2ª checagem: ainda pending — agora paga
+      "pagar",
+      "salvar:paga:sem-rastreio", // pagarComRastreio grava "paga" ANTES de procurar (item C)
+      "esperar:4000", // regra C começa a procurar o rastreio
+      "consultar:3",
+      "salvar:paga:com-rastreio", // achou, grava de novo
+    ])
+    expect(d.criar).not.toHaveBeenCalled()
   })
 
   it("regra B: 'canceled' na 1ª consulta — comprar um novo é legítimo (passa pela regra 4 inteira)", async () => {
@@ -254,6 +314,8 @@ describe("garantirEtiqueta — segurança contra pagar em dobro", () => {
     expect(label).toEqual(LABEL)
     expect(d.criar).toHaveBeenCalledTimes(1)
     expect(d.pagar).toHaveBeenCalledWith("ord_1")
+    expect(d.consultar).toHaveBeenCalledTimes(2)
+    expect(d.esperar).toHaveBeenCalledWith(8000)
   })
 
   it("regra B: status desconhecido/inesperado na 1ª consulta — não paga nem cria, avisa o operador", async () => {
@@ -388,6 +450,19 @@ describe("garantirEtiqueta — segurança contra pagar em dobro", () => {
     expect(d.consultar).toHaveBeenCalledTimes(3)
     expect(d.esperar).toHaveBeenCalledTimes(3)
     expect(d.esperar).toHaveBeenCalledWith(4000)
+  })
+
+  it("achado 1 (round 5): `salvar` rejeita DENTRO da busca de rastreio (regra C) depois de achar o rastreio — NÃO lança, devolve o rastreio já encontrado (dinheiro já gasto, o registro em si é melhor-esforço)", async () => {
+    const d = deps({
+      pagar: vi.fn(async () => SEM_RASTREIO),
+      consultar: vi.fn(async () => ({ status: "released", label: LABEL })),
+      salvar: vi.fn(async (estado: EstadoDoFrete) => {
+        if (estado.tracking_number) throw new Error("Falha de rede ao gravar o rastreio encontrado")
+      }),
+    })
+    const label = await garantirEtiqueta(d, null)
+    expect(label).toEqual(LABEL) // devolve com o rastreio mesmo com o `salvar` tendo falhado
+    expect(d.consultar).toHaveBeenCalledTimes(1)
   })
 
   it("regra 4, `criar` falha: grava 'iniciando' com data zerada para NÃO travar a próxima tentativa por 2 minutos", async () => {
