@@ -159,3 +159,15 @@ Confirmado com dado real no mesmo dia: a consulta `GET /api/v0/order/info/{id}` 
 - **Nova — Cockpit:** segurar a mensagem quando a etiqueta sai sem código, gravar `aviso_despacho` e mostrar o estado no pedido.
 - Task 4 (script e SOP): passa a descrever também o job.
 
+
+## 10. Adendo 2026-09-21 — o segredo da assinatura é gerado pela SuperFrete
+
+Conferido na documentação pública ([criar webhook](https://superfrete.readme.io/reference/criar-webhook-app), [webhook](https://superfrete.readme.io/reference/webhook)): o cadastro (`POST /api/v0/webhook`) aceita só `name`, `url` e `events`; **não existe campo de segredo**. A SuperFrete gera o `secret_token` e o devolve **uma única vez**, na resposta da criação. A listagem e a atualização não o trazem.
+
+Isto **substitui** a parte da §4.2 ("um segredo que definimos ao cadastrar o webhook") e da §5 ("o mesmo usado ao cadastrar o webhook"):
+
+- `SUPERFRETE_WEBHOOK_SECRET` no Railway recebe o `secret_token` devolvido pelo `ativar-webhook-superfrete.mjs --aplicar` e vai para lá **depois** do `--aplicar`, logo em seguida (os eventos que chegarem entre um e outro são ignorados com 200 e se perdem).
+- O `--aplicar` que cria é rodado só pelo dono, no terminal dele. O script mostra o segredo uma vez ou o grava num arquivo novo (`--salvar-segredo`), e sem terminal ele recusa mostrar.
+- Perdeu o segredo: `--aplicar --desfazer` e `--aplicar` de novo (webhook novo, segredo novo).
+- `SUPERFRETE_WEBHOOK_URL` só é lida pelo script, no ambiente de quem o roda; o backend não precisa dela.
+- Ordem de ir ao ar atualizada em `progress.md` (2026-09-21) e SOP em `architecture/envios.md`.
