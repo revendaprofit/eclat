@@ -179,10 +179,11 @@ function clienteSuperfreteDoAmbiente(): ClienteSuperfrete | null {
 }
 
 // Erros de rede que PROVAM que a conexão nunca se estabeleceu — nada chegou à Evolution, então a
-// mensagem não saiu e é seguro voltar para "pendente". ECONNRESET fica de fora de propósito: ele
-// também acontece com a resposta a caminho (a Evolution já entregou), e não dá para separar os dois
-// casos com segurança.
-const REDE_SEM_CONEXAO = new Set(["ECONNREFUSED", "ENOTFOUND", "EAI_AGAIN", "UND_ERR_CONNECT_TIMEOUT"])
+// mensagem não saiu e é seguro voltar para "pendente". São todos da FASE DE CONEXÃO (DNS, rota,
+// recusa, prazo de conectar). ECONNRESET e ETIMEDOUT ficam de fora de propósito: eles também
+// acontecem com a conexão já aberta e a resposta a caminho (a Evolution já entregou), e não dá para
+// separar os dois casos com segurança.
+const REDE_SEM_CONEXAO = new Set(["ECONNREFUSED", "ENOTFOUND", "EAI_AGAIN", "UND_ERR_CONNECT_TIMEOUT", "EHOSTUNREACH", "ENETUNREACH"])
 
 // Código do erro de rede do fetch (undici): `TypeError("fetch failed")` com `cause.code`, ou um
 // `AggregateError` em `cause` quando havia mais de um endereço (aí só vale se TODOS são sem conexão).
@@ -198,13 +199,14 @@ function codigoDeRede(e: unknown): string {
 
 // True só quando é CERTO que a mensagem não saiu:
 //  - `EvolutionHttpError`: a Evolution respondeu 4xx/5xx (o `numeroInexistente` é tratado antes).
-//    TROCA ACEITA no 5xx: um proxy na frente da Evolution poderia devolver 5xx depois de ela ter
-//    entregado, e aí a cliente receberia duas vezes. O dono prefere a retentativa a um aviso perdido
-//    em silêncio — 5xx volta para "pendente".
+//    TROCA no 5xx: um proxy na frente da Evolution poderia devolver 5xx depois de ela ter entregado,
+//    e aí a cliente receberia duas vezes. DECISÃO TÉCNICA de 2026-09-21 (retentar em vez de
+//    silenciar), AINDA A CONFIRMAR COM O DONO: 5xx volta para "pendente". Se ele preferir o outro
+//    lado da troca, 5xx passa a virar "incerto" (basta tirar o 5xx deste `true`).
 //  - erro de rede que prova que a conexão nunca aconteceu (REDE_SEM_CONEXAO).
 // Todo o resto — timeout, ECONNRESET, 2xx com corpo que não é JSON, `terminated` lendo o corpo — é
 // AMBÍGUO (o erro pode ter nascido depois da entrega) e vira "incerto".
-function naoChegouAEntregar(e: unknown): boolean {
+export function naoChegouAEntregar(e: unknown): boolean {
   if (e instanceof EvolutionHttpError) return true
   return REDE_SEM_CONEXAO.has(codigoDeRede(e))
 }

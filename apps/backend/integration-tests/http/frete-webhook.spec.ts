@@ -26,10 +26,13 @@ jest.setTimeout(240 * 1000)
 // A pré-venda (contato de WhatsApp do e-mail) vem do Supabase. Aqui ela é SIMULADA para o teste
 // nunca depender do Supabase de verdade, e para poder "pendurar" a leitura (Fix round 1, item 2).
 // `jest.mock` vale para o registro de módulos do processo, e o app roda no mesmo processo (inApp).
+// O contato do mock é diferente do WHATSAPP_PADRAO de propósito: o teste do e-mail afirma que o
+// contato veio DAQUI, o que prova que o mock está ativo (e não o Supabase nem o padrão).
 let mockPrevendaPendurada = false
+const mockWhatsappDaPrevenda = "5500000000000"
 jest.mock("../../src/lib/prevenda", () => ({
   getPrevenda: () =>
-    mockPrevendaPendurada ? new Promise(() => undefined) : Promise.resolve({ ativa: false, envios_a_partir: "", whatsapp: "5500000000000" }),
+    mockPrevendaPendurada ? new Promise(() => undefined) : Promise.resolve({ ativa: false, envios_a_partir: "", whatsapp: mockWhatsappDaPrevenda }),
 }))
 
 // Segredo FICTÍCIO, só deste teste. O repositório é público: o segredo real vive no ambiente.
@@ -613,7 +616,7 @@ medusaIntegrationTestRunner({
         codigo: "AA123456789BR",
         link: "https://exemplo.invalid/AA",
         lojaUrl: expect.stringMatching(/^https?:\/\//),
-        whatsapp: expect.stringMatching(/^\d+$/),
+        whatsapp: mockWhatsappDaPrevenda, // veio do mock de lib/prevenda: o mock está ativo
         idempotencia: `superfrete-posted-${ETIQUETA}`,
       })
       // E o template monta o e-mail com esses dados, sem campo faltando.

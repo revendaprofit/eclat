@@ -1,4 +1,5 @@
-import { linkDeRastreio, mesclarNoFrete, mudarAvisoDespacho } from "../aviso-despacho"
+import { linkDeRastreio, mesclarNoFrete, mudarAvisoDespacho, naoChegouAEntregar } from "../aviso-despacho"
+import { EvolutionHttpError } from "../evolution"
 
 // O comportamento no banco é provado no teste de integração (integration-tests/http/aviso-despacho.spec.ts).
 // Aqui ficam as regras que não dependem do Postgres.
@@ -51,5 +52,36 @@ describe("linkDeRastreio (mesma regra do Cockpit)", () => {
   it("rastreamento dos Correios com o código; sem código, vazio", () => {
     expect(linkDeRastreio("AA123456789BR")).toBe("https://rastreamento.correios.com.br/app/index.php?objetos=AA123456789BR")
     expect(linkDeRastreio("")).toBe("")
+  })
+})
+
+describe("naoChegouAEntregar (volta a pendente só quando é CERTO que não saiu)", () => {
+  // Erro do fetch (undici): TypeError("fetch failed") com o código em `cause`.
+  const deRede = (code: string) => Object.assign(new TypeError("fetch failed"), { cause: { code } })
+  const agregado = (...codes: string[]) =>
+    Object.assign(new TypeError("fetch failed"), { cause: { errors: codes.map((code) => ({ code })) } })
+
+  it("4xx/5xx da Evolution → não chegou", () => {
+    expect(naoChegouAEntregar(new EvolutionHttpError("x", 503))).toBe(true)
+    expect(naoChegouAEntregar(new EvolutionHttpError("x", 401))).toBe(true)
+  })
+
+  it("erros da fase de conexão → não chegou (inclui EHOSTUNREACH e ENETUNREACH)", () => {
+    for (const code of ["ECONNREFUSED", "ENOTFOUND", "EAI_AGAIN", "UND_ERR_CONNECT_TIMEOUT", "EHOSTUNREACH", "ENETUNREACH"]) {
+      expect([code, naoChegouAEntregar(deRede(code))]).toEqual([code, true])
+    }
+    expect(naoChegouAEntregar(agregado("EHOSTUNREACH", "ENETUNREACH"))).toBe(true)
+  })
+
+  it("ETIMEDOUT e ECONNRESET são AMBÍGUOS (podem nascer depois da entrega) → não afirma", () => {
+    expect(naoChegouAEntregar(deRede("ETIMEDOUT"))).toBe(false)
+    expect(naoChegouAEntregar(deRede("ECONNRESET"))).toBe(false)
+    expect(naoChegouAEntregar(agregado("EHOSTUNREACH", "ETIMEDOUT"))).toBe(false)
+  })
+
+  it("timeout, corpo ilegível e erro desconhecido → não afirma", () => {
+    expect(naoChegouAEntregar(Object.assign(new Error("t"), { name: "TimeoutError" }))).toBe(false)
+    expect(naoChegouAEntregar(new SyntaxError("json"))).toBe(false)
+    expect(naoChegouAEntregar(null)).toBe(false)
   })
 })
