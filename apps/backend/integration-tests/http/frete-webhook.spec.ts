@@ -15,7 +15,8 @@ import { createServer, type Server } from "node:http"
 import type { AddressInfo } from "node:net"
 import { medusaIntegrationTestRunner } from "@medusajs/test-utils"
 import type { IOrderModuleService } from "@medusajs/framework/types"
-import { Modules } from "@medusajs/framework/utils"
+import { ContainerRegistrationKeys, Modules } from "@medusajs/framework/utils"
+import { asValue } from "@medusajs/framework/awilix"
 import { criarAdmin } from "../helpers/admin"
 
 jest.setTimeout(240 * 1000)
@@ -479,22 +480,31 @@ medusaIntegrationTestRunner({
 
     it("mensagem enviada mas a marca falha ao gravar → 200 com marcado: false (nunca 500, que duplicaria a mensagem)", async () => {
       const p = await criarPedido({ tracking_number: "AA123456789BR" })
-      // Espião no serviço de pedidos REAL do container: deixa o write do estado passar e derruba só
-      // o seguinte (o da marca). O app roda no mesmo processo (inApp), então é a mesma instância.
-      const original = pedidos.updateOrders.bind(pedidos)
-      let chamadas = 0
-      const espiao = jest.spyOn(pedidos, "updateOrders").mockImplementation(((...args: unknown[]) => {
-        chamadas++
-        if (chamadas === 2) return Promise.reject(new Error("banco fora do ar"))
-        return (original as (...a: unknown[]) => unknown)(...args)
-      }) as never)
+      // Task 3 (seção G): a rota grava estado e marca por SQL (`mesclarNoFrete`), não mais por
+      // `updateOrders` — o espião antigo no serviço de pedidos não enxergaria nada. O `raw` do knex é
+      // somente-leitura (jest.spyOn falha), então o teste troca, só durante esta chamada, o registro
+      // PG_CONNECTION do container por um knex EMBRULHADO que derruba só a gravação da marca
+      // (`avisos.posted`). A rota resolve o knex do `req.scope`, que herda do container raiz.
+      const container = getContainer()
+      const pgReal = container.resolve(ContainerRegistrationKeys.PG_CONNECTION) as unknown as { raw: (...a: unknown[]) => unknown }
+      let derrubadas = 0
+      const pgQueFalhaNaMarca = {
+        raw: (sql: string, bindings?: unknown[]) => {
+          if (Array.isArray(bindings) && bindings[0] === "avisos") {
+            derrubadas++
+            return Promise.reject(new Error("banco fora do ar"))
+          }
+          return pgReal.raw(sql, bindings)
+        },
+      }
+      container.register(ContainerRegistrationKeys.PG_CONNECTION, asValue(pgQueFalhaNaMarca))
       try {
         const r = await chamar(corpoDe(p.display_id, "order.posted"))
-        expect(chamadas).toBe(2)
+        expect(derrubadas).toBe(1)
         expect(r.status).toBe(200)
         expect(r.data).toMatchObject({ enviado: true, marcado: false })
       } finally {
-        espiao.mockRestore()
+        container.register(ContainerRegistrationKeys.PG_CONNECTION, asValue(pgReal))
       }
       expect(whatsappEnviados).toHaveLength(1)
       expect((await lerFrete(p.id)).avisos).toBeUndefined()
@@ -516,6 +526,42 @@ medusaIntegrationTestRunner({
       const r = await chamar(corpoDe(p.display_id, "order.posted"))
       expect(r.status).toBe(500)
       expect((await lerFrete(p.id)).avisos).toBeUndefined()
+    })
+
+    // ---- Task 3, seção G: a gravação de estado não é mais "ler, alterar e gravar" ----
+
+    it("order.posted: uma reserva do aviso de despacho feita DEPOIS da releitura e ANTES da gravação do estado não é desfeita", async () => {
+      const p = await criarPedido({ ...PENDENTE, tracking_number: "AA123456789BR" })
+      const pg = getContainer().resolve(ContainerRegistrationKeys.PG_CONNECTION) as unknown as { raw: (sql: string, b?: unknown[]) => Promise<unknown> }
+      // A releitura devolve o pedido com o aviso "pendente"; logo DEPOIS dela (antes de a rota gravar o
+      // estado), outro remetente reserva o aviso — é exatamente o que o `tentarAvisoDeDespacho` faz no
+      // banco. Gravar `frete` inteiro a partir da cópia relida devolveria "pendente" e reabriria a porta
+      // para a mensagem sair duas vezes. Determinístico: não depende de tempo.
+      const original = pedidos.retrieveOrder.bind(pedidos)
+      let reservou = false
+      const espiao = jest.spyOn(pedidos, "retrieveOrder").mockImplementation((async (...args: unknown[]) => {
+        const lido = await (original as (...a: unknown[]) => Promise<unknown>)(...args)
+        if (!reservou) {
+          reservou = true
+          await pg.raw(
+            `UPDATE "order" SET metadata = jsonb_set(metadata, '{frete,aviso_despacho}', (metadata->'frete'->'aviso_despacho') || '{"status":"enviando","por":"job"}'::jsonb) WHERE id = ?`,
+            [p.id]
+          )
+        }
+        return lido
+      }) as never)
+      try {
+        const r = await chamar(corpoDe(p.display_id, "order.posted"))
+        expect(r.status).toBe(200)
+        expect(reservou).toBe(true)
+      } finally {
+        espiao.mockRestore()
+      }
+      const frete = await lerFrete(p.id)
+      expect(frete.aviso_despacho).toMatchObject({ status: "enviando", por: "job" })
+      expect(frete.status_transportadora).toBe("order.posted")
+      expect(frete.eventos["order.posted"]).toEqual(expect.any(String))
+      expect(frete.avisos.posted).toEqual(expect.any(String))
     })
 
     it("aviso_despacho marcado 'enviado' por outro caminho ENTRE a leitura do pedido e o write do estado: não volta a 'pendente' nem manda de novo", async () => {

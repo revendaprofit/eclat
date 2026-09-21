@@ -2,6 +2,7 @@ import type { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import type { IOrderModuleService } from "@medusajs/framework/types"
 import { ContainerRegistrationKeys, Modules } from "@medusajs/framework/utils"
 import { EvolutionHttpError, evolutionConfigured, sendWhatsappText } from "../../../lib/evolution"
+import { mesclarNoFrete, mudarAvisoDespacho, type Pg } from "../../../lib/aviso-despacho"
 import { normalizaWhatsapp, textoDespacho, textoEntregue, textoPostado } from "../../../lib/superfrete-avisos"
 import { acaoDoEvento, assinaturaSuperfreteValida, numeroDoPedido, rastreioDoEvento } from "../../../lib/superfrete-webhook"
 
@@ -123,11 +124,8 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
   const agora = new Date().toISOString()
   const rastreio = rastreioDoEvento(data)
 
-  // `metadata.frete` é RELIDO aqui, imediatamente antes do write do estado, e as mudanças do webhook
-  // são aplicadas sobre essa cópia fresca — não sobre a lida no começo da requisição. Entre as duas
-  // leituras o Cockpit (ou o job de avisos pendentes) pode ter marcado `aviso_despacho` como
-  // "enviado"; espalhar a cópia velha devolveria "pendente" e a cliente receberia o despacho duas
-  // vezes. O merge do Medusa é raso: `frete` inteiro é substituído pelo que mandarmos.
+  // `metadata.frete` é RELIDO aqui para refazer a conferência de "já avisado" e para decidir o
+  // despacho: entre a leitura do começo e agora, outro caminho (Cockpit, job) pode ter avisado.
   const orderModule = req.scope.resolve<IOrderModuleService>(Modules.ORDER)
   const freteBase = objeto(objeto((await orderModule.retrieveOrder(pedido.id, { select: ["id", "metadata"] })).metadata).frete)
 
@@ -138,34 +136,31 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
     return res.status(200).json({ ignorado: "já avisado" })
   }
 
-  // As mudanças DESTE webhook, e só elas: estado da transportadora, histórico de eventos e o
-  // rastreio que faltava. Todo o resto de `frete` (do Cockpit: `superfrete_id`, `status`,
-  // `tracking_number`, `label_url`, `aviso_despacho`) segue como está no banco agora.
-  const freteNovo: Record<string, unknown> = {
-    ...freteBase,
-    status_transportadora: event,
-    eventos: { ...objeto(freteBase.eventos), [String(event)]: agora },
-  }
+  // GRAVAÇÃO DO ESTADO SEM "LER, ALTERAR E GRAVAR" (Task 3, seção G). As mudanças DESTE webhook, e
+  // só elas — estado da transportadora, histórico de eventos e o rastreio que faltava — são mescladas
+  // DENTRO do Postgres (`mesclarNoFrete`, uma instrução por mudança). Nada é escrito a partir da
+  // cópia relida acima: gravar `frete` inteiro com ela desfaria uma reserva `pendente → enviando`
+  // feita por outro remetente nos milissegundos entre a releitura e a gravação, e a mensagem de
+  // despacho poderia sair duas vezes. Todo o resto de `frete` (do Cockpit: `superfrete_id`,
+  // `status`, `label_url`, `aviso_despacho`) e todo o resto do `metadata` (`fiscal`, …) ficam como
+  // estão no banco NA HORA de cada instrução.
+  const pg = req.scope.resolve(ContainerRegistrationKeys.PG_CONNECTION) as unknown as Pg
+  await mesclarNoFrete(pg, pedido.id, { status_transportadora: event })
+  let freteNovo = (await mesclarNoFrete(pg, pedido.id, { [event]: agora }, { em: "eventos" })) ?? freteBase
 
   // §4.1: o rastreio nasce segundos depois do pagamento da etiqueta (~24 s na primeira etiqueta
   // real, pedido #21), então o despacho pode ter saído sem ele. QUALQUER evento que traga o código
   // preenche o que falta — se o `order.generated` se perdeu, o `order.posted` ainda completa — e
-  // nenhum sobrescreve um código que já existe.
+  // nenhum sobrescreve um código que já existe (a condição está no próprio UPDATE: `seSemRastreio`).
   //
   // NOTA DE ESCOPO: o rastreio do FULFILLMENT no Medusa não é reescrito aqui. Quem grava o `label`
   // no envio é o Cockpit, na hora de despachar. Esta fase registra o código no `metadata.frete`; o
   // Cockpit passa a exibi-lo de lá numa fase futura.
-  if (!freteBase.tracking_number && rastreio.tracking) {
-    freteNovo.tracking_number = rastreio.tracking
-    if (rastreio.tracking_url) freteNovo.tracking_url = rastreio.tracking_url
+  if (rastreio.tracking) {
+    const campos: Record<string, unknown> = { tracking_number: rastreio.tracking }
+    if (rastreio.tracking_url) campos.tracking_url = rastreio.tracking_url
+    freteNovo = (await mesclarNoFrete(pg, pedido.id, campos, { seSemRastreio: true })) ?? freteNovo
   }
-
-  // SÓ a chave `frete` vai no update. O Medusa 2.15.5 (MedusaInternalService.update → mergeMetadata)
-  // faz merge RASO do `metadata` enviado sobre a linha como ela está no banco NA HORA do write: cada
-  // chave de primeiro nível enviada substitui a do banco, e as não enviadas ficam como estão. Mandar
-  // `{ ...metadata, frete }` reescreveria `fiscal`, `conferencia` etc. com o valor lido no começo da
-  // requisição, desfazendo o que outro escritor (webhook da Brasil NFe, Cockpit) gravou no meio.
-  await orderModule.updateOrders(pedido.id, { metadata: { frete: freteNovo } })
 
   // `order.generated` (spec §9, decisão do dono em 2026-09-21): quando a etiqueta sai sem código, o
   // Cockpit despacha mas SEGURA o WhatsApp e grava `aviso_despacho = { status: "pendente" }`. Aqui,
@@ -270,21 +265,20 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
   // job de avisos pendentes leem para não repetir); nos demais, `avisos[aviso]`.
   //
   // Daqui em diante a mensagem JÁ SAIU. Duas regras:
-  //  - `metadata.frete` é relido AGORA e só a marca é aplicada por cima: o envio levou segundos, e
-  //    o Cockpit pode ter gravado no `frete` nesse meio-tempo (o merge do Medusa é raso — `frete`
-  //    inteiro é substituído pelo que mandarmos).
+  //  - só a marca é gravada, mesclada DENTRO do banco: o envio levou segundos, e o Cockpit pode ter
+  //    gravado no `frete` nesse meio-tempo — nada do que ele gravou é reescrito.
   //  - Falha aqui NUNCA vira 500: um 500 faria a SuperFrete reenviar, o reenvio não veria a marca e
   //    a cliente receberia a mensagem de novo. Responde 200 com `marcado: false` e loga para o
   //    operador — uma marca faltando é bem menos grave que uma mensagem duplicada.
   try {
     const marcadoEm = new Date().toISOString()
-    const fresco = await orderModule.retrieveOrder(pedido.id, { select: ["id", "metadata"] })
-    const freteFresco = objeto(objeto(fresco.metadata).frete)
-    const freteMarcado =
-      aviso === "generated"
-        ? { ...freteFresco, aviso_despacho: { ...objeto(freteFresco.aviso_despacho), status: "enviado", em: marcadoEm, por: "webhook" } }
-        : { ...freteFresco, avisos: { ...objeto(freteFresco.avisos), [aviso]: marcadoEm } }
-    await orderModule.updateOrders(pedido.id, { metadata: { frete: freteMarcado } })
+    if (aviso === "generated") {
+      // Condicional: só vira "enviado" se ainda está "pendente" (a mesma transição do remetente único).
+      await mudarAvisoDespacho(pg, pedido.id, "pendente", { status: "enviado", em: marcadoEm, por: "webhook" })
+    } else {
+      // `avisos` é um objeto: a chave nova é mesclada DENTRO dele, no banco, sem reescrever as outras.
+      await mesclarNoFrete(pg, pedido.id, { [aviso]: marcadoEm }, { em: "avisos" })
+    }
   } catch (e) {
     logger.error(
       `[frete] aviso ${aviso} do pedido #${displayId} ENVIADO, mas a marca não foi gravada (${(e as Error)?.name ?? "erro"}) — ` +
