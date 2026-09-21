@@ -180,7 +180,10 @@ usada no despacho manual e com o interruptor desligado — mudou um, mude o outr
   resposta da criação. O script mostra na tela, ou grava num arquivo NOVO com `--salvar-segredo=<arquivo>`
   (aberto antes da criação; caminho dentro de repositório git é recusado; sem quebra de linha no fim). Sem
   terminal (agente, saída redirecionada) o `--aplicar` sem `--salvar-segredo` é recusado, para o segredo não
-  parar num log. Se a gravação do arquivo falhar depois da criação, o segredo sai na tela para não se perder.
+  parar num log. Se a gravação do arquivo falhar depois da criação, o segredo sai na tela para não se perder — inclusive
+  sem terminal (num log ou no chat de um agente); nesse caso o dono trata o segredo como EXPOSTO e troca:
+  `--aplicar --desfazer` e depois `--aplicar`. O script sempre mostra a base da API e avisa quando ela não é a
+  de produção (sandbox ou teste): webhook cadastrado assim não é o que a loja usa.
   No Windows o modo 0600 não protege o arquivo: copiar para `SUPERFRETE_WEBHOOK_SECRET` no Railway e apagar.
   Perdeu o segredo? `--aplicar --desfazer` e `--aplicar` de novo.
 - O backend apara espaços e quebras de linha do `SUPERFRETE_WEBHOOK_SECRET`. A variável só vale depois que o

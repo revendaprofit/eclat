@@ -331,14 +331,20 @@ medusaIntegrationTestRunner({
       const p = await criarPedido({ ...pendente(desde), tracking_number: CODIGO })
       modoEvolution = "401"
       const final = await tentar(getContainer(), p.id, "job")
-      expect(final).toEqual({ status: "pendente", desde, tentado_em: expect.any(String) })
-      expect((await lerFrete(p.id)).aviso_despacho).toEqual({ status: "pendente", desde, tentado_em: expect.any(String) })
+      // Formato exato que a ordenação do job reconhece (regex no SELECT de verificarAvisosPendentes).
+      const ISO_DO_JOB = expect.stringMatching(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/)
+      expect(final).toEqual({ status: "pendente", desde, tentado_em: ISO_DO_JOB })
+      expect((await lerFrete(p.id)).aviso_despacho).toEqual({ status: "pendente", desde, tentado_em: ISO_DO_JOB })
       await freteDoCockpitIntacto(p.id)
 
       // A retentativa seguinte, com a Evolution de volta, manda.
       modoEvolution = "ok"
-      expect((await tentar(getContainer(), p.id, "job"))?.status).toBe("enviado")
+      const depois = await tentar(getContainer(), p.id, "job")
+      expect(depois?.status).toBe("enviado")
       expect(whatsappEnviados).toHaveLength(1)
+      // `tentado_em` só serve à fila de pendentes: o enviado não o carrega (nem no retorno, nem no banco).
+      expect(depois).not.toHaveProperty("tentado_em")
+      expect((await lerFrete(p.id)).aviso_despacho).not.toHaveProperty("tentado_em")
     })
 
     it("Evolution 400 com exists: false → sem_whatsapp (final)", async () => {

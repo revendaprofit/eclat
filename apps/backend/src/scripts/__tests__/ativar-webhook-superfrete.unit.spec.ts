@@ -421,4 +421,44 @@ describe("ativar-webhook-superfrete.mjs", () => {
       rmSync(pasta, { recursive: true, force: true })
     }
   })
+
+  // ---------- sobras das revisões ----------
+
+  it("toda execução mostra a base da API; fora da produção, com aviso de que o webhook não é o de produção", async () => {
+    const { saida } = await rodar([])
+    expect(saida).toContain(`Base da API: ${base}`)
+    expect(saida).toMatch(/NÃO é a de produção/)
+  })
+
+  it("base de produção: mostra a base e não avisa (conferido sem rede: falta o token, nada é chamado)", async () => {
+    const { codigo, saida } = await rodar(["--aplicar"], { SUPERFRETE_BASE_URL: undefined, SUPERFRETE_TOKEN: undefined })
+    expect(codigo).toBe(1)
+    expect(saida).toContain("Base da API: https://api.superfrete.com")
+    expect(saida).not.toMatch(/NÃO é a de produção/)
+    expect(requisicoes).toHaveLength(0)
+  })
+
+  it("sandbox também avisa que não é produção", async () => {
+    const { saida } = await rodar(["--mostrar-base"], { SUPERFRETE_BASE_URL: undefined, SUPERFRETE_SANDBOX: "true", SUPERFRETE_TOKEN: undefined })
+    expect(saida).toContain("Base da API: https://sandbox.superfrete.com")
+    expect(saida).toMatch(/NÃO é a de produção/)
+  })
+
+  it("SUPERFRETE_TESTE_FALHAR_ESCRITA é ignorado fora de 127.0.0.1 (a escrita acontece de verdade)", async () => {
+    const pasta = mkdtempSync(path.join(tmpdir(), "eclat-webhook-"))
+    const arquivo = path.join(pasta, "segredo.txt")
+    try {
+      const porta = new URL(base).port
+      const { codigo, saida } = await rodar(["--aplicar", `--salvar-segredo=${arquivo}`], {
+        SUPERFRETE_BASE_URL: `http://localhost:${porta}`,
+        SUPERFRETE_TESTE_FALHAR_ESCRITA: "1",
+      })
+      expect(escritas().map((r) => r.method)).toEqual(["POST"]) // chegou ao servidor falso por "localhost"
+      expect(codigo).toBe(0)
+      expect(readFileSync(arquivo, "utf8")).toBe(SEGREDO_NOVO)
+      expect(saida).not.toContain(SEGREDO_NOVO)
+    } finally {
+      rmSync(pasta, { recursive: true, force: true })
+    }
+  })
 })

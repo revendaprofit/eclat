@@ -418,9 +418,11 @@ async function tentarAviso(
   desfecho.tentativa = "saiu"
   // 7a. Saiu. Marca "enviado". Se ESTA gravação falhar, NÃO relança e devolve "enviado" para quem
   // chamou: no banco fica "enviando", que vira "incerto" em 10 min — e ninguém reenvia. De propósito.
-  const enviado = { ...reservado, status: "enviado", em: new Date().toISOString(), por: origem }
+  // `tentado_em` só ordena a fila de pendentes do job; o enviado não o carrega.
+  const { tentado_em: _semFila, ...reservadoSemFila } = reservado
+  const enviado = { ...reservadoSemFila, status: "enviado", em: new Date().toISOString(), por: origem }
   try {
-    const marcado = await mudarAvisoDespacho(pg, orderId, "enviando", { status: "enviado", em: enviado.em, por: origem })
+    const marcado = await mudarAvisoDespacho(pg, orderId, "enviando", { status: "enviado", em: enviado.em, por: origem }, ["tentado_em"])
     if (marcado) {
       logger.info(`[aviso-despacho] pedido #${n}: aviso de despacho enviado (${origem})`)
       return marcado

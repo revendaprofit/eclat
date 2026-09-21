@@ -34,6 +34,7 @@ import path from "node:path"
 
 const EVENTOS = ["order.created", "order.released", "order.generated", "order.posted", "order.delivered", "order.cancelled"]
 const NOME = "use.ECLAT — avisos de entrega"
+const PRODUCAO = "https://api.superfrete.com"
 const FLAGS = new Set(["--aplicar", "--desfazer", "--mostrar-base"])
 
 const semBarraFinal = (u) => String(u ?? "").replace(/\/+$/, "")
@@ -81,12 +82,13 @@ async function main() {
 
   const BASE = semBarraFinal(
     process.env.SUPERFRETE_BASE_URL ||
-      (process.env.SUPERFRETE_SANDBOX === "true" ? "https://sandbox.superfrete.com" : "https://api.superfrete.com")
+      (process.env.SUPERFRETE_SANDBOX === "true" ? "https://sandbox.superfrete.com" : PRODUCAO)
   )
-  if (args.includes("--mostrar-base")) {
-    console.log(`Base da API: ${BASE}`)
-    return
+  console.log(`Base da API: ${BASE}`)
+  if (BASE !== PRODUCAO) {
+    console.warn(`! atenção: esta base NÃO é a de produção (${PRODUCAO}) — um webhook cadastrado assim NÃO é o que a loja usa.`)
   }
+  if (args.includes("--mostrar-base")) return
   // Interruptores de teste: só com a SuperFrete FALSA em 127.0.0.1; contra a API real não existem.
   let baseLocal = false
   try {
