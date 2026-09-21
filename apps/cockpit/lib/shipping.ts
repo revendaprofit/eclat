@@ -23,9 +23,13 @@ export type CarrierLabel = {
   carrier_order_id: string
 }
 
+// Exportada para a rota de despacho recusar ANTES de qualquer efeito (conferência, nota) com o mesmo texto.
+export const MSG_CARRIER_NAO_CONFIGURADO =
+  "Integração com a SuperFrete ainda não configurada. Defina SUPERFRETE_TOKEN no ambiente do Cockpit (ver architecture/envios.md). Use o rastreio manual por enquanto."
+
 class CarrierNotConfigured extends Error {
   constructor() {
-    super("Integração com a SuperFrete ainda não configurada. Defina SUPERFRETE_TOKEN no ambiente do Cockpit (ver architecture/envios.md). Use o rastreio manual por enquanto.")
+    super(MSG_CARRIER_NAO_CONFIGURADO)
     this.name = "CarrierNotConfigured"
   }
 }

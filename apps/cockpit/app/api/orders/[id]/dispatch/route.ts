@@ -4,7 +4,14 @@ import { podeDespachar } from "@/lib/despacho-permitido"
 import { validarConferencia, type ConferenciaEnviada } from "@/lib/leitor"
 import { decidirDespacho, type ResultadoEmissao } from "@/lib/fiscal-despacho"
 import { createSupabaseServer } from "@/lib/supabase/server"
-import { carrierCriarFrete, carrierPagarFrete, carrierConsultarFrete } from "@/lib/shipping"
+import {
+  carrierConfigured,
+  carrierCriarFrete,
+  carrierPagarFrete,
+  carrierConsultarFrete,
+  MSG_CARRIER_NAO_CONFIGURADO,
+} from "@/lib/shipping"
+import { avisoAoDespacharComEtiqueta, lerAvisoDespacho, type AvisoDespacho } from "@/lib/aviso-despacho"
 import { garantirEtiqueta, lerEstadoDoFrete } from "@/lib/etiqueta-segura"
 import { executarComTrava, DespachoEmAndamento } from "@/lib/trava-despacho"
 import { lerDadosFiscais } from "@/lib/dados-fiscais"
@@ -12,8 +19,9 @@ import { AVISO_PAGAMENTO, pagamentoConfirmado } from "@/lib/pagamento-despacho"
 import { sendWhatsappText } from "@/lib/evolution"
 
 // Despacha um pedido: confere as peças (leitor) + emite a NF-e + cria fulfillment + marca envio
-// (com rastreio) + avisa o cliente por WhatsApp. Rastreio: manual (tracking_number) OU gerado pela
-// transportadora (use_carrier). Conferência (spec leitor-codigo-barras F1): a tela manda as
+// (com rastreio) + avisa o cliente por WhatsApp (no despacho com etiqueta da SuperFrete, o aviso
+// espera o código de rastreio e quem manda é o backend — ver passo 3). Rastreio: manual
+// (tracking_number) OU gerado pela transportadora (use_carrier). Conferência (spec leitor-codigo-barras F1): a tela manda as
 // leituras; o servidor recalcula contra os itens reais do pedido e só despacha conferência
 // divergente com motivo. O registro vai para metadata.conferencia ANTES do fulfillment.
 //
@@ -50,6 +58,64 @@ function normalizaWhatsapp(phone: string): string {
   if (d.startsWith("55")) return d
   if (d.length === 10 || d.length === 11) return "55" + d
   return d
+}
+
+const ehObjeto = (v: unknown): v is Record<string, unknown> => !!v && typeof v === "object" && !Array.isArray(v)
+
+// Grava metadata.frete.aviso_despacho SEM perder o resto de metadata.frete (id do frete, status da
+// etiqueta, rastreio…): medusaMergeOrderMetadata só junta no nível de cima, então gravar `frete`
+// substitui o objeto inteiro. Por isso o pedido é relido AGORA, logo antes de gravar, e o `frete`
+// relido é espalhado por baixo do aviso.
+async function gravarAvisoDespacho(id: string, aviso: AvisoDespacho): Promise<void> {
+  const relido = await medusaGetOrder(id)
+  const frete = relido.metadata?.frete
+  const freteRelido = ehObjeto(frete) ? frete : {}
+  await medusaMergeOrderMetadata(id, { frete: { ...freteRelido, aviso_despacho: aviso } })
+}
+
+// Pede ao backend que tente mandar o aviso pendente na hora (POST /admin/frete/aviso-despacho/{id};
+// resposta 200 com `{ aviso_despacho: {...} }`). MELHOR ESFORÇO: qualquer falha (rota ausente,
+// timeout, 500, resposta fora do formato) só vai para o log — sem dado da cliente — e devolve null;
+// o job do backend tenta de novo a cada 5 min. Limite de 5 s: o AbortController corta o fetch e o
+// Promise.race garante o teto mesmo se o login no Medusa (medusaAdminToken, fora do signal) travar.
+const LIMITE_AVISO_MS = 5_000
+async function pedirAvisoAoBackend(id: string): Promise<AvisoDespacho | null> {
+  const ctrl = new AbortController()
+  let timer: ReturnType<typeof setTimeout> | undefined
+  const tempoEsgotado = new Promise<null>((resolve) => {
+    timer = setTimeout(() => {
+      ctrl.abort()
+      console.warn(`[aviso-despacho] pedido ${id}: backend não respondeu em ${LIMITE_AVISO_MS / 1000}s — o job do backend tenta de novo`)
+      resolve(null)
+    }, LIMITE_AVISO_MS)
+  })
+  const chamada = (async (): Promise<AvisoDespacho | null> => {
+    const r = await medusaAdmin(`/admin/frete/aviso-despacho/${encodeURIComponent(id)}`, {
+      method: "POST",
+      body: "{}",
+      signal: ctrl.signal,
+    })
+    if (!r.ok) {
+      console.warn(`[aviso-despacho] pedido ${id}: backend respondeu HTTP ${r.status} — o job do backend tenta de novo`)
+      return null
+    }
+    const dados: unknown = await r.json().catch(() => null)
+    // lerAvisoDespacho lê metadata.frete.aviso_despacho; a resposta é { aviso_despacho }, então
+    // embrulha em { frete } para reaproveitar a mesma validação defensiva.
+    const aviso = lerAvisoDespacho({ frete: dados })
+    if (!aviso) console.warn(`[aviso-despacho] pedido ${id}: resposta do backend fora do formato — ignorada`)
+    return aviso
+  })().catch((e) => {
+    if (!ctrl.signal.aborted) {
+      console.warn(`[aviso-despacho] pedido ${id}: chamada ao backend falhou (${(e as Error).name}) — o job do backend tenta de novo`)
+    }
+    return null
+  })
+  try {
+    return await Promise.race([chamada, tempoEsgotado])
+  } finally {
+    clearTimeout(timer)
+  }
 }
 
 export async function POST(
@@ -92,6 +158,12 @@ export async function POST(
       // fica aqui, logo depois do fulfillment_status — ANTES da gravação da conferência, ANTES da
       // emissão da NF-e e muito antes da compra: quando ela recusa, nada foi gravado, nada foi
       // emitido e nada foi comprado. O caminho manual não gasta dinheiro e segue como sempre.
+      // Transportadora sem credenciais: recusa AQUI, junto da guarda de pagamento — antes, o
+      // operador só descobria depois de gravar a conferência e passar pela nota fiscal (visto em
+      // produção em 2026-09-21). Mesmo texto do CarrierNotConfigured (lib/shipping.ts).
+      if (body.use_carrier && !carrierConfigured()) {
+        return NextResponse.json({ error: MSG_CARRIER_NAO_CONFIGURADO }, { status: 400 })
+      }
       if (body.use_carrier && !pagamentoConfirmado(order.payment_status)) {
         if (body.pagamento_conferido !== true) {
           return NextResponse.json(
@@ -221,12 +293,39 @@ export async function POST(
       const fulfillmentId = await medusaFulfillOrder(id, items)
       await medusaShipFulfillment(id, fulfillmentId, items, label)
 
-      // 3) aviso por WhatsApp (se pedido + telefone) — só menciona rastreio quando ele existe de
-      // fato (carrierPagarFrete/carrierConsultarFrete nunca inventam um rastreio a partir do id do
-      // frete).
+      // 3) aviso à cliente.
+      //
+      // Etiqueta da SuperFrete (spec §9, 2026-09-21): o Cockpit NÃO manda mais o WhatsApp — o código
+      // de rastreio pode levar dezenas de segundos para existir, e a mensagem espera por ele. Quem
+      // envia é o backend (webhook order.generated + verificação a cada 5 min), um remetente só. Aqui:
+      // grava o estado em metadata.frete.aviso_despacho e, se ficou pendente, pede ao backend que
+      // tente na hora (melhor esforço). O despacho já aconteceu neste ponto, então nenhuma falha
+      // daqui vira erro da rota: vira aviso na resposta.
+      //
+      // Despacho manual (código digitado ou sem código): igual a antes — avisa na hora com o que
+      // houver; só menciona rastreio quando ele existe de fato.
       let whatsapp: { ok: boolean; error?: string } | null = null
+      let avisoDespacho: AvisoDespacho | null = null
+      let avisoDespachoErro: string | null = null
       const phone = order.shipping_address?.phone
-      if (body.notify && phone) {
+      if (body.use_carrier) {
+        const aviso = avisoAoDespacharComEtiqueta({
+          notificar: body.notify === true,
+          temTelefone: !!phone,
+          agora: new Date().toISOString(),
+        })
+        try {
+          await gravarAvisoDespacho(id, aviso)
+          avisoDespacho = aviso
+        } catch (e) {
+          console.error(`[aviso-despacho] pedido ${id}: não foi possível gravar o aviso — ${(e as Error).message}`)
+          avisoDespachoErro =
+            "Não foi possível registrar o aviso à cliente no pedido. Avise a cliente à mão pelo WhatsApp."
+        }
+        if (avisoDespacho?.status === "pendente") {
+          avisoDespacho = (await pedirAvisoAoBackend(id)) ?? avisoDespacho
+        }
+      } else if (body.notify && phone) {
         const nome = order.shipping_address?.first_name || "tudo bem"
         const rastreio = label?.tracking_number
           ? `\n\n📦 Código de rastreio: *${label.tracking_number}*${label.tracking_url ? `\nAcompanhe: ${label.tracking_url}` : ""}`
@@ -241,6 +340,8 @@ export async function POST(
         tracking_number: label?.tracking_number ?? null,
         label_url: label?.label_url ?? null,
         whatsapp,
+        aviso_despacho: avisoDespacho,
+        aviso_despacho_erro: avisoDespachoErro,
         aviso_fiscal: avisoFiscal,
       })
     })
