@@ -8,6 +8,8 @@
 // - o gancho `conjunto-cupom` acrescenta a regra de exclusão do Benefício Conjunto na criação;
 // - por peça vale o MAIOR desconto entre cupom e conjunto (gancho `conjunto-marcar`);
 // - o pedido mínimo da loja (R$ 150 em peças) é do checkout, não do cupom.
+// - código que começa com BEMVINDA é cupom de PRIMEIRA COMPRA: além do teto de usos, vale um por CPF
+//   (apps/backend/src/modules/cupom-primeira-compra). Qualquer outro código não tem trava por cliente.
 //
 // Ambiente: MEDUSA_ADMIN_URL, MEDUSA_ADMIN_EMAIL, MEDUSA_ADMIN_PASSWORD.
 const args = process.argv.slice(2)

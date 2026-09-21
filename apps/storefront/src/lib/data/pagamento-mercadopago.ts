@@ -22,6 +22,14 @@ const CAMPOS_DO_CARRINHO =
 const ERRO_GENERICO =
   "Não conseguimos iniciar o pagamento agora. Tenta de novo em instantes ou escolhe outra forma de pagamento."
 
+// Recusas de REGRA DE CUPOM vêm do backend com texto para a cliente (ex.: cupom de primeira compra já
+// usado no CPF) — essas passam; qualquer outro erro continua genérico, sem vazar detalhe técnico.
+function mensagemDoErro(e: unknown): string {
+  const m = String((e as { message?: string })?.message ?? "")
+  const i = m.toLowerCase().indexOf("o cupom ")
+  return i >= 0 ? m.slice(i).replace(/\.*$/, "") + "." : ERRO_GENERICO
+}
+
 export type ResultadoDoCartao =
   | { resultado: "recusado"; mensagem: string }
   | { resultado: "pendente" }
@@ -81,8 +89,8 @@ export async function gerarPix(deviceId?: string): Promise<{ erro?: string }> {
       data: { ...ctx.base, metodo: "pix", ...(deviceId ? { device_id: deviceId } : {}) },
     })
     return {}
-  } catch {
-    return { erro: ERRO_GENERICO }
+  } catch (e) {
+    return { erro: mensagemDoErro(e) }
   }
 }
 
@@ -115,8 +123,8 @@ export async function pagarComCartao(dados: {
       },
     })
     sessao = sessaoDoMercadoPago(resp?.payment_collection)
-  } catch {
-    return { resultado: "erro", mensagem: ERRO_GENERICO }
+  } catch (e) {
+    return { resultado: "erro", mensagem: mensagemDoErro(e) }
   }
 
   if (!sessao) return { resultado: "erro", mensagem: ERRO_GENERICO }
