@@ -208,6 +208,38 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
   let tentados = 0
   let entregues = 0
 
+  // A MARCA (`avisos[aviso]`) é gravada logo depois do PRIMEIRO canal que entregar — não no fim.
+  // Motivo (Fix round 1 da Task 3): o WhatsApp pode levar até 15 s; se o e-mail vier depois e algo
+  // nele demorar, a SuperFrete desiste em 30 s e reenvia. Com a marca já gravada, o reenvio cai no
+  // "já avisado" e a cliente não recebe o WhatsApp de novo. A semântica não muda: a marca sempre
+  // quis dizer "pelo menos um canal entregou" — só passa a ser gravada assim que isso é verdade.
+  //  - Só a marca é gravada, mesclada DENTRO do banco (o Cockpit pode ter gravado no `frete` no
+  //    meio-tempo — nada do que ele gravou é reescrito).
+  //  - Falha na marca NUNCA vira 500: um 500 faria a SuperFrete reenviar, o reenvio não veria a
+  //    marca e a cliente receberia a mensagem de novo. Resposta 200 com `marcado: false` e log.
+  let marcado: boolean | null = null
+  const marcar = async () => {
+    if (marcado !== null) return
+    try {
+      // `avisos` é um objeto: a chave nova é mesclada DENTRO dele, no banco, sem reescrever as outras.
+      await mesclarNoFrete(pg, pedido.id, { [aviso]: new Date().toISOString() }, { em: "avisos" })
+      marcado = true
+    } catch (e) {
+      marcado = false
+      logger.error(
+        `[frete] aviso ${aviso} do pedido #${displayId} ENVIADO, mas a marca não foi gravada (${(e as Error)?.name ?? "erro"}) — ` +
+          `conferir o pedido: um reenvio da SuperFrete pode repetir a mensagem`
+      )
+    }
+  }
+
+  // O e-mail precisa do contato de WhatsApp da marca (o da pré-venda, no Supabase). Ele é resolvido
+  // ANTES do envio do WhatsApp e com prazo curto: o Supabase pendurado não pode empurrar a resposta
+  // para além dos 30 s da SuperFrete. Sem resposta em 2 s, vale o contato padrão.
+  const email = pedido.email as string | undefined
+  const emailLigado = acao.canais.includes("email") && Boolean(process.env.RESEND_API_KEY) && Boolean(email)
+  const contatoDaMarca = emailLigado ? await contatoWhatsappDaMarca() : WHATSAPP_PADRAO
+
   // DADO PESSOAL: nenhum log daqui para baixo leva `message` de erro de canal. O erro da Evolution
   // traz o corpo da resposta, e ela ecoa o número (ou o JID) quando recusa — com 5 retentativas da
   // SuperFrete, seriam 5 cópias do telefone da cliente no log. Loga-se só o status HTTP ou o tipo.
@@ -221,6 +253,7 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
       try {
         await sendWhatsappText(normalizaWhatsapp(telefone), texto, 0, { timeoutMs: TIMEOUT_WHATSAPP_MS })
         entregues++
+        await marcar()
       } catch (e) {
         if (e instanceof EvolutionHttpError && e.numeroInexistente) {
           // SÓ a recusa por número inexistente (400 + `exists: false`) é permanente e daquela
@@ -240,8 +273,7 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
   }
 
   if (acao.canais.includes("email")) {
-    const email = pedido.email as string | undefined
-    if (!process.env.RESEND_API_KEY || !email) {
+    if (!emailLigado) {
       logger.info(`[frete] aviso ${aviso} do pedido #${displayId}: e-mail pulado (${email ? "Resend desligado" : "pedido sem e-mail"})`)
     } else {
       tentados++
@@ -257,11 +289,10 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
           codigo: codigo || null,
           link: link || null,
           lojaUrl: (process.env.STOREFRONT_URL || "https://www.useeclat.com.br").replace(/\/$/, ""),
-          // Mesmo contato do "pedido confirmado": o WhatsApp configurado na pré-venda, ou o padrão.
-          whatsapp: (await getPrevenda()).whatsapp || WHATSAPP_PADRAO,
+          whatsapp: contatoDaMarca,
         }
         await req.scope.resolve(Modules.NOTIFICATION).createNotifications({
-          to: email,
+          to: email as string,
           channel: "email",
           template: "pedido-postado",
           trigger_type: "superfrete.order.posted",
@@ -273,6 +304,7 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
           data: { ...dadosEmail, idempotencia },
         })
         entregues++
+        await marcar()
       } catch (e) {
         // Só o tipo do erro: a mensagem do provider pode repetir o endereço de e-mail.
         logger.error(`[frete] aviso ${aviso} do pedido #${displayId}: e-mail falhou (${(e as Error)?.name ?? "erro"})`)
@@ -294,29 +326,24 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
     return res.status(200).json({ ok: true, gravado: true, enviado: false })
   }
 
-  // A marca (`avisos[aviso]`, só postado e entregue) só depois do envio. O despacho não passa por
-  // aqui: a marca dele é `aviso_despacho`, gravada pelo remetente único.
-  //
-  // Daqui em diante a mensagem JÁ SAIU. Duas regras:
-  //  - só a marca é gravada, mesclada DENTRO do banco: o envio levou segundos, e o Cockpit pode ter
-  //    gravado no `frete` nesse meio-tempo — nada do que ele gravou é reescrito.
-  //  - Falha aqui NUNCA vira 500: um 500 faria a SuperFrete reenviar, o reenvio não veria a marca e
-  //    a cliente receberia a mensagem de novo. Responde 200 com `marcado: false` e loga para o
-  //    operador — uma marca faltando é bem menos grave que uma mensagem duplicada.
-  try {
-    const marcadoEm = new Date().toISOString()
-    // `avisos` é um objeto: a chave nova é mesclada DENTRO dele, no banco, sem reescrever as outras.
-    await mesclarNoFrete(pg, pedido.id, { [aviso]: marcadoEm }, { em: "avisos" })
-  } catch (e) {
-    logger.error(
-      `[frete] aviso ${aviso} do pedido #${displayId} ENVIADO, mas a marca não foi gravada (${(e as Error)?.name ?? "erro"}) — ` +
-        `conferir o pedido: um reenvio da SuperFrete pode repetir a mensagem`
-    )
-    return res.status(200).json({ ok: true, gravado: true, enviado: true, marcado: false })
-  }
-
+  if (!marcado) return res.status(200).json({ ok: true, gravado: true, enviado: true, marcado: false })
   logger.info(`[frete] aviso ${aviso} do pedido #${displayId} enviado (${entregues}/${tentados} canais)`)
   return res.status(200).json({ ok: true, gravado: true, enviado: true, marcado: true })
+}
+
+// Contato de WhatsApp da marca para o e-mail: o da pré-venda (Supabase), com prazo de 2 s. Sem
+// resposta a tempo, ou com erro, vale o padrão — mesmo contato do "pedido confirmado".
+const PRAZO_CONTATO_MS = 2_000
+async function contatoWhatsappDaMarca(): Promise<string> {
+  let relogio: NodeJS.Timeout | undefined
+  const padrao = new Promise<string>((ok) => {
+    relogio = setTimeout(() => ok(WHATSAPP_PADRAO), PRAZO_CONTATO_MS)
+  })
+  try {
+    return await Promise.race([getPrevenda().then((p) => p?.whatsapp || WHATSAPP_PADRAO, () => WHATSAPP_PADRAO), padrao])
+  } finally {
+    clearTimeout(relogio)
+  }
 }
 
 // Timeout do WhatsApp: a SuperFrete desiste da chamada em 30 s; uma Evolution pendurada não pode

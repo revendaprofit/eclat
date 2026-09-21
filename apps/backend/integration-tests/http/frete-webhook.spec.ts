@@ -18,9 +18,19 @@ import { medusaIntegrationTestRunner } from "@medusajs/test-utils"
 import type { IOrderModuleService } from "@medusajs/framework/types"
 import { ContainerRegistrationKeys, Modules } from "@medusajs/framework/utils"
 import { asValue } from "@medusajs/framework/awilix"
+import { WHATSAPP_PADRAO } from "../../src/modules/resend/dados-pedido"
 import { criarAdmin } from "../helpers/admin"
 
 jest.setTimeout(240 * 1000)
+
+// A pré-venda (contato de WhatsApp do e-mail) vem do Supabase. Aqui ela é SIMULADA para o teste
+// nunca depender do Supabase de verdade, e para poder "pendurar" a leitura (Fix round 1, item 2).
+// `jest.mock` vale para o registro de módulos do processo, e o app roda no mesmo processo (inApp).
+let mockPrevendaPendurada = false
+jest.mock("../../src/lib/prevenda", () => ({
+  getPrevenda: () =>
+    mockPrevendaPendurada ? new Promise(() => undefined) : Promise.resolve({ ativa: false, envios_a_partir: "", whatsapp: "5500000000000" }),
+}))
 
 // Segredo FICTÍCIO, só deste teste. O repositório é público: o segredo real vive no ambiente.
 const SEGREDO = "segredo-ficticio-do-teste-do-webhook"
@@ -117,6 +127,7 @@ medusaIntegrationTestRunner({
     beforeEach(() => {
       modoEvolution = "ok"
       duranteOEnvio = null
+      mockPrevendaPendurada = false
       for (const r of pendurados.splice(0)) r.destroy()
       whatsappEnviados.length = 0
     })
@@ -611,6 +622,31 @@ medusaIntegrationTestRunner({
       expect(email.subject).toBe(`Seu pedido #${p.display_id} foi postado · use.ÉCLAT`)
       expect(email.html).toContain("AA123456789BR")
       expect((await lerFrete(p.id)).avisos.posted).toEqual(expect.any(String))
+    })
+
+    it("Fix round 1: leitura da pré-venda PENDURADA não segura a resposta — 200 bem antes dos 30 s, marca gravada, contato padrão", async () => {
+      const p = await criarPedido({ tracking_number: "AA123456789BR" })
+      mockPrevendaPendurada = true
+      const container = getContainer()
+      const notificacaoReal = container.resolve(Modules.NOTIFICATION)
+      const espiao = jest.fn().mockResolvedValue([])
+      container.register(Modules.NOTIFICATION, asValue({ createNotifications: espiao }))
+      process.env.RESEND_API_KEY = "re_ficticia_do_teste"
+      const inicio = Date.now()
+      let r: { status: number } | "sem resposta"
+      try {
+        r = await Promise.race([chamar(corpoDe(p.display_id, "order.posted")), new Promise<"sem resposta">((ok) => setTimeout(() => ok("sem resposta"), 25_000))])
+      } finally {
+        delete process.env.RESEND_API_KEY
+        container.register(Modules.NOTIFICATION, asValue(notificacaoReal))
+      }
+      expect(r).not.toBe("sem resposta")
+      expect((r as { status: number }).status).toBe(200)
+      expect(Date.now() - inicio).toBeLessThan(10_000)
+      expect(whatsappEnviados).toHaveLength(1)
+      expect((await lerFrete(p.id)).avisos.posted).toEqual(expect.any(String))
+      expect(espiao).toHaveBeenCalledTimes(1)
+      expect((espiao.mock.calls[0][0] as { data: { whatsapp: string } }).data.whatsapp).toBe(WHATSAPP_PADRAO)
     })
 
     // ---- Task 3, seção G: a gravação de estado não é mais "ler, alterar e gravar" ----
