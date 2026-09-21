@@ -11,7 +11,14 @@ import {
   carrierConsultarFrete,
   MSG_CARRIER_NAO_CONFIGURADO,
 } from "@/lib/shipping"
-import { avisoAoDespacharComEtiqueta, avisoPeloBackend, lerRespostaDoBackend, type AvisoDespacho } from "@/lib/aviso-despacho"
+import {
+  avisoAoDespacharComEtiqueta,
+  avisoPeloBackend,
+  ehONossoAviso,
+  gravarAvisoDespacho,
+  lerRespostaDoBackend,
+  type AvisoDespacho,
+} from "@/lib/aviso-despacho"
 import { garantirEtiqueta, lerEstadoDoFrete } from "@/lib/etiqueta-segura"
 import { executarComTrava, DespachoEmAndamento } from "@/lib/trava-despacho"
 import { lerDadosFiscais } from "@/lib/dados-fiscais"
@@ -67,19 +74,6 @@ function normalizaWhatsapp(phone: string): string {
   if (d.startsWith("55")) return d
   if (d.length === 10 || d.length === 11) return "55" + d
   return d
-}
-
-const ehObjeto = (v: unknown): v is Record<string, unknown> => !!v && typeof v === "object" && !Array.isArray(v)
-
-// Grava metadata.frete.aviso_despacho SEM perder o resto de metadata.frete (id do frete, status da
-// etiqueta, rastreio…): medusaMergeOrderMetadata só junta no nível de cima, então gravar `frete`
-// substitui o objeto inteiro. Por isso o pedido é relido AGORA, logo antes de gravar, e o `frete`
-// relido é espalhado por baixo do aviso.
-async function gravarAvisoDespacho(id: string, aviso: AvisoDespacho): Promise<void> {
-  const relido = await medusaGetOrder(id)
-  const frete = relido.metadata?.frete
-  const freteRelido = ehObjeto(frete) ? frete : {}
-  await medusaMergeOrderMetadata(id, { frete: { ...freteRelido, aviso_despacho: aviso } })
 }
 
 // Pede ao backend que tente mandar o aviso pendente na hora (POST /admin/frete/aviso-despacho/{id};
@@ -327,20 +321,29 @@ export async function POST(
           temTelefone: !!phone,
           agora: new Date().toISOString(),
         })
-        try {
-          await gravarAvisoDespacho(id, aviso)
-          avisoDespacho = aviso
-        } catch (e) {
-          // Só texto fixo + id + status HTTP: a mensagem do erro pode trazer o corpo da resposta do
-          // Medusa (medusaMergeOrderMetadata), que pode ecoar o metadata do pedido (ex.: e-mail do
-          // operador na conferência).
-          const http = /HTTP (\d{3})/.exec((e as Error)?.message ?? "")?.[1]
-          console.error(`[aviso-despacho] pedido ${id}: não foi possível gravar o aviso no pedido${http ? ` (HTTP ${http})` : ""}`)
+        // I-1: uma gravação que responde erro pode ter gravado. `gravarAvisoDespacho` relê o pedido e
+        // diz o que de fato ficou lá — "avise à mão" só quando o aviso com certeza NÃO está no pedido
+        // (senão a cliente receberia a mensagem do operador E a do backend).
+        const gravacao = await gravarAvisoDespacho(id, aviso, { lerPedido: medusaGetOrder, mesclarMetadata: medusaMergeOrderMetadata })
+        if (gravacao.estado === "gravado") {
+          avisoDespacho = gravacao.aviso
+        } else if (gravacao.estado === "ausente") {
           avisoDespachoErro =
             "Não foi possível registrar o aviso à cliente no pedido. Avise a cliente à mão pelo WhatsApp."
+        } else {
+          avisoDespachoErro =
+            "Não deu para confirmar se o aviso à cliente foi registrado. Abra o pedido e confira o aviso antes de avisar a cliente à mão."
         }
         if (avisoDespacho?.status === "pendente") {
           avisoDespacho = (await pedirAvisoAoBackend(id)) ?? avisoDespacho
+        } else if (gravacao.estado === "desconhecido" && aviso.status === "pendente") {
+          // Estado desconhecido: o backend (remetente único, com trava) é quem pode dizer. Se ele achar
+          // o NOSSO aviso, a dúvida acabou; se não achar, o erro de "confira" fica.
+          const doBackend = await pedirAvisoAoBackend(id)
+          if (doBackend && ehONossoAviso(aviso, doBackend)) {
+            avisoDespacho = doBackend
+            avisoDespachoErro = null
+          }
         }
       } else if (body.notify && phone) {
         const nome = order.shipping_address?.first_name || "tudo bem"

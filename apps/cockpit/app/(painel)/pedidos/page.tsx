@@ -8,7 +8,7 @@ import { FiscalDoPedido, type DocumentoFiscal } from "@/components/fiscal-do-ped
 import { NfdDoPedido } from "@/components/nfd-do-pedido"
 import { DadosFiscaisDoPedido } from "@/components/dados-fiscais-do-pedido"
 import { resumoDoPagamento, type PagamentoDoPedido } from "@/lib/pagamento"
-import { AVISO_PAGAMENTO, pagamentoConfirmado } from "@/lib/pagamento-despacho"
+import { AVISO_PAGAMENTO, pagamentoConfirmado, pedeConfirmacaoDePagamento } from "@/lib/pagamento-despacho"
 import { aceiteDaEntregaApp, ehEntregaPorApp } from "@/lib/entrega-app"
 import { avisoPedeAtencao, lerAvisoDespacho, textoDoAviso, type AvisoDespacho, type StatusAviso } from "@/lib/aviso-despacho"
 // `podeDespachar` já é o nome da variável local da conferência das peças nesta tela.
@@ -546,11 +546,13 @@ export default function PedidosPage() {
                 {det.fulfillment_status === "not_fulfilled" && travaDeDespacho(det).pode ? (
                   <section className="border border-eclat-dourado/40 rounded-lg p-4 bg-white/60 flex flex-col gap-3">
                     <h4 className="text-corpo font-medium text-eclat-texto">Despachar pedido</h4>
-                    {!pagamentoOk && (
+                    {/* Só no caminho que a rota trava: a etiqueta (lib/pagamento-despacho). */}
+                    {pedeConfirmacaoDePagamento(det) && (
                       <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-corpo text-red-900 flex flex-col gap-2">
                         <span>
                           {AVISO_PAGAMENTO} Status do pagamento: {badge(PAGAMENTO, det.payment_status)}
                         </span>
+                        <span className="text-meta">Vale só para Gerar etiqueta. Despachar sem etiqueta não depende desta confirmação.</span>
                         <label className="flex items-center gap-2">
                           <input
                             type="checkbox"

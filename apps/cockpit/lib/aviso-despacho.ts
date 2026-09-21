@@ -36,7 +36,9 @@ export type StatusAviso =
   | "enviando"
   | "sem_whatsapp"
   | "incerto"
-export type AvisoDespacho = { status: StatusAviso; desde?: string; desde_envio?: string; em?: string; por?: string }
+// `motivo`: o backend grava `dispensado` sozinho em dois casos, com o motivo em texto fixo
+// (apps/backend/src/lib/aviso-despacho.ts): "etiqueta cancelada" e "coberto pelo aviso de postado".
+export type AvisoDespacho = { status: StatusAviso; desde?: string; desde_envio?: string; em?: string; por?: string; motivo?: string }
 
 const STATUS: ReadonlySet<string> = new Set<StatusAviso>([
   "pendente",
@@ -64,11 +66,15 @@ export function lerAvisoDespacho(metadata: unknown): AvisoDespacho | null {
   const a = metadata.frete.aviso_despacho
   if (!ehObjeto(a) || typeof a.status !== "string" || !STATUS.has(a.status)) return null
   const aviso: AvisoDespacho = { status: a.status as StatusAviso }
-  for (const k of ["desde", "desde_envio", "em", "por"] as const) {
+  for (const k of ["desde", "desde_envio", "em", "por", "motivo"] as const) {
     if (typeof a[k] === "string") aviso[k] = a[k] as string
   }
   return aviso
 }
+
+// Os dois motivos de `dispensado` que o backend grava (mesmo texto de lá, letra por letra).
+const MOTIVO_ETIQUETA_CANCELADA = "etiqueta cancelada"
+const MOTIVO_COBERTO_PELO_POSTADO = "coberto pelo aviso de postado"
 
 // Hora de Brasília, fixa: a operação é no Brasil e o texto não pode depender do fuso do navegador.
 function horaMinuto(iso: string | undefined): string | null {
@@ -89,6 +95,8 @@ export function textoDoAviso(a: AvisoDespacho | null): string | null {
       return hora ? `Aviso à cliente enviado às ${hora}.` : "Aviso à cliente enviado."
     }
     case "dispensado":
+      if (a.motivo === MOTIVO_ETIQUETA_CANCELADA) return "Etiqueta cancelada na SuperFrete: o aviso de despacho não foi enviado."
+      if (a.motivo === MOTIVO_COBERTO_PELO_POSTADO) return "A cliente recebeu o aviso de postado, com o código, no lugar do aviso de despacho."
       return "Aviso à cliente desligado no despacho."
     case "sem_telefone":
       return "Pedido sem telefone: a cliente não será avisada pelo WhatsApp."
@@ -124,4 +132,70 @@ export function lerRespostaDoBackend(dados: unknown): { valida: true; aviso: Avi
   if (dados.aviso_despacho === null) return { valida: true, aviso: null }
   const aviso = lerAvisoDespacho({ frete: dados })
   return aviso ? { valida: true, aviso } : { valida: false }
+}
+
+/**
+ * O aviso lido do pedido é o que NÓS gravamos (ou um estado posterior dele, escrito pelo backend)?
+ *  - `pendente`: vale qualquer estado com o MESMO `desde` — o backend muda o aviso só por mescla
+ *    (`mudarAvisoDespacho`), então `desde` atravessa enviando/enviado/incerto/expirado/dispensado…
+ *    O `desde` é o instante do despacho, com milissegundos: outro aviso com o mesmo valor não existe.
+ *  - `dispensado` / `sem_telefone` (o Cockpit grava com `em`, e o backend não mexe neles): mesmo
+ *    status e mesmo `em`.
+ */
+export function ehONossoAviso(escrito: AvisoDespacho, lido: AvisoDespacho | null): boolean {
+  if (!lido) return false
+  if (escrito.status === "pendente") return !!escrito.desde && lido.desde === escrito.desde
+  return lido.status === escrito.status && !!escrito.em && lido.em === escrito.em
+}
+
+export type ResultadoDaGravacao =
+  | { estado: "gravado"; aviso: AvisoDespacho }
+  | { estado: "ausente" }
+  | { estado: "desconhecido" }
+
+/**
+ * Grava `metadata.frete.aviso_despacho` SEM perder o resto de `metadata.frete` (id do frete, status
+ * da etiqueta, rastreio…): a mescla do Medusa só junta no nível de cima, então gravar `frete`
+ * substitui o objeto inteiro. Por isso o pedido é relido AGORA, logo antes de gravar, e o `frete`
+ * relido é espalhado por baixo do aviso.
+ *
+ * I-1 (revisão final de 2026-09-21): uma gravação pode DAR CERTO e mesmo assim responder erro (a
+ * resposta se perde, estoura o tempo). Dizer ao operador "avise à mão" nesse caso faria a cliente
+ * receber duas mensagens — a dele e a do backend, que acha o `pendente` no banco. Então, no erro, o
+ * pedido é relido:
+ *   - o nosso aviso está lá (ou um estado posterior dele) → "gravado", com o estado REAL;
+ *   - não está → "ausente": aí sim o operador avisa à mão;
+ *   - nem a releitura funcionou → "desconhecido": não dá para afirmar nada.
+ * `deps` são o `medusaGetOrder` e o `medusaMergeOrderMetadata` (lib/medusa.ts), injetados para o teste.
+ */
+export async function gravarAvisoDespacho(
+  id: string,
+  aviso: AvisoDespacho,
+  deps: {
+    lerPedido: (id: string) => Promise<{ metadata?: Record<string, unknown> | null }>
+    mesclarMetadata: (id: string, patch: Record<string, unknown>) => Promise<unknown>
+  }
+): Promise<ResultadoDaGravacao> {
+  try {
+    const frete = (await deps.lerPedido(id)).metadata?.frete
+    await deps.mesclarMetadata(id, { frete: { ...(ehObjeto(frete) ? frete : {}), aviso_despacho: aviso } })
+    return { estado: "gravado", aviso }
+  } catch (e) {
+    // Só texto fixo + id + status HTTP: a mensagem do erro pode trazer o corpo da resposta do Medusa,
+    // que pode ecoar o metadata do pedido (ex.: e-mail do operador na conferência).
+    const http = /HTTP (\d{3})/.exec((e as Error)?.message ?? "")?.[1]
+    console.error(`[aviso-despacho] pedido ${id}: a gravação do aviso no pedido respondeu erro${http ? ` (HTTP ${http})` : ""} — relendo o pedido`)
+  }
+  try {
+    const lido = lerAvisoDespacho((await deps.lerPedido(id)).metadata)
+    if (lido && ehONossoAviso(aviso, lido)) {
+      console.warn(`[aviso-despacho] pedido ${id}: a gravação respondeu erro, mas o aviso está no pedido (${lido.status})`)
+      return { estado: "gravado", aviso: lido }
+    }
+    console.error(`[aviso-despacho] pedido ${id}: o aviso NÃO foi gravado no pedido`)
+    return { estado: "ausente" }
+  } catch {
+    console.error(`[aviso-despacho] pedido ${id}: não deu para reler o pedido — estado do aviso desconhecido`)
+    return { estado: "desconhecido" }
+  }
 }

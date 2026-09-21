@@ -7,6 +7,8 @@
 // operação até o Mercado Pago entrar no ar. Então: aviso + confirmação explícita do operador, no
 // mesmo espírito do motivo digitado quando a conferência de peças é pulada.
 //
+import { ehEntregaPorApp, type PedidoComEnvio } from "./entrega-app"
+
 // A tela e a rota importam daqui para nunca divergirem sobre o que é "pago" nem sobre o texto do
 // aviso.
 
@@ -30,3 +32,13 @@ export function pagamentoConfirmado(payment_status: string | null | undefined): 
 /** Texto do aviso, usado igual na tela e na resposta da rota. */
 export const AVISO_PAGAMENTO =
   "Este pedido não consta como pago. Gerar a etiqueta vai gastar saldo da SuperFrete."
+
+/**
+ * A tela mostra o aviso vermelho e a caixa "Confirmo que o pagamento foi verificado"? Só no caminho
+ * que a rota de despacho de fato trava: a ETIQUETA (`use_carrier` com pagamento não confirmado). O
+ * "Despachar" sem etiqueta não gasta dinheiro e não passa pela guarda; e a entrega por aplicativo não
+ * tem etiqueta (o botão fica desligado), então não há o que confirmar.
+ */
+export function pedeConfirmacaoDePagamento(pedido: PedidoComEnvio & { payment_status?: string | null }): boolean {
+  return !pagamentoConfirmado(pedido.payment_status) && !ehEntregaPorApp(pedido)
+}
