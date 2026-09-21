@@ -1,5 +1,6 @@
 import type { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import { ContainerRegistrationKeys } from "@medusajs/framework/utils"
+import { configDoAmbiente, entraNaLista } from "./filtro"
 
 // Carrinhos abandonados para o Cockpit. SOMENTE LEITURA (invariante 2): o Medusa é a fonte da
 // verdade do comércio e a Admin API padrão (2.15) não tem listagem de carrinhos, então esta rota
@@ -53,7 +54,9 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
     filters: { completed_at: null, updated_at: { $gte: desde, $lte: ate } },
     pagination: { take: 300, skip: 0, order: { updated_at: "DESC" } },
   })
-  const carrinhos = (data ?? []).filter((c: any) => (c.items ?? []).length > 0)
+  // Testes da equipe e o que existia antes do marco zero ficam de fora (ver ./filtro.ts).
+  const cfg = configDoAmbiente()
+  const carrinhos = (data ?? []).filter((c: any) => (c.items ?? []).length > 0 && entraNaLista(c, cfg))
 
   // Pagamento iniciado (Pix gerado / cartão tentado): consulta à parte e tolerante — se o vínculo
   // carrinho→cobrança mudar de nome numa versão futura, a lista continua saindo, só sem este selo.
