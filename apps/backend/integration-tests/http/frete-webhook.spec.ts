@@ -240,7 +240,9 @@ medusaIntegrationTestRunner({
       expect(frete.tracking_url).toBe("https://exemplo.invalid/AA123456789BR")
       expect(frete.status_transportadora).toBe("order.generated")
       expect(frete.eventos["order.generated"]).toEqual(expect.any(String))
-      expect(frete.aviso_despacho).toEqual({ status: "enviado", desde: "2026-09-21T10:00:00.000Z", em: expect.any(String), por: "webhook" })
+      // Task 3: quem marca é `tentarAvisoDeDespacho` (o remetente único), que guarda também quando a
+      // reserva foi feita (`desde_envio`).
+      expect(frete.aviso_despacho).toEqual({ status: "enviado", desde: "2026-09-21T10:00:00.000Z", em: expect.any(String), por: "webhook", desde_envio: expect.any(String) })
       expect(frete.avisos).toBeUndefined()
       // O que já estava no metadata continua lá (superfrete_id, status, e a chave de outro assunto).
       expect(frete.superfrete_id).toBe(ETIQUETA)
@@ -270,11 +272,13 @@ medusaIntegrationTestRunner({
       expect(whatsappEnviados).toHaveLength(0)
     })
 
-    it("order.generated com aviso_despacho pendente e WhatsApp fora do ar → 500, segue pendente; o reenvio manda", async () => {
+    it("order.generated com aviso_despacho pendente e WhatsApp fora do ar → 200 (o job de 5 min é a rede), segue pendente; a próxima tentativa manda", async () => {
       const p = await criarPedido(PENDENTE)
       modoEvolution = "503"
       const r1 = await chamar(corpoDe(p.display_id, "order.generated", COM_CODIGO))
-      expect(r1.status).toBe(500)
+      // Task 3: no order.generated a retentativa da SuperFrete não acrescenta nada (o job tenta de 5 em
+      // 5 min) e competiria com ele — por isso 200 mesmo sem conseguir enviar.
+      expect(r1.status).toBe(200)
       const falhou = await lerFrete(p.id)
       expect(falhou.tracking_number).toBe("AA123456789BR")
       expect(falhou.aviso_despacho.status).toBe("pendente")
@@ -526,6 +530,40 @@ medusaIntegrationTestRunner({
       const r = await chamar(corpoDe(p.display_id, "order.posted"))
       expect(r.status).toBe(500)
       expect((await lerFrete(p.id)).avisos).toBeUndefined()
+    })
+
+    // ---- Task 3, seção D: o order.generated delega o despacho ao remetente único ----
+
+    it("order.generated: erro inesperado do remetente único → 200, rastreio gravado, nada enviado", async () => {
+      const p = await criarPedido(PENDENTE)
+      // A reserva (a gravação que leva "enviando") explode como se o banco tivesse caído no meio.
+      const container = getContainer()
+      const pgReal = container.resolve(ContainerRegistrationKeys.PG_CONNECTION) as unknown as { raw: (...a: unknown[]) => unknown }
+      const pgQueFalhaNaReserva = {
+        raw: (sql: string, bindings?: unknown[]) =>
+          Array.isArray(bindings) && bindings.some((b) => typeof b === "string" && b.includes('"status":"enviando"'))
+            ? Promise.reject(new Error("banco fora do ar"))
+            : pgReal.raw(sql, bindings),
+      }
+      container.register(ContainerRegistrationKeys.PG_CONNECTION, asValue(pgQueFalhaNaReserva))
+      try {
+        const r = await chamar(corpoDe(p.display_id, "order.generated", COM_CODIGO))
+        expect(r.status).toBe(200)
+      } finally {
+        container.register(ContainerRegistrationKeys.PG_CONNECTION, asValue(pgReal))
+      }
+      const frete = await lerFrete(p.id)
+      expect(frete.tracking_number).toBe("AA123456789BR")
+      expect(frete.aviso_despacho.status).toBe("pendente")
+      expect(whatsappEnviados).toHaveLength(0)
+    })
+
+    it("order.generated: número sem WhatsApp → 200 e aviso_despacho vira sem_whatsapp (final)", async () => {
+      const p = await criarPedido(PENDENTE)
+      modoEvolution = "400"
+      const r = await chamar(corpoDe(p.display_id, "order.generated", COM_CODIGO))
+      expect(r.status).toBe(200)
+      expect((await lerFrete(p.id)).aviso_despacho.status).toBe("sem_whatsapp")
     })
 
     // ---- Task 3, seção G: a gravação de estado não é mais "ler, alterar e gravar" ----
