@@ -331,3 +331,14 @@ Sacola, checkout, pedido e menu nasceram com o tema padrão da Medusa (botão pr
 - **Etapa 1 — base (feita):** `src/styles/globals.css` repinta as variáveis do `@medusajs/ui-preset` em `:root:root` (`--fg-interactive`, `--bg-interactive`, `--border-interactive`, `--fg-base/subtle/muted`, `--border-base`, `--bg-*`, sombras de foco) com a paleta `eclat-*`; vale para toda classe `ui-*` do fluxo. `Button` do kit (`modules/common/components/ui`): primário terracota, secundário em contorno, foco terracota; `Input` 44px com borda pedra; radio/checkbox com `accent-eclat-terracota`. O botão da PDP muda junto (usa o mesmo `Button`).
 - **Etapa 2 — sacola (feita):** `cart/components/item-card` (cartão por peça: foto retrato 3:4 via `Thumbnail size="portrait"`, título em serifada, variação, etiqueta Conjunto, quantidade em − / + com alvos de 44px, "Remover", preço da linha e "cada" quando qtd > 1) substitui a tabela que cortava a coluna Total no celular; o `Item` antigo fica só para o resumo do checkout (`type="preview"`). `common/components/nota-atelie` = cartão do resumo (filete duplo terracota, fundo blush, serifada), e `CartTotals` virou linhas com pontilhado, total em serifada, "Impostos" só quando > 0 e frete "calculado no checkout" antes de existir método. No celular, barra fixa no rodapé com total + "Finalizar compra" (safe-area); no desktop o botão fica na nota. Convite de login virou uma linha abaixo das peças; sacola vazia com CTA.
 - **Pendentes:** etapa 3 (checkout e pedido confirmado: etapas numeradas, resumos empilhados, data/país em pt-BR, Pix/cartão em cartões) e etapa 4 (menu lateral: painel terracota escuro, fotos no lugar das letras, sem seletor de país).
+
+## Imagens da vitrine sem custo de otimização (2026-09-21)
+O `next/image` usa loader próprio (`apps/storefront/src/lib/util/image-loader.ts`). Modo padrão **"direto"**: a imagem sai
+direto do Supabase Storage, sem o otimizador da Vercel (cota estourada, 402) e sem o `render/image` do Supabase (cobrado por
+imagem de origem). Para não servir sempre o original, toda foto de produto subida pelos scripts
+(`site/products/<handle>/<nome>-<hash8>.jpg`) tem duas versões leves ao lado: `.w480.jpg` e `.w960.jpg`, geradas por
+`scripts/gerar-variantes-fotos.py` (os scripts de cadastro já chamam no fim; rodar à mão após qualquer troca de foto por
+outra via). O loader escolhe a menor variante que cobre a largura pedida; acima de 960 px, ou para qualquer imagem fora desse
+padrão de nome (upload do Cockpit, banners, categorias), sai o original. **Foto com hash no nome e sem variante aparece
+quebrada** — por isso a regra do nome no loader e no gerador é a mesma (`COM_VARIANTES`). `NEXT_PUBLIC_IMAGENS_MODO=supabase`
+liga o redimensionamento do Supabase; `IMAGENS_OTIMIZADOR=vercel` volta ao otimizador da Vercel.

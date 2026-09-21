@@ -188,6 +188,9 @@ def main():
                 except RuntimeError:
                     api.post("/admin/inventory-items/%s/location-levels/%s" % (iid, sloc["id"]), {"stocked_quantity": qtd})
         print("estoque lançado em \"%s\": %s por cor" % (sloc["name"], ESTOQUE))
+    # versões leves (.w480/.w960) que a vitrine pede no modo "direto" do loader — sem elas a foto nova aparece quebrada
+    import subprocess
+    subprocess.run([sys.executable, "-B", os.path.join(RAIZ, "scripts", "gerar-variantes-fotos.py"), "--apply"], check=False)
     print("link: /br/products/%s" % HANDLE)
 
 

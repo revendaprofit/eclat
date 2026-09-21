@@ -209,6 +209,9 @@ def main():
                 if not existente:
                     api.post("/admin/inventory-items/%s/location-levels/%s" % (iid, sloc["id"]), {"stocked_quantity": ESTOQUE})
     print("estoque: %d pares por variante em \"%s\"\nlink: /br/products/%s" % (ESTOQUE, sloc["name"], HANDLE))
+    # versões leves (.w480/.w960) que a vitrine pede no modo "direto" do loader — sem elas a foto nova aparece quebrada
+    import subprocess
+    subprocess.run([sys.executable, "-B", os.path.join(RAIZ, "scripts", "gerar-variantes-fotos.py"), "--apply"], check=False)
 
 if __name__ == "__main__":
     main()
