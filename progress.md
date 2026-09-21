@@ -1215,8 +1215,8 @@ Pedido da sócia: aba Acessórios com as subcategorias Meias e Óculos de sol. A
      segredo carregou). Apagar o arquivo do segredo, se usou.
   6. **Dono:** só então `SUPERFRETE_AVISO_PELO_BACKEND=true` no Vercel (Cockpit) e redeploy do Cockpit.
   7. **Próximo despacho real com etiqueta:** conferir no pedido o estado do aviso (`pendente` → `enviado`), a
-     mensagem no WhatsApp da cliente com o código, e depois o postado (WhatsApp + e-mail, se o Resend estiver
-     ligado) e o entregue. **Conferir no log do Railway que NÃO aparece "assinatura inválida" depois do primeiro
+     mensagem no WhatsApp da cliente com o código, e depois o postado (WhatsApp + e-mail; o Resend está ativo em produção
+     desde 2026-09-18) e o entregue. **Conferir no log do Railway que NÃO aparece "assinatura inválida" depois do primeiro
      evento real** — se aparecer, o segredo no Railway não é o da criação: `--aplicar --desfazer`, `--aplicar` e
      segredo novo no Railway.
   8. **Reverter:** desligar `SUPERFRETE_AVISO_PELO_BACKEND` no Vercel + redeploy (volta ao aviso imediato pelo
@@ -1231,5 +1231,5 @@ Pedido da sócia: aba Acessórios com as subcategorias Meias e Óculos de sol. A
   do aviso deu certo mas respondeu erro.
 - **Pendências abertas:** (1) formato real da resposta "número sem WhatsApp" da Evolution — conferir no
   primeiro caso real (`sem_whatsapp`); (2) índice parcial em `metadata->'frete'->'aviso_despacho'->>'status'`
-  se o volume de pedidos crescer (o job varre sem índice); (3) e-mail de postado só sai com o Resend ativo
-  (`RESEND_API_KEY` no Railway).
+  se o volume de pedidos crescer (o job varre sem índice); (3) conferir o primeiro e-mail "pedido postado"
+  real (o Resend já está ativo desde 2026-09-18; o template é novo).

@@ -133,7 +133,7 @@ Spec: `docs/superpowers/specs/2026-09-20-avisos-entrega-superfrete-design.md`. A
 | Momento | Canal | Quem manda |
 |---|---|---|
 | Despacho (etiqueta com código de rastreio) | WhatsApp: número do pedido + código + link | remetente único do backend |
-| Postado (`order.posted`) | WhatsApp + e-mail "pedido postado" (e-mail só com o Resend ligado) | rota do webhook |
+| Postado (`order.posted`) | WhatsApp + e-mail "pedido postado" (Resend; sem `RESEND_API_KEY` o e-mail é pulado) | rota do webhook |
 | Entregue (`order.delivered`) | WhatsApp | rota do webhook |
 | `order.created`/`released`/`cancelled` | nada (só registro no pedido / log). O `cancelled` dispensa um aviso de despacho ainda pendente | — |
 
