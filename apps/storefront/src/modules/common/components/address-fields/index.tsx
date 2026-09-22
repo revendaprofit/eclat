@@ -31,6 +31,12 @@ export default function AddressFields({
   const [buscando, setBuscando] = useState(false)
   const [avisoCep, setAvisoCep] = useState<string | null>(null)
   const [avisoMunicipio, setAvisoMunicipio] = useState<string | null>(null)
+  // Toca só depois que a cliente sai do campo — CEP incompleto no meio da digitação é
+  // normal, não é erro. Achado de 2026-09-22: sem limite de dígitos, um CEP digitado
+  // errado com um dígito a mais (10 em vez de 8) passa batido pelo campo, o Medusa
+  // nunca acha uma opção de frete (nem a Entrega por App, nem a SuperFrete — as duas
+  // exigem CEP de 8 dígitos) e a tela de entrega fica travada sem nenhum aviso.
+  const [cepTocado, setCepTocado] = useState(false)
 
   // Guarda de sequência: se a cliente corrigir o CEP antes da resposta anterior
   // voltar, ficam duas buscas em voo. Sem isto, a resposta mais lenta pode chegar
@@ -138,9 +144,14 @@ export default function AddressFields({
     )
   }
 
+  const cepAtual = v("postal_code")
+  const cepIncompleto = cepTocado && cepAtual.length > 0 && !cepValido(cepAtual)
+
   const avisoJuntoDoCep = buscando
     ? "Buscando endereço…"
-    : avisoCep || avisoMunicipio
+    : cepIncompleto
+      ? "CEP incompleto — digite os 8 números."
+      : avisoCep || avisoMunicipio
 
   return (
     <div className="grid grid-cols-2 gap-4">
@@ -148,11 +159,21 @@ export default function AddressFields({
         label="CEP"
         name={n("postal_code")}
         autoComplete="postal-code"
+        inputMode="numeric"
+        maxLength={9}
         value={v("postal_code")}
         onChange={(e) => {
-          onChange(n("postal_code"), e.target.value)
-          void buscarCep(e.target.value)
+          // Nunca deixa passar de 8 dígitos — é o que quebrou o checkout do Otávio em
+          // 2026-09-22 (CEP "326000-0004", 10 dígitos): sem o limite aqui, o navegador
+          // aceita qualquer coisa e só o backend rejeita, em silêncio, sem tela alguma
+          // para a cliente ver o motivo.
+          const digitos = e.target.value.replace(/\D/g, "").slice(0, 8)
+          const formatado =
+            digitos.length > 5 ? `${digitos.slice(0, 5)}-${digitos.slice(5)}` : digitos
+          onChange(n("postal_code"), formatado)
+          void buscarCep(formatado)
         }}
+        onBlur={() => setCepTocado(true)}
         required
         data-testid={testid("input-cep")}
       />
