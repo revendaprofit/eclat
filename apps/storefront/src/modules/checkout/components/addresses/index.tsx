@@ -5,7 +5,7 @@ import compareAddresses from "@lib/util/compare-addresses"
 import { CheckCircleSolid } from "@medusajs/icons"
 import { HttpTypes } from "@medusajs/types"
 import Divider from "@modules/common/components/divider"
-import { Heading, Text } from "@modules/common/components/ui"
+import { clx, Heading, Text } from "@modules/common/components/ui"
 import Spinner from "@modules/common/icons/spinner"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { useActionState } from "react"
@@ -39,16 +39,20 @@ const Addresses = ({
   }
 
   const [message, formAction] = useActionState(setAddresses, null)
+  const temEndereco = !!cart?.shipping_address?.address_1
 
   return (
     <div className="bg-white">
       <div className="flex flex-row items-center justify-between mb-6">
         <Heading
           level="h2"
-          className="flex flex-row text-3xl-regular gap-x-2 items-baseline"
+          className={clx("flex flex-row text-3xl-regular gap-x-2 items-baseline", {
+            // Passo ainda não alcançado (sem contato ou sem endereço): cinza, como Entrega/Pagamento.
+            "opacity-50 pointer-events-none select-none": !isOpen && !temEndereco,
+          })}
         >
           Endereço de entrega
-          {!isOpen && <CheckCircleSolid />}
+          {!isOpen && temEndereco && <CheckCircleSolid />}
         </Heading>
         {!isOpen && cart?.shipping_address?.address_1 && (
           <Text>
