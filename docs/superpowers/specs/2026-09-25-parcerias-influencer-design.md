@@ -33,7 +33,7 @@ AMABILE20, SIBELE20, DOUGLAS20, OTAVIOGO20): esses são 20%, **1 uso no total** 
 | # | Regra | Proposta | Alternativa |
 |---|-------|----------|-------------|
 | R1 | Desconto da cliente | 10% nas peças, frete fora, sem somar com conjunto (maior desconto vence) | — |
-| R2 | Base da comissão | **valor das peças efetivamente pago** (depois do desconto, sem frete). Ex.: peça de R$ 259 → cliente paga R$ 233,10 → comissão R$ 11,66 | 5% sobre o preço cheio (R$ 12,95) |
+| R2 | Base da comissão | **DECIDIDO pelo dono em 2026-09-25: valor das peças efetivamente pago** (depois do desconto, sem frete). Ex.: peça de R$ 259 → cliente paga R$ 233,10 → comissão R$ 11,66 | ~~5% sobre o preço cheio~~ |
 | R3 | Quando a venda conta | pedido **pago** (Pix confirmado ou cartão aprovado) e **não cancelado**. Devolução/estorno tira a venda da conta | contar no fechamento do pedido |
 | R4 | Teto de usos do cupom | **sem teto** (é para os seguidores da parceira). A campanha do Medusa fica sem budget | teto alto, ex. 500, e o Cockpit avisa quando chegar perto |
 | R5 | Um cupom por pedido | **hoje a sacola ACUMULA códigos** (`discount-code/index.tsx` faz `codes.push`): PATY10 + BEMVINDA10 entrariam juntos. Proposta: a vitrine passa a enviar só o último código (troca em vez de somar) — mudança pequena, com teste | trava no backend (gancho recusa carrinho com 2 cupons) |
@@ -133,7 +133,7 @@ O campo de cupom da sacola já existe. Só conferir a R5 (um código por vez).
 | F4 | SOP `architecture/parcerias.md` + `contexto-claude/eclat-parcerias-influencer.md` (quem são, como pagar) | — |
 
 ## 7. Perguntas abertas para o dono
-1. R2: comissão sobre o valor pago (proposta) ou sobre o preço cheio?
+1. ~~R2: comissão sobre o valor pago ou sobre o preço cheio?~~ **Decidido: sobre o valor pago** (dono, 2026-09-25).
 2. R4: cupom sem teto de usos, ou teto com aviso?
 3. R7: fechamento mensal por Pix manual serve? Quem paga: dono ou sócia?
 4. DRE: despesa no mês da venda (proposta) ou no mês do pagamento?
