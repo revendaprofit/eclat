@@ -7,31 +7,23 @@ import NotaAtelie from "@modules/common/components/nota-atelie"
 import DiscountCode from "@modules/checkout/components/discount-code"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import FreteGratisBarra from "@modules/cart/components/frete-gratis-barra"
+import CalcularFrete from "@modules/cart/components/calcular-frete"
 import { convertToLocale } from "@lib/util/money"
 import { HttpTypes } from "@medusajs/types"
 import type { RegrasDeFrete } from "@lib/util/frete"
 import { avaliarMinimo } from "@lib/util/pedido-minimo"
+import { etapaDoCheckout } from "@lib/util/contato-checkout"
 
 type SummaryProps = {
   cart: HttpTypes.StoreCart
   regrasDeFrete: RegrasDeFrete | null
 }
 
-function getCheckoutStep(cart: HttpTypes.StoreCart) {
-  if (!cart?.shipping_address?.address_1 || !cart.email) {
-    return "address"
-  } else if (cart?.shipping_methods?.length === 0) {
-    return "delivery"
-  } else {
-    return "payment"
-  }
-}
-
 const reais = (centavos: number, moeda: string) =>
   convertToLocale({ amount: centavos / 100, currency_code: moeda })
 
 const Summary = ({ cart, regrasDeFrete }: SummaryProps) => {
-  const href = "/checkout?step=" + getCheckoutStep(cart)
+  const href = "/checkout?step=" + etapaDoCheckout(cart)
   // Pedido mínimo (R$ 100 em peças): a cliente é avisada aqui; quem recusa de verdade é o servidor.
   const minimo = avaliarMinimo(cart)
   const aviso = minimo.atingiu ? null : (
@@ -50,6 +42,10 @@ const Summary = ({ cart, regrasDeFrete }: SummaryProps) => {
       <NotaAtelie titulo="Resumo" data-testid="cart-summary">
         <div className="flex flex-col gap-y-5">
           <FreteGratisBarra cart={cart} regras={regrasDeFrete} />
+          <CalcularFrete
+            cepInicial={cart.shipping_address?.postal_code ?? null}
+            itensKey={(cart.items ?? []).map((i) => `${i.variant_id}:${i.quantity}`).join(",")}
+          />
           <DiscountCode cart={cart} />
           <CartTotals totals={cart} />
           {/* No celular o botão vive na barra fixa do rodapé (zona do polegar); aqui só no desktop. */}

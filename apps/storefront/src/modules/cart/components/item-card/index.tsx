@@ -8,6 +8,7 @@ import ErrorMessage from "@modules/checkout/components/error-message"
 import LineItemPrice from "@modules/common/components/line-item-price"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import Thumbnail from "@modules/products/components/thumbnail"
+import { fotoDoItem } from "@lib/util/foto-do-item"
 
 // Peça na sacola, em cartão (redesenho 2026-09): foto em retrato, nome, variação, etiqueta de
 // conjunto, quantidade em − / + (alvos de toque de 44px) e total da linha. Substitui a linha de
@@ -57,7 +58,7 @@ export default function ItemCard({
       aria-busy={ocupado}
     >
       <LocalizedClientLink href={href} className="block w-24 small:w-28 shrink-0" aria-label={item.product_title ?? undefined}>
-        <Thumbnail thumbnail={item.thumbnail} images={item.variant?.product?.images} size="portrait" className="!p-0 !rounded-md !shadow-none" />
+        <Thumbnail thumbnail={fotoDoItem(item)} images={item.variant?.product?.images} size="portrait" className="!p-0 !rounded-md !shadow-none" />
       </LocalizedClientLink>
 
       <div className="flex min-w-0 flex-1 flex-col">

@@ -25,7 +25,8 @@ const Addresses = ({
   const router = useRouter()
   const pathname = usePathname()
 
-  const isOpen = searchParams.get("step") === "address"
+  // Sem contato ainda, o passo aberto é o de Contato (componente acima); o endereço espera.
+  const isOpen = searchParams.get("step") === "address" && !!cart?.email
 
   const { state: sameAsBilling, toggle: toggleSameAsBilling } = useToggleState(
     cart?.shipping_address && cart?.billing_address
@@ -49,7 +50,7 @@ const Addresses = ({
           Endereço de entrega
           {!isOpen && <CheckCircleSolid />}
         </Heading>
-        {!isOpen && cart?.shipping_address && (
+        {!isOpen && cart?.shipping_address?.address_1 && (
           <Text>
             <button
               onClick={handleEdit}
@@ -92,7 +93,7 @@ const Addresses = ({
       ) : (
         <div>
           <div className="text-small-regular">
-            {cart && cart.shipping_address ? (
+            {!cart?.email ? null : cart && cart.shipping_address?.address_1 ? (
               <div className="flex flex-col gap-y-6 small:flex-row small:items-start small:gap-x-8">
                 <div className="flex flex-col gap-y-6 w-full small:flex-row small:items-start small:gap-x-4">
                   <div

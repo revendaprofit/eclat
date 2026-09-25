@@ -17,6 +17,7 @@ export default function RodapeConjunto({
   isAdding,
   erro,
   onAdicionar,
+  pendente = null,
 }: {
   nome: string
   precoCheio: number
@@ -27,7 +28,20 @@ export default function RodapeConjunto({
   isAdding: boolean
   erro: string | null
   onAdicionar: () => void
+  // Peça que ainda está sem tamanho (diagnóstico 2026-09-25): no celular o seletor do short ficava
+  // a ~1.760 px de rolagem e o botão ficava cinza sem dizer por quê. Com pendente, o botão diz o que
+  // falta e rola até a peça.
+  pendente?: { indice: number; titulo: string } | null
 }) {
+  const irParaPendente = () => {
+    if (!pendente) return
+    document
+      .getElementById(`peca-conjunto-${pendente.indice}-selecao`)
+      ?.scrollIntoView({
+        behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+        block: "center",
+      })
+  }
   const conteudo = (
     <>
       <div className="flex items-baseline gap-x-2 flex-wrap">
@@ -49,16 +63,27 @@ export default function RodapeConjunto({
           {erro}
         </p>
       )}
-      <Button
-        onClick={onAdicionar}
-        disabled={disabled || isAdding}
-        isLoading={isAdding}
-        variant="primary"
-        className="w-full h-11"
-        data-testid="adicionar-conjunto-button"
-      >
-        Adicionar o conjunto
-      </Button>
+      {pendente && !isAdding ? (
+        <Button
+          onClick={irParaPendente}
+          variant="secondary"
+          className="w-full h-11"
+          data-testid="escolher-tamanho-conjunto-button"
+        >
+          Escolher tamanho: {pendente.titulo}
+        </Button>
+      ) : (
+        <Button
+          onClick={onAdicionar}
+          disabled={disabled || isAdding}
+          isLoading={isAdding}
+          variant="primary"
+          className="w-full h-11"
+          data-testid="adicionar-conjunto-button"
+        >
+          Adicionar o conjunto
+        </Button>
+      )}
     </>
   )
 

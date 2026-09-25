@@ -3,6 +3,7 @@
 import { sdk } from "@lib/config"
 import { getSiteContent } from "@lib/data/site-content"
 import { lerConfigBoasVindas, TEXTO_ACEITE } from "@lib/util/boas-vindas"
+import { guardarContato } from "@lib/data/cart"
 
 // Cadastro do aviso de boas-vindas: o contato vira lead pelo backend (`POST /store/boas-vindas`,
 // Supabase é do backend) e SÓ DEPOIS o cupom é devolvido — o código não viaja para o navegador
@@ -21,6 +22,9 @@ export async function cadastrarBoasVindas(dados: {
       body: { whatsapp: dados.whatsapp, email: dados.email || undefined, aceite: dados.aceite, texto_aceite: TEXTO_ACEITE, site: dados.site || undefined },
       cache: "no-store",
     })
+    // Liga o contato ao carrinho (atual ou o próximo): sem isto o carrinho de quem deixou o
+    // WhatsApp aparecia como "Só sacola" no Cockpit (caso real de 22/09).
+    await guardarContato({ whatsapp: dados.whatsapp, email: dados.email })
     return { cupom: config.cupom, percentual: config.percentual }
   } catch (e) {
     const msg = (e as { message?: string })?.message

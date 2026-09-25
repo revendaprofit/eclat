@@ -54,7 +54,8 @@ export default function PecaDoConjunto({
     <div className="flex flex-col gap-y-4" data-testid={`peca-conjunto-${index}`}>
       <h3 className="font-serif text-xl text-eclat-grafite">{peca.title}</h3>
       <VariantGallery ssrImages={ssrImages} productTitle={peca.title} />
-      <div className="flex flex-col gap-y-4">
+      {/* âncora do rodapé: "Escolher tamanho do …" rola até aqui (scroll-mt: fica abaixo do cabeçalho fixo) */}
+      <div className="flex flex-col gap-y-4 scroll-mt-40" id={`peca-conjunto-${index}-selecao`}>
         <ColorSelect colorMap={colorMap} disabled={disabled} />
         <SizeSelect showGuide={false} disabled={disabled} />
       </div>

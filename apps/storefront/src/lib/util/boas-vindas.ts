@@ -19,9 +19,12 @@ export function lerConfigBoasVindas(v: unknown): BoasVindasConfig | null {
 
 // Onde o aviso NÃO abre: quem já está comprando não pode ser interrompido (sacola, checkout,
 // pedido), nem quem está na conta. `pathname` vem com o país (`/br/...`).
+// Diagnóstico de 2026-09-25: também não abre na página de produto nem na de conjunto — são o
+// destino dos anúncios, e a cliente chegava e via o aviso de cookies e, logo depois, este aviso
+// cobrindo a peça. O anúncio já traz o cupom no texto; o aviso aparece quando ela navega pela loja.
 export function avisoPermitidoNaRota(pathname: string): boolean {
   const resto = pathname.replace(/^\/[a-z]{2}(?=\/|$)/, "")
-  return !/^\/(cart|checkout|order|account)(\/|$)/.test(resto)
+  return !/^\/(cart|checkout|order|account|products|conjuntos)(\/|$)/.test(resto)
 }
 
 /** Máscara de celular brasileiro enquanto digita: (31) 99999-0000. */

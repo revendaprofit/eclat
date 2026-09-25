@@ -115,7 +115,7 @@ const ShippingAddress = ({
       {customer && (addressesInRegion?.length || 0) > 0 && (
         <Container className="mb-6 flex flex-col gap-y-4 p-5">
           <p className="text-small-regular">
-            {`Hi ${customer.first_name}, do you want to use one of your saved addresses?`}
+            {`Oi, ${customer.first_name}! Quer usar um dos seus endereços salvos?`}
           </p>
           <AddressSelect
             addresses={customer.addresses}
@@ -128,7 +128,17 @@ const ShippingAddress = ({
           />
         </Container>
       )}
-      <div className="grid grid-cols-2 gap-4">
+      <div>
+        <AddressFields
+          prefixo="shipping_address"
+          valores={formData}
+          onChange={(campo, valor) =>
+            setFormData((p) => ({ ...p, [campo]: valor }))
+          }
+          region={cart?.region}
+        />
+      </div>
+      <div className="mt-4 grid grid-cols-2 gap-4">
         <Input
           label="Nome"
           name="shipping_address.first_name"
@@ -146,24 +156,6 @@ const ShippingAddress = ({
           onChange={handleChange}
           required
           data-testid="shipping-last-name-input"
-        />
-        <Input
-          label="Empresa"
-          name="shipping_address.company"
-          value={formData["shipping_address.company"]}
-          onChange={handleChange}
-          autoComplete="organization"
-          data-testid="shipping-company-input"
-        />
-      </div>
-      <div className="mt-4">
-        <AddressFields
-          prefixo="shipping_address"
-          valores={formData}
-          onChange={(campo, valor) =>
-            setFormData((p) => ({ ...p, [campo]: valor }))
-          }
-          region={cart?.region}
         />
       </div>
       <div className="mt-4">
@@ -189,27 +181,6 @@ const ShippingAddress = ({
           checked={checked}
           onChange={onChange}
           data-testid="billing-address-checkbox"
-        />
-      </div>
-      <div className="grid grid-cols-2 gap-4 mb-4">
-        <Input
-          label="E-mail"
-          name="email"
-          type="email"
-          title="Informe um e-mail válido."
-          autoComplete="email"
-          value={formData.email}
-          onChange={handleChange}
-          required
-          data-testid="shipping-email-input"
-        />
-        <Input
-          label="Telefone"
-          name="shipping_address.phone"
-          autoComplete="tel"
-          value={formData["shipping_address.phone"]}
-          onChange={handleChange}
-          data-testid="shipping-phone-input"
         />
       </div>
     </>

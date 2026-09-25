@@ -14,6 +14,11 @@ chama `POST /store/boas-vindas`; com a rota fora do ar o formulário mostra erro
 
 ## Regras de exibição (`apps/storefront/src/lib/util/boas-vindas.ts`)
 - Nunca em `/cart`, `/checkout`, `/order`, `/account` (quem está comprando não é interrompido).
+- Desde 2026-09-25 também nunca em `/products/*` e `/conjuntos/*`: são o destino dos anúncios, e a cliente via o
+  aviso de cookies e logo este aviso cobrindo a peça. O anúncio já traz o cupom no texto.
+- Depois do cadastro, `guardarContato` (`lib/data/cart.ts`) grava o cookie httpOnly `eclat_contato` e preenche
+  e-mail/`metadata.whatsapp` no carrinho atual (ou no próximo, ao ser criado) — o Cockpit deixa de mostrar
+  "Só sacola" para quem deixou o WhatsApp. Ver `architecture/checkout.md`.
 - Abre 8 s depois do carregamento e só depois que a visitante respondeu o aviso de cookies (mesmo canto da tela).
 - Fechou, recusou ou cadastrou → cookie `eclat_bv` por 60 dias; não reaparece.
 - O código do cupom NÃO vai para o navegador antes do cadastro (o componente de servidor passa só o percentual;
