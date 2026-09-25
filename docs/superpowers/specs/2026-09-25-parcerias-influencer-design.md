@@ -12,8 +12,10 @@ Formato de parceria com influencer (definido pelo dono em 2026-09-25):
 
 Primeiro caso real: cupom `PATY10`.
 
-Isso é diferente dos cupons `NOME20` que já existem em produção (ERIKA20, ALANA20, POLLI20, LUANA20, GIGO20,
-AMABILE20, SIBELE20, DOUGLAS20, OTAVIOGO20): esses são 20%, **1 uso no total** e sem comissão. Continuam como estão.
+Os cupons `NOME20` que já existem em produção (ERIKA20, ALANA20, POLLI20, LUANA20, GIGO20, AMABILE20, SIBELE20,
+DOUGLAS20, OTAVIOGO20) são 20%, **1 uso no total** e sem comissão. **Decisão do dono (2026-09-25): ficam como estão,
+mas entram no mesmo controle** — cada um vira uma linha em `parceria` com `desconto_percentual = 20`,
+`comissao_percentual = 0` e o `medusa_campaign_id` do teto de 1 uso, para a tela mostrar quem usou e quando.
 
 ## 2. O que já existe e é reaproveitado
 
@@ -35,10 +37,10 @@ AMABILE20, SIBELE20, DOUGLAS20, OTAVIOGO20): esses são 20%, **1 uso no total** 
 | R1 | Desconto da cliente | 10% nas peças, frete fora, sem somar com conjunto (maior desconto vence) | — |
 | R2 | Base da comissão | **DECIDIDO pelo dono em 2026-09-25: valor das peças efetivamente pago** (depois do desconto, sem frete). Ex.: peça de R$ 259 → cliente paga R$ 233,10 → comissão R$ 11,66 | ~~5% sobre o preço cheio~~ |
 | R3 | Quando a venda conta | pedido **pago** (Pix confirmado ou cartão aprovado) e **não cancelado**. Devolução/estorno tira a venda da conta | contar no fechamento do pedido |
-| R4 | Teto de usos do cupom | **sem teto** (é para os seguidores da parceira). A campanha do Medusa fica sem budget | teto alto, ex. 500, e o Cockpit avisa quando chegar perto |
+| R4 | Teto de usos do cupom | **DECIDIDO (dono, 2026-09-25): sem teto.** A promoção é criada sem campanha (`scripts/cupom.mjs --sem-teto`) | ~~teto alto com aviso~~ |
 | R5 | Um cupom por pedido | **hoje a sacola ACUMULA códigos** (`discount-code/index.tsx` faz `codes.push`): PATY10 + BEMVINDA10 entrariam juntos. Proposta: a vitrine passa a enviar só o último código (troca em vez de somar) — mudança pequena, com teste | trava no backend (gancho recusa carrinho com 2 cupons) |
 | R6 | Cupom de parceria em primeira compra | não é cupom de primeira compra (qualquer cliente usa, quantas vezes quiser) | travar 1 por CPF |
-| R7 | Fechamento do repasse | **mensal**: no início do mês o Cockpit mostra o acumulado do mês anterior por parceira; a operadora paga por Pix e marca "pago" com data e valor | quinzenal / por pedido |
+| R7 | Fechamento do repasse | **DECIDIDO (dono, 2026-09-25): mensal, pago pela ÉCLAT** (dono/sócia) por Pix; no início do mês o Cockpit mostra o acumulado do mês anterior por parceira e a operadora marca "pago" com data e valor | ~~quinzenal / por pedido~~ |
 | R8 | Dinheiro | centavos inteiros (invariante 3). O 5% arredonda por pedido, meio para cima | — |
 | R9 | Padrão de código | `NOME10` (nome da parceira + percentual da cliente), maiúsculas, sem acento | livre |
 
@@ -116,8 +118,8 @@ node scripts/parceria.mjs --codigo PATY10 --nome "Paty" --instagram paty --desco
 
 ### Financeiro / DRE
 Comissão paga entra como despesa: linha "Comissão de parceria" no DRE do período, lida de `parceria_repasse`
-com `status='pago'`. Decisão do dono: no DRE pelo mês em que foi **paga** ou pelo mês da **venda**? Proposta: pela venda
-(compete com a receita), mostrando "a pagar" enquanto o repasse está aberto.
+com `status='pago'`. **Decidido (dono, 2026-09-25): pelo mês da venda** (compete com a receita), mostrando "a pagar" enquanto o repasse
+está aberto e "pago" depois.
 
 ### Vitrine — nada
 O campo de cupom da sacola já existe. Só conferir a R5 (um código por vez).
@@ -127,16 +129,16 @@ O campo de cupom da sacola já existe. Só conferir a R5 (um código por vez).
 | Fase | Entrega | Aceite |
 |------|---------|--------|
 | F0 | Este desenho aprovado + migration aplicada com "pode aplicar" | tabelas existem, RLS ligada |
-| F1 | `scripts/parceria.mjs` + PATY10 criado em produção + linha em `parceria` | carrinho real com PATY10: peça 259 → 233,10; conjunto Aurora 318 → 286,20 (não soma) |
+| F1 | `scripts/parceria.mjs` + linha em `parceria` para PATY10 e para os NOME20 | PATY10 já existe (2026-09-25, `cupom.mjs --sem-teto`), provado em carrinho real: peça 259 → 233,10; conjunto Aurora 318 → 286,20 (não soma) |
 | F2 | Cockpit: lista + ficha + cálculo puro com testes | pedido de teste com PATY10 aparece na ficha com a comissão certa |
 | F3 | Fechar mês / marcar pago + linha no DRE | repasse gravado, DRE mostra a despesa |
 | F4 | SOP `architecture/parcerias.md` + `contexto-claude/eclat-parcerias-influencer.md` (quem são, como pagar) | — |
 
 ## 7. Perguntas abertas para o dono
 1. ~~R2: comissão sobre o valor pago ou sobre o preço cheio?~~ **Decidido: sobre o valor pago** (dono, 2026-09-25).
-2. R4: cupom sem teto de usos, ou teto com aviso?
-3. R7: fechamento mensal por Pix manual serve? Quem paga: dono ou sócia?
-4. DRE: despesa no mês da venda (proposta) ou no mês do pagamento?
-5. Os `NOME20` atuais viram parcerias (20% cliente + comissão?) ou ficam como cupons soltos de 1 uso?
-6. PATY10 precisa sair **antes** do Cockpit ficar pronto? Se sim, F1 pode ir primeiro: o pedido já grava o cupom, e a
-   comissão dela é calculada depois, retroativa, quando a F2 entrar.
+2. ~~R4~~ **Decidido: sem teto.**
+3. ~~R7~~ **Decidido: mensal, a ÉCLAT paga.**
+4. ~~DRE~~ **Decidido: mês da venda.**
+5. ~~NOME20~~ **Decidido: ficam como estão (20%, 1 uso, sem comissão) e entram no controle.**
+6. ~~PATY10 antes?~~ **Decidido: sim.** PATY10 criado em produção em 2026-09-25 com `cupom.mjs --sem-teto`; o pedido
+   já grava o cupom, a comissão entra retroativa quando a F2 existir.

@@ -1233,3 +1233,10 @@ Pedido da sócia: aba Acessórios com as subcategorias Meias e Óculos de sol. A
   primeiro caso real (`sem_whatsapp`); (2) índice parcial em `metadata->'frete'->'aviso_despacho'->>'status'`
   se o volume de pedidos crescer (o job varre sem índice); (3) conferir o primeiro e-mail "pedido postado"
   real (o Resend já está ativo desde 2026-09-18; o template é novo).
+
+## 2026-09-25 — Parcerias com influencers: desenho decidido e PATY10 no ar
+- Formato (decisões do dono, 2026-09-25): cliente 10% nas peças sem acúmulo; parceira 5% sobre o VALOR PAGO (sem frete); cupom SEM teto; repasse mensal pago pela ÉCLAT; despesa no DRE no mês da venda; os NOME20 ficam como estão (20%, 1 uso, sem comissão) mas entram no mesmo controle. Desenho: `docs/superpowers/specs/2026-09-25-parcerias-influencer-design.md` (schema `parceria` + `parceria_repasse`, script `parceria.mjs`, tela Parcerias no Cockpit, fases F0–F4).
+- `scripts/cupom.mjs --sem-teto`: promoção nasce sem campanha (sem limite de usos). PATY10 criado em produção e provado em carrinho real: Solaris 259 → 233,10; conjunto Aurora 318 → 286,20 (não soma com o conjunto; gancho de exclusão aplicado). Os dois carrinhos de teste ficaram abandonados em produção (sem e-mail).
+- O pedido já grava `promotions[].code` (conferido no pedido #21): a venda com cupom de parceria é rastreável desde já; comissão calculável retroativamente quando a tela existir.
+- **Achado**: `modules/checkout/components/discount-code/index.tsx` ACUMULA códigos na sacola (PATY10 + BEMVINDA10 entram juntos). Corrigir na vitrine (R5 do desenho).
+- **Pendente**: F0 migration `0013_parcerias.sql` (com "pode aplicar"), F1 `parceria.mjs` + cadastro de PATY10 e dos NOME20, F2/F3 Cockpit + DRE, F4 SOP `architecture/parcerias.md`. Códigos, ids e números vão em `contexto-claude/eclat-parcerias-influencer.md` (a criar).
