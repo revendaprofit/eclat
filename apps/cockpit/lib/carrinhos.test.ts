@@ -31,6 +31,13 @@ describe("montarCarrinho", () => {
     expect(montarCarrinho({ ...base, customer: { email: "ana@ex.com" } }, AGORA).email).toBe("ana@ex.com")
   })
 
+  it("WhatsApp gravado no carrinho (1º passo do checkout / aviso de boas-vindas) identifica e gera link", () => {
+    const c = montarCarrinho({ ...base, metadata: { whatsapp: "31999990000" } }, AGORA)
+    expect(c.estagio).toBe("identificado")
+    expect(c.telefone).toBe("31999990000")
+    expect(linkWhatsApp(c)).not.toBeNull()
+  })
+
   it("pagamento iniciado vence os outros estágios", () => {
     expect(montarCarrinho({ ...base, email: "ana@ex.com", pagamento_iniciado: "not_paid" }, AGORA).estagio).toBe("pagamento")
   })

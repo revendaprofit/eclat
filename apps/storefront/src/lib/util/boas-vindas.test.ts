@@ -12,10 +12,12 @@ describe("lerConfigBoasVindas", () => {
 })
 
 describe("avisoPermitidoNaRota", () => {
-  it("abre em vitrine/produto/conjunto; nunca em sacola, checkout, pedido ou conta", () => {
+  it("abre na vitrine; nunca em produto, conjunto (destinos do anúncio), sacola, checkout, pedido ou conta", () => {
     expect(avisoPermitidoNaRota("/br")).toBe(true)
-    expect(avisoPermitidoNaRota("/br/conjuntos/conjunto-aurora")).toBe(true)
-    expect(avisoPermitidoNaRota("/br/products/cartola")).toBe(true) // começa com "cart" mas não é a sacola
+    expect(avisoPermitidoNaRota("/br/categories/conjuntos")).toBe(true)
+    expect(avisoPermitidoNaRota("/br/cartola")).toBe(true) // começa com "cart" mas não é a sacola
+    expect(avisoPermitidoNaRota("/br/conjuntos/conjunto-aurora")).toBe(false)
+    expect(avisoPermitidoNaRota("/br/products/macaquinho-solaris")).toBe(false)
     expect(avisoPermitidoNaRota("/br/cart")).toBe(false)
     expect(avisoPermitidoNaRota("/br/checkout")).toBe(false)
     expect(avisoPermitidoNaRota("/br/order/x/confirmed")).toBe(false)

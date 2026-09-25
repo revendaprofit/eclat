@@ -43,6 +43,8 @@ export default function AddressFields({
   // por último e sobrescrever os campos com os dados do CEP errado.
   const sequenciaBusca = useRef(0)
 
+  const paisUnico = region?.countries?.length === 1 ? region.countries[0].iso_2 ?? null : null
+
   const n = (campo: string) => (prefixo ? `${prefixo}.${campo}` : campo)
   const v = (campo: string) => valores[n(campo)] || ""
   // Com "cobrança diferente" aberto, entrega e cobrança renderizam ao mesmo tempo —
@@ -235,15 +237,21 @@ export default function AddressFields({
         data-testid={testid("input-estado")}
       />
 
-      <CountrySelect
-        name={n("country_code")}
-        autoComplete="country"
-        region={region}
-        value={v("country_code")}
-        onChange={(e) => onChange(n("country_code"), e.target.value)}
-        required
-        data-testid={testid("select-pais")}
-      />
+      {/* A loja só entrega no Brasil: com um país só na região, o seletor (que vinha "Brazil", em
+          inglês) sai da tela e o código viaja escondido. */}
+      {paisUnico ? (
+        <input type="hidden" name={n("country_code")} value={v("country_code") || paisUnico} data-testid={testid("select-pais")} />
+      ) : (
+        <CountrySelect
+          name={n("country_code")}
+          autoComplete="country"
+          region={region}
+          value={v("country_code")}
+          onChange={(e) => onChange(n("country_code"), e.target.value)}
+          required
+          data-testid={testid("select-pais")}
+        />
+      )}
 
       {/* A cliente não digita código IBGE — ele vem da busca de CEP. */}
       <input type="hidden" name={n("metadata.municipio_ibge")} value={v("metadata.municipio_ibge")} />

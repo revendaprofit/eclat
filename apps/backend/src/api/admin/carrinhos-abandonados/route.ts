@@ -32,6 +32,7 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
       "created_at",
       "updated_at",
       "completed_at",
+      "metadata",
       "customer_id",
       "customer.first_name",
       "customer.last_name",

@@ -82,6 +82,10 @@ export default function ConjuntoBuilder({
   })
   const totais = totalDoConjunto(precosSelecionados, card.pecas, card.regra)
   const podeAdicionar = produtos.length > 0 && produtos.every((p) => selecoes[p.id]?.completa)
+  // Primeira peça ainda sem tamanho (ou sem estoque no tamanho escolhido): o rodapé aponta para ela.
+  const indicePendente = produtos.findIndex((p) => !selecoes[p.id]?.completa)
+  const pendente =
+    indicePendente >= 0 ? { indice: indicePendente, titulo: card.pecas[indicePendente]?.title ?? produtos[indicePendente]?.title ?? "" } : null
 
   async function handleAdicionar() {
     if (!podeAdicionar || adicionando) return
@@ -157,6 +161,7 @@ export default function ConjuntoBuilder({
         isAdding={adicionando}
         erro={erro}
         onAdicionar={handleAdicionar}
+        pendente={pendente}
       />
     </div>
   )

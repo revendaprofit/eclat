@@ -8,6 +8,8 @@ export type CarrinhoCru = {
   created_at: string
   updated_at: string
   customer_id?: string | null
+  // WhatsApp do 1º passo do checkout ou do aviso de boas-vindas (vitrine, desde 2026-09-25)
+  metadata?: { whatsapp?: unknown } | null
   customer?: { first_name?: string | null; last_name?: string | null; email?: string | null; phone?: string | null } | null
   shipping_address?: { first_name?: string | null; last_name?: string | null; phone?: string | null; city?: string | null; province?: string | null } | null
   items?: {
@@ -56,7 +58,7 @@ export function montarCarrinho(c: CarrinhoCru, agora: number = Date.now()): Carr
   const bruto = itens.reduce((s, i) => s + i.preco * i.quantidade, 0)
   const descontos = (c.items ?? []).reduce((s, i) => s + (i.adjustments ?? []).reduce((a, d) => a + (Number(d?.amount) || 0), 0), 0)
   const email = txt(c.email) ?? txt(c.customer?.email)
-  const telefone = txt(c.shipping_address?.phone) ?? txt(c.customer?.phone)
+  const telefone = txt(c.shipping_address?.phone) ?? txt(c.metadata?.whatsapp) ?? txt(c.customer?.phone)
   const nome =
     [txt(c.shipping_address?.first_name), txt(c.shipping_address?.last_name)].filter(Boolean).join(" ") ||
     [txt(c.customer?.first_name), txt(c.customer?.last_name)].filter(Boolean).join(" ") ||

@@ -13,13 +13,22 @@ import {
   getCacheOptions,
   getCacheTag,
   getCartId,
+  getContatoGuardado,
   removeCartId,
   setCartId,
+  setContatoGuardado,
 } from "./cookies"
 import { getRegion } from "./regions"
 import { getLocale } from "./locale-actions"
 import { retrieveCustomer, updateCustomer } from "./customer"
 import { sinaisDoMeta } from "@modules/analytics/capi"
+import {
+  contatoParaCarrinho,
+  lerContatoDoCookie,
+  serializarContato,
+  validarContato,
+  type Contato,
+} from "@lib/util/contato-checkout"
 
 /**
  * Retrieves a cart by its ID. If no ID is provided, it will use the cart ID from the cookies.
@@ -34,7 +43,7 @@ export async function retrieveCart(cartId?: string, fields?: string) {
   // useEffect de shipping-address/index.tsx apaga número/bairro/IBGE ao reabrir o passo
   // de endereço (achado da revisão final).
   fields ??=
-    "*items, *region, *items.product, *items.variant, *items.thumbnail, *items.metadata, *items.adjustments, +items.total, *promotions, +shipping_methods.name, +shipping_address.metadata, +billing_address.metadata"
+    "*items, *region, *items.product, *items.variant, *items.variant.images, *items.thumbnail, *items.metadata, *items.adjustments, +items.total, *promotions, +shipping_methods.name, +shipping_address.metadata, +billing_address.metadata"
 
   if (!id) {
     return null
@@ -77,8 +86,10 @@ export async function getOrSetCart(countryCode: string) {
 
   if (!cart) {
     const locale = await getLocale()
+    // Quem já deixou o contato (aviso de boas-vindas ou checkout anterior) não vira "Só sacola".
+    const contato = contatoParaCarrinho({}, lerContatoDoCookie(await getContatoGuardado())) ?? {}
     const cartResp = await sdk.store.cart.create(
-      { region_id: region.id, locale: locale || undefined },
+      { region_id: region.id, locale: locale || undefined, ...contato },
       {},
       headers
     )
@@ -360,6 +371,46 @@ export async function submitPromotionForm(
   return r.ok ? undefined : r.mensagem
 }
 
+/**
+ * Contato guardado (aviso de boas-vindas): grava o cookie e, se já existe carrinho, preenche nele o
+ * que falta. Falha aqui nunca derruba quem chamou — o lead já foi salvo.
+ */
+export async function guardarContato(contato: Partial<Contato>) {
+  try {
+    await setContatoGuardado(serializarContato(contato))
+    const cartId = await getCartId()
+    if (!cartId) return
+    const cart = await retrieveCart(cartId, "id,email,metadata")
+    if (!cart) return
+    const mudanca = contatoParaCarrinho(cart, lerContatoDoCookie(serializarContato(contato)))
+    if (mudanca) await updateCart(mudanca as HttpTypes.StoreUpdateCart)
+  } catch {
+    // silencioso de propósito
+  }
+}
+
+/** 1º passo do checkout: só WhatsApp + e-mail, gravados no carrinho na hora (diagnóstico 2026-09-25). */
+export async function salvarContato(_estado: unknown, formData: FormData) {
+  const r = validarContato({
+    whatsapp: String(formData.get("whatsapp") ?? ""),
+    email: String(formData.get("email") ?? ""),
+  })
+  if ("erro" in r) return r.erro
+  try {
+    const cartId = await getCartId()
+    if (!cartId) throw new Error("Sua sacola expirou. Volte à sacola e tente de novo.")
+    const cart = await retrieveCart(cartId, "id,email,metadata")
+    await updateCart({
+      email: r.contato.email,
+      metadata: { ...(cart?.metadata ?? {}), whatsapp: r.contato.whatsapp, ...(await sinaisDoMeta()) },
+    })
+    await setContatoGuardado(serializarContato(r.contato))
+  } catch (e) {
+    return e instanceof Error ? e.message : String(e)
+  }
+  redirect(`/${String(formData.get("country_code") || "br")}/checkout?step=address`)
+}
+
 // TODO: Pass a POJO instead of a form entity here
 export async function setAddresses(currentState: unknown, formData: FormData) {
   try {
@@ -370,6 +421,10 @@ export async function setAddresses(currentState: unknown, formData: FormData) {
     if (!cartId) {
       throw new Error("No existing cart found when setting addresses")
     }
+
+    // Contato vem do 1º passo (salvarContato); o formulário de endereço não pede de novo.
+    const atual = await retrieveCart(undefined, "id,email,metadata")
+    const whatsapp = String((atual?.metadata as Record<string, unknown> | null)?.whatsapp ?? "")
 
     const cpf = normalizarCpf(String(formData.get("cpf") ?? ""))
     if (!cpfValido(cpf)) {
@@ -393,11 +448,11 @@ export async function setAddresses(currentState: unknown, formData: FormData) {
         city: formData.get("shipping_address.city"),
         country_code: formData.get("shipping_address.country_code"),
         province: formData.get("shipping_address.province"),
-        phone: formData.get("shipping_address.phone"),
+        phone: formData.get("shipping_address.phone") || whatsapp,
         metadata: metaEnvio,
       },
-      email: formData.get("email"),
-      metadata: { cpf, ...(await sinaisDoMeta()) },
+      email: formData.get("email") || atual?.email,
+      metadata: { ...(atual?.metadata ?? {}), cpf, ...(await sinaisDoMeta()) },
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- payload montado de FormData (starter do Medusa)
     } as any
 
