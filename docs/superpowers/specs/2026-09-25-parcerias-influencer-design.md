@@ -36,7 +36,7 @@ AMABILE20, SIBELE20, DOUGLAS20, OTAVIOGO20): esses são 20%, **1 uso no total** 
 | R2 | Base da comissão | **valor das peças efetivamente pago** (depois do desconto, sem frete). Ex.: peça de R$ 259 → cliente paga R$ 233,10 → comissão R$ 11,66 | 5% sobre o preço cheio (R$ 12,95) |
 | R3 | Quando a venda conta | pedido **pago** (Pix confirmado ou cartão aprovado) e **não cancelado**. Devolução/estorno tira a venda da conta | contar no fechamento do pedido |
 | R4 | Teto de usos do cupom | **sem teto** (é para os seguidores da parceira). A campanha do Medusa fica sem budget | teto alto, ex. 500, e o Cockpit avisa quando chegar perto |
-| R5 | Um cupom por pedido | a sacola aceita só um código por vez (hoje o campo da vitrine envia a lista inteira; conferir se troca ou acumula) | permitir dois códigos |
+| R5 | Um cupom por pedido | **hoje a sacola ACUMULA códigos** (`discount-code/index.tsx` faz `codes.push`): PATY10 + BEMVINDA10 entrariam juntos. Proposta: a vitrine passa a enviar só o último código (troca em vez de somar) — mudança pequena, com teste | trava no backend (gancho recusa carrinho com 2 cupons) |
 | R6 | Cupom de parceria em primeira compra | não é cupom de primeira compra (qualquer cliente usa, quantas vezes quiser) | travar 1 por CPF |
 | R7 | Fechamento do repasse | **mensal**: no início do mês o Cockpit mostra o acumulado do mês anterior por parceira; a operadora paga por Pix e marca "pago" com data e valor | quinzenal / por pedido |
 | R8 | Dinheiro | centavos inteiros (invariante 3). O 5% arredonda por pedido, meio para cima | — |
