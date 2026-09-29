@@ -198,11 +198,13 @@ Continua fora do banco (decisão de 2026-09-25): chave Pix, CPF e contrato assin
 | P6 | Ranking | números batem com a conta manual de 2 creators |
 | P7 | SOP `architecture/parcerias.md` e contexto compartilhado | — |
 
-## 8. Perguntas abertas para o dono
-1. **C5**: autoriza a exceção à regra do número para o aviso de venda (só para creators que aceitaram)?
-2. **C2/C3**: horário 8h–21h e texto do aviso estão bons? Mostrar o valor da comissão por venda ou só "saiu uma venda"?
-3. **C6**: cookie de 30 dias, com o último link clicado vencendo?
-4. **C8**: a creator escolhe qualquer peça, ou há um teto (ex.: até o Solaris)?
-5. **Nota fiscal da peça de presente** (remessa em bonificação): confirmar com o contador antes da P4.
-6. **Acesso da Camila ao Cockpit**: ela já tem login de operadora? Sem isso, a P0 não fecha.
-7. **Meta**: gerar o token da conta do Instagram da ÉCLAT com permissão de leitura de perfis (Business Discovery) para a P3.
+## 8. Respostas do dono (2026-09-29)
+1. **C5 — DECIDIDO: sim.** Exceção à regra do número autorizada só para creators com `aceite_avisos = true`.
+2. **C2/C3 — DECIDIDO: sim, com valor.** Horário 8h–21h; a mensagem mostra a comissão prevista da venda e o total do mês.
+3. **C6 — DECIDIDO: sim.** Cookie de 30 dias; o último link clicado vence.
+4. **C8 — DECIDIDO: qualquer peça.** Sem teto de preço; uma peça por creator aprovada.
+5. **Nota fiscal da peça de presente — DECIDIDO: não tratar agora.** A P4 registra o envio e o custo sem emitir nota.
+   Pendência a rever com o contador antes de escalar o volume de envios.
+6. **Acesso da Camila ao Cockpit — sim**, ela já tem login de operadora.
+7. **Token da Meta** — instruções enviadas ao dono em 2026-09-29; a P3 espera `META_IG_USER_ID` e `META_IG_TOKEN`
+   no ambiente do Cockpit (Vercel e `.env.local`).
