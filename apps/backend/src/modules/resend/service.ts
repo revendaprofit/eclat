@@ -7,6 +7,7 @@ import type { Logger, NotificationTypes } from "@medusajs/framework/types"
 import type { DadosPedido } from "./dados-pedido"
 import { pedidoConfirmado, type EmailPronto } from "./templates/pedido-confirmado"
 import { pedidoPostado } from "./templates/pedido-postado"
+import { recuperacao } from "./templates/recuperacao"
 
 const API = "https://api.resend.com/emails"
 
@@ -17,6 +18,8 @@ const TEMPLATES: Record<string, (dados: never) => EmailPronto> = {
   "pedido-confirmado": pedidoConfirmado as (dados: never) => EmailPronto,
   // webhook `order.posted` da SuperFrete (src/api/webhooks/superfrete/route.ts)
   "pedido-postado": pedidoPostado as (dados: never) => EmailPronto,
+  // recuperação automática de vendas (src/lib/recuperacao.ts)
+  recuperacao: recuperacao as (dados: never) => EmailPronto,
 }
 
 export default class ResendNotificationService extends AbstractNotificationProviderService {

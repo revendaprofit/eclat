@@ -9,6 +9,7 @@ import {
 } from "../../../lib/supabase"
 import { getMediaBase64 } from "../../../lib/evolution"
 import { ehGatilhoDoClube, responderClube } from "../../../lib/clube"
+import { tratarMensagemRecebida } from "../../../lib/recuperacao"
 
 const MEDIA_TIPOS = new Set(["audio", "imagem", "video", "doc"])
 
@@ -94,7 +95,9 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
       if (!number) continue
 
       const fromMe = Boolean(key.fromMe)
-      const pushName = m.pushName || "Contato WhatsApp"
+      // Em mensagem enviada pela marca, o pushName é o nome da PRÓPRIA marca ("Éclat - Moda
+      // Fitness") — não pode virar o nome do lead nem da conversa.
+      const pushName = (!fromMe && m.pushName) || "Contato WhatsApp"
       const { tipo, texto, media_mime } = parseMessage(m.message)
       const ts = m.messageTimestamp
         ? new Date(Number(m.messageTimestamp) * 1000).toISOString()
@@ -137,6 +140,14 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
         } catch (e) {
           logger.warn(`[clube] resposta automática falhou (${number}): ${(e as Error).message}`)
         }
+      }
+
+      // Recuperação automática: resposta à abordagem agenda a oferta; "sair" encerra; mensagem da
+      // equipe pelo celular tira a automação da conversa (lib/recuperacao.ts).
+      try {
+        await tratarMensagemRecebida({ number, fromMe, texto, log: logger })
+      } catch (e) {
+        logger.warn(`[recuperacao] resposta não tratada: ${(e as Error).message}`)
       }
 
       // Mídia: baixa da Evolution, guarda no Storage e atualiza a mensagem (best-effort).

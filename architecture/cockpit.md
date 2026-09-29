@@ -242,6 +242,7 @@ Tela `/carrinhos` do Cockpit (menu logo abaixo de Pedidos). Só leitura.
   O selo "pagamento iniciado" vem de uma segunda consulta (carrinho → `payment_collection.payment_sessions`), tolerante a falha.
 - **Regra de negócio testada:** `apps/cockpit/lib/carrinhos.ts` (+ `.test.ts`): valor = Σ preço×qtd − ajustes; estágio
   `sacola` (sem contato) / `identificado` (e-mail ou telefone) / `pagamento`; telefone → `wa.me/55…` com mensagem pronta.
-- **Nada é enviado sozinho:** o botão abre o WhatsApp de quem está operando, com o texto para revisar. Automação de
-  recuperação (pela Evolution/Clube) é decisão à parte, por causa das regras de proteção do número.
+- **Esta tela não envia nada:** o botão abre o WhatsApp de quem está operando, com o texto para revisar. O envio
+  automático existe à parte, na tela **Recuperação automática** (`/recuperacao`, `architecture/recuperacao.md`,
+  decisão do dono em 2026-09-29).
 - **Deploy:** precisa do backend no ar (Railway, `railway up`) ANTES do Cockpit; sem a rota, a tela avisa que falta o deploy.

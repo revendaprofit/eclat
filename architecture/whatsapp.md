@@ -45,3 +45,10 @@ Invariante 2: o backend é o orquestrador; quem guarda relacionamento é o Supab
 ## Produção (futuro)
 - Trocar o quick tunnel por túnel/host fixo (deploy do backend ou cloudflared nomeado) — URL estável p/ webhook.
 - Usar um número dedicado da marca (risco de bloqueio do WhatsApp em API não-oficial).
+
+## Exceção decidida pelo dono em 2026-09-29: recuperação automática
+A regra "o robô só responde a quem escreveu" ganhou UMA exceção: a recuperação de vendas
+(`architecture/recuperacao.md`) escreve primeiro para quem deixou o número no site e não comprou. Para
+proteger o número, a primeira mensagem é só um "oi" de pessoa (sem link, sem cupom), com no máximo 15 por dia,
+intervalo sorteado de 15 a 60 min, das 9h às 19h, com "digitando…" antes. A oferta só sai se a pessoa responder.
+Pausa sozinha depois de 3 falhas seguidas. Disparo em massa continua proibido.

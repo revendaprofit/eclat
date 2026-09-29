@@ -33,8 +33,9 @@ chama `POST /store/boas-vindas`; com a rota fora do ar o formulário mostra erro
 - `src/api/store/boas-vindas/route.ts` — idempotente pelo WhatsApp: lead existente não duplica (ganha o e-mail
   se faltava e a nota do aceite); lead novo entra com `origem: "site"`, `interesse: "boas-vindas"`.
 - LGPD: o aceite fica nas `notas` do lead com data/hora ISO e o texto exato que a pessoa viu.
-- **A marca não manda mensagem para quem só deixou o contato**: o lead não dispara robô nenhum. Contato ativo
-  é decisão da operadora, dentro das regras de proteção do número (`architecture/whatsapp.md`).
+- **Contato automático (decisão do dono em 2026-09-29):** quem deixou o contato e não comprou em 2 h entra na
+  recuperação automática (`architecture/recuperacao.md`): e-mail e, no WhatsApp, só um "oi" da persona — a oferta
+  com o cupom vai depois que a pessoa responde. Até 2026-09-28 a regra era "a marca não manda mensagem".
 
 ## Regras de cupom
 - Cupom nunca soma com o Benefício Conjunto: por peça vale o maior desconto (CLAUDE.md, "Regras de venda").
