@@ -6,6 +6,7 @@ import Manifesto from "@modules/home/components/manifesto"
 import FeaturedLines from "@modules/home/components/featured-lines"
 import EditorialBanner from "@modules/home/components/editorial-banner"
 import Benefits from "@modules/home/components/benefits"
+import FaixaCondicoes from "@modules/home/components/faixa-condicoes"
 import Testimonials from "@modules/home/components/testimonials"
 import Faq from "@modules/home/components/faq"
 import Newsletter from "@modules/home/components/newsletter"
@@ -108,18 +109,7 @@ export default async function Home(props: {
       />
 
 
-      {isVisible(manifesto) && <Manifesto content={manifesto} />}
-
-      {/* I7: "Nossas linhas" inverte a regra padrão de `isVisible` (oculto a menos que
-          explicitamente `false`) — aqui só aparece com `visible: true` GRAVADO em
-          site_content.home.lines. "Compre por peça" já cobre a navegação por categoria;
-          sem essa marcação explícita (linha nunca salva, ou salva sem mexer no toggle),
-          o default (HOME_DEFAULTS.lines.visible = false) mantém o bloco oculto. */}
-      {(lines ?? HOME_DEFAULTS.lines).visible === true && <FeaturedLines content={lines} />}
-
-      {/* Conjuntos logo abaixo de "Nossas linhas": a vitrine da coleção repete as mesmas peças dos
-          quadros, então vem depois (pedido da sócia, 2026-09-19). */}
-      {isVisible(banner) && <EditorialBanner content={banner} />}
+      <FaixaCondicoes />
 
       {isVisible(featured) && featuredCollection && (
         <section className="content-container">
@@ -134,6 +124,19 @@ export default async function Home(props: {
           </ul>
         </section>
       )}
+
+      {/* Conjuntos logo depois da grade de produtos (reordenação de 2026-09-30, referência beatco.com.br:
+          produto e preço na primeira rolagem; manifesto e linhas descem). */}
+      {isVisible(banner) && <EditorialBanner content={banner} />}
+
+      {isVisible(manifesto) && <Manifesto content={manifesto} />}
+
+      {/* I7: "Nossas linhas" inverte a regra padrão de `isVisible` (oculto a menos que
+          explicitamente `false`) — aqui só aparece com `visible: true` GRAVADO em
+          site_content.home.lines. "Compre por peça" já cobre a navegação por categoria;
+          sem essa marcação explícita (linha nunca salva, ou salva sem mexer no toggle),
+          o default (HOME_DEFAULTS.lines.visible = false) mantém o bloco oculto. */}
+      {(lines ?? HOME_DEFAULTS.lines).visible === true && <FeaturedLines content={lines} />}
 
       {isVisible(benefits) && <Benefits content={benefits} />}
 

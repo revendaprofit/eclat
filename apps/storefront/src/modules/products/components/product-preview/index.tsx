@@ -1,5 +1,6 @@
 import { HttpTypes } from "@medusajs/types"
 import { getColorMap } from "@lib/data/colors"
+import { getCondicoes } from "@lib/data/condicoes"
 import { buildProductCardData } from "@lib/util/product-card-data"
 import ProductCard from "../product-card"
 
@@ -20,7 +21,7 @@ export default async function ProductPreview({
   // Card por cor: cor (grafia do catálogo) que o card mostra e leva para a PDP via ?cor=.
   cor?: string | null
 }) {
-  const colorMap = await getColorMap()
+  const [colorMap, condicoes] = await Promise.all([getColorMap(), getCondicoes()])
   const countryCode = region.countries?.[0]?.iso_2 ?? "br"
   return (
     <ProductCard
@@ -29,6 +30,7 @@ export default async function ProductPreview({
       listName={listName}
       aspect={isFeatured ? "featured" : "portrait"}
       initialColor={cor ?? null}
+      condicoes={condicoes}
     />
   )
 }

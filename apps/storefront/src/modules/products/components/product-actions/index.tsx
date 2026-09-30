@@ -13,13 +13,14 @@ import MobileActions from "./mobile-actions"
 import { variantToAddToCart } from "@modules/analytics/items"
 import { pushEcommerceEvent } from "@modules/analytics/push"
 import { isVariantAvailable, type StockVariant } from "@lib/util/availability"
-import { findOption, variantLabel } from "@lib/util/pdp-variants"
+import { findOption, rotuloSelecaoIncompleta, variantLabel } from "@lib/util/pdp-variants"
 import type { ColorMap } from "@lib/util/colors"
 import type { MeasureTable } from "@lib/util/measurements"
 import { useProductSelection } from "../product-selection"
 import ColorSelect from "./color-select"
 import SizeSelect from "./size-select"
 import NotifyMe from "../notify-me"
+import type { Condicoes } from "@lib/util/condicoes"
 
 type ProductActionsProps = {
   product: HttpTypes.StoreProduct
@@ -30,9 +31,10 @@ type ProductActionsProps = {
   measureTable?: MeasureTable | null
   // acessório sem tabela de medidas: some o link "Guia de medidas" (a aba não existe na PDP)
   semMedidas?: boolean
+  condicoes?: Condicoes
 }
 
-export default function ProductActions({ product, colorMap, disabled, measureTable, semMedidas }: ProductActionsProps) {
+export default function ProductActions({ product, colorMap, disabled, measureTable, semMedidas, condicoes }: ProductActionsProps) {
   const { selection, setValue, selectedVariant, isComplete } = useProductSelection()
   const [isAdding, setIsAdding] = useState(false)
   const [notifyFor, setNotifyFor] = useState<{ variantId: string; label: string } | null>(null)
@@ -82,7 +84,7 @@ export default function ProductActions({ product, colorMap, disabled, measureTab
           <Divider />
         </div>
       )}
-      <ProductPrice product={product} variant={selectedVariant ?? undefined} />
+      <ProductPrice product={product} variant={selectedVariant ?? undefined} condicoes={condicoes} />
       <Button
         onClick={handleAddToCart}
         disabled={!inStock || !selectedVariant || !!disabled || isAdding || !isComplete}
@@ -91,7 +93,7 @@ export default function ProductActions({ product, colorMap, disabled, measureTab
         isLoading={isAdding}
         data-testid="add-product-button"
       >
-        {!selectedVariant || !isComplete ? "Escolha as opções" : !inStock ? "Esgotado" : "Adicionar à sacola"}
+        {!selectedVariant || !isComplete ? rotuloSelecaoIncompleta(product, selection) : !inStock ? "Esgotado" : "Adicionar à sacola"}
       </Button>
       {notify && <NotifyMe key={notify.variantId} productId={product.handle ?? product.id} variantLabel={notify.label} />}
       <MobileActions

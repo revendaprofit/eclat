@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest"
 import type { HttpTypes } from "@medusajs/types"
 import {
   colorValues, corDaGaleria, findOption, firstAvailableVariantId, galeriaDaCor, imagesForColor, initialSelection,
-  isCompleteSelection, selectedColor, sizeAvailability, sizeValues, variantFor, variantLabel,
+  isCompleteSelection, rotuloSelecaoIncompleta, selectedColor, sizeAvailability, sizeValues, variantFor, variantLabel,
 } from "./pdp-variants"
 
 const OPTS = [
@@ -99,8 +99,9 @@ describe("initialSelection", () => {
   })
   it("preferência de tamanho só entra se disponível na cor escolhida", () => {
     expect(initialSelection(P, { variantId: "v4", prefSize: "M" })).toEqual({ o_t: "P", o_c: "Licor" }) // v_id manda
-    expect(initialSelection({ ...P, variants: P.variants } as any, { prefSize: "M" })).toEqual({ o_t: "M" })   // sem cor: M existe em alguma cor
-    expect(initialSelection(P, { prefSize: "G" })).toEqual({})                                                 // G esgotado em todas
+    // sem cor na entrada: marca a cor da galeria (Verde, tem foto e estoque) e o M dela está disponível
+    expect(initialSelection({ ...P, variants: P.variants } as any, { prefSize: "M" })).toEqual({ o_t: "M", o_c: "Verde Exercito" })
+    expect(initialSelection(P, { prefSize: "G" })).toEqual({ o_c: "Verde Exercito" })                          // G esgotado: só a cor
   })
   it("produto de variante única: pré-seleciona os valores da variante mesmo sem opção Cor", () => {
     const opts = [{ id: "o_x", title: "Tamanho", values: [{ value: "Único" }] }]
@@ -130,8 +131,13 @@ describe("initialSelection com cor da URL do card", () => {
   it("cor reconhecida pré-seleciona com a grafia do catálogo; nunca o tamanho", () => {
     expect(initialSelection(P, { color: "verde exército" })).toEqual({ o_c: "Verde Exercito" })
   })
-  it("cor não reconhecida não pré-seleciona nada", () => {
-    expect(initialSelection(P, { color: "Azul" })).toEqual({})
+  it("cor não reconhecida cai na cor padrão da galeria (a cor que as fotos já mostram)", () => {
+    expect(initialSelection(P, { color: "Azul" })).toEqual({ o_c: "Verde Exercito" })
+  })
+  it("sem ?cor=: cor da galeria; se ela estiver esgotada, a primeira cor com estoque", () => {
+    expect(initialSelection(P, {})).toEqual({ o_c: "Verde Exercito" })
+    const verdeEsgotado = { ...P, variants: (P.variants as any[]).map((x) => (x.options[1].value === "Verde Exercito" ? { ...x, inventory_quantity: 0 } : x)) } as any
+    expect(initialSelection(verdeEsgotado, {})).toEqual({ o_c: "Licor" })
   })
   it("variantId vence sobre color", () => {
     expect(initialSelection(P, { variantId: "v4", color: "Verde Exercito" })).toEqual({ o_t: "P", o_c: "Licor" })
@@ -162,5 +168,13 @@ describe("imagesForColor: produto de uma cor so", () => {
   })
   it("com mais de uma cor, a foto da variante da cor continua valendo", () => {
     expect(imagesForColor(P, "Verde Exercito").map((i) => i.url)).toEqual(["v1a.jpg"])
+  })
+})
+
+describe("rotuloSelecaoIncompleta", () => {
+  it("com a cor marcada pede o tamanho; sem nada, o genérico", () => {
+    expect(rotuloSelecaoIncompleta(P, { o_c: "Licor" })).toBe("Escolha o tamanho")
+    expect(rotuloSelecaoIncompleta(P, {})).toBe("Escolha as opções")
+    expect(rotuloSelecaoIncompleta(P, { o_t: "P" })).toBe("Escolha as opções")
   })
 })

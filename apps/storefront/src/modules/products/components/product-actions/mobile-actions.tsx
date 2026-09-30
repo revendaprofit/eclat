@@ -12,7 +12,7 @@ import ColorSelect from "./color-select"
 import SizeSelect from "./size-select"
 import { HttpTypes } from "@medusajs/types"
 import { isSimpleProduct } from "@lib/util/product"
-import { variantLabel } from "@lib/util/pdp-variants"
+import { rotuloSelecaoIncompleta, variantLabel } from "@lib/util/pdp-variants"
 import type { ColorMap } from "@lib/util/colors"
 import type { MeasureTable } from "@lib/util/measurements"
 
@@ -135,7 +135,7 @@ const MobileActions: React.FC<MobileActionsProps> = ({
                 data-testid="mobile-cart-button"
               >
                 {!variant
-                  ? "Escolha as opções"
+                  ? rotuloSelecaoIncompleta(product, options)
                   : !inStock
                   ? "Esgotado"
                   : "Adicionar à sacola"}

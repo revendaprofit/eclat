@@ -3,6 +3,7 @@ import { HttpTypes } from "@medusajs/types"
 import ProductActions from "@modules/products/components/product-actions"
 import type { ColorMap } from "@lib/util/colors"
 import type { MeasureTable } from "@lib/util/measurements"
+import type { Condicoes } from "@lib/util/condicoes"
 
 /**
  * Fetches real time pricing for a product and renders the product actions component.
@@ -13,12 +14,14 @@ export default async function ProductActionsWrapper({
   colorMap,
   measureTable,
   semMedidas,
+  condicoes,
 }: {
   id: string
   region: HttpTypes.StoreRegion
   colorMap: ColorMap
   measureTable?: MeasureTable | null
   semMedidas?: boolean
+  condicoes?: Condicoes
 }) {
   const product = await listProducts({
     queryParams: { id: [id] },
@@ -29,5 +32,5 @@ export default async function ProductActionsWrapper({
     return null
   }
 
-  return <ProductActions product={product} region={region} colorMap={colorMap} measureTable={measureTable} semMedidas={semMedidas} />
+  return <ProductActions product={product} region={region} colorMap={colorMap} measureTable={measureTable} semMedidas={semMedidas} condicoes={condicoes} />
 }

@@ -7,6 +7,7 @@ import Track, { type EcommercePayload } from "@modules/analytics/track"
 import { ConjuntoJsonLd } from "@modules/seo/jsonld"
 import ConjuntoBuilder from "@modules/conjuntos/components/conjunto-builder"
 import InformacoesConjunto from "@modules/conjuntos/components/informacoes-conjunto"
+import { getCondicoes } from "@lib/data/condicoes"
 import { formatarReais, fraseEconomia } from "@lib/util/conjuntos"
 
 // `view_item` do conjunto (spec §7.2): os "items" são as PEÇAS, não uma linha "conjunto" — não
@@ -39,7 +40,7 @@ export default async function ConjuntoTemplate({
   countryCode: string
   corInicial?: string | null
 }) {
-  const colorMap = await getColorMap()
+  const [colorMap, condicoes] = await Promise.all([getColorMap(), getCondicoes()])
   const base = getBaseURL()
   const url = `${base}/${countryCode}/conjuntos/${card.handle}`
   const economia = fraseEconomia(card.precoCheio, card.precoComBeneficio)
@@ -76,7 +77,7 @@ export default async function ConjuntoTemplate({
         <strong className="text-eclat-terracota font-medium">{formatarReais(card.precoComBeneficio)}</strong>
         {economia ? ` — ${economia.charAt(0).toLowerCase()}${economia.slice(1)}.` : "."}
       </p>
-      <ConjuntoBuilder card={card} produtos={produtos} colorMap={colorMap} countryCode={countryCode} corInicial={corInicial} />
+      <ConjuntoBuilder card={card} produtos={produtos} colorMap={colorMap} countryCode={countryCode} corInicial={corInicial} condicoes={condicoes} />
       <InformacoesConjunto produtos={produtos} />
     </div>
   )

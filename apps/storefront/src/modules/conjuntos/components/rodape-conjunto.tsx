@@ -2,6 +2,7 @@
 
 import { Button } from "@modules/common/components/ui"
 import { descricaoRegra, formatarReais, fraseEconomia, type RegraStore } from "@lib/util/conjuntos"
+import { CONDICOES_PADRAO, fraseCartao, linhaParcelamento, linhaPix, reais, type Condicoes } from "@lib/util/condicoes"
 
 // Rodapé de compra do conjunto (spec §7.2, ruling 4): preço cheio riscado + total com benefício,
 // texto da regra e o botão "Adicionar o conjunto". Fixo (rodapé) no mobile, painel lateral
@@ -18,6 +19,7 @@ export default function RodapeConjunto({
   erro,
   onAdicionar,
   pendente = null,
+  condicoes = CONDICOES_PADRAO,
 }: {
   nome: string
   precoCheio: number
@@ -32,7 +34,11 @@ export default function RodapeConjunto({
   // a ~1.760 px de rolagem e o botão ficava cinza sem dizer por quê. Com pendente, o botão diz o que
   // falta e rola até a peça.
   pendente?: { indice: number; titulo: string } | null
+  // Condições da loja (site_content "condicoes"): parcela e Pix só aparecem quando ligadas.
+  condicoes?: Condicoes
 }) {
+  const pix = linhaPix(precoComBeneficio, condicoes, (c) => reais(c))
+  const parcela = linhaParcelamento(precoComBeneficio, condicoes, (c) => reais(c))
   const irParaPendente = () => {
     if (!pendente) return
     document
@@ -55,8 +61,13 @@ export default function RodapeConjunto({
       <p className="text-xs text-eclat-grafite/70" data-testid="rodape-conjunto-regra">
         {fraseEconomia(precoCheio, precoComBeneficio) ?? descricaoRegra(regra, numPecas)}
       </p>
+      {pix && (
+        <p className="text-sm font-medium text-eclat-terracota" data-testid="rodape-conjunto-pix">
+          {pix}
+        </p>
+      )}
       <p className="text-[11px] text-eclat-grafite/60" data-testid="rodape-conjunto-pagamento">
-        Pix ou cartão em até 4x · envio para todo o Brasil
+        {parcela ? `ou ${parcela}` : fraseCartao(condicoes)} · envio para todo o Brasil
       </p>
       {erro && (
         <p className="text-xs text-red-600" role="alert" data-testid="rodape-conjunto-erro">

@@ -2,13 +2,17 @@ import { clx } from "@modules/common/components/ui"
 
 import { getProductPrice } from "@lib/util/get-product-price"
 import { HttpTypes } from "@medusajs/types"
+import { emCentavos, linhaParcelamento, linhaPix, reais, type Condicoes } from "@lib/util/condicoes"
 
 export default function ProductPrice({
   product,
   variant,
+  condicoes,
 }: {
   product: HttpTypes.StoreProduct
   variant?: HttpTypes.StoreProductVariant
+  // Condições da loja (site_content "condicoes"): cada linha só aparece com a condição ligada.
+  condicoes?: Condicoes
 }) {
   const { cheapestPrice, variantPrice } = getProductPrice({
     product,
@@ -29,6 +33,10 @@ export default function ProductPrice({
     return <div className="block w-32 h-9 bg-gray-100 animate-pulse" />
   }
 
+  const centavos = emCentavos(selectedPrice.calculated_price_number ?? 0)
+  const parcela = condicoes ? linhaParcelamento(centavos, condicoes, (c) => reais(c)) : null
+  const pix = condicoes ? linhaPix(centavos, condicoes, (c) => reais(c)) : null
+
   return (
     <div className="flex flex-col text-ui-fg-base">
       <span
@@ -44,6 +52,16 @@ export default function ProductPrice({
           {selectedPrice.calculated_price}
         </span>
       </span>
+      {parcela && (
+        <span className="text-sm text-ui-fg-subtle" data-testid="product-parcela">
+          ou {parcela}
+        </span>
+      )}
+      {pix && (
+        <span className="text-sm font-medium text-eclat-terracota" data-testid="product-pix">
+          {pix}
+        </span>
+      )}
       {selectedPrice.price_type === "sale" && (
         <>
           <p>

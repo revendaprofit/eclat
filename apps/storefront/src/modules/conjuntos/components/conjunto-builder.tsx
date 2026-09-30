@@ -13,6 +13,7 @@ import { adicionarEmSequencia, mensagemFalha, type ProgressoAdicao, type SlotAdi
 import { ProductSelectionProvider } from "@modules/products/components/product-selection"
 import PecaDoConjunto, { type SelecaoPeca } from "./peca-do-conjunto"
 import RodapeConjunto from "./rodape-conjunto"
+import type { Condicoes } from "@lib/util/condicoes"
 
 type VariantComPreco = HttpTypes.StoreProductVariant & {
   calculated_price?: { calculated_amount?: number | null } | null
@@ -42,12 +43,14 @@ export default function ConjuntoBuilder({
   colorMap,
   countryCode,
   corInicial = null,
+  condicoes,
 }: {
   card: CardConjunto
   produtos: HttpTypes.StoreProduct[]
   colorMap: ColorMap
   countryCode: string
   corInicial?: string | null
+  condicoes?: Condicoes
 }) {
   const [selecoes, setSelecoes] = useState<Record<string, SelecaoPeca>>({})
   const [adicionando, setAdicionando] = useState(false)
@@ -162,6 +165,7 @@ export default function ConjuntoBuilder({
         erro={erro}
         onAdicionar={handleAdicionar}
         pendente={pendente}
+        condicoes={condicoes}
       />
     </div>
   )

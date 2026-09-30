@@ -125,6 +125,15 @@ export function initialSelection(product: Product, opts: { variantId?: string | 
     const hit = cores.find((c) => norm(c) === norm(opts.color!))
     if (hit) sel[corOpt.id] = hit
   }
+  // Sem cor válida na entrada (menu, busca, link sem ?cor=): marca a cor que a galeria já está
+  // mostrando, para os tamanhos aparecerem de cara (relatório beatco.com.br, 2026-09-30). Se essa cor
+  // estiver esgotada, a primeira cor com estoque. O tamanho continua sendo escolha da cliente.
+  if (corOpt && !sel[corOpt.id] && cores.length > 1) {
+    const temEstoque = (c: string) => variantsOf(product, c).some((v) => isVariantAvailable(v as StockVariant))
+    const daGaleria = corDaGaleria(product, null)
+    const padrao = daGaleria && temEstoque(daGaleria) ? daGaleria : cores.find(temEstoque) ?? daGaleria
+    if (padrao) sel[corOpt.id] = padrao
+  }
   const tamOpt = findOption(product, "Tamanho")
   if (tamOpt && opts.prefSize) {
     const cor = corOpt ? sel[corOpt.id] ?? null : null
@@ -139,4 +148,14 @@ export function variantLabel(product: Product, variant: HttpTypes.StoreProductVa
   const cor = optionValue(product.options, variant as StockVariant, "Cor")
   const tam = optionValue(product.options, variant as StockVariant, "Tamanho")
   return [cor, tam].filter(Boolean).join(" / ")
+}
+
+// Texto do botão enquanto a seleção está incompleta: com a cor já marcada (padrão desde 2026-09-30),
+// falta só o tamanho — o botão diz isso em vez do genérico "Escolha as opções".
+export function rotuloSelecaoIncompleta(product: Product, sel: Selection): string {
+  const tam = findOption(product, "Tamanho")
+  const cor = findOption(product, "Cor")
+  const faltaTamanho = !!tam && !sel[tam.id]
+  const faltaCor = !!cor && !sel[cor.id]
+  return faltaTamanho && !faltaCor ? "Escolha o tamanho" : "Escolha as opções"
 }

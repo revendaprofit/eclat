@@ -10,6 +10,7 @@ import Badge from "./badge"
 import QuickAdd from "./quick-add"
 import Swatches from "./swatches"
 import { pushEcommerceEvent } from "@modules/analytics/push"
+import { emCentavos, linhaParcelamento, linhaPix, reais, type Condicoes } from "@lib/util/condicoes"
 
 function pushSelectItem(data: ProductCardData, listName?: string, cor?: string) {
   pushEcommerceEvent("select_item", { item_list_name: listName, items: [{ item_id: data.id, item_name: data.title, price: data.price?.calculated_price_number, ...(cor ? { item_variant: cor } : {}) }] })
@@ -26,7 +27,7 @@ function indiceInicial(data: ProductCardData, initialColor: string | null): numb
   return Math.max(0, data.colors.findIndex((c) => c.available))
 }
 
-export default function ProductCard({ data, countryCode, listName, aspect = "portrait", initialColor = null }: { data: ProductCardData; countryCode: string; listName?: string; aspect?: "portrait" | "featured"; initialColor?: string | null }) {
+export default function ProductCard({ data, countryCode, listName, aspect = "portrait", initialColor = null, condicoes }: { data: ProductCardData; countryCode: string; listName?: string; aspect?: "portrait" | "featured"; initialColor?: string | null; condicoes?: Condicoes }) {
   const [active, setActive] = useState(() => indiceInicial(data, initialColor))
   const [sheet, setSheet] = useState(false)
   const color = data.colors[active] ?? data.colors[0]
@@ -37,6 +38,11 @@ export default function ProductCard({ data, countryCode, listName, aspect = "por
   const href = `/products/${data.handle}${color?.name ? `?cor=${encodeURIComponent(color.name)}` : ""}`
   // Proporção do card: portrait (9/16) no grid, featured (11/14) no destaque da home
   const aspectClass = aspect === "featured" ? "aspect-[11/14]" : "aspect-[9/16]"
+  // Parcela e Pix abaixo do preço (referência beatco.com.br). Cada linha só existe com a condição
+  // ligada em site_content "condicoes" — ver lib/util/condicoes.ts.
+  const precoCentavos = data.price ? emCentavos(data.price.calculated_price_number) : 0
+  const parcela = condicoes ? linhaParcelamento(precoCentavos, condicoes, (c) => reais(c)) : null
+  const pix = condicoes ? linhaPix(precoCentavos, condicoes, (c) => reais(c)) : null
 
   // A faixa de adição rápida fica FORA do link (botão dentro de <a> é HTML inválido):
   // o link cobre a imagem por baixo, a faixa fica por cima como irmã posicionada.
@@ -68,6 +74,12 @@ export default function ProductCard({ data, countryCode, listName, aspect = "por
             {data.price && <Text className={clx("text-ui-fg-muted", data.price.price_type === "sale" && "text-ui-fg-interactive")} data-testid="price">{data.price.calculated_price}</Text>}
           </div>
         </div>
+        {(parcela || pix) && (
+          <div className="mt-1 text-xs leading-snug text-ui-fg-muted" data-testid="card-condicoes">
+            {pix && <p className="text-eclat-terracota font-medium">{pix}</p>}
+            {parcela && <p>{parcela}</p>}
+          </div>
+        )}
         {data.formaConjunto && (
           <p className="mt-1 text-[10px] uppercase tracking-[0.15em] text-eclat-dourado" data-testid="forma-conjunto-badge">
             Forma conjunto

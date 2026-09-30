@@ -10,6 +10,8 @@ import Footer from "@modules/layout/templates/footer"
 import BoasVindas from "@modules/layout/components/boas-vindas"
 import Nav from "@modules/layout/templates/nav"
 import PrevendaBar from "@modules/layout/components/prevenda-bar"
+import BarraCondicoes from "@modules/layout/components/barra-condicoes"
+import { getPrevenda } from "@lib/data/prevenda"
 import Wizard from "@modules/personalization/wizard"
 import FreeShippingPriceNudge from "@modules/shipping/components/free-shipping-price-nudge"
 import ToastHost from "@modules/common/components/toast"
@@ -22,7 +24,7 @@ export default async function PageLayout(props: { children: React.ReactNode }) {
   const customer = await retrieveCustomer()
   const cart = await retrieveCart()
   // "Minha ÉCLAT" desligada no Cockpit → sem wizard (o menu e a PDP também escondem a função).
-  const [personas, personasLigadas] = await Promise.all([listPersonas(), personasAtivas()])
+  const [personas, personasLigadas, prevenda] = await Promise.all([listPersonas(), personasAtivas(), getPrevenda()])
   let shippingOptions: StoreCartShippingOption[] = []
 
   if (cart) {
@@ -33,7 +35,8 @@ export default async function PageLayout(props: { children: React.ReactNode }) {
 
   return (
     <>
-      <PrevendaBar />
+      {/* Na pré-venda a barra fala dos envios; com a loja aberta, das condições de compra. */}
+      {prevenda.ativa ? <PrevendaBar /> : <BarraCondicoes />}
       <Nav />
       {customer && cart && (
         <CartMismatchBanner customer={customer} cart={cart} />

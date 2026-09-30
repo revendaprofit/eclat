@@ -12,7 +12,8 @@ import { notFound } from "next/navigation"
 import { HttpTypes } from "@medusajs/types"
 
 import ProductActionsWrapper from "./product-actions-wrapper"
-import GuaranteeSeals from "@modules/products/components/guarantee-seals"
+import CompraSegura from "@modules/products/components/compra-segura"
+import { getCondicoesDaLoja } from "@lib/data/condicoes"
 import QuemE from "@modules/products/components/quem-e"
 import PdpTestimonials from "@modules/products/components/pdp-testimonials"
 import ProductFaq from "@modules/products/components/product-faq"
@@ -72,7 +73,7 @@ const ProductTemplate = async ({
   const measureTable = categoryPath ? pickMeasurements(measureMap, categoryPath) : null
   // acessório sem tabela própria: PDP sem aba de medidas e sem link "Guia de medidas"
   const semMedidas = hidesMeasures(categoryPath, measureTable)
-  const prevenda = await getPrevenda()
+  const [prevenda, loja] = await Promise.all([getPrevenda(), getCondicoesDaLoja()])
 
   const productUrl = `${getBaseURL()}/${countryCode}/products/${product.handle}`
 
@@ -128,7 +129,7 @@ const ProductTemplate = async ({
               <ProductDescription product={product} />
               <ProductTabs product={product} measureTable={measureTable} semMedidas={semMedidas} />
             </div>
-            <div className="order-3 flex flex-col w-full py-8 gap-y-12 small:py-0 small:col-start-3 small:row-start-1 small:row-span-2 small:self-start small:sticky small:top-48">
+            <div className="order-3 flex flex-col w-full py-8 gap-y-8 small:py-0 small:col-start-3 small:row-start-1 small:row-span-2 small:self-start small:sticky small:top-48">
               <ProductOnboardingCta />
               <Suspense
                 fallback={
@@ -139,6 +140,7 @@ const ProductTemplate = async ({
                     colorMap={colorMap}
                     measureTable={measureTable}
                     semMedidas={semMedidas}
+                    condicoes={loja.condicoes}
                   />
                 }
               >
@@ -148,9 +150,13 @@ const ProductTemplate = async ({
                   colorMap={colorMap}
                   measureTable={measureTable}
                   semMedidas={semMedidas}
+                  condicoes={loja.condicoes}
                 />
               </Suspense>
               <PrevendaNota />
+              {/* Condições coladas no botão (referência beatco.com.br, 2026-09-30). Substituem os selos
+                  que ficavam antes da FAQ desde 2026-09-13. */}
+              {!prevenda.ativa && <CompraSegura loja={loja} />}
               {allOut && <NotifyMe productId={product.handle ?? product.id} />}
             </div>
           </div>
@@ -167,9 +173,7 @@ const ProductTemplate = async ({
       <PdpTestimonials />
       <section className="bg-eclat-blush-claro/60 py-12 small:py-16" data-testid="pdp-faixa-faq">
         <div className="content-container max-w-4xl flex flex-col gap-y-10">
-          {/* Selos (7 dias / 30 dias / WhatsApp) saíram da coluna de compra para logo antes da FAQ
-              (pedido do dono, 2026-09-13). */}
-          <GuaranteeSeals />
+          {/* Selos 7/30 dias/WhatsApp: agora no bloco "Compra segura", junto do botão (2026-09-30). */}
           <ProductFaq product={product} />
         </div>
       </section>

@@ -7,6 +7,9 @@ import { avisoPermitidoNaRota, CHAVE_CUPOM_GUARDADO, COOKIE_AVISO, mascararCelul
 import { pushEcommerceEvent } from "@modules/analytics/push"
 
 const ESPERA_MS = 8000 // deixa a visitante ver a página antes; nunca abre em cima do aviso de cookies
+// Desde 2026-09-30 o cupom também está na barra do topo, então o aviso não precisa interromper quem
+// acabou de chegar: só abre depois de a visitante rolar uma tela inteira (sinal de interesse).
+const rolouUmaTela = () => window.scrollY >= window.innerHeight
 const temCookie = (nome: string) => document.cookie.split("; ").some((c) => c.startsWith(`${nome}=`))
 const marcarVisto = () => {
   document.cookie = `${COOKIE_AVISO}=1;path=/;max-age=${60 * 60 * 24 * 60}`
@@ -29,7 +32,7 @@ export default function AvisoBoasVindas({ percentual }: { percentual: number }) 
     let id: ReturnType<typeof setTimeout>
     const tentar = () => {
       // o aviso de cookies ocupa o mesmo canto da tela: espera a escolha antes de abrir
-      if (!temCookie("eclat_consent")) id = setTimeout(tentar, 2000)
+      if (!temCookie("eclat_consent") || !rolouUmaTela()) id = setTimeout(tentar, 2000)
       else setAberto(true)
     }
     id = setTimeout(tentar, ESPERA_MS)
