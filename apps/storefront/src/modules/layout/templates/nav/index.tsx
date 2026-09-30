@@ -10,6 +10,7 @@ import LocalizedClientLink from "@modules/common/components/localized-client-lin
 import CartButton from "@modules/layout/components/cart-button"
 import SideMenu from "@modules/layout/components/side-menu"
 import SearchBar from "@modules/layout/components/search-bar"
+import { LupaCelular, PainelBusca } from "@modules/layout/components/busca-celular"
 import CategoryBar from "@modules/layout/components/category-bar"
 import PersonalizeTrigger from "@modules/personalization/trigger"
 import { personasAtivas } from "@lib/data/personas"
@@ -49,7 +50,8 @@ export default async function Nav() {
             </LocalizedClientLink>
           </div>
 
-          <div className="flex items-center gap-x-6 h-full flex-1 basis-0 justify-end">
+          <div className="flex items-center gap-x-4 small:gap-x-6 h-full flex-1 basis-0 justify-end">
+            <LupaCelular />
             <div className="hidden small:flex items-center gap-x-6 h-full">
               {personasLigadas && <PersonalizeTrigger />}
               <LocalizedClientLink
@@ -92,10 +94,8 @@ export default async function Nav() {
       {/* categorias expostas (desktop) */}
       <CategoryBar nav={nav} />
 
-      {/* busca em destaque (mobile) */}
-      <div className="small:hidden bg-eclat-luz border-b border-ui-border-base px-4 py-3">
-        <SearchBar variant="full" nav={nav} />
-      </div>
+      {/* busca no celular: abre pela lupa do cabeçalho (antes ficava sempre aberta — 2026-09-30) */}
+      <PainelBusca nav={nav} />
     </div>
   )
 }

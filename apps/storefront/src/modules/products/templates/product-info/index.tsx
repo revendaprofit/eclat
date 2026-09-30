@@ -1,6 +1,7 @@
 import { HttpTypes } from "@medusajs/types"
 import { Heading, Text } from "@modules/common/components/ui"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
+import { lerFuncionalidades } from "@lib/util/funcionalidades"
 
 type ProductInfoProps = {
   product: HttpTypes.StoreProduct
@@ -25,15 +26,34 @@ export const ProductHeader = ({ product }: ProductInfoProps) => (
   </div>
 )
 
-export const ProductDescription = ({ product }: ProductInfoProps) =>
-  product.description ? (
-    <Text
-      className="text-medium text-ui-fg-subtle whitespace-pre-line lg:max-w-[500px] mx-auto w-full"
-      data-testid="product-description"
-    >
-      {product.description}
-    </Text>
-  ) : null
+export const ProductDescription = ({ product }: ProductInfoProps) => {
+  const funcionalidades = lerFuncionalidades(product.metadata?.funcionalidades)
+  if (!product.description && funcionalidades.length === 0) return null
+  return (
+    <div className="flex flex-col gap-y-5 lg:max-w-[500px] mx-auto w-full">
+      {product.description && (
+        <Text className="text-medium text-ui-fg-subtle whitespace-pre-line" data-testid="product-description">
+          {product.description}
+        </Text>
+      )}
+      {funcionalidades.length > 0 && (
+        <div data-testid="product-funcionalidades">
+          <h2 className="text-xs uppercase tracking-widest text-eclat-terracota mb-3">Funcionalidades</h2>
+          <ul className="flex flex-col gap-y-2 text-sm text-ui-fg-subtle">
+            {funcionalidades.map((f) => (
+              <li key={f.titulo} className="flex gap-x-2">
+                <span aria-hidden className="text-eclat-terracota">•</span>
+                <span>
+                  <strong className="font-semibold text-eclat-grafite">{f.titulo}:</strong> {f.texto}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  )
+}
 
 const ProductInfo = ({ product }: ProductInfoProps) => (
   <div className="flex flex-col gap-y-4">

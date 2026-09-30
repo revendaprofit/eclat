@@ -15,8 +15,9 @@ type ImageGalleryProps = {
   video?: VideoSource | null
 }
 
-// Carrossel horizontal com scroll-snap em todas as telas (pedido do dono, 2026-09-13): uma foto
-// por vez, setas ‹ › no desktop (no mobile arrasta) e bolinhas embaixo — sem biblioteca.
+// Celular: carrossel horizontal com scroll-snap, uma foto por vez, arrastando, bolinhas embaixo.
+// Desktop (desde 2026-09-30, referência beatco.com.br): todas as fotos em grade de 2 colunas descendo
+// pela página, sem setas — a mesma lista de itens, só o CSS muda (sem duplicar imagens no HTML).
 // Item de vídeo (quando `video` existe) entra como slide no meio das fotos —
 // buildGalleryItems decide a posição (2º item, LCP intacto no hero).
 const ImageGallery = ({ images, productTitle, productHandle, video }: ImageGalleryProps) => {
@@ -93,7 +94,7 @@ const ImageGallery = ({ images, productTitle, productHandle, video }: ImageGalle
     <div className="flex flex-col relative">
       <div
         ref={trackRef}
-        className="flex w-full gap-x-2 overflow-x-auto snap-x snap-mandatory no-scrollbar"
+        className="flex w-full gap-x-2 overflow-x-auto snap-x snap-mandatory no-scrollbar small:grid small:grid-cols-2 small:gap-2 small:overflow-visible small:snap-none"
         data-testid="image-gallery"
       >
         {items.map((item) => {
@@ -101,7 +102,7 @@ const ImageGallery = ({ images, productTitle, productHandle, video }: ImageGalle
             return (
               <Container
                 key={item.id}
-                className="relative aspect-[2/3] w-full shrink-0 snap-center overflow-hidden bg-ui-bg-subtle"
+                className="relative aspect-[2/3] w-full shrink-0 snap-center overflow-hidden bg-ui-bg-subtle small:shrink"
                 id={item.id}
                 data-testid="product-video"
               >
@@ -112,41 +113,19 @@ const ImageGallery = ({ images, productTitle, productHandle, video }: ImageGalle
           fotoN += 1
           const alt = productTitle ? `${productTitle} — use.ÉCLAT — foto ${fotoN}` : `Foto ${fotoN} do produto`
           return (
-            <Container key={item.id} className="relative aspect-[2/3] w-full shrink-0 snap-center overflow-hidden bg-ui-bg-subtle" id={item.id}>
+            <Container key={item.id} className="relative aspect-[2/3] w-full shrink-0 snap-center overflow-hidden bg-ui-bg-subtle small:shrink" id={item.id}>
               {/* follow-up #2: `priority` conta FOTOS, não itens da galeria — o slide de vídeo não
                   pode consumir uma das duas prioridades. Sem vídeo o HTML sai idêntico ao de antes
                   desta feature (as 2 primeiras imagens com fetchpriority=high). */}
               <Image src={item.url} priority={fotoN <= 2} className="absolute inset-0 rounded-rounded" alt={alt} fill quality={80}
-                sizes="(max-width: 576px) 100vw, (max-width: 1024px) 60vw, 800px" style={{ objectFit: "cover" }} />
+                sizes="(max-width: 1024px) 100vw, 480px" style={{ objectFit: "cover" }} />
             </Container>
           )
         })}
       </div>
       {items.length > 1 && (
         <>
-          {/* Setas só no desktop (no mobile arrasta). Sobre a foto, centradas na vertical;
-              desabilitadas nas pontas. */}
-          <button
-            type="button"
-            onClick={() => irPara(active - 1)}
-            disabled={active === 0}
-            aria-label="Foto anterior"
-            className="hidden small:flex absolute left-3 top-1/2 -translate-y-1/2 z-10 h-10 w-10 items-center justify-center rounded-full bg-white/85 text-eclat-grafite shadow hover:bg-white disabled:opacity-30 disabled:cursor-default"
-            data-testid="gallery-prev"
-          >
-            <span aria-hidden className="text-xl leading-none">‹</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => irPara(active + 1)}
-            disabled={active === items.length - 1}
-            aria-label="Próxima foto"
-            className="hidden small:flex absolute right-3 top-1/2 -translate-y-1/2 z-10 h-10 w-10 items-center justify-center rounded-full bg-white/85 text-eclat-grafite shadow hover:bg-white disabled:opacity-30 disabled:cursor-default"
-            data-testid="gallery-next"
-          >
-            <span aria-hidden className="text-xl leading-none">›</span>
-          </button>
-          <div className="flex justify-center gap-1.5 w-full mt-3" role="tablist" aria-label="Fotos do produto">
+          <div className="flex small:hidden justify-center gap-1.5 w-full mt-3" role="tablist" aria-label="Fotos do produto">
             {items.map((it, i) => (
               <button
                 key={it.id}

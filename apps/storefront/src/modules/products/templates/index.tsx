@@ -105,17 +105,15 @@ const ProductTemplate = async ({
         <div className="content-container relative">
           {/* Só o JSON-LD do caminho (SEO); o breadcrumb visível saiu da PDP a pedido do dono (2026-09-13). */}
           <BreadcrumbJsonLd items={breadcrumbItems.map((c) => ({ name: c.name, url: `${getBaseURL()}/${countryCode}${c.href}` }))} />
-          {/* Mobile (coluna única, pela `order`): cabeçalho → fotos → compra → descrição + abas.
-              Desktop (grid 300 | fotos | 300): cabeçalho e descrição na coluna da esquerda
-              (linhas 1 e 2), fotos no centro, compra à direita (fixa) — pedido do dono, 2026-09-13. */}
+          {/* Desde 2026-09-30 (referência beatco.com.br): fotos primeiro. Celular: galeria → título →
+              compra → descrição, em coluna. Desktop: fotos grandes em grade de 2 colunas à esquerda e,
+              à direita, título, compra, "Compra segura", descrição e abas (antes: 3 colunas com uma foto
+              por vez no meio e o título acima da foto no celular). */}
           <div
-            className="flex flex-col small:grid small:grid-cols-[300px_minmax(0,1fr)_300px] small:gap-x-8 small:items-start py-6"
+            className="flex flex-col small:grid small:grid-cols-[minmax(0,1fr)_380px] medium:grid-cols-[minmax(0,1fr)_420px] small:gap-x-10 small:items-start py-6"
             data-testid="product-container"
           >
-            <div className="order-1 w-full pt-2 pb-4 small:p-0 small:col-start-1 small:row-start-1">
-              <ProductHeader product={product} />
-            </div>
-            <div className="order-2 block w-full relative small:col-start-2 small:row-start-1 small:row-span-2">
+            <div className="block w-full relative">
               <PersonaGallery
                 images={images}
                 personaMedia={personaMedia}
@@ -125,39 +123,42 @@ const ProductTemplate = async ({
                 videos={videos}
               />
             </div>
-            <div className="order-4 flex flex-col w-full py-8 gap-y-6 small:py-6 small:col-start-1 small:row-start-2">
-              <ProductDescription product={product} />
-              <ProductTabs product={product} measureTable={measureTable} semMedidas={semMedidas} />
-            </div>
-            <div className="order-3 flex flex-col w-full py-8 gap-y-8 small:py-0 small:col-start-3 small:row-start-1 small:row-span-2 small:self-start small:sticky small:top-48">
-              <ProductOnboardingCta />
-              <Suspense
-                fallback={
-                  <ProductActions
-                    disabled={true}
-                    product={product}
+            <div className="flex flex-col w-full pt-6 small:pt-0 gap-y-8">
+              <ProductHeader product={product} />
+              <div className="flex flex-col gap-y-8">
+                <ProductOnboardingCta />
+                <Suspense
+                  fallback={
+                    <ProductActions
+                      disabled={true}
+                      product={product}
+                      region={region}
+                      colorMap={colorMap}
+                      measureTable={measureTable}
+                      semMedidas={semMedidas}
+                      condicoes={loja.condicoes}
+                    />
+                  }
+                >
+                  <ProductActionsWrapper
+                    id={product.id}
                     region={region}
                     colorMap={colorMap}
                     measureTable={measureTable}
                     semMedidas={semMedidas}
                     condicoes={loja.condicoes}
                   />
-                }
-              >
-                <ProductActionsWrapper
-                  id={product.id}
-                  region={region}
-                  colorMap={colorMap}
-                  measureTable={measureTable}
-                  semMedidas={semMedidas}
-                  condicoes={loja.condicoes}
-                />
-              </Suspense>
-              <PrevendaNota />
-              {/* Condições coladas no botão (referência beatco.com.br, 2026-09-30). Substituem os selos
-                  que ficavam antes da FAQ desde 2026-09-13. */}
-              {!prevenda.ativa && <CompraSegura loja={loja} />}
-              {allOut && <NotifyMe productId={product.handle ?? product.id} />}
+                </Suspense>
+                <PrevendaNota />
+                {allOut && <NotifyMe productId={product.handle ?? product.id} />}
+                {/* Condições coladas no botão (referência beatco.com.br, 2026-09-30). Substituem os selos
+                    que ficavam antes da FAQ desde 2026-09-13. */}
+                {!prevenda.ativa && <CompraSegura loja={loja} />}
+              </div>
+              <div className="flex flex-col gap-y-6 pb-4">
+                <ProductDescription product={product} />
+                <ProductTabs product={product} measureTable={measureTable} semMedidas={semMedidas} />
+              </div>
             </div>
           </div>
           {/* Achado #5: o bloco busca conjuntos no backend — sem `Suspense` a PDP inteira espera
