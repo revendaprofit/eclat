@@ -1,5 +1,5 @@
 import { HOME_DEFAULTS, Testimonials as TestimonialsType } from "@modules/home/content"
-import { depoimentosVisiveis } from "@lib/util/depoimentos"
+import { depoimentosReais } from "@lib/util/depoimentos"
 
 // Provas sociais (depoimentos) — editável no Cockpit (site_content home.testimonials).
 export default function Testimonials({
@@ -7,13 +7,10 @@ export default function Testimonials({
 }: {
   content?: TestimonialsType | null
 }) {
-  // Mesma regra da PDP: ocultos ate 13/10/2026 (sem vendas ainda), voltam sozinhos.
-  if (!depoimentosVisiveis()) return null
+  // Só depoimento real gravado no Cockpit; sem nenhum, a seção não aparece.
+  const items = depoimentosReais(content?.items)
+  if (items.length === 0) return null
   const heading = content?.heading ?? HOME_DEFAULTS.testimonials.heading
-  const items =
-    content?.items && content.items.length > 0
-      ? content.items
-      : HOME_DEFAULTS.testimonials.items!
 
   return (
     <section className="content-container py-16 small:py-24">
@@ -34,11 +31,10 @@ export default function Testimonials({
             <p className="text-base text-eclat-grafite/85 leading-relaxed flex-1">
               {t.quote}
             </p>
-            {t.author && (
-              <p className="uppercase tracking-widest text-xs text-eclat-grafite/60">
-                {t.author}
-              </p>
-            )}
+            <p className="uppercase tracking-widest text-xs text-eclat-grafite/60">
+              {t.author}
+              {t.origem && <span className="normal-case tracking-normal"> · via {t.origem}</span>}
+            </p>
           </li>
         ))}
       </ul>

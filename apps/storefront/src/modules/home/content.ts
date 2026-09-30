@@ -45,7 +45,7 @@ export type Newsletter = {
   button_label?: string
 }
 
-export type Testimonial = { quote: string; author?: string }
+export type Testimonial = { quote: string; author?: string; origem?: string } // origem: "WhatsApp", "Instagram"
 export type Testimonials = {
   visible?: boolean
   heading?: string
@@ -105,23 +105,9 @@ export const HOME_DEFAULTS = {
     button_label: "Quero receber",
   } as Newsletter,
   testimonials: {
-    heading: "Quem veste, ama",
-    items: [
-      {
-        quote:
-          "O caimento é perfeito, valoriza demais. Não tiro mais.",
-        author: "Marina S.",
-      },
-      {
-        quote:
-          "Tecido premium de verdade — sustenta no treino e fica linda na rua.",
-        author: "Camila R.",
-      },
-      {
-        quote: "Entrega rápida e a peça é ainda mais bonita pessoalmente.",
-        author: "Juliana P.",
-      },
-    ],
+    // Sem itens de propósito: depoimento só de cliente real, gravado no Cockpit (lib/util/depoimentos.ts).
+    heading: "O que elas dizem",
+    items: [],
   } as Testimonials,
   faq: {
     heading: "Perguntas frequentes",
