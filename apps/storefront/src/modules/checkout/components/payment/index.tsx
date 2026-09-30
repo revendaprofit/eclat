@@ -1,7 +1,7 @@
 "use client"
 import { RadioGroup } from "@headlessui/react"
 import { isManual, isStripeLike, paymentInfoMap } from "@lib/constants"
-import { initiatePaymentSession } from "@lib/data/cart"
+import { ajustarDescontoPix, initiatePaymentSession } from "@lib/data/cart"
 import {
   ehMetodoMercadoPago,
   isMercadoPago,
@@ -11,6 +11,7 @@ import {
   valorDaOpcao,
 } from "@lib/util/pagamento-mercadopago"
 import { CheckCircleSolid, CreditCard } from "@medusajs/icons"
+import { CONDICOES_PADRAO, frasePix, type Condicoes } from "@lib/util/condicoes"
 import ErrorMessage from "@modules/checkout/components/error-message"
 import PaymentContainer, {
   StripeCardContainer,
@@ -30,9 +31,12 @@ import { useCallback, useEffect, useState } from "react"
 const Payment = ({
   cart,
   availablePaymentMethods,
+  condicoes = CONDICOES_PADRAO,
 }: {
   cart: HttpTypes.StoreCart
   availablePaymentMethods: { id: string }[]
+  // Condições da loja (site_content "condicoes"): rótulo "5% de desconto" no Pix e "até 4x" no cartão.
+  condicoes?: Condicoes
 }) => {
   const activeSession = cart.payment_collection?.payment_sessions?.find(
     (paymentSession) => paymentSession.status === "pending"
@@ -107,6 +111,9 @@ const Payment = ({
       const { metodo } = lerOpcao(selectedPaymentMethod)
       if (metodo) {
         // Meio do Mercado Pago: nada é cobrado nem criado aqui — só segue para a revisão.
+        // Desconto do Pix entra (Pix) ou sai (cartão) do carrinho agora, para a revisão, o valor do
+        // Pix e o Brick do cartão já nascerem com o total certo.
+        await ajustarDescontoPix(metodo === "pix" ? "pix" : "cartao")
         const params = new URLSearchParams(searchParams)
         params.set("step", "review")
         params.set("metodo", metodo)
@@ -188,7 +195,14 @@ const Payment = ({
                       <PaymentContainer
                         paymentInfoMap={{
                           [paymentMethod.id]: {
-                            title: tituloDoMetodo(paymentMethod.metodo),
+                            title:
+                              paymentMethod.metodo === "pix"
+                                ? condicoes.pix_percentual > 0
+                                  ? `Pix — ${frasePix(condicoes)}`
+                                  : tituloDoMetodo("pix")
+                                : condicoes.parcelas > 1
+                                  ? `${tituloDoMetodo(paymentMethod.metodo)} — até ${condicoes.parcelas}x${condicoes.sem_juros ? " sem juros" : ""}`
+                                  : tituloDoMetodo(paymentMethod.metodo),
                             icon: <CreditCard />,
                           },
                         }}

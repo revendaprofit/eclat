@@ -3,6 +3,7 @@ import { StepResponse } from "@medusajs/framework/workflows-sdk"
 import { Modules } from "@medusajs/framework/utils"
 import { avaliarCarrinho, marcarContexto, type CupomPercentual } from "../../modules/beneficio-conjunto/avaliar-carrinho"
 import { CODIGO_PREFIXO, MARCA_LIVRE } from "../../modules/beneficio-conjunto/utils/promocao"
+import { ehCodigoPix } from "../../modules/desconto-pix/regra"
 
 // Benefício Conjunto (spec §6.1): marca as unidades do carrinho antes de o motor de promoções avaliar.
 // Nunca lança — carrinho sem benefício é melhor que carrinho quebrado.
@@ -11,14 +12,15 @@ import { CODIGO_PREFIXO, MARCA_LIVRE } from "../../modules/beneficio-conjunto/ut
  * Cupons PERCENTUAIS de itens aplicados (ou entrando agora) no carrinho, para a regra do maior
  * desconto por peça (decisão do dono, 2026-09-20). Fora da conta: as promoções automáticas do
  * próprio Benefício Conjunto (prefixo `CONJUNTO-`) e cupons de valor fixo — ver
- * `descontoDoCupomNaUnidade`. Falha aqui devolve lista vazia: sem comparação, valem as marcas
+ * `descontoDoCupomNaUnidade` — e o desconto do Pix (PIX5), que SOMA com conjunto e cupom
+ * (dono, 2026-09-30) e por isso não entra na disputa do maior desconto. Falha aqui devolve lista vazia: sem comparação, valem as marcas
  * de sempre.
  */
 async function cupomPercentualDoCarrinho(container: any, cart: any, promoCodes: string[]): Promise<CupomPercentual[]> {
   const codigos = [
     ...((cart?.promotions ?? []) as { code?: string | null }[]).map((p) => p?.code),
     ...(promoCodes ?? []),
-  ].filter((c): c is string => !!c && !c.startsWith(CODIGO_PREFIXO))
+  ].filter((c): c is string => !!c && !c.startsWith(CODIGO_PREFIXO) && !ehCodigoPix(c))
   if (!codigos.length) return []
   try {
     const promocoes: any[] = await container.resolve(Modules.PROMOTION).listPromotions(

@@ -3,6 +3,7 @@ import type { HttpTypes } from "@medusajs/types"
 import {
   agruparDescontos,
   avisoCupom,
+  codigosParaPagamento,
   cuponsVisiveis,
   ehAjusteConjunto,
   etiquetaDoPedido,
@@ -52,11 +53,17 @@ describe("agruparDescontos", () => {
       { id: "a", quantity: 1, adjustments: [{ code: "CONJUNTO-creg_1", amount: 18.9 }] },
       { id: "b", quantity: 1, adjustments: [{ code: "CUPOM10", amount: 25.9 }, { code: "CONJUNTO-creg_1", amount: 0.1 }] },
     ])
-    expect(g).toEqual({ conjunto: 1900, cupom: 2590 })
+    expect(g).toEqual({ conjunto: 1900, cupom: 2590, pix: 0 })
+  })
+  it("desconto do Pix (PIX5) tem grupo próprio, fora de Cupom", () => {
+    const g = agruparDescontos([
+      { id: "a", quantity: 1, adjustments: [{ code: "BEMVINDA10", amount: 29.9 }, { code: "PIX5", amount: 13.46 }] },
+    ])
+    expect(g).toEqual({ conjunto: 0, cupom: 2990, pix: 1346 })
   })
   it("tolera itens sem ajustes e lista vazia", () => {
-    expect(agruparDescontos([{ id: "a", quantity: 1 }])).toEqual({ conjunto: 0, cupom: 0 })
-    expect(agruparDescontos(undefined)).toEqual({ conjunto: 0, cupom: 0 })
+    expect(agruparDescontos([{ id: "a", quantity: 1 }])).toEqual({ conjunto: 0, cupom: 0, pix: 0 })
+    expect(agruparDescontos(undefined)).toEqual({ conjunto: 0, cupom: 0, pix: 0 })
   })
 })
 
@@ -149,5 +156,19 @@ describe("montarGatilhos / tituloGatilho / slotGatilho", () => {
   })
   it("slotGatilho gera conjunto_slot próprio e único por instante", () => {
     expect(slotGatilho("tops", 123)).toEqual({ conjunto_slot: "gatilho-tops#0#123" })
+  })
+})
+
+describe("codigosParaPagamento", () => {
+  const promos = [{ code: "CONJUNTO-creg_1" }, { code: "BEMVINDA10" }]
+  it("Pix escolhido: acrescenta PIX5 aos cupons (conjunto automático fica de fora da lista)", () => {
+    expect(codigosParaPagamento(promos, true)).toEqual({ codigos: ["BEMVINDA10", "PIX5"], mudou: true })
+  })
+  it("cartão: tira o PIX5 e mantém os cupons", () => {
+    expect(codigosParaPagamento([...promos, { code: "PIX5" }], false)).toEqual({ codigos: ["BEMVINDA10"], mudou: true })
+  })
+  it("já está como deveria: não grava", () => {
+    expect(codigosParaPagamento([...promos, { code: "PIX5" }], true).mudou).toBe(false)
+    expect(codigosParaPagamento(promos, false).mudou).toBe(false)
   })
 })

@@ -12,7 +12,7 @@ import { isMercadoPago } from "@lib/util/pagamento-mercadopago"
 import { HttpTypes } from "@medusajs/types"
 import { revalidateTag } from "next/cache"
 import { redirect } from "next/navigation"
-import { initiatePaymentSession, retrieveCart } from "./cart"
+import { ajustarDescontoPix, initiatePaymentSession, retrieveCart } from "./cart"
 import { getAuthHeaders, getCacheTag, removeCartId } from "./cookies"
 import { listCartPaymentMethods } from "./payment"
 
@@ -81,6 +81,8 @@ async function concluirSePago(cartId: string): Promise<void> {
 
 /** Gera (ou regenera) o código Pix para o valor atual do carrinho. */
 export async function gerarPix(deviceId?: string): Promise<{ erro?: string }> {
+  // Garante o desconto do Pix no carrinho antes de o valor do código ser calculado (no backend).
+  await ajustarDescontoPix("pix")
   const ctx = await contextoDoPagamento()
   if (!ctx) return { erro: ERRO_GENERICO }
   try {
@@ -104,6 +106,15 @@ export async function pagarComCartao(dados: {
   /** Id do aparelho (`MP_DEVICE_SESSION_ID`), criado pelo SDK do Mercado Pago no navegador. */
   deviceId?: string
 }): Promise<ResultadoDoCartao> {
+  // Cartão nunca leva o desconto do Pix. Se ainda estava no carrinho (aba antiga, voltou do Pix), o
+  // total sobe: a cliente precisa ver o valor novo antes de cobrar — não cobra agora.
+  const { mudou } = await ajustarDescontoPix("cartao")
+  if (mudou) {
+    return {
+      resultado: "erro",
+      mensagem: "O valor foi atualizado para pagamento no cartão (o desconto do Pix vale só no Pix). Confira o total e envie de novo.",
+    }
+  }
   const ctx = await contextoDoPagamento()
   if (!ctx || !dados.token || !dados.bandeira) return { resultado: "erro", mensagem: ERRO_GENERICO }
 

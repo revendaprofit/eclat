@@ -3,6 +3,7 @@
 // com código `CONJUNTO-<regra_id>`) e se monta a apresentação (etiquetas, aviso, gatilhos).
 import type { HttpTypes } from "@medusajs/types"
 import { type ColecaoStore, type RegraStore, descricaoRegra, precoMinDisponivel, slotMetadata } from "./conjuntos"
+import { CODIGO_DESCONTO_PIX, ehCodigoPix } from "./condicoes"
 
 // Mesmo prefixo de `CODIGO_PREFIXO` no backend (`utils/promocao.ts`).
 export const PREFIXO_CONJUNTO = "CONJUNTO-"
@@ -20,7 +21,7 @@ export type LinhaComAjustes = {
   metadata?: Record<string, unknown> | null
 }
 /** Centavos inteiros. */
-export type GruposDesconto = { conjunto: number; cupom: number }
+export type GruposDesconto = { conjunto: number; cupom: number; pix: number }
 
 // Resposta de GET /store/conjuntos/oportunidades?cart_id= (F1; dinheiro em centavos no backend).
 export type UnidadeStore = { item_id: string; product_id: string; preco_unitario: number; desconto_unitario: number }
@@ -42,12 +43,14 @@ export function ehAjusteConjunto(code?: string | null): boolean {
 
 const centavos = (v?: number | null): number => Math.round((v ?? 0) * 100)
 
-// Ruling 2: "Benefício Conjunto" = ajustes CONJUNTO-*; "Cupom" = todos os outros ajustes de linha.
+// Ruling 2: "Benefício Conjunto" = ajustes CONJUNTO-*; "Desconto Pix" = PIX5 (2026-09-30);
+// "Cupom" = todos os outros ajustes de linha.
 export function agruparDescontos(itens?: LinhaComAjustes[] | null): GruposDesconto {
-  const g: GruposDesconto = { conjunto: 0, cupom: 0 }
+  const g: GruposDesconto = { conjunto: 0, cupom: 0, pix: 0 }
   for (const item of itens ?? []) {
     for (const a of item.adjustments ?? []) {
       if (ehAjusteConjunto(a.code)) g.conjunto += centavos(a.amount)
+      else if (ehCodigoPix(a.code)) g.pix += centavos(a.amount)
       else g.cupom += centavos(a.amount)
     }
   }
@@ -87,9 +90,28 @@ export function etiquetaDoPedido(item: LinhaComAjustes): string | null {
   return porAjuste || porSlot ? "Conjunto" : null
 }
 
-// Ruling 3: promoções CONJUNTO-* são automáticas, não cupons — não aparecem na lista.
+// Ruling 3: promoções CONJUNTO-* são automáticas, não cupons — não aparecem na lista. O desconto do
+// Pix (PIX5) também não: é da forma de pagamento, entra e sai sozinho no checkout.
 export function cuponsVisiveis<T extends { code?: string | null }>(promotions?: T[] | null): T[] {
-  return (promotions ?? []).filter((p) => !ehAjusteConjunto(p.code))
+  return (promotions ?? []).filter((p) => !ehAjusteConjunto(p.code) && !ehCodigoPix(p.code))
+}
+
+/**
+ * Códigos que o carrinho deve ter para a forma de pagamento escolhida: os cupons da cliente, mais o
+ * PIX5 só quando `querPix` (Pix escolhido e desconto ligado). `mudou` = precisa gravar no carrinho.
+ */
+export function codigosParaPagamento(
+  promotions: { code?: string | null }[] | null | undefined,
+  querPix: boolean
+): { codigos: string[]; mudou: boolean } {
+  const cupons = cuponsVisiveis(promotions).map((p) => p.code).filter((c): c is string => !!c)
+  const temPix = (promotions ?? []).some((p) => ehCodigoPix(p.code))
+  return { codigos: querPix ? [...cupons, CODIGO_DESCONTO_PIX] : cupons, mudou: querPix !== temPix }
+}
+
+/** Códigos que a cliente não vê mas que precisam sobreviver quando ela mexe nos cupons (o PIX5). */
+export function codigosOcultosMantidos(promotions?: { code?: string | null }[] | null): string[] {
+  return (promotions ?? []).map((p) => p.code).filter((c): c is string => ehCodigoPix(c))
 }
 
 export function avisoCupom(cart: {

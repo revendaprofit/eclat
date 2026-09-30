@@ -15,6 +15,15 @@ export type Condicoes = {
 
 export const CONDICOES_PADRAO: Condicoes = { parcelas: 4, sem_juros: false, pix_percentual: 0 }
 
+// Código da promoção do desconto no Pix (criada por scripts/desconto-pix.mjs; o backend trata o mesmo
+// código em apps/backend/src/modules/desconto-pix/regra.ts). A vitrine põe no carrinho ao escolher Pix
+// e tira ao escolher cartão — só com pix_percentual > 0. O percentual da promoção tem de ser o mesmo.
+export const CODIGO_DESCONTO_PIX = "PIX5"
+
+export function ehCodigoPix(code?: string | null): boolean {
+  return typeof code === "string" && code.trim().toUpperCase() === CODIGO_DESCONTO_PIX
+}
+
 /** Lê o registro do Cockpit com tolerância: campo ausente ou inválido cai no padrão. */
 export function lerCondicoes(salvo: unknown): Condicoes {
   const s = (salvo && typeof salvo === "object" ? salvo : {}) as Record<string, unknown>

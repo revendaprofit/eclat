@@ -57,10 +57,18 @@ describe("provider superfrete", () => {
   it("usa os adjustments do context quando o Medusa os entrega, sem ir ao banco", async () => {
     const { svc, buscarBase } = provider()
     const ctx = contexto()
-    ctx.items = [{ quantity: 2, unit_price: 300, adjustments: [{ amount: 50 }], variant: { weight: 200 } }]
+    ctx.items = [{ quantity: 2, unit_price: 300, adjustments: [{ amount: 50, code: "BEMVINDA10" }], variant: { weight: 200 } }]
     // base = 60000 − 5000 = 55000 ≥ piso MG → 2 peças não têm Mini; PAC é a mais barata
     expect((await svc.calculatePrice({ id: "pac" }, {}, ctx)).calculated_amount).toBe(0)
     expect(buscarBase).not.toHaveBeenCalled()
+  })
+
+  it("adjustments sem o código de cada desconto: busca a base no banco (precisa do código para tirar o Pix)", async () => {
+    const { svc, buscarBase } = provider({ base: 52000 })
+    const ctx = contexto()
+    ctx.items = [{ quantity: 2, unit_price: 300, adjustments: [{ amount: 50 }], variant: { weight: 200 } }]
+    await svc.calculatePrice({ id: "pac" }, {}, ctx)
+    expect(buscarBase).toHaveBeenCalledWith("cart_1")
   })
 
   it("sem peso na variante, usa o peso do produto (é onde ele mora em produção)", async () => {

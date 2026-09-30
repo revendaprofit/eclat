@@ -7,8 +7,9 @@
 import { container } from "@medusajs/framework"
 import { ContainerRegistrationKeys } from "@medusajs/framework/utils"
 import { paraCentavos } from "./dinheiro"
+import { ehCodigoPix } from "../desconto-pix/regra"
 
-export type ItemDaBase = { unit_price: unknown; quantity: unknown; adjustments?: { amount?: unknown }[] | null }
+export type ItemDaBase = { unit_price: unknown; quantity: unknown; adjustments?: { amount?: unknown; code?: unknown }[] | null }
 
 /** O Medusa entrega números ora crus, ora como BigNumber ({ numeric }) ou bruto ({ value }). */
 function numero(v: unknown): number {
@@ -25,7 +26,11 @@ export function calcularBase(itens: ItemDaBase[]): number {
   for (const item of itens) {
     base += paraCentavos(numero(item.unit_price)) * numero(item.quantity)
     // `adjustment.amount` é o desconto da LINHA inteira, não por unidade.
-    for (const a of item.adjustments ?? []) base -= paraCentavos(numero(a.amount ?? 0))
+    // O desconto do Pix NÃO reduz a base (dono, 2026-09-30): escolher Pix nunca tira o frete grátis.
+    for (const a of item.adjustments ?? []) {
+      if (ehCodigoPix(a.code)) continue
+      base -= paraCentavos(numero(a.amount ?? 0))
+    }
   }
   return Math.max(0, base)
 }
@@ -34,7 +39,7 @@ export async function buscarBaseDoCarrinho(cartId: string): Promise<number> {
   const query: any = container.resolve(ContainerRegistrationKeys.QUERY)
   const { data } = await query.graph({
     entity: "cart",
-    fields: ["id", "items.unit_price", "items.quantity", "items.adjustments.amount"],
+    fields: ["id", "items.unit_price", "items.quantity", "items.adjustments.amount", "items.adjustments.code"],
     filters: { id: cartId },
   })
   return calcularBase((data[0]?.items ?? []) as ItemDaBase[])

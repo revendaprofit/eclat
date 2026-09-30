@@ -167,8 +167,10 @@ export default class SuperfreteProviderService extends AbstractFulfillmentProvid
 
   private async base_(context: Contexto): Promise<number> {
     const itens = (context.items ?? []) as unknown as ItemDaBase[]
-    // O /calculate do Medusa não traz adjustments; outros fluxos trazem. Se vieram, confio neles.
-    if (itens.length && itens.every((i) => Array.isArray(i.adjustments))) return calcularBase(itens)
+    // O /calculate do Medusa não traz adjustments; outros fluxos trazem. Se vieram COM o código de cada
+    // desconto (preciso dele para deixar o Pix fora da base), confio neles; senão busco no banco.
+    const completos = itens.every((i) => Array.isArray(i.adjustments) && i.adjustments.every((a) => a && "code" in a))
+    if (itens.length && completos) return calcularBase(itens)
     return (this.opcoes_.buscarBase ?? buscarBaseDoCarrinho)(String(context.id))
   }
 }

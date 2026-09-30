@@ -31,7 +31,7 @@ const CartTotals: React.FC<CartTotalsProps> = ({ totals }) => {
 
   const grupos = agruparDescontos(totals.items)
   // Ruling 2: o que não for conjunto nem cupom de linha (ex.: ajuste de frete) fica na linha genérica.
-  const restante = Math.max(0, Math.round((discount_subtotal ?? 0) * 100) - grupos.conjunto - grupos.cupom)
+  const restante = Math.max(0, Math.round((discount_subtotal ?? 0) * 100) - grupos.conjunto - grupos.cupom - grupos.pix)
 
   // Linha da nota: rótulo · pontilhado · valor (o pontilhado guia o olho em telas largas e some em nada no celular).
   const Linha = ({ rotulo, children, destaque }: { rotulo: string; children: React.ReactNode; destaque?: boolean }) => (
@@ -70,6 +70,13 @@ const CartTotals: React.FC<CartTotalsProps> = ({ totals }) => {
           <Linha rotulo="Cupom" destaque>
             <span data-testid="cart-cupom" data-value={grupos.cupom / 100}>
               − {convertToLocale({ amount: grupos.cupom / 100, currency_code })}
+            </span>
+          </Linha>
+        )}
+        {grupos.pix > 0 && (
+          <Linha rotulo="Desconto Pix" destaque>
+            <span data-testid="cart-desconto-pix" data-value={grupos.pix / 100}>
+              − {convertToLocale({ amount: grupos.pix / 100, currency_code })}
             </span>
           </Linha>
         )}

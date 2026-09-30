@@ -1,5 +1,6 @@
 import { listCartShippingMethods } from "@lib/data/fulfillment"
 import { listCartPaymentMethods } from "@lib/data/payment"
+import { getCondicoes } from "@lib/data/condicoes"
 import { isMercadoPago } from "@lib/util/pagamento-mercadopago"
 import { HttpTypes } from "@medusajs/types"
 import Addresses from "@modules/checkout/components/addresses"
@@ -20,7 +21,10 @@ export default async function CheckoutForm({
   }
 
   const shippingMethods = await listCartShippingMethods(cart.id)
-  const paymentMethods = await listCartPaymentMethods(cart.region?.id ?? "")
+  const [paymentMethods, condicoes] = await Promise.all([
+    listCartPaymentMethods(cart.region?.id ?? ""),
+    getCondicoes(),
+  ])
 
   if (!shippingMethods || !paymentMethods) {
     return null
@@ -34,7 +38,7 @@ export default async function CheckoutForm({
 
       <Shipping cart={cart} availableShippingMethods={shippingMethods} />
 
-      <Payment cart={cart} availablePaymentMethods={paymentMethods} />
+      <Payment cart={cart} availablePaymentMethods={paymentMethods} condicoes={condicoes} />
 
       <Review
         cart={cart}

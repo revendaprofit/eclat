@@ -18,6 +18,14 @@ describe("calcularBase", () => {
     expect(calcularBase([{ unit_price: { numeric: 100 }, quantity: { value: "2" }, adjustments: [{ amount: { numeric: 10 } }] }])).toBe(19000)
   })
 
+  it("o desconto do Pix (PIX5) não reduz a base — escolher Pix nunca tira o frete grátis", () => {
+    expect(
+      calcularBase([
+        { unit_price: 300, quantity: 2, adjustments: [{ amount: 60, code: "BEMVINDA10" }, { amount: 27, code: "PIX5" }] },
+      ])
+    ).toBe(54000)
+  })
+
   it("nunca fica negativa", () => {
     expect(calcularBase([{ unit_price: 10, quantity: 1, adjustments: [{ amount: 50 }] }])).toBe(0)
   })

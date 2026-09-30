@@ -1,5 +1,7 @@
 // Regras de frete do lado da vitrine (spec 2026-09-18-frete-superfrete-design.md §4.5–4.6).
 // A conta que VALE é a do backend (modules/superfrete/preco.ts); aqui é só exibição.
+import { ehCodigoPix } from "./condicoes"
+
 export type RegrasDeFrete = { piso_mg: number; piso_brasil: number }
 export type ServicoDeFrete = "mini" | "pac" | "sedex"
 export type Prazos = Partial<Record<ServicoDeFrete, { min: number; max: number }>>
@@ -9,7 +11,7 @@ const centavos = (v?: number | null) => Math.round((v ?? 0) * 100)
 export type ItemDeBase = {
   unit_price?: number | null
   quantity?: number | null
-  adjustments?: { amount?: number | null }[] | null
+  adjustments?: { amount?: number | null; code?: string | null }[] | null
 }
 
 /**
@@ -23,7 +25,8 @@ export function baseDoCarrinho(cart: { items?: ItemDeBase[] | null }): number {
   let base = 0
   for (const item of cart.items ?? []) {
     base += centavos(item.unit_price) * (item.quantity ?? 0)
-    for (const a of item.adjustments ?? []) base -= centavos(a.amount)
+    // Desconto do Pix fora da base (dono, 2026-09-30) — mesma regra do backend.
+    for (const a of item.adjustments ?? []) if (!ehCodigoPix(a.code)) base -= centavos(a.amount)
   }
   return Math.max(0, base)
 }

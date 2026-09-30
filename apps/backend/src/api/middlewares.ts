@@ -6,6 +6,7 @@ import { z } from "zod"
 import { TIPOS_DESCONTO } from "../modules/beneficio-conjunto/utils/tipos"
 import { exigirPedidoMinimo } from "./middlewares/pedido-minimo"
 import { exigirCupomPrimeiraCompraLivre } from "./middlewares/cupom-primeira-compra"
+import { recusarCartaoComDescontoPix } from "./middlewares/desconto-pix"
 
 // `valor` é inteiro ≥ 1 (percentual inteiro 1–100, ou centavos ≥ 1) — spec §4.1. O teto de 100
 // só faz sentido para tipos percentuais (`*_percentual`); tipos `*_valor` guardam centavos e não
@@ -94,6 +95,8 @@ export default defineMiddlewares({
     { methods: ["POST"], matcher: "/webhooks/superfrete", bodyParser: { preserveRawBody: true } },
     // Pedido mínimo: recusa a cobrança antes de existir Pix ou cartão (ver o próprio middleware).
     { method: "POST", matcher: "/store/payment-collections", middlewares: [exigirPedidoMinimo, exigirCupomPrimeiraCompraLivre] },
+    // Desconto do Pix: cartão com PIX5 no carrinho é recusado (ver o próprio middleware).
+    { methods: ["POST"], matcher: "/store/payment-collections/:id/payment-sessions", middlewares: [recusarCartaoComDescontoPix] },
     { method: "POST", matcher: "/admin/conjuntos/regras", middlewares: [validateAndTransformBody(CriarRegraSchema)] },
     { method: "PUT", matcher: "/admin/conjuntos/regras/:id", middlewares: [validateAndTransformBody(AtualizarRegraSchema)] },
     { method: "PUT", matcher: "/admin/conjuntos/pares", middlewares: [validateAndTransformBody(AtualizarParesSchema)] },

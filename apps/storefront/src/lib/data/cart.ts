@@ -22,6 +22,8 @@ import { getRegion } from "./regions"
 import { getLocale } from "./locale-actions"
 import { retrieveCustomer, updateCustomer } from "./customer"
 import { sinaisDoMeta } from "@modules/analytics/capi"
+import { getCondicoes } from "./condicoes"
+import { codigosParaPagamento } from "@lib/util/carrinho-conjunto"
 import {
   contatoParaCarrinho,
   lerContatoDoCookie,
@@ -310,6 +312,32 @@ export async function applyPromotions(
     return { ok: true }
   } catch (e) {
     return { ok: false, mensagem: mensagemDeErroDoCupom(medusaErroTexto(e), codes[codes.length - 1]) }
+  }
+}
+
+/**
+ * Desconto do Pix (2026-09-30): põe o código PIX5 no carrinho ao escolher Pix e tira ao escolher
+ * cartão — só com `condicoes.pix_percentual > 0` no Cockpit. Nunca estoura: sem a promoção criada
+ * no backend (ou com erro), o carrinho fica como estava e o pagamento segue sem desconto.
+ * `mudou` avisa quem chamou que o total do carrinho mudou (o cartão precisa reconfirmar o valor).
+ */
+export async function ajustarDescontoPix(metodo: "pix" | "cartao"): Promise<{ mudou: boolean }> {
+  try {
+    const cartId = await getCartId()
+    if (!cartId) return { mudou: false }
+    const [cart, condicoes] = await Promise.all([retrieveCart(cartId, "id,*promotions"), getCondicoes()])
+    if (!cart) return { mudou: false }
+    const querPix = metodo === "pix" && condicoes.pix_percentual > 0
+    const { codigos, mudou } = codigosParaPagamento(cart.promotions, querPix)
+    if (!mudou) return { mudou: false }
+    const headers = { ...(await getAuthHeaders()) }
+    await sdk.store.cart.update(cartId, { promo_codes: codigos }, {}, headers)
+    revalidateTag(await getCacheTag("carts"))
+    revalidateTag(await getCacheTag("fulfillment"))
+    return { mudou: true }
+  } catch (e) {
+    console.error("[desconto-pix] ajustar", e)
+    return { mudou: false }
   }
 }
 

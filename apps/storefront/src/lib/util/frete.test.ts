@@ -4,6 +4,11 @@ import { baseDoCarrinho, casasDoValor, progressoFreteGratis, servicoDaOpcao, tex
 const REGRAS = { piso_mg: 49900, piso_brasil: 59900 }
 
 describe("frete na vitrine", () => {
+  it("desconto do Pix (PIX5) não reduz a base do frete grátis", () => {
+    expect(
+      baseDoCarrinho({ items: [{ unit_price: 300, quantity: 2, adjustments: [{ amount: 60, code: "BEMVINDA10" }, { amount: 27, code: "PIX5" }] }] })
+    ).toBe(54000)
+  })
   it("base = soma preço × quantidade das linhas, em centavos (espelha calcularBase do backend)", () => {
     expect(
       baseDoCarrinho({ items: [{ unit_price: 259, quantity: 2 }, { unit_price: 159.9, quantity: 1 }] })

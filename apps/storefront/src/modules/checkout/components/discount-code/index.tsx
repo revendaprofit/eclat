@@ -5,7 +5,7 @@ import React from "react"
 
 import { applyPromotions } from "@lib/data/cart"
 import { CHAVE_CUPOM_GUARDADO } from "@lib/util/boas-vindas"
-import { avisoCupom, cuponsVisiveis } from "@lib/util/carrinho-conjunto"
+import { avisoCupom, codigosOcultosMantidos, cuponsVisiveis } from "@lib/util/carrinho-conjunto"
 import { convertToLocale } from "@lib/util/money"
 import { HttpTypes } from "@medusajs/types"
 import Trash from "@modules/common/icons/trash"
@@ -21,6 +21,8 @@ const DiscountCode: React.FC<DiscountCodeProps> = ({ cart }) => {
   const [errorMessage, setErrorMessage] = React.useState("")
 
   const promotions = cuponsVisiveis(cart.promotions)
+  // PIX5 não aparece na lista, mas precisa continuar no carrinho quando a cliente mexe nos cupons.
+  const ocultos = codigosOcultosMantidos(cart.promotions)
 
   // Cupom do aviso de boas-vindas guardado neste aparelho: o campo já abre preenchido — a cliente
   // só toca em "Aplicar". Deixa de preencher quando o cupom já está na sacola.
@@ -43,9 +45,10 @@ const DiscountCode: React.FC<DiscountCodeProps> = ({ cart }) => {
       (promotion) => promotion.code !== code
     )
 
-    await applyPromotions(
-      validPromotions.filter((p) => p.code !== undefined).map((p) => p.code!)
-    )
+    await applyPromotions([
+      ...validPromotions.filter((p) => p.code !== undefined).map((p) => p.code!),
+      ...ocultos,
+    ])
   }
 
   const addPromotionCode = async (formData: FormData) => {
@@ -59,6 +62,7 @@ const DiscountCode: React.FC<DiscountCodeProps> = ({ cart }) => {
     const codes = promotions
       .filter((p) => p.code !== undefined)
       .map((p) => p.code!)
+    codes.push(...ocultos)
     codes.push(code.toString())
 
     const r = await applyPromotions(codes)
