@@ -37,7 +37,7 @@ export async function montarItensDoPedido(
       // cai no vazio e a emissão morre com "pedido está sem CPF" mesmo com o CPF gravado —
       // foi o que travou o despacho do pedido #21 em 20/09.
       "id", "email", "currency_code", "shipping_total", "metadata",
-      "items.id", "items.title", "items.variant_title", "items.quantity", "items.unit_price",
+      "items.id", "items.title", "items.variant_title", "items.quantity", "items.unit_price", "items.metadata",
       "items.discount_total", "items.item_total",
       "items.variant_sku", "items.variant_id", "items.product_id",
       "items.variant.hs_code", "items.variant.origin_country",
@@ -69,6 +69,15 @@ export async function montarItensDoPedido(
   if (!/^\d{7}$/.test(municipioIbge)) {
     throw new ErroFiscal(
       `Pedido ${orderId} está sem o código IBGE do município de entrega (7 dígitos). Sem ele a SEFAZ rejeita a nota.`
+    )
+  }
+
+  // Presente por faixa (linha a R$ 0, metadata.brinde): como item de venda a R$ 0 com o CFOP de venda a nota sairia
+  // errada. Até o contador definir o tratamento (bonificação, CFOP 5.910/6.910), pedido com presente NÃO emite
+  // automático — a operadora emite à mão (desenho: 2026-09-30-brindes-por-faixa-design.md).
+  if ((order.items ?? []).some((i: any) => typeof i?.metadata?.brinde === "string")) {
+    throw new ErroFiscal(
+      `Pedido ${orderId} leva um presente (meia/óculos). Emita esta nota manualmente até o contador definir o CFOP de bonificação.`
     )
   }
 

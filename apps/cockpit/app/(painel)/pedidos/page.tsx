@@ -444,6 +444,10 @@ export default function PedidosPage() {
                               {etiquetaConjunto(i) && (
                                 <span className="inline-block mt-0.5 rounded-sm bg-eclat-areia px-1.5 text-meta uppercase tracking-wider text-eclat-texto" data-testid="etiqueta-conjunto">Conjunto</span>
                               )}
+                              {/* Presente por faixa (R$ 0): precisa ir na caixa; a nota fiscal deste pedido é manual. */}
+                              {typeof i.metadata?.brinde === "string" && (
+                                <span className="inline-block mt-0.5 ml-1 rounded-sm bg-eclat-terracota px-1.5 text-meta uppercase tracking-wider text-white" data-testid="etiqueta-presente">Presente</span>
+                              )}
                               <div className="text-meta text-eclat-texto-3">{i.variant_title}</div>
                             </td>
                             <td className="px-3 py-2 text-center text-eclat-texto-2">{i.quantity}×</td>
