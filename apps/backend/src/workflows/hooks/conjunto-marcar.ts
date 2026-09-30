@@ -4,6 +4,7 @@ import { Modules } from "@medusajs/framework/utils"
 import { avaliarCarrinho, marcarContexto, type CupomPercentual } from "../../modules/beneficio-conjunto/avaliar-carrinho"
 import { CODIGO_PREFIXO, MARCA_LIVRE } from "../../modules/beneficio-conjunto/utils/promocao"
 import { ehCodigoPix } from "../../modules/desconto-pix/regra"
+import { codigosEfetivos } from "../../modules/beneficio-conjunto/codigos-efetivos"
 
 // Benefício Conjunto (spec §6.1): marca as unidades do carrinho antes de o motor de promoções avaliar.
 // Nunca lança — carrinho sem benefício é melhor que carrinho quebrado.
@@ -16,11 +17,11 @@ import { ehCodigoPix } from "../../modules/desconto-pix/regra"
  * (dono, 2026-09-30) e por isso não entra na disputa do maior desconto. Falha aqui devolve lista vazia: sem comparação, valem as marcas
  * de sempre.
  */
-async function cupomPercentualDoCarrinho(container: any, cart: any, promoCodes: string[]): Promise<CupomPercentual[]> {
-  const codigos = [
-    ...((cart?.promotions ?? []) as { code?: string | null }[]).map((p) => p?.code),
-    ...(promoCodes ?? []),
-  ].filter((c): c is string => !!c && !c.startsWith(CODIGO_PREFIXO) && !ehCodigoPix(c))
+async function cupomPercentualDoCarrinho(container: any, cart: any, promoCodes: string[], action?: string): Promise<CupomPercentual[]> {
+  const doCarrinho = ((cart?.promotions ?? []) as { code?: string | null }[]).map((p) => p?.code)
+  const codigos = codigosEfetivos(doCarrinho, promoCodes, action).filter(
+    (c) => !c.startsWith(CODIGO_PREFIXO) && !ehCodigoPix(c)
+  )
   if (!codigos.length) return []
   try {
     const promocoes: any[] = await container.resolve(Modules.PROMOTION).listPromotions(
@@ -37,13 +38,13 @@ async function cupomPercentualDoCarrinho(container: any, cart: any, promoCodes: 
   }
 }
 
-updateCartPromotionsWorkflow.hooks.setPromotionContext(async ({ cart, promo_codes }, { container }) => {
+updateCartPromotionsWorkflow.hooks.setPromotionContext(async ({ cart, promo_codes, action }, { container }) => {
   try {
     const items = ((cart as any)?.items ?? []) as any[]
     if (!items.length) return new StepResponse({})
     const [{ resultado }, cupons] = await Promise.all([
       avaliarCarrinho(container, cart as any),
-      cupomPercentualDoCarrinho(container, cart, (promo_codes ?? []) as string[]),
+      cupomPercentualDoCarrinho(container, cart, (promo_codes ?? []) as string[], action as string | undefined),
     ])
     return new StepResponse({ items: marcarContexto(items, resultado, cupons) })
   } catch (e) {
