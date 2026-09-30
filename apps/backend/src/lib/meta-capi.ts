@@ -62,7 +62,8 @@ export function montarEventoDeCompra(pedido: PedidoParaMeta, lojaUrl: string, ag
   if (fbc) user_data.fbc = fbc
   if (ua) user_data.client_user_agent = ua
 
-  const contents = (pedido.items ?? []).map((it) => ({
+  // Presente (linha a R$ 0, metadata.brinde) não é produto comprado: fica fora do contents.
+  const contents = (pedido.items ?? []).filter((it) => !(it as { metadata?: Record<string, unknown> | null }).metadata?.brinde).map((it) => ({
     id: it.variant_id || it.product_id || it.id, // = g:id do feed (variant.id)
     quantity: numero(it.quantity) ?? 1,
     item_price: numero(it.unit_price),
