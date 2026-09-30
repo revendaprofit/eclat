@@ -52,6 +52,24 @@ export type Testimonials = {
   items?: Testimonial[]
 }
 
+// Chamada para o grupo do WhatsApp (entrada pelo número da marca — vira lead no Cockpit).
+export type Clube = {
+  visible?: boolean
+  eyebrow?: string
+  title?: string
+  text?: string
+  cta_label?: string
+}
+
+// Grade "Acompanhe @eclat.use". Fotos hospedadas no Storage do site (as URLs do Instagram expiram).
+export type InstagramItem = { image_url: string; href?: string; alt?: string }
+export type Instagram = {
+  visible?: boolean
+  handle?: string
+  heading?: string
+  items?: InstagramItem[]
+}
+
 export type FaqItem = { q: string; a: string }
 export type Faq = { visible?: boolean; heading?: string; items?: FaqItem[] }
 
@@ -109,6 +127,18 @@ export const HOME_DEFAULTS = {
     heading: "O que elas dizem",
     items: [],
   } as Testimonials,
+  clube: {
+    eyebrow: "Clube Éclat",
+    title: "Entre para o Clube Éclat",
+    text:
+      "Lançamentos antes de todo mundo, condições só para o grupo e os bastidores da marca — tudo no nosso WhatsApp.",
+    cta_label: "Quero entrar no Clube",
+  } as Clube,
+  instagram: {
+    handle: "eclat.use",
+    heading: "Acompanhe a Éclat",
+    items: [],
+  } as Instagram,
   faq: {
     heading: "Perguntas frequentes",
     items: [

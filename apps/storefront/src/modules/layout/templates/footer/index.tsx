@@ -6,6 +6,10 @@ import Image from "next/image";
 
 import LocalizedClientLink from "@modules/common/components/localized-client-link";
 import IdentificacaoDaEmpresa from "@modules/layout/components/identificacao-da-empresa";
+import { getPrevenda, linkClubeWhatsapp } from "@lib/data/prevenda";
+import { getSiteContent } from "@lib/data/site-content";
+import { linkPerfilInstagram } from "@lib/util/instagram";
+import { HOME_DEFAULTS, Instagram } from "@modules/home/content";
 
 export default async function Footer() {
   // I8: mesma árvore de navegação da barra/menu (getNavigation) — só raízes visíveis
@@ -16,7 +20,13 @@ export default async function Footer() {
     .then((r: StoreRegion[]) => r)
     .catch(() => [] as StoreRegion[]);
   const countryCode = regions?.[0]?.countries?.[0]?.iso_2 ?? "br";
-  const { roots, collections } = await getNavigation(countryCode);
+  const [{ roots, collections }, prevenda, instagram] = await Promise.all([
+    getNavigation(countryCode),
+    getPrevenda(),
+    getSiteContent<Instagram>("home.instagram"),
+  ]);
+  const linkClube = linkClubeWhatsapp(prevenda);
+  const linkInstagram = linkPerfilInstagram(instagram?.handle || HOME_DEFAULTS.instagram.handle);
 
   return (
     <footer className="border-t border-ui-border-base w-full">
@@ -108,6 +118,18 @@ export default async function Footer() {
                     Toda a loja
                   </LocalizedClientLink>
                 </li>
+                <li>
+                  <a href={linkClube} target="_blank" rel="noopener noreferrer" className="hover:text-ui-fg-base">
+                    Clube Éclat (WhatsApp)
+                  </a>
+                </li>
+                {linkInstagram && (
+                  <li>
+                    <a href={linkInstagram} target="_blank" rel="noopener noreferrer" className="hover:text-ui-fg-base">
+                      Instagram @eclat.use
+                    </a>
+                  </li>
+                )}
                 <li>
                   <LocalizedClientLink href="/sobre" className="hover:text-ui-fg-base">
                     Sobre a Éclat

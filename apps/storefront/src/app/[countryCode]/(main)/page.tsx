@@ -10,6 +10,8 @@ import FaixaCondicoes from "@modules/home/components/faixa-condicoes"
 import Testimonials from "@modules/home/components/testimonials"
 import Faq from "@modules/home/components/faq"
 import Newsletter from "@modules/home/components/newsletter"
+import ClubeEclat from "@modules/home/components/clube-eclat"
+import Instagram from "@modules/home/components/instagram"
 import { listCollections } from "@lib/data/collections"
 import { getRegion } from "@lib/data/regions"
 import { getSiteContent } from "@lib/data/site-content"
@@ -23,6 +25,8 @@ import {
   Testimonials as TestimonialsType,
   Faq as FaqType,
   Newsletter as NewsletterType,
+  Clube as ClubeType,
+  Instagram as InstagramType,
   HOME_DEFAULTS,
 } from "@modules/home/content"
 
@@ -73,6 +77,8 @@ export default async function Home(props: {
     newsletter,
     testimonials,
     faq,
+    clube,
+    instagram,
   ] = await Promise.all([
     getRegion(countryCode),
     listCollections({ fields: "id, handle, title" }),
@@ -85,6 +91,8 @@ export default async function Home(props: {
     getSiteContent<NewsletterType>("home.newsletter"),
     getSiteContent<TestimonialsType>("home.testimonials"),
     getSiteContent<FaqType>("home.faq"),
+    getSiteContent<ClubeType>("home.clube"),
+    getSiteContent<InstagramType>("home.instagram"),
   ])
 
   const collections = collectionsRes?.collections
@@ -107,7 +115,6 @@ export default async function Home(props: {
           handle: collections[0]?.handle,
         }}
       />
-
 
       <FaixaCondicoes />
 
@@ -141,6 +148,10 @@ export default async function Home(props: {
       {isVisible(benefits) && <Benefits content={benefits} />}
 
       {isVisible(testimonials) && <Testimonials content={testimonials} />}
+
+      {isVisible(clube) && <ClubeEclat content={clube} />}
+
+      {isVisible(instagram) && <Instagram content={instagram} />}
 
       {isVisible(faq) && <Faq content={faq} />}
 

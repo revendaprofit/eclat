@@ -19,10 +19,12 @@ export default function EditorialBanner({
 
   return (
     <section className="content-container py-12 small:py-20">
-      <div className="grid grid-cols-1 small:grid-cols-2 items-stretch border border-eclat-pedra/30 overflow-hidden">
+      {/* items-start no celular: com items-stretch o Safari do iPhone ignora o aspect-ratio da coluna da
+          imagem (conteúdo todo absoluto) e ela ficava com altura zero — só a seta aparecia (2026-09-30). */}
+      <div className="grid grid-cols-1 small:grid-cols-2 items-start small:items-stretch border border-eclat-pedra/30 overflow-hidden">
         {/* imagem */}
         <div
-          className={`relative ${
+          className={`relative w-full ${
             carrossel ? "aspect-[2/3] small:aspect-[4/3] bg-[#09090d]" : "min-h-[280px] small:min-h-[440px] bg-eclat-areia/40"
           } ${imageRight ? "small:order-2" : "small:order-1"}`}
         >
