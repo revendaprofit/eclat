@@ -34,7 +34,11 @@ Um pedido de avaliação por pessoa a cada 60 dias. Pedido de teste (e-mail `@ec
 **Botão manual** "Pedir avaliação" na conversa do Cockpit, para quem comprou fora do site (ex.: pelo WhatsApp);
 cria a linha já em `agendada` e respeita os mesmos freios.
 
-## Dado de entrega (mudança pequena no webhook da SuperFrete)
+## Dado de entrega
+> Implementação (2026-09-30): o webhook JÁ grava `metadata.frete.eventos["order.delivered"]` antes de qualquer
+> mensagem, então não foi preciso mudar o webhook — a data vem daí (ou do fulfillment marcado como entregue).
+> Texto original do desenho abaixo.
+
 Hoje só existe `metadata.frete.avisos.entregue`, gravado **depois** do WhatsApp de "entregue" sair. Passa a
 gravar também `metadata.frete.entregue_em` (hora do evento `order.delivered`) **antes** do aviso, para a data de
 entrega não depender de a mensagem ter saído. Sem webhook ativo, vale `fulfillment.shipped_at + 10 dias`.

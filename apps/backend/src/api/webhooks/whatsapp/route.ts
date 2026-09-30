@@ -10,6 +10,7 @@ import {
 import { getMediaBase64 } from "../../../lib/evolution"
 import { ehGatilhoDoClube, responderClube } from "../../../lib/clube"
 import { tratarMensagemRecebida } from "../../../lib/recuperacao"
+import { tratarRespostaDeAvaliacao } from "../../../lib/avaliacao"
 
 const MEDIA_TIPOS = new Set(["audio", "imagem", "video", "doc"])
 
@@ -144,10 +145,20 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
 
       // Recuperação automática: resposta à abordagem agenda a oferta; "sair" encerra; mensagem da
       // equipe pelo celular tira a automação da conversa (lib/recuperacao.ts).
+      // Pedido de avaliação (lib/avaliacao.ts): resposta de quem comprou. Se a mensagem é de uma
+      // avaliação em andamento, a recuperação não a trata (uma mensagem pertence a uma automação só).
+      let daAvaliacao = false
       try {
-        await tratarMensagemRecebida({ number, fromMe, texto, log: logger })
+        daAvaliacao = await tratarRespostaDeAvaliacao({ number, fromMe, texto, tipo, log: logger })
       } catch (e) {
-        logger.warn(`[recuperacao] resposta não tratada: ${(e as Error).message}`)
+        logger.warn(`[avaliacao] resposta não tratada: ${(e as Error).message}`)
+      }
+      if (!daAvaliacao) {
+        try {
+          await tratarMensagemRecebida({ number, fromMe, texto, log: logger })
+        } catch (e) {
+          logger.warn(`[recuperacao] resposta não tratada: ${(e as Error).message}`)
+        }
       }
 
       // Mídia: baixa da Evolution, guarda no Storage e atualiza a mensagem (best-effort).

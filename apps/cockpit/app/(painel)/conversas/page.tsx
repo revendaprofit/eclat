@@ -114,6 +114,22 @@ export default function ConversasPage() {
     if (c) openConv(c)
   }, [openConv])
 
+  async function pedirAvaliacao(conversationId: string | null) {
+    if (!conversationId) return
+    const pecas = window.prompt(
+      'O que ela comprou? Ex.: o Conjunto Aurora, o Macaquinho Solaris. Deixe vazio para "as peças".\n\n' +
+        "A mensagem sai pela automação de Avaliações (precisa estar ligada), no horário e no intervalo do número."
+    )
+    if (pecas === null) return
+    const r = await fetch("/api/avaliacoes/manual", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ conversation_id: conversationId, pecas }),
+    })
+    const j = await r.json().catch(() => ({}))
+    window.alert(r.ok ? "Pedido de avaliação na fila. Acompanhe em Vender → Avaliações." : j.error || `Erro ${r.status}`)
+  }
+
   const refetchMessages = useCallback(async (id: string) => {
     const r = await fetch(`/api/conversations/${id}/messages`, { cache: "no-store" })
     if (r.ok) setMessages(await r.json())
@@ -263,13 +279,23 @@ export default function ConversasPage() {
             </div>
           ) : (
             <>
-              <div className="px-4 py-3 border-b border-eclat-pedra/30">
-                <div className="font-medium text-corpo">
-                  {atual?.nome_contato || atual?.contato_e164}
+              <div className="px-4 py-3 border-b border-eclat-pedra/30 flex items-start justify-between gap-3">
+                <div>
+                  <div className="font-medium text-corpo">
+                    {atual?.nome_contato || atual?.contato_e164}
+                  </div>
+                  <div className="text-meta text-eclat-texto-3">
+                    {atual?.contato_e164}
+                  </div>
                 </div>
-                <div className="text-meta text-eclat-texto-3">
-                  {atual?.contato_e164}
-                </div>
+                {/* Pedido de avaliação manual (quem comprou fora do site): entra na fila das Avaliações e sai
+                    pelos mesmos freios do número. Ver architecture/avaliacao.md. */}
+                <button
+                  onClick={() => pedirAvaliacao(selected)}
+                  className="text-meta px-3 py-1.5 rounded-md border border-eclat-pedra/50 bg-white hover:bg-eclat-areia/40 whitespace-nowrap"
+                >
+                  Pedir avaliação
+                </button>
               </div>
               <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-2">
                 {messages.map((m) => (

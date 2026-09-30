@@ -24,6 +24,7 @@ import {
   type CarrinhoBruto, type LeadBruto, type Ocasiao,
 } from "./recuperacao-regras"
 import { getOrCreateConversation, getOrCreateLeadByWhatsapp, insertMessageIdempotent, sbSelect, updateLead } from "./supabase"
+import { contarPedidosDeAvaliacaoDesde } from "./avaliacao-db"
 
 type Log = { info: (m: string) => void; warn: (m: string) => void }
 
@@ -317,7 +318,9 @@ async function enviarAbordagem(container: MedusaContainer, cfg: RecuperacaoConfi
   if (!cfg.whatsapp_ativo || !evolutionConfigured()) return
   if (!dentroDaJanela(cfg.janela_inicio, cfg.janela_fim, agora)) return
   if (cfg.proximo_envio_em && Date.parse(cfg.proximo_envio_em) > agora.getTime()) return
-  if ((await contarAbordagensDesde(inicioDoDiaLocal(agora))) >= cfg.max_abordagens_dia) return
+  // Teto diário COMPARTILHADO com o pedido de avaliação (lib/avaliacao.ts): o número nunca passa do limite.
+  const hoje = inicioDoDiaLocal(agora)
+  if ((await contarAbordagensDesde(hoje)) + (await contarPedidosDeAvaliacaoDesde(hoje)) >= cfg.max_abordagens_dia) return
 
   const fila = await listar(
     `etapa=eq.aguardando&contato=not.is.null&elegivel_em=lte.${encodeURIComponent(agora.toISOString())}&order=elegivel_em.asc&limit=10`
