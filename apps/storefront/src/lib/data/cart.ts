@@ -23,6 +23,7 @@ import { getLocale } from "./locale-actions"
 import { retrieveCustomer, updateCustomer } from "./customer"
 import { sinaisDoMeta } from "@modules/analytics/capi"
 import { getCondicoes } from "./condicoes"
+import { ajustarPresente } from "./brinde"
 import { codigosParaPagamento } from "@lib/util/carrinho-conjunto"
 import {
   contatoParaCarrinho,
@@ -207,6 +208,7 @@ export async function updateLineItem({
   await sdk.store.cart
     .updateLineItem(cartId, lineId, { quantity }, {}, headers)
     .then(async () => {
+      await ajustarPresente()
       const cartCacheTag = await getCacheTag("carts")
       revalidateTag(cartCacheTag)
 
@@ -234,6 +236,7 @@ export async function deleteLineItem(lineId: string) {
   await sdk.store.cart
     .deleteLineItem(cartId, lineId, {}, headers)
     .then(async () => {
+      await ajustarPresente()
       const cartCacheTag = await getCacheTag("carts")
       revalidateTag(cartCacheTag)
 
@@ -304,6 +307,7 @@ export async function applyPromotions(
 
   try {
     await sdk.store.cart.update(cartId, { promo_codes: codes }, {}, headers)
+    await ajustarPresente() // cupom trocado pode baixar a base abaixo da faixa
     const cartCacheTag = await getCacheTag("carts")
     revalidateTag(cartCacheTag)
 

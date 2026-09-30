@@ -59,11 +59,9 @@ const DiscountCode: React.FC<DiscountCodeProps> = ({ cart }) => {
       return
     }
     const input = document.getElementById("promotion-input") as HTMLInputElement
-    const codes = promotions
-      .filter((p) => p.code !== undefined)
-      .map((p) => p.code!)
-    codes.push(...ocultos)
-    codes.push(code.toString())
+    // UM cupom por sacola (parcerias R5, 2026-09-30): o código novo SUBSTITUI o anterior — sem isso PATY10 + ERIKA20
+    // somariam 30%. Os ocultos (PIX5) continuam.
+    const codes = [...ocultos, code.toString()]
 
     const r = await applyPromotions(codes)
     if (!r.ok) setErrorMessage(r.mensagem)

@@ -95,15 +95,33 @@ export function fraseFreteGratis(
   return `Frete grátis a partir de ${fmt(mg)} em MG e ${fmt(br)} nos demais estados`
 }
 
+/** Faixa mais baixa do presente (site_content "brindes"), para a barra; null se desligado ou fora do formato. */
+export function lerPresenteDaBarra(v: unknown): { id: string; minimo_centavos: number } | null {
+  if (!v || typeof v !== "object") return null
+  const o = v as { ativo?: unknown; faixas?: unknown }
+  if (o.ativo !== true || !Array.isArray(o.faixas)) return null
+  const faixas = (o.faixas as { id?: unknown; minimo_centavos?: unknown }[])
+    .filter((f) => (f?.id === "meia" || f?.id === "oculos") && Number.isInteger(f?.minimo_centavos) && Number(f.minimo_centavos) > 0)
+    .map((f) => ({ id: String(f.id), minimo_centavos: Number(f.minimo_centavos) }))
+    .sort((a, b) => a.minimo_centavos - b.minimo_centavos)
+  return faixas[0] ?? null
+}
+
+export function frasePresente(p: { id: string; minimo_centavos: number }, fmt: Formatar): string {
+  return `${p.id === "oculos" ? "Óculos" : "Meia"} de presente a partir de ${fmt(p.minimo_centavos)}`
+}
+
 /** Frases da barra do topo, na ordem em que aparecem (no celular, uma por vez). */
 export function frasesDaBarra(args: {
   condicoes: Condicoes
   cupom: { codigo: string; percentual: number } | null
+  presente?: { id: string; minimo_centavos: number } | null
   pisos: { piso_mg: number; piso_brasil: number } | null
   fmt: Formatar
 }): string[] {
-  const { condicoes, cupom, pisos, fmt } = args
+  const { condicoes, cupom, presente, pisos, fmt } = args
   const frases: string[] = []
+  if (presente) frases.push(frasePresente(presente, fmt))
   if (cupom) frases.push(`${formatarPercentual(cupom.percentual)} OFF na 1ª compra com o cupom ${cupom.codigo}`)
   frases.push(fraseCartao(condicoes))
   if (condicoes.pix_percentual > 0) frases.push(frasePix(condicoes))

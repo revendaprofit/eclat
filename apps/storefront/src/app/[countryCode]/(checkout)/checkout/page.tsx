@@ -9,6 +9,7 @@ import { Metadata } from "next"
 import { notFound } from "next/navigation"
 import Track from "@modules/analytics/track"
 import { cartToBeginCheckout } from "@modules/analytics/items"
+import { getPresenteDaSacola } from "@lib/data/brinde"
 
 export const metadata: Metadata = {
   title: "Finalizar compra",
@@ -31,6 +32,7 @@ export default async function Checkout({
     comGatilhos: false,
   })
   const etiquetas = etiquetasDoCarrinho(conjuntos, cart.items ?? [])
+  const presente = await getPresenteDaSacola(cart)
 
   return (
     <div className="grid grid-cols-1 small:grid-cols-[1fr_416px] content-container gap-x-40 py-12">
@@ -38,7 +40,7 @@ export default async function Checkout({
       <PaymentWrapper cart={cart}>
         <CheckoutForm cart={cart} customer={customer} />
       </PaymentWrapper>
-      <CheckoutSummary cart={cart} etiquetas={etiquetas} />
+      <CheckoutSummary cart={cart} etiquetas={etiquetas} presente={presente} />
     </div>
   )
 }

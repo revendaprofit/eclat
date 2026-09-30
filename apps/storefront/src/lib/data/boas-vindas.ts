@@ -13,9 +13,9 @@ export async function cadastrarBoasVindas(dados: {
   email?: string
   aceite: boolean
   site?: string
-}): Promise<{ cupom: string; percentual: number } | { erro: string }> {
+}): Promise<{ cupom: string | null; percentual: number } | { erro: string }> {
   const config = lerConfigBoasVindas(await getSiteContent("boas_vindas"))
-  if (!config) return { erro: "Cupom indisponível no momento." }
+  if (!config) return { erro: "Cadastro indisponível no momento." }
   try {
     await sdk.client.fetch("/store/boas-vindas", {
       method: "POST",

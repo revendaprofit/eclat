@@ -5,6 +5,7 @@ import {
   fraseFreteGratis,
   frasesDaBarra,
   lerCondicoes,
+  lerPresenteDaBarra,
   linhaParcelamento,
   linhaPix,
   parcelaEmCentavos,
@@ -81,6 +82,18 @@ describe("frasesDaBarra", () => {
       "5% de desconto no Pix",
       "Frete grátis: R$ 499,00 em MG, R$ 599,00 no Brasil",
     ])
+  })
+  it("presente por faixa vem primeiro; faixa mais baixa, só com a promoção ligada", () => {
+    const presente = lerPresenteDaBarra({
+      ativo: true,
+      faixas: [
+        { id: "oculos", minimo_centavos: 55000 },
+        { id: "meia", minimo_centavos: 25000 },
+      ],
+    })
+    expect(presente).toEqual({ id: "meia", minimo_centavos: 25000 })
+    expect(lerPresenteDaBarra({ ativo: false, faixas: [{ id: "meia", minimo_centavos: 25000 }] })).toBeNull()
+    expect(frasesDaBarra({ condicoes: ligado, cupom: null, presente, pisos: null, fmt })[0]).toBe("Meia de presente a partir de R$ 250,00")
   })
   it("sem cupom e sem frete, fica só o que é verdade", () => {
     expect(frasesDaBarra({ condicoes: CONDICOES_PADRAO, cupom: null, pisos: null, fmt })).toEqual(["Até 4x no cartão"])

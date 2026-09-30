@@ -2,7 +2,7 @@ import "server-only"
 import { getSiteContent } from "@lib/data/site-content"
 import { getRegrasDeFrete } from "@lib/data/frete"
 import { lerConfigBoasVindas } from "@lib/util/boas-vindas"
-import { lerCondicoes, type Condicoes } from "@lib/util/condicoes"
+import { lerCondicoes, lerPresenteDaBarra, type Condicoes } from "@lib/util/condicoes"
 import type { RegrasDeFrete } from "@lib/util/frete"
 
 export type CondicoesDaLoja = {
@@ -11,6 +11,8 @@ export type CondicoesDaLoja = {
   // Desligar o aviso no Cockpit tira o cupom da barra também.
   cupom: { codigo: string; percentual: number } | null
   pisos: RegrasDeFrete | null
+  // Presente por faixa (site_content "brindes"): a faixa mais baixa, para a barra do topo.
+  presente: { id: string; minimo_centavos: number } | null
 }
 
 // Pré-visualização LOCAL: `ECLAT_CONDICOES_PREVIEW='{"sem_juros":true,"pix_percentual":5}'` no .env.local
@@ -29,15 +31,17 @@ async function condicoesSalvas(): Promise<unknown> {
 
 /** Tudo que a vitrine fala sobre pagamento e frete, lido das fontes de verdade (Cockpit e backend). */
 export async function getCondicoesDaLoja(): Promise<CondicoesDaLoja> {
-  const [salvo, boasVindas, pisos] = await Promise.all([
+  const [salvo, boasVindas, pisos, brindes] = await Promise.all([
     condicoesSalvas(),
     getSiteContent("boas_vindas"),
     getRegrasDeFrete(),
+    getSiteContent("brindes"),
   ])
   const bv = lerConfigBoasVindas(boasVindas)
   return {
     condicoes: lerCondicoes(salvo),
-    cupom: bv ? { codigo: bv.cupom, percentual: bv.percentual } : null,
+    cupom: bv?.modo === "cupom" ? { codigo: bv.cupom, percentual: bv.percentual } : null,
+    presente: lerPresenteDaBarra(brindes),
     pisos,
   }
 }

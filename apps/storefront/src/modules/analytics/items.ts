@@ -103,7 +103,7 @@ export function cartToBeginCheckout(cart: HttpTypes.StoreCart): EcommercePayload
   return {
     currency: (cart.currency_code || "brl").toUpperCase(),
     value: n((cart as any).total),
-    items: (cart.items || []).map(
+    items: (cart.items || []).filter((it: any) => !it?.metadata?.brinde).map(
       (it: any): GA4Item => ({
         item_id: it.variant_id || it.product_id || it.id,
         item_name: it.product_title || it.title,
@@ -119,7 +119,7 @@ export function orderToPurchase(order: HttpTypes.StoreOrder): EcommercePayload {
     currency: (order.currency_code || "brl").toUpperCase(),
     value: n((order as any).total),
     transaction_id: order.display_id ? String(order.display_id) : order.id,
-    items: (order.items || []).map(
+    items: (order.items || []).filter((it: any) => !it?.metadata?.brinde).map(
       (it: any): GA4Item => ({
         item_id: it.variant_id || it.product_id || it.id,
         item_name: it.product_title || it.title,

@@ -6,6 +6,7 @@ import { HttpTypes } from "@medusajs/types"
 import type { Gatilho } from "@lib/util/carrinho-conjunto"
 import type { RegrasDeFrete } from "@lib/util/frete"
 import GatilhosConjunto from "../components/gatilhos-conjunto"
+import type { DadosDoPresente } from "@lib/data/brinde"
 
 const CartTemplate = ({
   cart,
@@ -14,6 +15,7 @@ const CartTemplate = ({
   gatilhos,
   countryCode,
   regrasDeFrete,
+  presente,
 }: {
   cart: HttpTypes.StoreCart | null
   customer: HttpTypes.StoreCustomer | null
@@ -21,6 +23,7 @@ const CartTemplate = ({
   gatilhos?: Gatilho[]
   countryCode: string
   regrasDeFrete?: RegrasDeFrete | null
+  presente?: DadosDoPresente
 }) => {
   return (
     // pb extra no celular: a barra fixa "Finalizar compra" não pode cobrir o fim do resumo
@@ -35,7 +38,7 @@ const CartTemplate = ({
             </div>
             {cart.region && (
               <div className="small:sticky small:top-24">
-                <Summary cart={cart} regrasDeFrete={regrasDeFrete ?? null} />
+                <Summary cart={cart} regrasDeFrete={regrasDeFrete ?? null} presente={presente} />
               </div>
             )}
           </div>

@@ -1,6 +1,7 @@
 import { retrieveCart } from "@lib/data/cart"
 import { getCarrinhoConjunto } from "@lib/data/conjuntos"
 import { getRegrasDeFrete } from "@lib/data/frete"
+import { getPresenteDaSacola } from "@lib/data/brinde"
 import { retrieveCustomer } from "@lib/data/customer"
 import { etiquetasDoCarrinho } from "@lib/util/carrinho-conjunto"
 import CartTemplate from "@modules/cart/templates"
@@ -25,6 +26,7 @@ export default async function Cart({ params }: { params: Promise<{ countryCode: 
   const { conjuntos, gatilhos } = cart ? await getCarrinhoConjunto(cart.id, countryCode) : { conjuntos: [], gatilhos: [] }
   const etiquetas = etiquetasDoCarrinho(conjuntos, cart?.items ?? [])
   const regrasDeFrete = await regrasDeFretePromise
+  const presente = await getPresenteDaSacola(cart)
 
   return (
     <CartTemplate
@@ -34,6 +36,7 @@ export default async function Cart({ params }: { params: Promise<{ countryCode: 
       gatilhos={gatilhos}
       countryCode={countryCode}
       regrasDeFrete={regrasDeFrete}
+      presente={presente}
     />
   )
 }

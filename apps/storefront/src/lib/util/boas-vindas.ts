@@ -1,7 +1,11 @@
 // Aviso de boas-vindas (cupom de primeira compra em troca do WhatsApp). Parte pura, testável.
-// Config no Cockpit/Supabase: site_content key "boas_vindas" = { ativa, cupom, percentual }.
+// Config no Cockpit/Supabase: site_content key "boas_vindas" = { ativa, cupom, percentual } ou
+// { ativa, modo: "presente" } — desde 2026-09-30 (fim do BEMVINDA10, decisão do dono) o aviso oferece lançamentos
+// antes de todo mundo e lembra do presente por faixa (site_content "brindes"), sem cupom.
 // Sem a chave (ou com `ativa: false`) o aviso NÃO aparece — é o interruptor, sem deploy.
-export type BoasVindasConfig = { ativa: boolean; cupom: string; percentual: number }
+export type BoasVindasConfig =
+  | { ativa: true; modo: "cupom"; cupom: string; percentual: number }
+  | { ativa: true; modo: "presente"; cupom: null; percentual: 0 }
 
 export const CHAVE_CUPOM_GUARDADO = "eclat_cupom_boas_vindas" // localStorage: a sacola lê e já abre o campo
 export const COOKIE_AVISO = "eclat_bv" // "1" = já viu/fechou/cadastrou: não reaparece por 60 dias
@@ -11,10 +15,11 @@ export const TEXTO_ACEITE = "Aceito receber novidades e ofertas da ÉCLAT por Wh
 export function lerConfigBoasVindas(v: unknown): BoasVindasConfig | null {
   if (!v || typeof v !== "object") return null
   const o = v as Record<string, unknown>
+  if (o.ativa === true && o.modo === "presente") return { ativa: true, modo: "presente", cupom: null, percentual: 0 }
   const cupom = typeof o.cupom === "string" ? o.cupom.trim().toUpperCase() : ""
   const percentual = Number(o.percentual)
   if (o.ativa !== true || !cupom || !Number.isFinite(percentual) || percentual <= 0 || percentual > 100) return null
-  return { ativa: true, cupom, percentual }
+  return { ativa: true, modo: "cupom", cupom, percentual }
 }
 
 // Onde o aviso NÃO abre: quem já está comprando não pode ser interrompido (sacola, checkout,

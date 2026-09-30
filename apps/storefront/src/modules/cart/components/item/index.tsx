@@ -13,6 +13,7 @@ import LocalizedClientLink from "@modules/common/components/localized-client-lin
 import Spinner from "@modules/common/icons/spinner"
 import Thumbnail from "@modules/products/components/thumbnail"
 import { fotoDoItem } from "@lib/util/foto-do-item"
+import { ehLinhaDePresente } from "@lib/util/brinde"
 import { useState } from "react"
 
 type ItemProps = {
@@ -45,6 +46,8 @@ const Item = ({ item, type = "full", currencyCode, etiqueta }: ItemProps) => {
   // TODO: Update this to grab the actual max inventory
   const maxQtyFromInventory = 10
   const maxQuantity = item.variant?.manage_inventory ? 10 : maxQtyFromInventory
+  // Presente (R$ 0): uma unidade só, sem seletor; tirar pela lixeira ou pelo quadro do presente.
+  const presente = ehLinhaDePresente(item)
 
   return (
     <Table.Row className="w-full" data-testid="product-row">
@@ -72,6 +75,14 @@ const Item = ({ item, type = "full", currencyCode, etiqueta }: ItemProps) => {
           {item.product_title}
         </Text>
         <LineItemOptions variant={item.variant} data-testid="product-variant" />
+        {presente && (
+          <span
+            className="mt-1 inline-block rounded-sm bg-eclat-terracota px-1.5 py-0.5 text-[11px] uppercase tracking-wider text-eclat-luz"
+            data-testid="etiqueta-presente"
+          >
+            Presente
+          </span>
+        )}
         {etiqueta && (
           <span
             className="mt-1 inline-block rounded-sm bg-eclat-areia px-1.5 py-0.5 text-[11px] uppercase tracking-wider text-eclat-grafite"
@@ -86,7 +97,7 @@ const Item = ({ item, type = "full", currencyCode, etiqueta }: ItemProps) => {
         <Table.Cell className="px-1 small:px-4">
           <div className="flex items-center gap-1 small:gap-2 w-auto small:w-28">
             <DeleteButton id={item.id} data-testid="product-delete-button" />
-            <CartItemSelect
+            {!presente && <CartItemSelect
               value={item.quantity}
               onChange={(value) => changeQuantity(parseInt(value.target.value))}
               className="w-14 h-9 p-0 small:w-16 small:h-10"
@@ -107,7 +118,7 @@ const Item = ({ item, type = "full", currencyCode, etiqueta }: ItemProps) => {
               <option value={1} key={1}>
                 1
               </option>
-            </CartItemSelect>
+            </CartItemSelect>}
             {updating && <Spinner />}
           </div>
           <ErrorMessage error={error} data-testid="product-error-message" />

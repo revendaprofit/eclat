@@ -3,11 +3,16 @@ import { avisoPermitidoNaRota, lerConfigBoasVindas, mascararCelular } from "./bo
 
 describe("lerConfigBoasVindas", () => {
   it("só liga com ativa=true, cupom e percentual válidos", () => {
-    expect(lerConfigBoasVindas({ ativa: true, cupom: " bemvinda10 ", percentual: 10 })).toEqual({ ativa: true, cupom: "BEMVINDA10", percentual: 10 })
+    expect(lerConfigBoasVindas({ ativa: true, cupom: " bemvinda10 ", percentual: 10 })).toEqual({ ativa: true, modo: "cupom", cupom: "BEMVINDA10", percentual: 10 })
     expect(lerConfigBoasVindas({ ativa: false, cupom: "X", percentual: 10 })).toBeNull()
     expect(lerConfigBoasVindas({ ativa: true, cupom: "", percentual: 10 })).toBeNull()
     expect(lerConfigBoasVindas({ ativa: true, cupom: "X", percentual: 0 })).toBeNull()
     expect(lerConfigBoasVindas(null)).toBeNull()
+  })
+
+  it("modo presente (fim do BEMVINDA10, 2026-09-30): liga sem cupom", () => {
+    expect(lerConfigBoasVindas({ ativa: true, modo: "presente" })).toEqual({ ativa: true, modo: "presente", cupom: null, percentual: 0 })
+    expect(lerConfigBoasVindas({ ativa: false, modo: "presente" })).toBeNull()
   })
 })
 
