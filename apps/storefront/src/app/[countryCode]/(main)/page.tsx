@@ -12,6 +12,7 @@ import Faq from "@modules/home/components/faq"
 import Newsletter from "@modules/home/components/newsletter"
 import ClubeEclat from "@modules/home/components/clube-eclat"
 import Instagram from "@modules/home/components/instagram"
+import DetalhesQueFazemDiferenca from "@modules/common/components/detalhes"
 import { listCollections } from "@lib/data/collections"
 import { getRegion } from "@lib/data/regions"
 import { getSiteContent } from "@lib/data/site-content"
@@ -135,6 +136,8 @@ export default async function Home(props: {
       {/* Conjuntos logo depois da grade de produtos (reordenação de 2026-09-30, referência beatco.com.br:
           produto e preço na primeira rolagem; manifesto e linhas descem). */}
       {isVisible(banner) && <EditorialBanner content={banner} />}
+
+      <DetalhesQueFazemDiferenca />
 
       {isVisible(manifesto) && <Manifesto content={manifesto} />}
 

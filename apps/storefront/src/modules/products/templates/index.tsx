@@ -16,6 +16,7 @@ import CompraSegura from "@modules/products/components/compra-segura"
 import { getCondicoesDaLoja } from "@lib/data/condicoes"
 import QuemE from "@modules/products/components/quem-e"
 import PdpTestimonials from "@modules/products/components/pdp-testimonials"
+import DetalhesQueFazemDiferenca from "@modules/common/components/detalhes"
 import ProductFaq from "@modules/products/components/product-faq"
 import NotifyMe from "@modules/products/components/notify-me"
 import Track from "@modules/analytics/track"
@@ -171,6 +172,7 @@ const ProductTemplate = async ({
       {/* Faixas de borda a borda alternando os tons da marca (areia, luz, blush claro), pedido do
           dono (2026-09-13): cada seção cuida do próprio fundo e some inteira quando não tem dados. */}
       <QuemE product={product} />
+      <DetalhesQueFazemDiferenca />
       <PdpTestimonials />
       <section className="bg-eclat-blush-claro/60 py-12 small:py-16" data-testid="pdp-faixa-faq">
         <div className="content-container max-w-4xl flex flex-col gap-y-10">
