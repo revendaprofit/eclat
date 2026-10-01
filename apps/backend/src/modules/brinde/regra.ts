@@ -110,6 +110,17 @@ export function avaliarCarrinho(
   return { ok: true }
 }
 
+/**
+ * Frase do presente para as mensagens de recuperação (WhatsApp e e-mail): fala da faixa mais baixa.
+ * null = promoção desligada (a mensagem sai sem oferta).
+ */
+export function frasePresente(config: ConfigBrindes | null): string | null {
+  const f = config?.faixas[0]
+  if (!f) return null
+  const nome = f.id === "oculos" ? "um óculos Éclat" : "uma meia Éclat"
+  return `Nas compras a partir de ${reais(f.minimo_centavos).replace(",00", "")} em peças, você ganha ${nome} de presente.`
+}
+
 export function mensagemAbaixo(f: Faixa): string {
   const nome = f.id === "oculos" ? "o óculos" : "a meia"
   return `Seu presente saiu porque a sacola ficou abaixo de ${reais(f.minimo_centavos)} (valor para ganhar ${nome}).`

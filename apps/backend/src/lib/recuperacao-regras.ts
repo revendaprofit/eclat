@@ -145,21 +145,28 @@ export function linkDaOferta(gatilho: Gatilho, lojaUrl: string): string {
   return gatilho === "carrinho" || gatilho === "pix" ? `${base}/br/cart` : `${base}/br`
 }
 
-/** 2ª mensagem, só depois que a pessoa respondeu: o motivo do contato, o cupom e o link. */
+/**
+ * 2ª mensagem, só depois que a pessoa respondeu: o motivo do contato, a oferta e o link.
+ * Oferta: o PRESENTE por faixa quando a promoção está ligada (`presente` = frase pronta, modules/brinde/regra.ts);
+ * senão o cupom do Cockpit, se houver. Nunca os dois — o BEMVINDA10 saiu em 2026-09-30 (decisão do dono).
+ */
 export function textoOferta(p: {
   gatilho: Gatilho
   dados: DadosRecuperacao
   cupom: string
   link: string
+  presente?: string | null
 }): string {
-  const cupom = p.cupom.trim()
-  const comCupom = cupom ? ` Se for sua primeira compra, o cupom ${cupom} dá 10% de desconto.` : ""
+  const presente = p.presente?.trim() || ""
+  const cupom = presente ? "" : p.cupom.trim()
+  const comCupom = presente ? ` ${presente} 🎁` : cupom ? ` Se for sua primeira compra, o cupom ${cupom} dá 10% de desconto.` : ""
   switch (p.gatilho) {
     case "carrinho":
       return `Vi que você separou ${resumoItens(p.dados.itens)} no nosso site e não chegou a finalizar. Ficou alguma dúvida de tamanho ou de frete? Posso te ajudar 😊${comCupom} Sua sacola continua aqui: ${p.link}`
     case "pix":
       return `Vi que o Pix do seu pedido (${resumoItens(p.dados.itens)}) expirou antes do pagamento. Aconteceu alguma coisa? É só voltar na sacola que o site gera um Pix novo na hora: ${p.link} Se preferir, te ajudo por aqui 😊`
     case "lead_site":
+      if (presente) return `Você deixou seu contato no nosso site 😊${comCupom} Quer que eu te indique as peças mais pedidas? Dá uma olhada: ${p.link}`
       return `Você deixou seu contato no nosso site pra ganhar 10% na primeira compra 😊${cupom ? ` Seu cupom é ${cupom}.` : ""} Quer que eu te indique as peças mais pedidas? Dá uma olhada: ${p.link}`
     case "anuncio":
       return `Se quiser, te ajudo a escolher tamanho e cor por aqui mesmo.${comCupom} As peças estão todas aqui: ${p.link}`

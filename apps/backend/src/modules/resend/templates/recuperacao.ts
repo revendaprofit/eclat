@@ -10,6 +10,8 @@ export type DadosRecuperacaoEmail = {
   /** Resumo pronto: "o Macaquinho Solaris (Telha / M) e mais 1 peça". */
   itens: string
   cupom: string | null
+  /** Frase do presente por faixa (modules/brinde/regra.ts). Com ela, o cupom não é citado. */
+  presente?: string | null
   link: string
   lojaUrl: string
   whatsapp: string
@@ -19,8 +21,9 @@ type Texto = { assunto: string; titulo: string; paragrafos: string[]; botao: str
 
 function textos(d: DadosRecuperacaoEmail): Texto {
   const nome = d.primeiroNome ? `${d.primeiroNome}, ` : ""
-  const cupom = d.cupom?.trim()
-  const linhaCupom = cupom ? `Se for a sua primeira compra, use o cupom ${cupom} e ganhe 10% de desconto.` : null
+  const presente = d.presente?.trim() || null
+  const cupom = presente ? undefined : d.cupom?.trim()
+  const linhaCupom = presente ?? (cupom ? `Se for a sua primeira compra, use o cupom ${cupom} e ganhe 10% de desconto.` : null)
   switch (d.gatilho) {
     case "pix":
       return {
@@ -34,6 +37,14 @@ function textos(d: DadosRecuperacaoEmail): Texto {
         previa: "Volte à sacola e gere um Pix novo em um clique.",
       }
     case "lead_site":
+      if (presente)
+        return {
+          assunto: "Um presente esperando por você",
+          titulo: `${nome}tem presente na sua primeira sacola`,
+          paragrafos: ["Você deixou seu contato no nosso site para saber dos lançamentos antes de todo mundo.", presente],
+          botao: "Ver a coleção",
+          previa: presente,
+        }
       return {
         assunto: cupom ? `Seu cupom ${cupom} está esperando por você` : "Seu desconto está esperando por você",
         titulo: `${nome}seus 10% estão guardados`,

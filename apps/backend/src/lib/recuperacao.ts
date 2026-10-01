@@ -8,6 +8,8 @@
 // Freios: dois interruptores (WhatsApp e e-mail, desligados de início), sessão do WhatsApp aberta,
 // 1 abordagem por rodada, uma ocasião por pessoa a cada 30 dias, confere compra antes de cada envio,
 // pausa sozinha depois de 3 falhas seguidas. Log sem telefone nem e-mail.
+import { configDaLoja } from "./brinde"
+import { frasePresente } from "../modules/brinde/regra"
 import type { MedusaContainer } from "@medusajs/framework/types"
 import { ContainerRegistrationKeys, Modules } from "@medusajs/framework/utils"
 import { configDoAmbiente, entraNaLista } from "../api/admin/carrinhos-abandonados/filtro"
@@ -258,7 +260,13 @@ async function enviarOfertas(container: MedusaContainer, cfg: RecuperacaoConfig,
       await atualizar(r.id, { etapa: "encerrada", motivo_fim: "comprou" })
       continue
     }
-    const texto = textoOferta({ gatilho: r.gatilho, dados: r.dados ?? {}, cupom: cfg.cupom, link: linkDaOferta(r.gatilho, LOJA_URL) })
+    const texto = textoOferta({
+      gatilho: r.gatilho,
+      dados: r.dados ?? {},
+      cupom: cfg.cupom,
+      presente: frasePresente(await configDaLoja()),
+      link: linkDaOferta(r.gatilho, LOJA_URL),
+    })
     if (!(await reservar(r.id, "respondeu", { etapa: "oferta_enviada", oferta_em: agora.toISOString(), oferta_texto: texto }))) continue
     try {
       const conv = await enviarWhatsapp(r, texto, "oferta")
@@ -299,6 +307,7 @@ async function enviarEmails(container: MedusaContainer, cfg: RecuperacaoConfig, 
           primeiroNome: r.nome,
           itens: resumoItens(r.dados?.itens),
           cupom: cfg.cupom,
+          presente: frasePresente(await configDaLoja()),
           link: linkDaOferta(r.gatilho, LOJA_URL),
           lojaUrl: LOJA_URL,
           whatsapp: whatsappDaMarca,

@@ -96,6 +96,18 @@ describe("textos", () => {
     expect(t).toContain("BEMVINDA10")
     expect(t).toContain("https://www.useeclat.com.br/br/cart")
   })
+  it("com o presente ligado, a oferta fala da meia e NÃO cita cupom (BEMVINDA10 saiu em 2026-09-30)", () => {
+    const presente = "Nas compras a partir de R$ 250 em peças, você ganha uma meia Éclat de presente."
+    const carrinho = textoOferta({ gatilho: "carrinho", dados: {}, cupom: "BEMVINDA10", presente, link: "L" })
+    expect(carrinho).toContain("meia Éclat de presente")
+    expect(carrinho).not.toContain("BEMVINDA10")
+    expect(carrinho).not.toContain("10%")
+    const lead = textoOferta({ gatilho: "lead_site", dados: {}, cupom: "BEMVINDA10", presente, link: "L" })
+    expect(lead).toContain("meia Éclat de presente")
+    expect(lead).not.toMatch(/10%|BEMVINDA/)
+    // Pix expirado não leva oferta nenhuma
+    expect(textoOferta({ gatilho: "pix", dados: {}, cupom: "", presente, link: "L" })).not.toContain("presente")
+  })
   it("oferta do Pix fala em gerar Pix novo; lead do site leva à coleção", () => {
     expect(textoOferta({ gatilho: "pix", dados: {}, cupom: "", link: "L" })).toContain("Pix novo")
     expect(linkDaOferta("lead_site", "https://x.com")).toBe("https://x.com/br")

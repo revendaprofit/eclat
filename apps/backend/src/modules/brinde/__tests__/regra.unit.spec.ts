@@ -1,4 +1,4 @@
-import { avaliarCarrinho, faixasLiberadas, lerConfig, proximaFaixa } from "../regra"
+import { avaliarCarrinho, faixasLiberadas, frasePresente, lerConfig, proximaFaixa } from "../regra"
 
 const RAW = {
   ativo: true,
@@ -63,6 +63,11 @@ describe("brinde/regra", () => {
   it("recusa presente com a promoção desligada ou esgotada", () => {
     expect(avaliarCarrinho([meia()], 30000, null, {})).toMatchObject({ ok: false })
     expect(avaliarCarrinho([meia()], 30000, cfg, { meia: 30 })).toMatchObject({ ok: false })
+  })
+
+  it("frase do presente para as mensagens: faixa mais baixa, valor sem centavos", () => {
+    expect(frasePresente(cfg)).toBe("Nas compras a partir de R$ 250 em peças, você ganha uma meia Éclat de presente.")
+    expect(frasePresente(null)).toBeNull()
   })
 
   it("peça paga igual ao presente não conta como presente", () => {
