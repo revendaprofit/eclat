@@ -3,6 +3,7 @@ import { HttpTypes } from "@medusajs/types"
 import { Table } from "@modules/common/components/ui"
 
 import ItemCard from "@modules/cart/components/item-card"
+import { ehLinhaDePresente } from "@lib/util/brinde"
 import SkeletonLineItem from "@modules/skeletons/components/skeleton-line-item"
 
 type ItemsTemplateProps = {
@@ -13,7 +14,8 @@ type ItemsTemplateProps = {
 // Lista de peças da sacola em cartões (redesenho 2026-09; era uma tabela que cortava no celular).
 const ItemsTemplate = ({ cart, etiquetas }: ItemsTemplateProps) => {
   const items = cart?.items
-  const pecas = (items ?? []).reduce((s, i) => s + i.quantity, 0)
+  // O presente (R$ 0) não entra na contagem de peças.
+  const pecas = (items ?? []).reduce((s, i) => s + (ehLinhaDePresente(i) ? 0 : i.quantity), 0)
   return (
     <div>
       <header className="flex items-baseline justify-between border-b border-eclat-grafite/80 pb-3">

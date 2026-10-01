@@ -9,6 +9,7 @@ import LineItemPrice from "@modules/common/components/line-item-price"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import Thumbnail from "@modules/products/components/thumbnail"
 import { fotoDoItem } from "@lib/util/foto-do-item"
+import { ehLinhaDePresente } from "@lib/util/brinde"
 
 // Peça na sacola, em cartão (redesenho 2026-09): foto em retrato, nome, variação, etiqueta de
 // conjunto, quantidade em − / + (alvos de toque de 44px) e total da linha. Substitui a linha de
@@ -47,6 +48,8 @@ export default function ItemCard({
     })
   }
 
+  // Presente por faixa (R$ 0): uma unidade só — sem − / +, com etiqueta e "Grátis" no lugar do preço.
+  const presente = ehLinhaDePresente(item)
   const href = `/products/${item.product_handle}`
   const botaoQtd =
     "h-11 w-11 flex items-center justify-center text-lg text-eclat-grafite transition-colors hover:bg-eclat-blush-claro disabled:opacity-30 disabled:hover:bg-transparent"
@@ -72,6 +75,14 @@ export default function ItemCard({
                 {item.variant.title}
               </p>
             )}
+            {presente && (
+              <span
+                className="mt-2 inline-block rounded-sm bg-eclat-terracota px-1.5 py-0.5 text-[11px] uppercase tracking-wider text-eclat-luz"
+                data-testid="etiqueta-presente"
+              >
+                Presente
+              </span>
+            )}
             {etiqueta && (
               <span
                 className="mt-2 inline-block rounded-sm bg-eclat-blush-claro px-1.5 py-0.5 text-[11px] uppercase tracking-wider text-eclat-terracota-escuro"
@@ -82,7 +93,11 @@ export default function ItemCard({
             )}
           </div>
           <div className="shrink-0 text-right">
-            <LineItemPrice item={item} style="tight" currencyCode={currencyCode} />
+            {presente ? (
+              <span className="text-sm font-medium text-eclat-terracota" data-testid="presente-gratis">Grátis</span>
+            ) : (
+              <LineItemPrice item={item} style="tight" currencyCode={currencyCode} />
+            )}
             {item.quantity > 1 && (
               <p className="text-xs text-eclat-grafite/50 whitespace-nowrap">
                 {convertToLocale({ amount: item.unit_price ?? 0, currency_code: currencyCode })} cada
@@ -92,7 +107,7 @@ export default function ItemCard({
         </div>
 
         <div className="mt-auto flex items-center justify-between gap-3 pt-4 small:justify-start small:gap-6">
-          <div className="inline-flex items-center rounded-md border border-eclat-pedra overflow-hidden" role="group" aria-label={`Quantidade de ${item.product_title}`}>
+          {!presente && <div className="inline-flex items-center rounded-md border border-eclat-pedra overflow-hidden" role="group" aria-label={`Quantidade de ${item.product_title}`}>
             <button type="button" className={botaoQtd} onClick={() => mudarQuantidade(item.quantity - 1)} disabled={ocupado || item.quantity <= 1} aria-label="Diminuir quantidade" data-testid="product-qty-minus">
               −
             </button>
@@ -102,7 +117,7 @@ export default function ItemCard({
             <button type="button" className={botaoQtd} onClick={() => mudarQuantidade(item.quantity + 1)} disabled={ocupado || item.quantity >= MAX_POR_LINHA} aria-label="Aumentar quantidade" data-testid="product-qty-plus">
               +
             </button>
-          </div>
+          </div>}
           <button
             type="button"
             onClick={remover}
