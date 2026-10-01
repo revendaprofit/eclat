@@ -1,4 +1,5 @@
 import { Metadata } from "next"
+import { imagensOg } from "@lib/util/og"
 import { notFound } from "next/navigation"
 import { getSiteContent } from "@lib/data/site-content"
 import { getBaseURL } from "@lib/util/env"
@@ -55,6 +56,7 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
       title: `${page.title} | use.ÉCLAT`,
       description: page.description,
       url: path,
+      images: imagensOg(),
     },
   }
 }

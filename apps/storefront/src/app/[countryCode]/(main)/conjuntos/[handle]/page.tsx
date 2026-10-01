@@ -1,4 +1,5 @@
 import { Metadata } from "next"
+import { imagensOg } from "@lib/util/og"
 import { notFound } from "next/navigation"
 
 import { getConjunto } from "@lib/data/conjuntos"
@@ -37,7 +38,7 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
       title: `Conjunto ${card.nome} | use.ÉCLAT`,
       description,
       url: path,
-      images: imagem ? [imagem] : [],
+      images: imagensOg(imagem),
     },
   }
 }

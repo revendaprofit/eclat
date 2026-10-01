@@ -1,4 +1,5 @@
 import { Metadata } from "next"
+import { imagensOg } from "@lib/util/og"
 import Image from "next/image"
 import { listEditorialPosts } from "@lib/data/editorial"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
@@ -22,6 +23,7 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
       title: "Editorial | use.ÉCLAT",
       description,
       url: path,
+      images: imagensOg(),
     },
   }
 }

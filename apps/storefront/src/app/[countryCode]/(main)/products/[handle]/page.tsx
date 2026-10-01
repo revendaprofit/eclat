@@ -1,4 +1,5 @@
 import { Metadata } from "next"
+import { imagensOg } from "@lib/util/og"
 import { notFound } from "next/navigation"
 import { listProducts } from "@lib/data/products"
 import { getPersonaMediaForProduct, personasAtivas } from "@lib/data/personas"
@@ -95,7 +96,7 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
       title: `${product.title} | use.ÉCLAT`,
       description,
       url: path,
-      images: product.thumbnail ? [product.thumbnail] : [],
+      images: imagensOg(product.thumbnail),
     },
   }
 }

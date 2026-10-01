@@ -1,4 +1,5 @@
 import { Metadata } from "next"
+import { imagensOg } from "@lib/util/og"
 import Image from "next/image"
 import { notFound } from "next/navigation"
 import { getEditorialPost } from "@lib/data/editorial"
@@ -29,7 +30,7 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
       description,
       url: path,
       type: "article",
-      images: post.cover_url ? [post.cover_url] : undefined,
+      images: imagensOg(post.cover_url),
     },
   }
 }

@@ -1,4 +1,5 @@
 import { Metadata } from "next"
+import { imagensOg } from "@lib/util/og"
 import { permanentRedirect } from "next/navigation"
 
 import { isIndexable, legacyRedirectQuery, parseFilters } from "@lib/util/catalog-filters"
@@ -28,6 +29,7 @@ export async function generateMetadata(props: Params): Promise<Metadata> {
       title: "Loja | use.ÉCLAT",
       description,
       url: path,
+      images: imagensOg(),
     },
   }
 }

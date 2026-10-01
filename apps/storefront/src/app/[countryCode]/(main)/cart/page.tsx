@@ -9,8 +9,9 @@ import { Metadata } from "next"
 import { notFound } from "next/navigation"
 
 export const metadata: Metadata = {
-  title: "Sacola",
-  description: "Veja sua sacola",
+  title: "Sua sacola",
+  // É o texto que aparece no link da sacola mandado pelo WhatsApp (recuperação de carrinho).
+  description: "Suas peças estão guardadas aqui. Finalize quando quiser.",
 }
 
 export default async function Cart({ params }: { params: Promise<{ countryCode: string }> }) {

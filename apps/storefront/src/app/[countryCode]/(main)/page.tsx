@@ -1,4 +1,5 @@
 import { Metadata } from "next"
+import { imagensOg } from "@lib/util/og"
 
 import FeaturedProducts from "@modules/home/components/featured-products"
 import Hero, { HeroContent } from "@modules/home/components/hero"
@@ -56,7 +57,7 @@ export async function generateMetadata(props: {
       title,
       description,
       url: path,
-      images: seo?.og_image_url ? [{ url: seo.og_image_url }] : undefined,
+      images: imagensOg(seo?.og_image_url),
     },
   }
 }

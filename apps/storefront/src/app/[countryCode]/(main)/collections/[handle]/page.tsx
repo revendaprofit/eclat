@@ -1,4 +1,5 @@
 import { Metadata } from "next"
+import { imagensOg } from "@lib/util/og"
 import { notFound, permanentRedirect } from "next/navigation"
 
 import { getCollectionByHandle, listCollections } from "@lib/data/collections"
@@ -71,6 +72,7 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
       title: `${collection.title} | use.ÉCLAT`,
       description,
       url: path,
+      images: imagensOg(),
     },
   } as Metadata
 
