@@ -2,6 +2,7 @@
 //
 //   node scripts/cupom.mjs --codigo ERIKA20 --percentual 20 --usos 1
 //   node scripts/cupom.mjs --codigo ERIKA20 --percentual 20 --usos 1 --aplicar
+//   node scripts/cupom.mjs --codigo PATY10 --percentual 10 --sem-teto --aplicar   (cupom de parceria: sem limite de usos)
 //
 // Regras que valem sozinhas, sem nada aqui:
 // - o cupom alcança só as PEÇAS (nunca o frete): `target_type: "items"`;
@@ -10,6 +11,8 @@
 // - o pedido mínimo da loja (R$ 150 em peças) é do checkout, não do cupom.
 // - código que começa com BEMVINDA é cupom de PRIMEIRA COMPRA: além do teto de usos, só vale para CPF sem pedido anterior
 //   (apps/backend/src/modules/cupom-primeira-compra). Qualquer outro código não tem trava por cliente.
+// - `--sem-teto` (decisão do dono, 2026-09-25, cupons de parceria com influencer): a promoção nasce SEM campanha,
+//   logo sem limite de usos. O controle de vendas/comissão por cupom é do Cockpit (specs/2026-09-25-parcerias-influencer).
 //
 // Ambiente: MEDUSA_ADMIN_URL, MEDUSA_ADMIN_EMAIL, MEDUSA_ADMIN_PASSWORD.
 const args = process.argv.slice(2)
@@ -23,9 +26,10 @@ const PERCENTUAL = Number(valorDe("percentual"))
 // USOS = quantas vezes o cupom pode ser usado NO TOTAL, por qualquer pessoa (decisão do dono,
 // 2026-09-20: nada de cupom preso a cliente). Esgotado o limite, o Medusa recusa o código.
 const USOS = Number(valorDe("usos", "1"))
+const SEM_TETO = args.includes("--sem-teto")
 
 if (!CODIGO || !Number.isFinite(PERCENTUAL) || PERCENTUAL <= 0 || PERCENTUAL > 100) {
-  console.error("✗ use: --codigo ERIKA20 --percentual 20 [--usos 1] [--aplicar]")
+  console.error("✗ use: --codigo ERIKA20 --percentual 20 [--usos 1 | --sem-teto] [--aplicar]")
   process.exit(1)
 }
 
@@ -79,24 +83,31 @@ const promocao = {
   },
 }
 
-console.log(`${APLICAR ? "→" : "(simulação)"} cupom ${CODIGO}: ${PERCENTUAL}% nas peças, ${USOS} uso(s) no total`)
+const teto = SEM_TETO ? "sem teto de usos" : `${USOS} uso(s) no total`
+console.log(`${APLICAR ? "→" : "(simulação)"} cupom ${CODIGO}: ${PERCENTUAL}% nas peças, ${teto}`)
 if (!APLICAR) {
-  console.log("  campanha:", JSON.stringify(campanha))
+  if (!SEM_TETO) console.log("  campanha:", JSON.stringify(campanha))
   console.log("  promoção:", JSON.stringify(promocao))
   console.log('  repita com --aplicar quando o dono disser "pode aplicar".')
   process.exit(0)
 }
 
-const { campaign } = await j(
-  await fetch(`${URL}/admin/campaigns`, { method: "POST", headers: h, body: JSON.stringify(campanha) })
-)
-console.log(`  ✓ campanha ${campaign.id} (limite ${USOS} uso(s) no total)`)
+let campaign_id
+if (SEM_TETO) {
+  console.log("  (sem campanha: cupom sem limite de usos)")
+} else {
+  const { campaign } = await j(
+    await fetch(`${URL}/admin/campaigns`, { method: "POST", headers: h, body: JSON.stringify(campanha) })
+  )
+  campaign_id = campaign.id
+  console.log(`  ✓ campanha ${campaign.id} (limite ${USOS} uso(s) no total)`)
+}
 
 const { promotion } = await j(
   await fetch(`${URL}/admin/promotions`, {
     method: "POST",
     headers: h,
-    body: JSON.stringify({ ...promocao, campaign_id: campaign.id }),
+    body: JSON.stringify(campaign_id ? { ...promocao, campaign_id } : promocao),
   })
 )
 console.log(`  ✓ cupom ${promotion.code} (${promotion.id}, ${promotion.status})`)
