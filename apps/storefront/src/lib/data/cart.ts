@@ -24,6 +24,7 @@ import { retrieveCustomer, updateCustomer } from "./customer"
 import { sinaisDoMeta } from "@modules/analytics/capi"
 import { getCondicoes } from "./condicoes"
 import { ajustarPresente } from "./brinde"
+import { aplicarCupomDaParceira } from "./parceira"
 import { codigosParaPagamento } from "@lib/util/carrinho-conjunto"
 import {
   contatoParaCarrinho,
@@ -175,6 +176,9 @@ export async function addToCart({
       headers
     )
     .then(async () => {
+      // Chegou por link de creator: o cupom dela entra agora (com peça na sacola o desconto já aparece).
+      // O cupom baixa a base, então o presente por faixa é reconferido.
+      if (await aplicarCupomDaParceira(cart.id)) await ajustarPresente()
       const cartCacheTag = await getCacheTag("carts")
       revalidateTag(cartCacheTag)
 

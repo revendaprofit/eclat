@@ -119,6 +119,12 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
+  // Link da creator (/p/<apelido> e /p/<apelido>/<n>): rota própria fora do [countryCode] — grava o cookie e
+  // ela mesma manda para /br. Sem este desvio o middleware redirecionaria para /br/p/... (404).
+  if (/^\/p\/.+/.test(request.nextUrl.pathname)) {
+    return NextResponse.next()
+  }
+
   if (COMING_SOON) {
     const path = request.nextUrl.pathname
     if (path === COMING_SOON_PATH || path === VIP_PATH) {
