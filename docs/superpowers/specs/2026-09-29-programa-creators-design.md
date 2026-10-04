@@ -14,7 +14,7 @@ com quem continuar. Sem custo fixo de plataforma.
 | # | Decisão |
 |---|---------|
 | D1 | **Só comissão.** Não há cachê. O formato é o das parcerias: cliente ganha 10% nas peças, parceira ganha 5% do valor das peças pago. |
-| D2 | **Toda creator aprovada recebe uma peça de presente.** |
+| D2 | **Toda creator aprovada recebe uma peça de presente.** A 2ª peça só com 5 vendas (D6, §9). |
 | D3 | **A ÉCLAT pode usar o conteúdo da creator (inclusive em anúncio) durante toda a parceria.** Acabou a parceria, acabou o direito. |
 | D4 | **Quem opera é a Camila** (dona da marca). |
 | D5 | **Sem portal da creator por enquanto.** A comunicação é por WhatsApp, e **toda venda com o cupom dela gera uma mensagem para ela.** |
@@ -187,16 +187,19 @@ Continua fora do banco (decisão de 2026-09-25): chave Pix, CPF e contrato assin
 
 ## 7. Fases (Halt entre cada uma)
 
+> Ordem revista em 2026-10-04 (§9): o ciclo roda primeiro com as creators que já têm cupom; a prospecção vem depois.
+
 | Fase | Entrega | Aceite |
 |------|---------|--------|
-| P0 | Terminar parcerias: F2 validada e com deploy (Cockpit + vitrine com um cupom por sacola) e F3 (fechar mês, marcar pago, DRE) | pedido com PATY10 aparece com a comissão; repasse gravado |
-| P1 | Aviso de venda por WhatsApp (tabela `parceria_aviso`, subscriber, job) | pedido de teste com cupom de teste gera exatamente 1 mensagem para o número do dono; fora do horário, sai às 8h |
-| P2 | Link `/p/<apelido>` | clicar no link, montar a sacola → cupom aplicado; pedido grava `parceria_link` |
-| P3 | Creators e prospecção + leitura do Instagram | cadastrar um @ real mostra seguidores e engajamento; aprovar cria o cupom |
-| P4 | Termo e envio de peça | envio vira pedido de R$ 0 com etiqueta; custo aparece na ficha |
-| P5 | Campanhas, entregas, aprovação e arquivos | entrega sobe arquivo, é aprovada e marcada "em anúncio"; desativar a parceria lista o conteúdo para pausar |
-| P6 | Ranking | números batem com a conta manual de 2 creators |
-| P7 | SOP `architecture/parcerias.md` e contexto compartilhado | — |
+| P0 | Terminar parcerias: F2 validada e com deploy do Cockpit e F3 (fechar mês, marcar pago, DRE). "Um cupom por sacola" já está no ar desde 2026-09-30 | pedido com PATY10 aparece com a comissão; repasse gravado |
+| P1 | Aviso de venda por WhatsApp (tabela `parceria_aviso`, subscriber, job), com o progresso para a 2ª peça (C14) | pedido de teste com cupom de teste gera exatamente 1 mensagem para o número do dono; fora do horário, sai às 8h |
+| P2 | Link `/p/<apelido>` e link por conteúdo `/p/<apelido>/<n>` (C11); cadastro mínimo de creator e de conteúdo no Cockpit | clicar no link, montar a sacola → cupom aplicado; pedido grava `parceria_link` e `parceria_conteudo` |
+| P3 | O ciclo: vídeo vencedor (C12), resumo semanal para o grupo (C13), 2ª peça por meta (C14), ativa/parada (C15) | 3 pedidos de teste no mesmo conteúdo marcam o vídeo como vencedor; o resumo da semana lista esse vídeo; a 5ª venda libera a 2ª peça |
+| P4 | Prospecção + leitura do Instagram | cadastrar um @ real mostra seguidores e engajamento; aprovar cria o cupom |
+| P5 | Termo e envio de peça | envio vira pedido de R$ 0 com etiqueta; custo aparece na ficha |
+| P6 | Campanhas, aprovação de conteúdo e arquivos | entrega sobe arquivo, é aprovada e marcada "em anúncio"; desativar a parceria lista o conteúdo para pausar |
+| P7 | Ranking por creator e por vídeo | números batem com a conta manual de 2 creators |
+| P8 | SOP `architecture/parcerias.md` e contexto compartilhado | — |
 
 ## 8. Respostas do dono (2026-09-29)
 1. **C5 — DECIDIDO: sim.** Exceção à regra do número autorizada só para creators com `aceite_avisos = true`.
@@ -206,5 +209,50 @@ Continua fora do banco (decisão de 2026-09-25): chave Pix, CPF e contrato assin
 5. **Nota fiscal da peça de presente — DECIDIDO: não tratar agora.** A P4 registra o envio e o custo sem emitir nota.
    Pendência a rever com o contador antes de escalar o volume de envios.
 6. **Acesso da Camila ao Cockpit — sim**, ela já tem login de operadora.
-7. **Token da Meta** — instruções enviadas ao dono em 2026-09-29; a P3 espera `META_IG_USER_ID` e `META_IG_TOKEN`
-   no ambiente do Cockpit (Vercel e `.env.local`).
+7. **Token da Meta** — instruções enviadas ao dono em 2026-09-29; a prospecção (P4) espera `META_IG_USER_ID` e
+   `META_IG_TOKEN` no ambiente do Cockpit (Vercel e `.env.local`).
+
+## 9. Ajustes de 2026-10-04 — de "lista de contatos" para ciclo
+
+> Origem: referência trazida pelo dono (operação de creators afiliados em que o vídeo que vende vira referência para as
+> outras creators e recebe distribuição paga). O desenho acima já tinha comissão, amostra, briefing, uso em anúncio e
+> aviso de venda; faltava ligar as peças. **O schema abaixo precisa de aprovação antes do código.**
+
+### Decisões do dono (2026-10-04)
+| # | Decisão |
+|---|---------|
+| D6 | **2ª peça com 5 vendas.** A 1ª peça continua indo para toda creator aprovada (D2); a 2ª só sai quando ela chega a 5 vendas. |
+| D7 | **Vídeo vencedor = 3 vendas em 14 dias.** |
+
+### Regras novas
+| # | Regra | Como fica |
+|---|-------|-----------|
+| C11 | Medir por vídeo | Cada conteúdo cadastrado ganha um número por creator. O link vira `/p/<apelido>/<n>`; o cookie guarda o apelido e o número, e o pedido grava `metadata.parceria_conteudo`. A comissão continua sendo **só pelo cupom** (C6); o número só diz de qual vídeo a cliente veio. Link sem número conta para a creator, sem vídeo. |
+| C12 | Vídeo vencedor (D7) | Conteúdo com **3 ou mais pedidos pagos e não cancelados** atribuídos a ele **dentro de 14 dias corridos** (qualquer janela de 14 dias — a confirmar, ver "Em aberto"). Ao bater a regra, grava `vencedor_em` (não desmarca depois), aparece em destaque no Cockpit e entra no resumo semanal. Virar anúncio em parceria é decisão e ação do dono na Meta: o sistema só avisa. |
+| C13 | Grupo das creators | Um grupo de WhatsApp operado pela Camila. Toda semana o Cockpit monta o **resumo pronto para copiar**: vídeos que venderam (link do post, vendas), vencedores da semana e o briefing da próxima. O sistema **não envia** para o grupo (proteção do número): a Camila cola. Sem nome nem dado de cliente. |
+| C14 | 2ª peça (D6) | "Vendas que contam" = pedidos pagos e não cancelados com o cupom dela, acumulados desde a aprovação. Na 5ª, o Cockpit mostra "2ª peça liberada" (uma vez só por creator) e o envio usa o mesmo fluxo da 1ª (`creator_envio`). O aviso de venda (C3) diz quanto falta: "faltam 2 vendas para a sua 2ª peça". |
+| C15 | Ativa ou parada | Ativa = publicou conteúdo nos últimos **21 dias** (proposta, a confirmar). Parada entra numa fila "reativar" na tela, com a data do último vídeo. |
+
+### Schema — acréscimos à migration `0014_creators.sql`
+```sql
+-- C11/C12: número do conteúdo por creator, data de publicação e marca de vencedor
+alter table public.creator_entrega add column if not exists numero int;               -- 1, 2, 3… por creator
+alter table public.creator_entrega add column if not exists publicado_em timestamptz;
+alter table public.creator_entrega add column if not exists vencedor_em timestamptz;  -- C12: gravado uma vez
+create unique index if not exists creator_entrega_numero on public.creator_entrega (creator_id, numero);
+
+-- C11: de qual vídeo veio a venda (null = cupom digitado ou link sem número)
+alter table public.parceria_aviso add column if not exists entrega_id uuid references public.creator_entrega(id);
+
+-- C14: por que a peça saiu
+alter table public.creator_envio add column if not exists motivo text not null default 'aprovacao'
+  check (motivo in ('aprovacao', 'meta_vendas'));
+```
+`parceria_aviso` já é uma linha por pedido com cupom de parceria: é dela que saem a contagem do vídeo vencedor (C12) e
+a das 5 vendas (C14), sempre conferindo no Medusa se o pedido continua pago e não cancelado.
+
+### Em aberto
+1. **Janela dos 14 dias (C12):** qualquer período de 14 dias (proposta) ou só os 14 primeiros dias depois da publicação?
+2. **Dias sem publicar para contar como parada (C15):** 21 dias?
+3. **Paty e Nabels:** já receberam peça e estão publicando? Em 2026-10-04 os dois cupons tinham 0 vendas e a loja, 1 pedido
+   pago. A P3 só faz sentido com pelo menos uma creator publicando.
