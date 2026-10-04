@@ -256,6 +256,15 @@ a das 5 vendas (C14), sempre conferindo no Medusa se o pedido continua pago e n�
 2. **Parada:** 21 dias sem publicar.
 3. **Schema desta seção: APROVADO.**
 
-### Em aberto
-1. **Paty e Nabels:** já receberam peça e estão publicando? Em 2026-10-04 os dois cupons tinham 0 vendas e a loja, 1 pedido
-   pago. A P3 só faz sentido com pelo menos uma creator publicando.
+4. **Paty e Nabels já receberam a peça e estão publicando** e aceitam o aviso de venda. Apelidos dos links: `paty` e
+   `nabels`. Ordem aprovada: aviso de venda (P1) e links (P2) antes do fechamento do mês (F3 das parcerias).
+
+### Migration escrita (`supabase/migrations/0014_creators.sql`) — diferenças em relação ao texto acima
+Ao escrever a migration, cinco ajustes pequenos sobre o schema aprovado (todos aditivos):
+- `aceite_avisos` e `aceite_em` ficam em **`parceria`** (não em `creator`): o aviso é disparado pelo cupom, e hoje há
+  parceira com cupom e sem ficha de creator.
+- `creator.aprovada_em`: início da contagem das 5 vendas (C14).
+- `creator_entrega.titulo` (nome do vídeo no resumo semanal) e `criado_em`; `status` nasce `publicada` enquanto não há
+  fluxo de aprovação (P6).
+- `parceria_aviso.pedido_em` (data do pedido, para a janela de 14 dias), `veio_pelo_link` e `texto` (o que foi enviado).
+- A migration já grava os apelidos `paty` e `nabels`, o aceite das duas e cria as duas fichas em `creator`.
