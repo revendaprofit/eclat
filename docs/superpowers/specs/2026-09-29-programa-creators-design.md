@@ -228,10 +228,10 @@ Continua fora do banco (decisão de 2026-09-25): chave Pix, CPF e contrato assin
 | # | Regra | Como fica |
 |---|-------|-----------|
 | C11 | Medir por vídeo | Cada conteúdo cadastrado ganha um número por creator. O link vira `/p/<apelido>/<n>`; o cookie guarda o apelido e o número, e o pedido grava `metadata.parceria_conteudo`. A comissão continua sendo **só pelo cupom** (C6); o número só diz de qual vídeo a cliente veio. Link sem número conta para a creator, sem vídeo. |
-| C12 | Vídeo vencedor (D7) | Conteúdo com **3 ou mais pedidos pagos e não cancelados** atribuídos a ele **dentro de 14 dias corridos** (qualquer janela de 14 dias — a confirmar, ver "Em aberto"). Ao bater a regra, grava `vencedor_em` (não desmarca depois), aparece em destaque no Cockpit e entra no resumo semanal. Virar anúncio em parceria é decisão e ação do dono na Meta: o sistema só avisa. |
+| C12 | Vídeo vencedor (D7) | Conteúdo com **3 ou mais pedidos pagos e não cancelados** atribuídos a ele **dentro de qualquer período de 14 dias corridos** (dono, 2026-10-04). Ao bater a regra, grava `vencedor_em` (não desmarca depois), aparece em destaque no Cockpit e entra no resumo semanal. Virar anúncio em parceria é decisão e ação do dono na Meta: o sistema só avisa. |
 | C13 | Grupo das creators | Um grupo de WhatsApp operado pela Camila. Toda semana o Cockpit monta o **resumo pronto para copiar**: vídeos que venderam (link do post, vendas), vencedores da semana e o briefing da próxima. O sistema **não envia** para o grupo (proteção do número): a Camila cola. Sem nome nem dado de cliente. |
 | C14 | 2ª peça (D6) | "Vendas que contam" = pedidos pagos e não cancelados com o cupom dela, acumulados desde a aprovação. Na 5ª, o Cockpit mostra "2ª peça liberada" (uma vez só por creator) e o envio usa o mesmo fluxo da 1ª (`creator_envio`). O aviso de venda (C3) diz quanto falta: "faltam 2 vendas para a sua 2ª peça". |
-| C15 | Ativa ou parada | Ativa = publicou conteúdo nos últimos **21 dias** (proposta, a confirmar). Parada entra numa fila "reativar" na tela, com a data do último vídeo. |
+| C15 | Ativa ou parada | Ativa = publicou conteúdo nos últimos **21 dias** (dono, 2026-10-04). Parada entra numa fila "reativar" na tela, com a data do último vídeo. |
 
 ### Schema — acréscimos à migration `0014_creators.sql`
 ```sql
@@ -251,8 +251,11 @@ alter table public.creator_envio add column if not exists motivo text not null d
 `parceria_aviso` já é uma linha por pedido com cupom de parceria: é dela que saem a contagem do vídeo vencedor (C12) e
 a das 5 vendas (C14), sempre conferindo no Medusa se o pedido continua pago e não cancelado.
 
+### Respostas do dono (2026-10-04)
+1. **Janela do vídeo vencedor:** qualquer período de 14 dias.
+2. **Parada:** 21 dias sem publicar.
+3. **Schema desta seção: APROVADO.**
+
 ### Em aberto
-1. **Janela dos 14 dias (C12):** qualquer período de 14 dias (proposta) ou só os 14 primeiros dias depois da publicação?
-2. **Dias sem publicar para contar como parada (C15):** 21 dias?
-3. **Paty e Nabels:** já receberam peça e estão publicando? Em 2026-10-04 os dois cupons tinham 0 vendas e a loja, 1 pedido
+1. **Paty e Nabels:** já receberam peça e estão publicando? Em 2026-10-04 os dois cupons tinham 0 vendas e a loja, 1 pedido
    pago. A P3 só faz sentido com pelo menos uma creator publicando.
