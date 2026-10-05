@@ -45,6 +45,7 @@ const GRUPOS: { titulo: string | null; itens: { href: string; label: string }[] 
       { href: "/marketing", label: "Marketing" },
       { href: "/clube", label: "Clube Éclat" },
       { href: "/parcerias", label: "Parcerias" },
+      { href: "/creators", label: "Creators" },
     ],
   },
   {
