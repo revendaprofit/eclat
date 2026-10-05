@@ -129,3 +129,84 @@ export async function entregaDoNumero(codigo: string, numero: number): Promise<s
   })
   return criadas?.[0]?.id ?? (await achar())?.[0]?.id ?? null
 }
+
+// ---- Ciclo dos creators: perfis, vídeos, leituras (rotina diária e atribuição da venda) ----
+
+export type CreatorDoCiclo = { id: string; instagram: string; nome: string | null; parceria_codigo: string | null }
+export type Video = { id: string; creator_id: string; numero: number; link_post: string | null; publicado_em: string | null; vencedor_em: string | null }
+
+/** Creators aprovadas, com cupom e com @ — as que a rotina lê. */
+export async function creatorsDoCiclo(): Promise<CreatorDoCiclo[]> {
+  return (await sb<CreatorDoCiclo[]>(`creator?status=eq.aprovada&parceria_codigo=not.is.null&select=id,instagram,nome,parceria_codigo`)) ?? []
+}
+
+export async function videosDoCreator(creatorId: string): Promise<Video[]> {
+  return (await sb<Video[]>(`creator_entrega?creator_id=eq.${q(creatorId)}&select=id,creator_id,numero,link_post,publicado_em,vencedor_em&order=numero.asc&limit=1000`)) ?? []
+}
+
+/** Vídeos da creator dona do cupom (para decidir de qual vídeo veio a venda). */
+export async function videosDaParceria(codigo: string): Promise<Video[]> {
+  const creator = await creatorDaParceria(codigo)
+  return creator ? videosDoCreator(creator.id) : []
+}
+
+export async function criarVideo(v: {
+  creator_id: string
+  numero: number
+  formato: "reels" | "post"
+  titulo: string
+  link_post: string
+  publicado_em: string
+}): Promise<Video | null> {
+  const rows = await sb<Video[]>("creator_entrega?on_conflict=creator_id,numero", {
+    method: "POST",
+    headers: { Prefer: "resolution=ignore-duplicates,return=representation" },
+    body: JSON.stringify({ ...v, status: "publicada" }),
+  })
+  return rows?.[0] ?? null
+}
+
+export async function gravarLeitura(l: {
+  creator_id: string
+  seguidores: number | null
+  posts: number | null
+  media_curtidas: number
+  media_comentarios: number
+  engajamento_pct: number | null
+}): Promise<void> {
+  await sb("creator_snapshot", { method: "POST", headers: { Prefer: "return=minimal" }, body: JSON.stringify(l) })
+}
+
+/** Já houve leitura deste perfil desde `desdeIso`? (uma leitura por dia basta) */
+export async function temLeituraDesde(creatorId: string, desdeIso: string): Promise<boolean> {
+  const rows = await sb<{ id: string }[]>(`creator_snapshot?creator_id=eq.${q(creatorId)}&lido_em=gte.${q(desdeIso)}&select=id&limit=1`)
+  return (rows ?? []).length > 0
+}
+
+/** Vendas da parceria ainda sem vídeo. */
+export async function vendasSemVideo(codigo: string): Promise<Aviso[]> {
+  return listarAvisos(`codigo=eq.${q(codigo)}&entrega_id=is.null&select=order_id,pedido_em&limit=1000`)
+}
+
+/** Liga a venda ao vídeo — só se ela ainda não tem vídeo (nunca troca o que veio do link numerado). */
+export async function ligarVendaAoVideo(orderId: string, entregaId: string): Promise<void> {
+  await sb(`parceria_aviso?order_id=eq.${q(orderId)}&entrega_id=is.null`, {
+    method: "PATCH",
+    headers: { Prefer: "return=minimal" },
+    body: JSON.stringify({ entrega_id: entregaId }),
+  })
+}
+
+export async function vendasDoVideo(entregaId: string): Promise<Aviso[]> {
+  return listarAvisos(`entrega_id=eq.${q(entregaId)}&select=order_id,pedido_em&order=pedido_em.asc&limit=1000`)
+}
+
+/** Marca o vídeo como vencedor UMA vez (não desmarca nem remarca). Devolve true se marcou agora. */
+export async function marcarVencedor(entregaId: string, quandoIso: string): Promise<boolean> {
+  const rows = await sb<{ id: string }[]>(`creator_entrega?id=eq.${q(entregaId)}&vencedor_em=is.null`, {
+    method: "PATCH",
+    headers: { Prefer: "return=representation" },
+    body: JSON.stringify({ vencedor_em: quandoIso }),
+  })
+  return (rows ?? []).length > 0
+}

@@ -22,6 +22,7 @@ import type { MedusaContainer } from "@medusajs/framework/types"
 import { ContainerRegistrationKeys } from "@medusajs/framework/utils"
 import { EvolutionHttpError, evolutionConfigured, sendWhatsappText } from "./evolution"
 import { getOrCreateConversation, insertMessageIdempotent } from "./supabase"
+import { aposVendaDaParceria } from "./creator-ciclo"
 import {
   avisoDoPedido, avisosEnviadosDesde, criarAviso, entregaDoNumero, listarAvisos, listarParcerias, mudarAviso,
   parceriaDbConfigured, parceriaPorCodigo, vendasDaParceria, type Aviso,
@@ -92,6 +93,8 @@ export async function registrarVendaDeParceria(container: MedusaContainer, order
   })
   if (!aviso) return // já estava registrado (o subscriber rodou duas vezes): quem criou cuida do envio
   log.info(`[parceria] venda registrada: pedido #${aviso.display_id} com ${aviso.codigo}`)
+  // Sem número de vídeo, a venda vai para o último vídeo dela (até 14 dias); e confere o vídeo vencedor.
+  await aposVendaDaParceria(container, parceria.codigo, entregaId, log)
   await entregarAviso(container, aviso, new Date(), log)
 }
 
