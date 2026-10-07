@@ -1097,3 +1097,55 @@ export async function medusaSetThumbnail(productId: string, url: string | null):
   })
   if (!r.ok) throw new Error(`definir capa falhou (HTTP ${r.status}): ${await r.text()}`)
 }
+
+// ---- Parcerias com influencers (spec 2026-09-25) ----
+// Pedidos com os campos que o módulo puro lib/parcerias.ts precisa. Não há filtro por cupom na
+// Admin API: traz os pedidos e o módulo filtra (volume atual cabe em uma página).
+export type PedidoComCupomCru = {
+  id: string
+  display_id: number
+  status: string
+  payment_status: string | null
+  item_total: number | null
+  created_at: string
+  email?: string | null
+  promotions?: { code?: string | null }[] | null
+}
+export async function medusaOrdersComCupom(): Promise<PedidoComCupomCru[]> {
+  const r = await medusaAdmin(
+    `/admin/orders?limit=1000&order=-created_at&fields=id,display_id,status,payment_status,item_total,created_at,email,promotions.code`
+  )
+  if (!r.ok) throw new Error(`pedidos com cupom falhou (HTTP ${r.status})`)
+  return (await r.json()).orders
+}
+
+export type PromocaoResumo = { id: string; code: string; status: string; campaign_id: string | null }
+export async function medusaPromotionByCode(code: string): Promise<PromocaoResumo | null> {
+  const r = await medusaAdmin(`/admin/promotions?code=${encodeURIComponent(code)}&fields=id,code,status,campaign_id`)
+  if (!r.ok) throw new Error(`buscar cupom falhou (HTTP ${r.status})`)
+  const p = ((await r.json()).promotions ?? [])[0]
+  return p ? { id: p.id, code: p.code, status: p.status, campaign_id: p.campaign_id ?? null } : null
+}
+
+// Cupom de parceria: percentual só nas peças, SEM campanha (= sem teto de usos). O gancho
+// `conjunto-cupom` do backend põe a exclusão do Benefício Conjunto na criação. Mesmo corpo de
+// scripts/cupom.mjs --sem-teto.
+export async function medusaCriarCupomParceria(codigo: string, percentual: number): Promise<{ id: string }> {
+  const r = await medusaAdmin(`/admin/promotions`, {
+    method: "POST",
+    body: JSON.stringify({
+      code: codigo,
+      type: "standard",
+      is_automatic: false,
+      status: "active",
+      application_method: { type: "percentage", target_type: "items", allocation: "across", value: percentual, currency_code: "brl" },
+    }),
+  })
+  if (!r.ok) throw new Error(`criar cupom falhou (HTTP ${r.status}): ${(await r.text()).slice(0, 300)}`)
+  return { id: (await r.json()).promotion.id }
+}
+
+export async function medusaSetPromotionStatus(id: string, status: "active" | "inactive"): Promise<void> {
+  const r = await medusaAdmin(`/admin/promotions/${id}`, { method: "POST", body: JSON.stringify({ status }) })
+  if (!r.ok) throw new Error(`alterar status do cupom falhou (HTTP ${r.status}): ${(await r.text()).slice(0, 300)}`)
+}

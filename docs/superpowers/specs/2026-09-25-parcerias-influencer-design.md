@@ -38,7 +38,7 @@ mas entram no mesmo controle** — cada um vira uma linha em `parceria` com `des
 | R2 | Base da comissão | **DECIDIDO pelo dono em 2026-09-25: valor das peças efetivamente pago** (depois do desconto, sem frete). Ex.: peça de R$ 259 → cliente paga R$ 233,10 → comissão R$ 11,66 | ~~5% sobre o preço cheio~~ |
 | R3 | Quando a venda conta | pedido **pago** (Pix confirmado ou cartão aprovado) e **não cancelado**. Devolução/estorno tira a venda da conta | contar no fechamento do pedido |
 | R4 | Teto de usos do cupom | **DECIDIDO (dono, 2026-09-25): sem teto.** A promoção é criada sem campanha (`scripts/cupom.mjs --sem-teto`) | ~~teto alto com aviso~~ |
-| R5 | Um cupom por pedido | **hoje a sacola ACUMULA códigos** (`discount-code/index.tsx` faz `codes.push`): PATY10 + BEMVINDA10 entrariam juntos. Proposta: a vitrine passa a enviar só o último código (troca em vez de somar) — mudança pequena, com teste | trava no backend (gancho recusa carrinho com 2 cupons) |
+| R5 | Um cupom por pedido | **CORRIGIDO em código (2026-09-25, `lib/util/cupom-unico.ts`)**: o código novo substitui o anterior e a sacola avisa. Antes a sacola ACUMULAVA códigos (`discount-code/index.tsx` faz `codes.push`): PATY10 + BEMVINDA10 entrariam juntos. Proposta: a vitrine passa a enviar só o último código (troca em vez de somar) — mudança pequena, com teste | trava no backend (gancho recusa carrinho com 2 cupons) |
 | R6 | Cupom de parceria em primeira compra | não é cupom de primeira compra (qualquer cliente usa, quantas vezes quiser) | travar 1 por CPF |
 | R7 | Fechamento do repasse | **DECIDIDO (dono, 2026-09-25): mensal, pago pela ÉCLAT** (dono/sócia) por Pix; no início do mês o Cockpit mostra o acumulado do mês anterior por parceira e a operadora marca "pago" com data e valor | ~~quinzenal / por pedido~~ |
 | R8 | Dinheiro | centavos inteiros (invariante 3). O 5% arredonda por pedido, meio para cima | — |
@@ -130,7 +130,7 @@ O campo de cupom da sacola já existe. Só conferir a R5 (um código por vez).
 |------|---------|--------|
 | F0 | Este desenho aprovado + migration aplicada com "pode aplicar" | tabelas existem, RLS ligada |
 | F1 | `scripts/parceria.mjs` + linha em `parceria` para PATY10 e para os NOME20 | PATY10 já existe (2026-09-25, `cupom.mjs --sem-teto`), provado em carrinho real: peça 259 → 233,10; conjunto Aurora 318 → 286,20 (não soma) |
-| F2 | Cockpit: lista + ficha + cálculo puro com testes | pedido de teste com PATY10 aparece na ficha com a comissão certa |
+| F2 | Cockpit: lista + ficha + cálculo puro com testes (**em código, 2026-09-25**: `lib/parcerias.ts` + teste, rotas `/api/parcerias`, tela `/parcerias`; vitrine: um cupom por sacola) | pedido de teste com PATY10 aparece na ficha com a comissão certa — validação de tela pendente do dono |
 | F3 | Fechar mês / marcar pago + linha no DRE | repasse gravado, DRE mostra a despesa |
 | F4 | SOP `architecture/parcerias.md` + `contexto-claude/eclat-parcerias-influencer.md` (quem são, como pagar) | — |
 

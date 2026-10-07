@@ -6,6 +6,7 @@ import React from "react"
 import { applyPromotions } from "@lib/data/cart"
 import { CHAVE_CUPOM_GUARDADO } from "@lib/util/boas-vindas"
 import { avisoCupom, cuponsVisiveis } from "@lib/util/carrinho-conjunto"
+import { avisoTroca, codigosAoAplicar } from "@lib/util/cupom-unico"
 import { convertToLocale } from "@lib/util/money"
 import { HttpTypes } from "@medusajs/types"
 import Trash from "@modules/common/icons/trash"
@@ -19,6 +20,7 @@ type DiscountCodeProps = {
 const DiscountCode: React.FC<DiscountCodeProps> = ({ cart }) => {
   const [isOpen, setIsOpen] = React.useState(false)
   const [errorMessage, setErrorMessage] = React.useState("")
+  const [mensagemTroca, setAvisoTroca] = React.useState("")
 
   const promotions = cuponsVisiveis(cart.promotions)
 
@@ -56,13 +58,14 @@ const DiscountCode: React.FC<DiscountCodeProps> = ({ cart }) => {
       return
     }
     const input = document.getElementById("promotion-input") as HTMLInputElement
-    const codes = promotions
+    // Um cupom por pedido: o código novo SUBSTITUI o anterior (lib/util/cupom-unico.ts).
+    const anteriores = promotions
       .filter((p) => p.code !== undefined)
       .map((p) => p.code!)
-    codes.push(code.toString())
 
-    const r = await applyPromotions(codes)
+    const r = await applyPromotions(codigosAoAplicar(code.toString()))
     if (!r.ok) setErrorMessage(r.mensagem)
+    else setAvisoTroca(avisoTroca(anteriores, code.toString()) ?? "")
 
     if (input) {
       input.value = ""
@@ -121,7 +124,7 @@ const DiscountCode: React.FC<DiscountCodeProps> = ({ cart }) => {
           <div className="w-full flex items-center">
             <div className="flex flex-col w-full">
               <Heading className="txt-medium mb-2">
-                Cupom(ns) aplicado(s):
+                Cupom aplicado:
               </Heading>
 
               {promotions.map((promotion) => {
@@ -188,6 +191,11 @@ const DiscountCode: React.FC<DiscountCodeProps> = ({ cart }) => {
         )}
 
         <div aria-live="polite">
+          {mensagemTroca && (
+            <p className="txt-small text-eclat-grafite/70 mt-1" data-testid="aviso-cupom-troca">
+              {mensagemTroca}
+            </p>
+          )}
           {mostrarAviso && (
             <p className="txt-small text-eclat-grafite/70 mt-1" data-testid="aviso-cupom-conjunto">
               Cupom não se aplica a peças com Benefício Conjunto.
