@@ -19,24 +19,31 @@ import { ehPromocaoEmbaixador } from "../../modules/embaixador/regra"
  * SOMA com o conjunto (dono, 2026-10-08, modules/embaixador/regra.ts). Falha aqui devolve lista vazia: sem comparação, valem as marcas
  * de sempre.
  */
-async function cupomPercentualDoCarrinho(container: any, cart: any, promoCodes: string[], action?: string): Promise<CupomPercentual[]> {
+async function cupomPercentualDoCarrinho(
+  container: any,
+  cart: any,
+  promoCodes: string[],
+  action?: string
+): Promise<{ cupons: CupomPercentual[]; embaixador: boolean }> {
   const doCarrinho = ((cart?.promotions ?? []) as { code?: string | null }[]).map((p) => p?.code)
   const codigos = codigosEfetivos(doCarrinho, promoCodes, action).filter(
     (c) => !c.startsWith(CODIGO_PREFIXO) && !ehCodigoPix(c)
   )
-  if (!codigos.length) return []
+  if (!codigos.length) return { cupons: [], embaixador: false }
   try {
     const promocoes: any[] = await container.resolve(Modules.PROMOTION).listPromotions(
       { code: Array.from(new Set(codigos)) },
       { relations: ["application_method", "campaign"] }
     )
-    return promocoes
-      .filter((p) => p?.status !== "inactive" && p?.application_method?.type === "percentage" && !ehPromocaoEmbaixador(p))
+    const ativas = promocoes.filter((p) => p?.status !== "inactive")
+    const cupons = ativas
+      .filter((p) => p?.application_method?.type === "percentage" && !ehPromocaoEmbaixador(p))
       .map((p) => ({ code: p.code as string, percentual: Number(p.application_method?.value) || 0 }))
       .filter((c) => c.percentual > 0)
+    return { cupons, embaixador: ativas.some(ehPromocaoEmbaixador) }
   } catch (e) {
     console.error("[conjunto] cupons do carrinho", e)
-    return []
+    return { cupons: [], embaixador: false }
   }
 }
 
@@ -44,11 +51,11 @@ updateCartPromotionsWorkflow.hooks.setPromotionContext(async ({ cart, promo_code
   try {
     const items = ((cart as any)?.items ?? []) as any[]
     if (!items.length) return new StepResponse({})
-    const [{ resultado }, cupons] = await Promise.all([
+    const [{ resultado }, { cupons, embaixador }] = await Promise.all([
       avaliarCarrinho(container, cart as any),
       cupomPercentualDoCarrinho(container, cart, (promo_codes ?? []) as string[], action as string | undefined),
     ])
-    return new StepResponse({ items: marcarContexto(items, resultado, cupons) })
+    return new StepResponse({ items: marcarContexto(items, resultado, cupons, { baseComConjunto: embaixador }) })
   } catch (e) {
     // I1: um erro aqui (ex.: módulo indisponível, query graph falhando) não pode desligar os
     // cupons do carrinho inteiro. `items: {}` (StepResponse vazio) some com o atributo

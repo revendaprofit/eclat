@@ -100,8 +100,24 @@ export function descontoDoCupomNaUnidade(precoUnitario: number, cupons: CupomPer
   return melhor
 }
 
-export function marcarContexto(items: ItemCtx[], resultado: ResultadoMontagem, cupons: CupomPercentual[] = []): ItemCtx[] {
+/**
+ * `baseComConjunto` (cupom de EMBAIXADOR no carrinho, dono 2026-10-08): o cupom soma com o conjunto e deve
+ * incidir sobre o preço JÁ com o conjunto (R$ 299 → R$ 239,20). O motor do Medusa aplica as promoções em ordem
+ * de `application_method.value` DESC (promotion-module computeActions), então o cupom de 20 roda ANTES do
+ * conjunto (valor fixo 9,5 por peça) e calcularia sobre o preço cheio (R$ 235,40). Para corrigir, a entrada de
+ * contexto de cada unidade em conjunto chega ao motor com o `subtotal` já sem o desconto do conjunto: o cupom
+ * calcula sobre R$ 149,50 e o conjunto, que é valor fixo, desconta os mesmos R$ 9,50 de sempre.
+ * Efeito colateral conhecido: o PIX5, que roda depois dos dois, calcula sobre essa base reduzida menos o que já
+ * foi aplicado — nas peças em conjunto de carrinho de embaixador ele desconta 5% de R$ 9,50 a menos por peça.
+ */
+export function marcarContexto(
+  items: ItemCtx[],
+  resultado: ResultadoMontagem,
+  cupons: CupomPercentual[] = [],
+  opcoes: { baseComConjunto?: boolean } = {}
+): ItemCtx[] {
   const porItem = new Map<string, Map<string, number>>() // item_id → marca → unidades
+  const descontoPorItem = new Map<string, Map<string, number>>() // item_id → marca → centavos de conjunto
   for (const c of resultado.conjuntos) for (const u of c.unidades) {
     // Decisão do dono (2026-09-20): conjunto e cupom NUNCA somam na mesma peça — por peça vale o
     // MAIOR desconto. Se o cupom daria mais que o conjunto nesta unidade, ela sai como "nenhum"
@@ -117,6 +133,11 @@ export function marcarContexto(items: ItemCtx[], resultado: ResultadoMontagem, c
     const m = porItem.get(u.item_id) ?? new Map<string, number>()
     m.set(marca, (m.get(marca) ?? 0) + 1)
     porItem.set(u.item_id, m)
+    if (opcoes.baseComConjunto && marca === c.regra_id && u.desconto_unitario > 0) {
+      const d = descontoPorItem.get(u.item_id) ?? new Map<string, number>()
+      d.set(marca, (d.get(marca) ?? 0) + u.desconto_unitario)
+      descontoPorItem.set(u.item_id, d)
+    }
   }
   const saida: ItemCtx[] = []
   for (const it of items) {
@@ -125,10 +146,22 @@ export function marcarContexto(items: ItemCtx[], resultado: ResultadoMontagem, c
     if (!marcas) { saida.push({ ...it, conjunto_desconto: MARCA_LIVRE }); continue }
     let usadas = 0
     for (const [marca, n] of Array.from(marcas.entries())) {
-      saida.push({ ...escalar(it, n, q), conjunto_desconto: marca })
+      const entrada = escalar(it, n, q)
+      const centavos = descontoPorItem.get(it.id)?.get(marca) ?? 0
+      saida.push({ ...(centavos > 0 ? semDesconto(entrada, centavos) : entrada), conjunto_desconto: marca })
       usadas += n
     }
     if (usadas < q) saida.push({ ...escalar(it, q - usadas, q), conjunto_desconto: MARCA_LIVRE })
   }
   return saida
+}
+
+// Tira `centavos` do `subtotal` (e do `raw_subtotal`) de uma entrada de contexto — ver `baseComConjunto`.
+function semDesconto(entrada: ItemCtx, centavos: number): ItemCtx {
+  const copia: ItemCtx = { ...entrada, subtotal: Math.max(0, Number(entrada.subtotal) - centavos / 100) }
+  const raw = (entrada as any).raw_subtotal
+  if (raw && typeof raw === "object" && Number.isFinite(Number(raw.value))) {
+    ;(copia as any).raw_subtotal = { ...raw, value: String(Math.max(0, Number(raw.value) - centavos / 100)) }
+  }
+  return copia
 }
