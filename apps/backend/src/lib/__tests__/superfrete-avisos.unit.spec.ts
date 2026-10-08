@@ -27,10 +27,11 @@ describe("textos dos avisos de entrega", () => {
     )
   })
 
-  it("entregue (não fala de rastreio)", () => {
+  it("entregue: convida para o unboxing, com roteiro, perfil e voucher (não fala de rastreio)", () => {
     expect(textoEntregue(base)).toBe(
-      "Oi, Ana! 💛\nSeu pedido *#21* da use.ÉCLAT foi entregue.\n\nEsperamos que você ame. Obrigada por vestir a sua luz. ✨"
+      "Oi, Ana! 💛\nSeu pedido *#21* da use.ÉCLAT foi entregue. Esperamos que você ame! ✨\n\nQue tal fazer um unboxing e mostrar pra gente? 🎥 Um roteiro simples:\n1. Abra a caixa mostrando a embalagem e a tag.\n2. Mostre a peça de perto: a frente, as costas, o tecido.\n3. Vista ou treine com ela, do seu jeito.\n4. Poste nos stories marcando *@eclat.use*.\n\nMarcou? Me manda o print aqui que você ganha um *voucher de 10% OFF* para a sua próxima compra. 💛"
     )
+    expect(textoEntregue(base)).not.toContain("rastreio")
   })
 
   it("sem nome, a saudação vira 'tudo bem' (mesma regra do Cockpit)", () => {

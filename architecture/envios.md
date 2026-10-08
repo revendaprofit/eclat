@@ -210,3 +210,24 @@ usada no despacho manual e com o interruptor desligado — mudou um, mude o outr
 - A SuperFrete reenvia até 5 vezes, a cada 15 min, quando não recebe resposta boa em 30 s. Backend fora do
   ar por mais de ~1 h perde o aviso de postado/entregue (o pedido continua certo).
 - Etiqueta comprada fora do Cockpit (sem o número do pedido em `tags`) é ignorada, com registro no log.
+
+## Depois do despacho: convite para o Clube e convite ao unboxing (2026-10-08, sócia)
+Pedido da sócia depois do pedido #28: a cliente respondeu "Amei!!" ao rastreio e o robô de LEAD do Clube
+(`lib/clube.ts`, saudação + cupom de primeira compra) respondeu — confuso para quem acabou de comprar.
+- **Robô de lead não fala com quem comprou.** `api/webhooks/whatsapp/route.ts` consulta `ehClienteComPedido`
+  (`lib/convite-clube.ts`, cache de 5 min das chaves de contato dos pedidos de 180 dias) antes de `responderClube`.
+- **Convite para o Clube depois do rastreio.** Job `jobs/convite-clube.ts` (*/5): pedidos despachados há mais de
+  10 min e menos de 24 h, não cancelados, não `@eclat.local`, com telefone, cuja cliente NÃO está no grupo
+  (`groupParticipants` da Evolution, JID `CLUBE_ECLAT_GRUPO_JID`, comparação por 55+DDD+8 dígitos) recebem
+  `textoConviteClube` — participar das decisões, próximas coleções, benefícios, novidades, link do grupo; sem cupom.
+  Marca `metadata.clube_convite = {status, em}`: `enviado | no_grupo | sem_whatsapp | incerto | enviando`; reserva
+  atômica (`reservarConvite`) — nunca duas vezes. Sem a lista do grupo, nada sai (espera a próxima rodada). Quem recebe
+  o convite ganha `interesse: Clube Éclat` no lead, para o robô não repetir o link. Fica no job (e não no remetente
+  do despacho) porque o despacho tem dois caminhos (backend/Cockpit) e o convite precisa de um só.
+- **Entregue = convite ao unboxing.** `textoEntregue` (webhook `order.delivered`) agora traz o roteiro (abrir a caixa,
+  mostrar a peça, vestir/treinar, postar marcando `@eclat.use`) e promete voucher de 10% na próxima compra. O voucher
+  NÃO sai sozinho: a cliente manda o print na conversa, a equipe confere a marcação e cria o cupom
+  (`node scripts/cupom.mjs --codigo <NOME>10 --percentual 10 --usos 1 --aplicar`) e responde. 3 dias depois ainda sai o
+  pedido de avaliação (`architecture/avaliacao.md`) — são automações distintas.
+- Testes: `lib/__tests__/convite-clube.unit.spec.ts`, `superfrete-avisos.unit.spec.ts`. Não testado em execução:
+  `GET /group/participants` da Evolution (forma da resposta aceita `{participants:[{id}]}` e `[{id}]`).
