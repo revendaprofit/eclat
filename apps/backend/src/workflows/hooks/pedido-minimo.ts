@@ -2,7 +2,7 @@ import { completeCartWorkflow } from "@medusajs/medusa/core-flows"
 import { container } from "@medusajs/framework"
 import { MedusaError } from "@medusajs/framework/utils"
 import { avaliarMinimo, mensagemDoMinimo } from "../../modules/pedido-minimo/regra"
-import { carrinhoDoPresente, configDaLoja, presentesUsados } from "../../lib/brinde"
+import { carrinhoDoPresente, configDoCarrinho, presentesUsados } from "../../lib/brinde"
 import { avaliarCarrinho, ehLinhaDePresente } from "../../modules/brinde/regra"
 
 // Validação do FECHAMENTO do pedido. ATENÇÃO: o Medusa aceita UM só handler por hook — um segundo
@@ -24,7 +24,7 @@ completeCartWorkflow.hooks.validate(async ({ cart }) => {
   if (!itens.some(ehLinhaDePresente)) return
   const carrinho = await carrinhoDoPresente(container, (cart as any).id)
   if (!carrinho) return
-  const config = await configDaLoja()
+  const config = await configDoCarrinho(carrinho)
   const presente = avaliarCarrinho(carrinho.itens, carrinho.base, config, await presentesUsados(container, config))
   if (!presente.ok) throw new MedusaError(MedusaError.Types.NOT_ALLOWED, presente.motivo)
 })

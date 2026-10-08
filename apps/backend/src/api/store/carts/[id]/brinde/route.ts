@@ -6,13 +6,14 @@
 import type { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import { ContainerRegistrationKeys, MedusaError } from "@medusajs/framework/utils"
 import { addToCartWorkflow, deleteLineItemsWorkflow } from "@medusajs/medusa/core-flows"
-import { carrinhoDoPresente, configDaLoja, presentesUsados } from "../../../../../lib/brinde"
+import { carrinhoDoPresente, configDoCarrinho, presentesUsados } from "../../../../../lib/brinde"
 import { avaliarCarrinho, ehLinhaDePresente, faixasLiberadas, proximaFaixa } from "../../../../../modules/brinde/regra"
 
 async function estado(req: MedusaRequest) {
   const cartId = req.params.id
-  const [carrinho, config] = await Promise.all([carrinhoDoPresente(req.scope, cartId), configDaLoja()])
+  const carrinho = await carrinhoDoPresente(req.scope, cartId)
   if (!carrinho) throw new MedusaError(MedusaError.Types.NOT_FOUND, "Carrinho não encontrado.")
+  const config = await configDoCarrinho(carrinho)
   const usados = await presentesUsados(req.scope, config)
   return { cartId, carrinho, config, usados }
 }

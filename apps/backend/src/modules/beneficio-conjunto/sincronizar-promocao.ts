@@ -5,6 +5,7 @@ import { BENEFICIO_CONJUNTO_MODULE } from "./index"
 import { ATRIBUTO, CODIGO_PREFIXO, MARCA_LIVRE, REGRA_EXCLUSAO, codigoDaRegra, nUnidadesDaRegra, payloadPromocao } from "./utils/promocao"
 import type { Curado, Regra } from "./utils/tipos"
 import { ehCodigoPix } from "../desconto-pix/regra"
+import { ehPromocaoEmbaixador } from "../embaixador/regra"
 
 // Garante que a regra tem UMA promoção automática coerente (spec §6.2, ruling 6): cria se não existe
 // (ou se foi apagada à mão), atualiza tipo/valor/status se existe. A regra-alvo (eq regra_id) nunca muda.
@@ -72,7 +73,7 @@ export async function converterCupom(container: MedusaContainer, promotionId: st
   const p =
     promotionJaCarregada ??
     (await promo
-      .retrievePromotion(promotionId, { relations: ["application_method", "application_method.target_rules", "application_method.target_rules.values"] })
+      .retrievePromotion(promotionId, { relations: ["application_method", "application_method.target_rules", "application_method.target_rules.values", "campaign"] })
       .catch((e: unknown) => {
         console.error("[conjunto] converterCupom retrieve", promotionId, e)
         return null
@@ -81,6 +82,9 @@ export async function converterCupom(container: MedusaContainer, promotionId: st
   // Desconto do Pix (PIX5): soma com o conjunto (dono, 2026-09-30) — não ganha a regra de exclusão,
   // então alcança também as unidades em conjunto. Vale para o gancho e para /admin/conjuntos/reconciliar.
   if (ehCodigoPix(p.code)) return "ignorado"
+  // Cupom de embaixador (dono, 2026-10-08): soma com o conjunto, como o Pix — sem regra de exclusão. A campanha
+  // precisa existir quando a promoção nasce (scripts/cupom.mjs --embaixador cria a campanha antes).
+  if (ehPromocaoEmbaixador(p)) return "ignorado"
 
   // Promoção de frete (spec/ruling C1): uma promoção `target_type: "shipping_methods"` nunca
   // alcança unidade de item — a regra de exclusão `items.conjunto_desconto eq nenhum` seria
@@ -127,7 +131,7 @@ export async function converterTodosCupons(container: MedusaContainer): Promise<
     // `retrievePromotion` por item dentro de `converterCupom` (mesmo shape usado lá).
     const pagina = await promo.listPromotions(
       {},
-      { take, skip, order: { id: "ASC" }, relations: ["application_method", "application_method.target_rules", "application_method.target_rules.values"] }
+      { take, skip, order: { id: "ASC" }, relations: ["application_method", "application_method.target_rules", "application_method.target_rules.values", "campaign"] }
     )
     if (!pagina.length) break
     for (const p of pagina) {

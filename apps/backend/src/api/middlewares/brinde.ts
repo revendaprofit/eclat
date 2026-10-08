@@ -1,6 +1,6 @@
 import { MedusaError } from "@medusajs/framework/utils"
 import type { MedusaNextFunction, MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
-import { carrinhoDoPresente, configDaLoja, presentesUsados } from "../../lib/brinde"
+import { carrinhoDoPresente, configDoCarrinho, presentesUsados } from "../../lib/brinde"
 import { avaliarCarrinho } from "../../modules/brinde/regra"
 
 // Presente por faixa, barreira DIANTEIRA (mesmo motivo do pedido mínimo: o fechamento valida o pagamento antes
@@ -12,7 +12,7 @@ export async function exigirPresenteValido(req: MedusaRequest, _res: MedusaRespo
     if (!cartId) return next()
     const carrinho = await carrinhoDoPresente(req.scope, cartId)
     if (!carrinho) return next()
-    const config = await configDaLoja()
+    const config = await configDoCarrinho(carrinho)
     const avaliacao = avaliarCarrinho(carrinho.itens, carrinho.base, config, await presentesUsados(req.scope, config))
     if (avaliacao.ok) return next()
     return next(new MedusaError(MedusaError.Types.NOT_ALLOWED, avaliacao.motivo))

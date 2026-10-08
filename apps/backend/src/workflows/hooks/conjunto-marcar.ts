@@ -5,6 +5,7 @@ import { avaliarCarrinho, marcarContexto, type CupomPercentual } from "../../mod
 import { CODIGO_PREFIXO, MARCA_LIVRE } from "../../modules/beneficio-conjunto/utils/promocao"
 import { ehCodigoPix } from "../../modules/desconto-pix/regra"
 import { codigosEfetivos } from "../../modules/beneficio-conjunto/codigos-efetivos"
+import { ehPromocaoEmbaixador } from "../../modules/embaixador/regra"
 
 // Benefício Conjunto (spec §6.1): marca as unidades do carrinho antes de o motor de promoções avaliar.
 // Nunca lança — carrinho sem benefício é melhor que carrinho quebrado.
@@ -14,7 +15,8 @@ import { codigosEfetivos } from "../../modules/beneficio-conjunto/codigos-efetiv
  * desconto por peça (decisão do dono, 2026-09-20). Fora da conta: as promoções automáticas do
  * próprio Benefício Conjunto (prefixo `CONJUNTO-`) e cupons de valor fixo — ver
  * `descontoDoCupomNaUnidade` — e o desconto do Pix (PIX5), que SOMA com conjunto e cupom
- * (dono, 2026-09-30) e por isso não entra na disputa do maior desconto. Falha aqui devolve lista vazia: sem comparação, valem as marcas
+ * (dono, 2026-09-30) e por isso não entra na disputa do maior desconto. Também fora: o cupom de embaixador, que
+ * SOMA com o conjunto (dono, 2026-10-08, modules/embaixador/regra.ts). Falha aqui devolve lista vazia: sem comparação, valem as marcas
  * de sempre.
  */
 async function cupomPercentualDoCarrinho(container: any, cart: any, promoCodes: string[], action?: string): Promise<CupomPercentual[]> {
@@ -26,10 +28,10 @@ async function cupomPercentualDoCarrinho(container: any, cart: any, promoCodes: 
   try {
     const promocoes: any[] = await container.resolve(Modules.PROMOTION).listPromotions(
       { code: Array.from(new Set(codigos)) },
-      { relations: ["application_method"] }
+      { relations: ["application_method", "campaign"] }
     )
     return promocoes
-      .filter((p) => p?.status !== "inactive" && p?.application_method?.type === "percentage")
+      .filter((p) => p?.status !== "inactive" && p?.application_method?.type === "percentage" && !ehPromocaoEmbaixador(p))
       .map((p) => ({ code: p.code as string, percentual: Number(p.application_method?.value) || 0 }))
       .filter((c) => c.percentual > 0)
   } catch (e) {

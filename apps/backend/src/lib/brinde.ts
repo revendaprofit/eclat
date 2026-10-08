@@ -3,6 +3,7 @@
 import { ContainerRegistrationKeys } from "@medusajs/framework/utils"
 import { sbSelect, supabaseConfigured } from "./supabase"
 import { calcularBase, type ItemDaBase } from "../modules/superfrete/base-carrinho"
+import { codigosDeEmbaixador } from "./embaixador"
 import { lerConfig, type ConfigBrindes, type FaixaId, type LinhaDoCarrinho, type Usados } from "../modules/brinde/regra"
 
 // A configuração muda raramente (Cockpit/script); 60 s de memória poupam uma ida ao Supabase por requisição.
@@ -42,7 +43,14 @@ export async function presentesUsados(scope: any, config: ConfigBrindes | null):
   return usados
 }
 
-export type CarrinhoDoPresente = { itens: LinhaDoCarrinho[]; base: number }
+// `comEmbaixador`: carrinho com cupom de embaixador não ganha presente (dono, 2026-10-08, modules/embaixador/regra.ts).
+export type CarrinhoDoPresente = { itens: LinhaDoCarrinho[]; base: number; comEmbaixador: boolean }
+
+/** Configuração que vale PARA ESTE carrinho: a da loja, ou nenhuma (sem presente) se há cupom de embaixador. */
+export async function configDoCarrinho(carrinho: CarrinhoDoPresente | null): Promise<ConfigBrindes | null> {
+  if (carrinho?.comEmbaixador) return null
+  return configDaLoja()
+}
 
 export async function carrinhoDoPresente(scope: any, cartId: string): Promise<CarrinhoDoPresente | null> {
   const query = scope.resolve(ContainerRegistrationKeys.QUERY)
@@ -65,5 +73,7 @@ export async function carrinhoDoPresente(scope: any, cartId: string): Promise<Ca
   const cart = data?.[0]
   if (!cart) return null
   const itens = (cart.items ?? []) as (LinhaDoCarrinho & ItemDaBase)[]
-  return { itens, base: calcularBase(itens) }
+  const codigos = itens.flatMap((i: any) => ((i.adjustments ?? []) as { code?: string | null }[]).map((a) => a?.code))
+  const comEmbaixador = (await codigosDeEmbaixador(scope, codigos)).size > 0
+  return { itens, base: calcularBase(itens), comEmbaixador }
 }
