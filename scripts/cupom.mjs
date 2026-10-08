@@ -3,7 +3,7 @@
 //   node scripts/cupom.mjs --codigo ERIKA20 --percentual 20 --usos 1
 //   node scripts/cupom.mjs --codigo ERIKA20 --percentual 20 --usos 1 --aplicar
 //   node scripts/cupom.mjs --codigo PATY10 --percentual 10 --sem-teto --aplicar   (cupom de parceria: sem limite de usos)
-//   node scripts/cupom.mjs --codigo ALANA20 --percentual 20 --usos 20 --embaixador --validade 2027-10-08 --aplicar
+//   node scripts/cupom.mjs --codigo ALANA20 --percentual 20 --usos 20 --embaixador --validade 2027-09-15 --aplicar
 //   (se o cupom JÁ EXISTE, --embaixador converte o existente: campanha, validade, teto e soma com o conjunto)
 //   node scripts/cupom.mjs --listar 20   (só LÊ: cupons com código terminado em "20" ou de 20%, com a configuração de cada um)
 //
@@ -41,6 +41,11 @@ const LISTAR = args.includes("--listar") ? (valorDe("listar") ?? "").trim().toUp
 
 if (LISTAR === null && (EMBAIXADOR || VALIDADE) && SEM_TETO) {
   console.error("✗ --embaixador e --validade precisam de campanha: não use com --sem-teto.")
+  process.exit(1)
+}
+// Creator comissionado (cupom de parceria, --sem-teto) tem no máximo 10% (dono, 2026-10-08); 20% é de embaixador.
+if (LISTAR === null && SEM_TETO && PERCENTUAL > 10) {
+  console.error("✗ cupom de parceria (--sem-teto) vai até 10%. Cupom de 20% é de embaixador: use --embaixador.")
   process.exit(1)
 }
 if (VALIDADE && !/^\d{4}-\d{2}-\d{2}$/.test(VALIDADE)) {
