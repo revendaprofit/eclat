@@ -4,7 +4,8 @@
 //   node scripts/cupom.mjs --codigo ERIKA20 --percentual 20 --usos 1 --aplicar
 //   node scripts/cupom.mjs --codigo PATY10 --percentual 10 --sem-teto --aplicar   (cupom de parceria: sem limite de usos)
 //   node scripts/cupom.mjs --codigo ALANA20 --percentual 20 --usos 20 --embaixador --validade 2027-10-08 --aplicar
-//   node scripts/cupom.mjs --listar 20   (só LÊ: cupons cujo código termina em "20", com a configuração de cada um)
+//   (se o cupom JÁ EXISTE, --embaixador converte o existente: campanha, validade, teto e soma com o conjunto)
+//   node scripts/cupom.mjs --listar 20   (só LÊ: cupons com código terminado em "20" ou de 20%, com a configuração de cada um)
 //
 // Regras que valem sozinhas, sem nada aqui:
 // - o cupom alcança só as PEÇAS (nunca o frete): `target_type: "items"`;
@@ -77,8 +78,12 @@ const h = { authorization: `Bearer ${token}`, "content-type": "application/json"
 if (LISTAR !== null) {
   const campos = "code,status,campaign.campaign_identifier,campaign.starts_at,campaign.ends_at,campaign.budget.limit,campaign.budget.used,application_method.type,application_method.value,application_method.target_type,application_method.target_rules.attribute,application_method.target_rules.values.value"
   const { promotions = [] } = await j(await fetch(`${URL}/admin/promotions?limit=500&fields=${campos}`, { headers: h }))
-  const achados = promotions.filter((p) => (p.code ?? "").toUpperCase().endsWith(LISTAR)).sort((a, b) => a.code.localeCompare(b.code))
-  console.log(`${achados.length} cupom(ns) terminando em "${LISTAR}":`)
+  // Código terminando no sufixo OU desconto percentual igual a ele (cupom de 20% com outro nome também aparece).
+  const achados = promotions
+    .filter((p) => !(p.code ?? "").startsWith("CONJUNTO-"))
+    .filter((p) => (p.code ?? "").toUpperCase().endsWith(LISTAR) || (p.application_method?.type === "percentage" && String(Number(p.application_method.value)) === LISTAR))
+    .sort((a, b) => a.code.localeCompare(b.code))
+  console.log(`${achados.length} cupom(ns) terminando em "${LISTAR}" ou com ${LISTAR}%:`)
   for (const p of achados) {
     const am = p.application_method ?? {}
     const c = p.campaign
@@ -94,10 +99,62 @@ if (LISTAR !== null) {
   process.exit(0)
 }
 
-const existente = (await j(await fetch(`${URL}/admin/promotions?code=${CODIGO}`, { headers: h }))).promotions?.[0]
+const camposExistente = "*campaign,*campaign.budget,*application_method,*application_method.target_rules"
+const existente = (await j(await fetch(`${URL}/admin/promotions?code=${CODIGO}&fields=${camposExistente}`, { headers: h }))).promotions?.[0]
+if (existente && EMBAIXADOR) {
+  await converterEmEmbaixador(existente)
+  process.exit(0)
+}
 if (existente) {
   console.log(`= cupom ${CODIGO} já existe (${existente.id}, ${existente.status}) — nada a fazer.`)
   process.exit(0)
+}
+
+// Cupom que JÁ EXISTE passa para as regras de embaixador (dono, 2026-10-08: "os cupons que já existem com 20% entram
+// nas regras novas"). Mantém o código e os usos já feitos; acerta campanha (identificador, validade, teto) e tira a
+// regra de exclusão do conjunto. Ordem importa: a campanha de embaixador entra ANTES de tirar a regra, senão o
+// gancho conjunto-cupom (updatePromotionsWorkflow) a recoloca.
+async function converterEmEmbaixador(p) {
+  const am = p.application_method ?? {}
+  if (am.type !== "percentage" || Number(am.value) !== PERCENTUAL) {
+    console.error(`✗ ${CODIGO} existe com ${am.type} ${am.value}, não ${PERCENTUAL}% — não converto. Conferir à mão.`)
+    process.exit(1)
+  }
+  const c = p.campaign
+  const identificador = `embaixador-${CODIGO.toLowerCase()}`
+  const usados = Number(c?.budget?.used ?? 0)
+  const regrasExclusao = (am.target_rules ?? []).filter((r) => r.attribute === "items.conjunto_desconto")
+  console.log(`${APLICAR ? "→" : "(simulação)"} converter ${CODIGO} (${p.id}, ${p.status}) em cupom de EMBAIXADOR`)
+  console.log(`  hoje: campanha ${c?.campaign_identifier ?? "nenhuma"}, usos ${c?.budget ? `${usados}/${c.budget.limit}` : "sem teto"}, validade ${c?.ends_at?.slice(0, 10) ?? "—"}, exclusão do conjunto ${regrasExclusao.length ? "sim" : "não"}`)
+  console.log(`  fica: campanha ${identificador}, teto ${USOS} (já usados: ${usados}), validade ${VALIDADE ?? "—"}, soma com o conjunto, sem presente`)
+  if (usados >= USOS) console.log(`  ! já usou ${usados} vez(es): com teto ${USOS} o cupom fica esgotado — aumente --usos se for o caso`)
+  if (!APLICAR) {
+    console.log('  repita com --aplicar quando o dono disser "pode aplicar".')
+    return
+  }
+  const fim = VALIDADE ? { ends_at: `${VALIDADE}T23:59:59-03:00` } : {}
+  if (c) {
+    await j(await fetch(`${URL}/admin/campaigns/${c.id}`, {
+      method: "POST", headers: h,
+      body: JSON.stringify({ campaign_identifier: identificador, ...fim, budget: { limit: USOS } }),
+    }))
+    console.log(`  ✓ campanha ${c.id} atualizada`)
+  } else {
+    const { campaign } = await j(await fetch(`${URL}/admin/campaigns`, {
+      method: "POST", headers: h,
+      body: JSON.stringify({ name: `Cupom ${CODIGO}`, campaign_identifier: identificador, ...fim, budget: { type: "usage", limit: USOS } }),
+    }))
+    await j(await fetch(`${URL}/admin/promotions/${p.id}`, { method: "POST", headers: h, body: JSON.stringify({ campaign_id: campaign.id }) }))
+    console.log(`  ✓ campanha ${campaign.id} criada e ligada ao cupom (usos contam a partir de agora)`)
+  }
+  if (regrasExclusao.length) {
+    await j(await fetch(`${URL}/admin/promotions/${p.id}/target-rules/batch`, {
+      method: "POST", headers: h, body: JSON.stringify({ delete: regrasExclusao.map((r) => r.id) }),
+    }))
+  }
+  const conferido = await j(await fetch(`${URL}/admin/promotions/${p.id}?fields=${camposExistente}`, { headers: h }))
+  const ainda = (conferido.promotion?.application_method?.target_rules ?? []).some((r) => r.attribute === "items.conjunto_desconto")
+  console.log(`  soma com o conjunto: ${ainda ? "NÃO — a regra de exclusão continua; conferir o backend" : "sim ✓"}`)
 }
 
 const campanha = {
