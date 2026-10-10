@@ -37,11 +37,12 @@ export default async function Nav() {
             </div>
           </div>
 
-          {/* logo real centralizado (símbolo + wordmark) */}
+          {/* logo real centralizado (símbolo + wordmark). Sem anel de foco: ao voltar para a home pelo logo, o
+              navegador desenhava uma moldura preta em volta dele (print da sócia, 2026-10-10). */}
           <div className="flex items-center h-full">
             <LocalizedClientLink
               href="/"
-              className="flex items-center gap-x-2"
+              className="flex items-center gap-x-2 outline-none focus:outline-none focus-visible:outline-none"
               data-testid="nav-store-link"
               aria-label="use.ÉCLAT — página inicial"
             >
