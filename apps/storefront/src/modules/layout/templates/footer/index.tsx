@@ -133,6 +133,7 @@ export default async function Footer() {
                 <Icone d={ICONE_LOCAL} />
                 <span>{enderecoEmUmaLinha()}</span>
               </p>
+              <p className="text-xs text-eclat-luz/60 pl-8">Atendimento pelo WhatsApp de segunda a sexta, em horário comercial.</p>
             </div>
             <div className="flex items-center gap-4">
               {linkInstagram && (
@@ -157,7 +158,7 @@ export default async function Footer() {
         <div className="mt-12 flex flex-col small:flex-row items-start small:items-center justify-between gap-4 border border-eclat-luz/15 p-6">
           <div>
             <p className="font-serif text-2xl">Clube Éclat</p>
-            <p className="text-sm text-eclat-luz/70">Lançamentos antes de todo mundo e condições só para o grupo.</p>
+            <p className="text-sm text-eclat-luz/70">A cada 3 compras, um mega presente especial. Lançamentos antes de todo mundo e condições só do grupo.</p>
           </div>
           <a
             href={linkClube}
@@ -180,9 +181,24 @@ export default async function Footer() {
               </li>
             ))}
           </ul>
-          <p className="text-xs text-eclat-luz/60">
-            Pagamento processado pelo Mercado Pago · Site protegido com HTTPS
-          </p>
+          {/* Selos (referência bechose.com.br, 2026-10-10): a cliente lê "compra protegida" antes do CNPJ. */}
+          <ul className="flex flex-wrap justify-center gap-3" aria-label="Segurança da compra">
+            {[
+              { titulo: "Compra protegida", texto: "Pagamento pelo Mercado Pago" },
+              { titulo: "Site seguro", texto: "Certificado SSL · dados criptografados" },
+              { titulo: "Troca garantida", texto: "7 dias para desistir · 30 para defeito" },
+            ].map((s) => (
+              <li key={s.titulo} className="flex items-center gap-3 border border-eclat-luz/20 px-4 py-2.5 text-left">
+                <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5 shrink-0 fill-current text-eclat-terracota-claro">
+                  <path d="M12 1.5 4 4.5v6c0 5.1 3.4 9.8 8 11.5 4.6-1.7 8-6.4 8-11.5v-6l-8-3Zm-1.2 14.2-3.3-3.3 1.4-1.4 1.9 1.9 4.5-4.5 1.4 1.4-5.9 5.9Z" />
+                </svg>
+                <span>
+                  <span className="block text-xs font-semibold text-eclat-luz">{s.titulo}</span>
+                  <span className="block text-[11px] text-eclat-luz/60">{s.texto}</span>
+                </span>
+              </li>
+            ))}
+          </ul>
         </div>
 
         <div className="mt-12 border-t border-eclat-luz/15 pt-8 flex flex-col small:flex-row gap-4 small:items-end justify-between">

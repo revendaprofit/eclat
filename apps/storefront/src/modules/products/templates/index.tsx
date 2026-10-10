@@ -14,6 +14,7 @@ import { HttpTypes } from "@medusajs/types"
 import ProductActionsWrapper from "./product-actions-wrapper"
 import CompraSegura from "@modules/products/components/compra-segura"
 import { getCondicoesDaLoja } from "@lib/data/condicoes"
+import { getRegrasDeFrete } from "@lib/data/frete"
 import QuemE from "@modules/products/components/quem-e"
 import PdpTestimonials from "@modules/products/components/pdp-testimonials"
 import DetalhesQueFazemDiferenca from "@modules/common/components/detalhes"
@@ -74,7 +75,7 @@ const ProductTemplate = async ({
   const measureTable = categoryPath ? pickMeasurements(measureMap, categoryPath) : null
   // acessório sem tabela própria: PDP sem aba de medidas e sem link "Guia de medidas"
   const semMedidas = hidesMeasures(categoryPath, measureTable)
-  const [prevenda, loja] = await Promise.all([getPrevenda(), getCondicoesDaLoja()])
+  const [prevenda, loja, regrasFrete] = await Promise.all([getPrevenda(), getCondicoesDaLoja(), getRegrasDeFrete()])
 
   const productUrl = `${getBaseURL()}/${countryCode}/products/${product.handle}`
 
@@ -148,6 +149,7 @@ const ProductTemplate = async ({
                     measureTable={measureTable}
                     semMedidas={semMedidas}
                     condicoes={loja.condicoes}
+                    regrasFrete={regrasFrete}
                   />
                 </Suspense>
                 <PrevendaNota />

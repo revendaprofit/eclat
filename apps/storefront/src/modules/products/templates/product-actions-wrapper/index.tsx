@@ -4,6 +4,7 @@ import ProductActions from "@modules/products/components/product-actions"
 import type { ColorMap } from "@lib/util/colors"
 import type { MeasureTable } from "@lib/util/measurements"
 import type { Condicoes } from "@lib/util/condicoes"
+import type { RegrasDeFrete } from "@lib/util/frete"
 
 /**
  * Fetches real time pricing for a product and renders the product actions component.
@@ -15,6 +16,7 @@ export default async function ProductActionsWrapper({
   measureTable,
   semMedidas,
   condicoes,
+  regrasFrete,
 }: {
   id: string
   region: HttpTypes.StoreRegion
@@ -22,6 +24,7 @@ export default async function ProductActionsWrapper({
   measureTable?: MeasureTable | null
   semMedidas?: boolean
   condicoes?: Condicoes
+  regrasFrete?: RegrasDeFrete | null
 }) {
   const product = await listProducts({
     queryParams: { id: [id] },
@@ -32,5 +35,5 @@ export default async function ProductActionsWrapper({
     return null
   }
 
-  return <ProductActions product={product} region={region} colorMap={colorMap} measureTable={measureTable} semMedidas={semMedidas} condicoes={condicoes} />
+  return <ProductActions product={product} region={region} colorMap={colorMap} measureTable={measureTable} semMedidas={semMedidas} condicoes={condicoes} regrasFrete={regrasFrete} />
 }

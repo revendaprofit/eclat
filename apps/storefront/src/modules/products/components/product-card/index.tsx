@@ -36,8 +36,9 @@ export default function ProductCard({ data, countryCode, listName, aspect = "por
   // Leva a cor escolhida na vitrine (nunca o tamanho — controller: tamanho só quando a cliente
   // escolher na PDP). Produto sem opção Cor tem `color.name === ""` -> sem query.
   const href = `/products/${data.handle}${color?.name ? `?cor=${encodeURIComponent(color.name)}` : ""}`
-  // Proporção do card: portrait (9/16) no grid, featured (11/14) no destaque da home
-  const aspectClass = aspect === "featured" ? "aspect-[11/14]" : "aspect-[9/16]"
+  // Proporção do card = a da foto (2:3), para a foto aparecer inteira (regra da sócia, 2026-09-19: sem
+  // cortar cabeça, peça nem logo). "featured" mantém a moldura mais larga do destaque antigo.
+  const aspectClass = aspect === "featured" ? "aspect-[11/14]" : "aspect-[2/3]"
   // Parcela e Pix abaixo do preço (referência beatco.com.br). Cada linha só existe com a condição
   // ligada em site_content "condicoes" — ver lib/util/condicoes.ts.
   const precoCentavos = data.price ? emCentavos(data.price.calculated_price_number) : 0
@@ -59,15 +60,36 @@ export default function ProductCard({ data, countryCode, listName, aspect = "por
         {color && color.available && <QuickAdd data={data} color={color} countryCode={countryCode} open={sheet} onClose={() => setSheet(false)} />}
       </div>
       <LocalizedClientLink href={href} onClick={() => pushSelectItem(data, listName, color?.name || undefined)} className="block">
+        {/* Tamanhos da cor, sempre visíveis (referência bechose.com.br, 2026-10-10): esgotado fica riscado.
+            A adição rápida (hover / "+") continua sendo a faixa sobre a foto. */}
+        {color && color.variants.some((v) => v.size) && (
+          <ul className="mt-3 flex flex-wrap gap-1" aria-label="Tamanhos" data-testid="card-tamanhos">
+            {color.variants.map((v) => (
+              <li
+                key={v.id}
+                className={clx("min-w-[26px] rounded-sm border px-1.5 py-0.5 text-center text-[10px] leading-none", v.available ? "border-eclat-pedra/70 text-eclat-grafite" : "border-eclat-pedra/40 text-eclat-grafite/35 line-through")}
+                aria-label={`${v.size}${v.available ? "" : " esgotado"}`}
+              >
+                {v.size}
+              </li>
+            ))}
+          </ul>
+        )}
         {/* Mobile: nome em cima, preço embaixo (em 2 colunas estreitas o preço lado a lado
             transbordava para o card vizinho). Desktop (large): lado a lado. */}
-        <div className="flex flex-col mt-3 gap-y-1 large:mt-4 large:flex-row large:justify-between large:items-start large:gap-2">
+        <div className="flex flex-col mt-2 gap-y-1 large:flex-row large:justify-between large:items-start large:gap-2">
           <div className="min-w-0">
-            <Text className="text-ui-fg-subtle break-words" data-testid="product-title">{data.title}</Text>
-            {/* Nome da cor ativa: com um card por cor, é o que diferencia "Top Aurora" de "Top Aurora" */}
-            {data.colors.length > 1 && color?.name && (
-              <Text className="text-ui-fg-muted text-xs" data-testid="product-color-name">{color.name}</Text>
-            )}
+            {/* Nome · cor numa linha (referência bechose.com.br, 2026-10-10): com um card por cor, a cor faz
+                parte do nome — "Top Aurora · Grafitti". */}
+            <Text className="text-ui-fg-subtle break-words" data-testid="product-title">
+              {data.title}
+              {data.colors.length > 1 && color?.name && (
+                <span className="text-ui-fg-muted" data-testid="product-color-name">
+                  {" · "}
+                  {color.name}
+                </span>
+              )}
+            </Text>
           </div>
           <div className="flex flex-wrap items-center gap-x-2 large:shrink-0">
             {data.price?.price_type === "sale" && <Text className="line-through text-ui-fg-muted" data-testid="original-price">{data.price.original_price}</Text>}

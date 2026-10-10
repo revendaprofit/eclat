@@ -6,7 +6,7 @@ import { HttpTypes } from "@medusajs/types"
 import { Button } from "@modules/common/components/ui"
 import Divider from "@modules/common/components/divider"
 import OptionSelect from "@modules/products/components/product-actions/option-select"
-import { useParams } from "next/navigation"
+import { useParams, useRouter } from "next/navigation"
 import { useEffect, useRef, useState } from "react"
 import ProductPrice from "../product-price"
 import MobileActions from "./mobile-actions"
@@ -20,7 +20,10 @@ import { useProductSelection } from "../product-selection"
 import ColorSelect from "./color-select"
 import SizeSelect from "./size-select"
 import NotifyMe from "../notify-me"
-import type { Condicoes } from "@lib/util/condicoes"
+import { emCentavos, type Condicoes } from "@lib/util/condicoes"
+import type { RegrasDeFrete } from "@lib/util/frete"
+import { getProductPrice } from "@lib/util/get-product-price"
+import FretePrazo from "../frete-prazo"
 
 type ProductActionsProps = {
   product: HttpTypes.StoreProduct
@@ -32,11 +35,15 @@ type ProductActionsProps = {
   // acessório sem tabela de medidas: some o link "Guia de medidas" (a aba não existe na PDP)
   semMedidas?: boolean
   condicoes?: Condicoes
+  // pisos do frete grátis (régua no "Calcule o frete"); null = backend sem a rota
+  regrasFrete?: RegrasDeFrete | null
 }
 
-export default function ProductActions({ product, colorMap, disabled, measureTable, semMedidas, condicoes }: ProductActionsProps) {
+export default function ProductActions({ product, colorMap, disabled, measureTable, semMedidas, condicoes, regrasFrete = null }: ProductActionsProps) {
   const { selection, setValue, selectedVariant, isComplete } = useProductSelection()
   const [isAdding, setIsAdding] = useState(false)
+  const [comprando, setComprando] = useState(false)
+  const router = useRouter()
   const [notifyFor, setNotifyFor] = useState<{ variantId: string; label: string } | null>(null)
   const countryCode = useParams().countryCode as string
 
@@ -60,6 +67,23 @@ export default function ProductActions({ product, colorMap, disabled, measureTab
       setIsAdding(false)
     }
   }
+
+  // "Comprar agora" (referência bechose.com.br, 2026-10-10): põe na sacola e já vai para o checkout.
+  const handleComprarAgora = async () => {
+    if (!selectedVariant?.id) return null
+    setComprando(true)
+    try {
+      await addToCart({ variantId: selectedVariant.id, quantity: 1, countryCode })
+      pushEcommerceEvent("add_to_cart", variantToAddToCart(product, selectedVariant, 1))
+      router.push(`/${countryCode}/checkout?step=address`)
+    } catch {
+      setComprando(false)
+    }
+  }
+  // Frete na PDP cota a variante escolhida; antes de escolher o tamanho, a primeira do produto (mesmo peso).
+  const varianteParaFrete = selectedVariant?.id ?? product.variants?.[0]?.id ?? null
+  const precoDaPeca = getProductPrice({ product, variantId: selectedVariant?.id })
+  const precoCentavos = emCentavos((precoDaPeca.variantPrice ?? precoDaPeca.cheapestPrice)?.calculated_price_number ?? 0)
 
   const outrasOpcoes = (product.options ?? []).filter((o) => !/^(tamanho|cor)$/i.test(o.title ?? ""))
   const hasVariants = (product.variants?.length ?? 0) > 1
@@ -95,6 +119,19 @@ export default function ProductActions({ product, colorMap, disabled, measureTab
       >
         {!selectedVariant || !isComplete ? rotuloSelecaoIncompleta(product, selection) : !inStock ? "Esgotado" : "Adicionar à sacola"}
       </Button>
+      {selectedVariant && isComplete && inStock && (
+        <Button
+          onClick={handleComprarAgora}
+          disabled={!!disabled || isAdding || comprando}
+          variant="secondary"
+          className="w-full h-10"
+          isLoading={comprando}
+          data-testid="comprar-agora-button"
+        >
+          Comprar agora
+        </Button>
+      )}
+      <FretePrazo variantId={varianteParaFrete} precoCentavos={precoCentavos} regras={regrasFrete} />
       {notify && <NotifyMe key={notify.variantId} productId={product.handle ?? product.id} variantLabel={notify.label} />}
       <MobileActions
         product={product}
@@ -103,6 +140,7 @@ export default function ProductActions({ product, colorMap, disabled, measureTab
         updateOptions={setValue}
         inStock={inStock}
         handleAddToCart={handleAddToCart}
+        handleComprarAgora={handleComprarAgora}
         isAdding={isAdding}
         show={!inView}
         optionsDisabled={!!disabled || isAdding}

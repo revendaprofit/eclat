@@ -23,6 +23,7 @@ type MobileActionsProps = {
   updateOptions: (title: string, value: string) => void
   inStock?: boolean
   handleAddToCart: () => void
+  handleComprarAgora?: () => void
   isAdding?: boolean
   show: boolean
   optionsDisabled: boolean
@@ -39,6 +40,7 @@ const MobileActions: React.FC<MobileActionsProps> = ({
   updateOptions,
   inStock,
   handleAddToCart,
+  handleComprarAgora,
   isAdding,
   show,
   optionsDisabled,
@@ -141,6 +143,12 @@ const MobileActions: React.FC<MobileActionsProps> = ({
                   : "Adicionar à sacola"}
               </Button>
             </div>
+            {/* "Comprar agora" (2026-10-10): só com tamanho escolhido e em estoque, para a barra não crescer à toa. */}
+            {variant && inStock && handleComprarAgora && (
+              <Button onClick={handleComprarAgora} variant="secondary" className="w-full" data-testid="mobile-comprar-agora">
+                Comprar agora
+              </Button>
+            )}
           </div>
         </Transition>
       </div>
