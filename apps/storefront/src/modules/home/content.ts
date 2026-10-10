@@ -128,10 +128,11 @@ export const HOME_DEFAULTS = {
     items: [],
   } as Testimonials,
   clube: {
+    // Mecânica decidida pela sócia em 10/10/2026: a cada 3 compras, um mega presente especial.
     eyebrow: "Clube Éclat",
-    title: "Entre para o Clube Éclat",
+    title: "A cada 3 compras, um mega presente especial.",
     text:
-      "Lançamentos antes de todo mundo, condições só para o grupo e os bastidores da marca — tudo no nosso WhatsApp.",
+      "No Clube você vê os lançamentos antes de todo mundo, opina nas próximas coleções e recebe condições só do grupo. Na terceira compra, o presente vai junto com o pedido.",
     cta_label: "Quero entrar no Clube",
   } as Clube,
   instagram: {

@@ -1,35 +1,26 @@
 import { Metadata } from "next"
 import { imagensOg } from "@lib/util/og"
 
-import FeaturedProducts from "@modules/home/components/featured-products"
 import Hero, { HeroContent } from "@modules/home/components/hero"
-import Manifesto from "@modules/home/components/manifesto"
-import FeaturedLines from "@modules/home/components/featured-lines"
 import EditorialBanner from "@modules/home/components/editorial-banner"
-import Benefits from "@modules/home/components/benefits"
 import FaixaCondicoes from "@modules/home/components/faixa-condicoes"
+import CategoriasStories from "@modules/home/components/categorias-stories"
+import VitrineAbas from "@modules/home/components/vitrine-abas"
+import VitrineCores from "@modules/home/components/vitrine-cores"
 import Testimonials from "@modules/home/components/testimonials"
-import Faq from "@modules/home/components/faq"
 import Newsletter from "@modules/home/components/newsletter"
 import ClubeEclat from "@modules/home/components/clube-eclat"
 import Instagram from "@modules/home/components/instagram"
-import DetalhesQueFazemDiferenca from "@modules/common/components/detalhes"
 import { listCollections } from "@lib/data/collections"
 import { getRegion } from "@lib/data/regions"
 import { getSiteContent } from "@lib/data/site-content"
 import {
   isVisible,
-  Manifesto as ManifestoType,
-  FeaturedLines as FeaturedLinesType,
-  FeaturedCollection as FeaturedCollectionType,
   EditorialBanner as EditorialBannerType,
-  Benefits as BenefitsType,
   Testimonials as TestimonialsType,
-  Faq as FaqType,
   Newsletter as NewsletterType,
   Clube as ClubeType,
   Instagram as InstagramType,
-  HOME_DEFAULTS,
 } from "@modules/home/content"
 
 export async function generateMetadata(props: {
@@ -67,32 +58,13 @@ export default async function Home(props: {
 }) {
   const { countryCode } = await props.params
 
-  const [
-    region,
-    collectionsRes,
-    heroContent,
-    manifesto,
-    lines,
-    featured,
-    banner,
-    benefits,
-    newsletter,
-    testimonials,
-    faq,
-    clube,
-    instagram,
-  ] = await Promise.all([
+  const [region, collectionsRes, heroContent, banner, newsletter, testimonials, clube, instagram] = await Promise.all([
     getRegion(countryCode),
     listCollections({ fields: "id, handle, title" }),
     getSiteContent<HeroContent>("hero"),
-    getSiteContent<ManifestoType>("home.manifesto"),
-    getSiteContent<FeaturedLinesType>("home.lines"),
-    getSiteContent<FeaturedCollectionType>("home.featured"),
     getSiteContent<EditorialBannerType>("home.banner"),
-    getSiteContent<BenefitsType>("home.benefits"),
     getSiteContent<NewsletterType>("home.newsletter"),
     getSiteContent<TestimonialsType>("home.testimonials"),
-    getSiteContent<FaqType>("home.faq"),
     getSiteContent<ClubeType>("home.clube"),
     getSiteContent<InstagramType>("home.instagram"),
   ])
@@ -102,11 +74,6 @@ export default async function Home(props: {
   if (!collections || !region) {
     return null
   }
-
-  // coleção em destaque: a escolhida no cockpit ou a primeira
-  const featuredCollection =
-    collections.find((c) => c.handle === featured?.collection_handle) ||
-    collections[0]
 
   return (
     <>
@@ -120,44 +87,23 @@ export default async function Home(props: {
 
       <FaixaCondicoes />
 
-      {isVisible(featured) && featuredCollection && (
-        <section className="content-container">
-          <h2 className="font-serif text-3xl small:text-4xl text-eclat-grafite text-center pt-4">
-            {featured?.heading || HOME_DEFAULTS.featured.heading}
-          </h2>
-          <ul className="flex flex-col gap-x-6">
-            <FeaturedProducts
-              collections={[featuredCollection]}
-              region={region}
-            />
-          </ul>
-        </section>
-      )}
+      {/* Home de 2026-10-10 (sócia, referência bechose.com.br): metade da altura de antes. Ordem:
+          capa → condições → categorias (stories) → vitrine com abas → Conjuntos → vitrine por cor →
+          Clube → depoimentos → Instagram → newsletter. Manifesto, "Nossas linhas", "Detalhes que fazem
+          a diferença", benefícios e FAQ saíram da home (os dois últimos continuam na página do produto). */}
+      <CategoriasStories countryCode={countryCode} />
 
-      {/* Conjuntos logo depois da grade de produtos (reordenação de 2026-09-30, referência beatco.com.br:
-          produto e preço na primeira rolagem; manifesto e linhas descem). */}
+      <VitrineAbas region={region} countryCode={countryCode} />
+
       {isVisible(banner) && <EditorialBanner content={banner} />}
 
-      <DetalhesQueFazemDiferenca />
-
-      {isVisible(manifesto) && <Manifesto content={manifesto} />}
-
-      {/* I7: "Nossas linhas" inverte a regra padrão de `isVisible` (oculto a menos que
-          explicitamente `false`) — aqui só aparece com `visible: true` GRAVADO em
-          site_content.home.lines. "Compre por peça" já cobre a navegação por categoria;
-          sem essa marcação explícita (linha nunca salva, ou salva sem mexer no toggle),
-          o default (HOME_DEFAULTS.lines.visible = false) mantém o bloco oculto. */}
-      {(lines ?? HOME_DEFAULTS.lines).visible === true && <FeaturedLines content={lines} />}
-
-      {isVisible(benefits) && <Benefits content={benefits} />}
-
-      {isVisible(testimonials) && <Testimonials content={testimonials} />}
+      <VitrineCores region={region} countryCode={countryCode} />
 
       {isVisible(clube) && <ClubeEclat content={clube} />}
 
-      {isVisible(instagram) && <Instagram content={instagram} />}
+      {isVisible(testimonials) && <Testimonials content={testimonials} />}
 
-      {isVisible(faq) && <Faq content={faq} />}
+      {isVisible(instagram) && <Instagram content={instagram} />}
 
       {isVisible(newsletter) && <Newsletter content={newsletter} />}
     </>
