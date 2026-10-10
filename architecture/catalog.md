@@ -342,3 +342,12 @@ outra via). O loader escolhe a menor variante que cobre a largura pedida; acima 
 padrão de nome (upload do Cockpit, banners, categorias), sai o original. **Foto com hash no nome e sem variante aparece
 quebrada** — por isso a regra do nome no loader e no gerador é a mesma (`COM_VARIANTES`). `NEXT_PUBLIC_IMAGENS_MODO=supabase`
 liga o redimensionamento do Supabase; `IMAGENS_OTIMIZADOR=vercel` volta ao otimizador da Vercel.
+
+## Fotos de detalhe da peça (2026-10-10)
+Pedido da sócia: além da foto inteira (regra de 19/09: sem cortar cabeça, peça ou logo), cada cor ganha um recorte 2:3
+com foco só na peça — top/camiseta = ombros ao quadril, short = cintura ao joelho, macaquinho os dois. Gerados por
+`scripts/fotos-detalhe.py` a partir da 1ª foto de corpo inteiro da cor que já está em produção (silhueta pela ISNet,
+`~/.rembg/models`), subidos em `site/detalhes-pecas/<handle>/` (fora de `site/products/<handle>/`, que o importador
+limpa) e inseridos logo depois da capa da cor — viram a 2ª foto do card (hover). Idempotente por hash. Depois de uma
+rodada do importador eles vão para o fim da galeria (fotos "de outra origem"); rodar o script de novo não duplica.
+Prévia local antes de aplicar: `brand-assets/detalhes-pecas/previa.jpg`.
