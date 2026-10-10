@@ -28,7 +28,7 @@ APPLY = "--apply" in sys.argv
 REFAZER = "--refazer" in sys.argv
 LARGURAS = [480, 960]        # as mesmas de LARGURAS_VARIANTES no image-loader.ts
 JPEG_Q = 80
-COM_VARIANTES = re.compile(r"/site/(products/[^/?]+/[^/?]+-[0-9a-f]{8})\.jpg$")   # a mesma regra do loader
+COM_VARIANTES = re.compile(r"/site/((?:products|detalhes-pecas)/[^/?]+/[^/?]+-[0-9a-f]{8})\.jpg$")   # a mesma regra do loader (detalhes-pecas desde 2026-10-10)
 
 
 def env_cockpit():

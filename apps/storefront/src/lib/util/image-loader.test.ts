@@ -11,6 +11,11 @@ describe("modo direto (padrão, custo zero)", () => {
     expect(urlDaImagem({ src: PRODUTO, width: 480 }, "direto")).toBe(PRODUTO.replace(".jpg", ".w480.jpg"))
     expect(urlDaImagem({ src: PRODUTO, width: 828 }, "direto")).toBe(PRODUTO.replace(".jpg", ".w960.jpg"))
   })
+  it("capa/recorte da peça em detalhes-pecas (com hash) também usa as variantes", () => {
+    const capa = BASE + "detalhes-pecas/short-aurora/grafitti-capa-f16008c8.jpg"
+    expect(urlDaImagem({ src: capa, width: 384 }, "direto")).toBe(capa.replace(".jpg", ".w480.jpg"))
+    expect(urlDaImagem({ src: capa, width: 828 }, "direto")).toBe(capa.replace(".jpg", ".w960.jpg"))
+  })
   it("acima da maior variante sai o original", () => {
     expect(urlDaImagem({ src: PRODUTO, width: 1200 }, "direto")).toBe(PRODUTO)
   })

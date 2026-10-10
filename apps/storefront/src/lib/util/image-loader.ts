@@ -7,6 +7,7 @@
 //   transformação paga em lugar nenhum. As fotos de produto subidas pelos scripts (`products/<handle>/
 //   <nome>-<hash8>.jpg`) têm versões leves já prontas ao lado do original (`.w480.jpg` e `.w960.jpg`,
 //   geradas por scripts/gerar-variantes-fotos.py); o loader escolhe a menor que cobre a largura pedida.
+//   Desde 2026-10-10 vale também para `detalhes-pecas/<handle>/<nome>-<hash8>.jpg` (capas e recortes da peça).
 //   Qualquer outra imagem (upload do Cockpit, banners, categorias) sai no original.
 // - "supabase": redimensionamento pelo próprio Supabase (`/storage/v1/render/image/public/...`), que
 //   devolve a largura exata, mas é cobrado por imagem de origem acima da franquia do plano.
@@ -15,7 +16,7 @@ const PUBLICO = "/storage/v1/object/public/"
 const RENDER = "/storage/v1/render/image/public/"
 const HOST_SUPABASE = /^https:\/\/[a-z0-9-]+\.supabase\.co\//
 // Só estas têm variantes garantidas: fotos de produto com o hash de 8 dígitos que os scripts põem no nome.
-const COM_VARIANTES = /\/site\/products\/[^/?]+\/[^/?]+-[0-9a-f]{8}\.jpg$/
+const COM_VARIANTES = /\/site\/(?:products|detalhes-pecas)\/[^/?]+\/[^/?]+-[0-9a-f]{8}\.jpg$/
 export const LARGURAS_VARIANTES = [480, 960] as const
 
 export type ModoImagens = "direto" | "supabase"
