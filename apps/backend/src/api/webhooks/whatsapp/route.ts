@@ -9,6 +9,7 @@ import {
 } from "../../../lib/supabase"
 import { getMediaBase64 } from "../../../lib/evolution"
 import { ehGatilhoDoClube, responderClube } from "../../../lib/clube"
+import { ehClienteComPedido } from "../../../lib/convite-clube"
 import { tratarMensagemRecebida } from "../../../lib/recuperacao"
 import { tratarRespostaDeAvaliacao } from "../../../lib/avaliacao"
 
@@ -130,9 +131,13 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
       })
 
       // Clube Éclat: resposta automática com o link do grupo (só entrada, uma vez por contato).
+      // Quem já comprou fica de fora: recebe o convite depois do despacho (lib/convite-clube.ts), e a
+      // saudação de lead (com cupom de primeira compra) não faz sentido para quem acabou de receber o rastreio.
       if (!fromMe && tipo === "texto" && ehGatilhoDoClube(texto, m)) {
         try {
-          await responderClube({
+          if (await ehClienteComPedido(req.scope, number)) {
+            logger.info(`[clube] contato com pedido na loja — resposta automática de lead não enviada`)
+          } else await responderClube({
             number,
             conversationId,
             mensagem: m,

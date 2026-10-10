@@ -111,3 +111,19 @@ export async function getMediaBase64(
   if (!data?.base64) return null
   return { base64: data.base64, mimetype: data.mimetype }
 }
+
+// Participantes de um grupo (JID …@g.us). Usado para NÃO convidar para o Clube quem já está nele.
+// Devolve os JIDs crus (ex.: 5531999999999@s.whatsapp.net); quem compara normaliza (chaveContato).
+export async function groupParticipants(groupJid: string, opcoes: { timeoutMs?: number } = {}): Promise<string[]> {
+  const res = await fetch(`${EVO_URL}/group/participants/${INSTANCE}?groupJid=${encodeURIComponent(groupJid)}`, {
+    headers: { apikey: EVO_KEY as string },
+    ...(opcoes.timeoutMs ? { signal: AbortSignal.timeout(opcoes.timeoutMs) } : {}),
+  })
+  if (!res.ok) {
+    const corpo = await res.text()
+    throw new EvolutionHttpError(`Evolution group/participants falhou: ${res.status} ${corpo}`, res.status, corpo)
+  }
+  const d = (await res.json()) as { participants?: { id?: string }[] } | { id?: string }[]
+  const lista = Array.isArray(d) ? d : d?.participants ?? []
+  return lista.map((p) => String(p?.id ?? "")).filter(Boolean)
+}
