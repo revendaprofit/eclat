@@ -5,9 +5,9 @@ import { listProducts } from "@lib/data/products"
 
 // Categorias como "stories" (referência bechose.com.br, 2026-10-10): círculos com foto logo abaixo da
 // capa. No celular é a navegação principal; no computador é um atalho. A foto dá ênfase à PEÇA que o
-// nome do círculo anuncia (pedido da sócia, 2026-10-10): 1º a foto de detalhe de um produto da
-// categoria (recorte do top/short/camiseta, scripts/fotos-detalhe.py, Storage `site/detalhes-pecas/`);
-// sem ela, a capa da categoria (metadata image_url); por fim a 1ª foto de um produto, pelo meio.
+// nome do círculo anuncia (pedido da sócia, 2026-10-10): 1º a foto quadrada escolhida para a categoria
+// (metadata menu_image_url, scripts/fotos-categorias.py: short inteiro, tronco do macaquinho de costas,
+// camiseta); sem ela, o recorte de detalhe de um produto; por fim a 1ª foto de um produto, pelo meio.
 const DETALHE = /\/detalhes-pecas\//
 
 export default async function CategoriasStories({ countryCode }: { countryCode: string }) {
@@ -25,7 +25,9 @@ export default async function CategoriasStories({ countryCode }: { countryCode: 
     .map((r) => {
       const ids = new Set([r.id, ...r.children.map((c) => c.id)])
       const daLoja = fotoDaCategoria(ids)
-      const foto = daLoja?.detalhe ? daLoja : r.image_url ? { url: r.image_url, detalhe: false } : daLoja
+      // Foto escolhida à mão para a categoria (metadata menu_image_url, scripts/fotos-categorias.py) vence; depois o
+      // recorte de detalhe de um produto; por fim a 1ª foto de um produto, pelo meio.
+      const foto = r.image_url ? { url: r.image_url, detalhe: true } : daLoja
       return { id: r.id, nome: r.name, handle: r.handle, foto }
     })
     .filter((i): i is typeof i & { foto: { url: string; detalhe: boolean } } => !!i.foto)

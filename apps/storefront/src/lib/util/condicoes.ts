@@ -79,7 +79,7 @@ function formatarPercentual(p: number): string {
   return `${Number.isInteger(p) ? p : p.toLocaleString("pt-BR")}%`
 }
 
-/** Pisos em centavos (rota /store/frete/regras) → "Frete grátis a partir de R$ 499 em MG e R$ 599 nos demais estados". */
+/** Pisos em centavos (rota /store/frete/regras) → "Frete grátis a partir de R$ 399 em MG e R$ 599 nos demais estados". */
 export function fraseFreteGratis(
   pisos: { piso_mg: number; piso_brasil: number } | null,
   fmt: Formatar,

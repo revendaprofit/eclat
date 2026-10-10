@@ -1,7 +1,8 @@
 // Parâmetros da regra de frete: padrão da spec §4.4, sobrescrito por env (Railway) sem deploy de código.
 import type { Parametros } from "./preco"
 
-const PADRAO: Parametros = { margem: 200, pisoMg: 49900, pisoBrasil: 59900, reservaPac: 2490 }
+// pisoMg: R$ 499 → R$ 399 em 2026-10-10 (sócia); a variável FRETE_GRATIS_MG_CENTAVOS=39900 já está no Railway.
+const PADRAO: Parametros = { margem: 200, pisoMg: 39900, pisoBrasil: 59900, reservaPac: 2490 }
 
 function inteiro(valor: string | undefined, padrao: number): number {
   const n = Number(valor)

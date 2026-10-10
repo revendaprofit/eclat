@@ -48,13 +48,16 @@ describe("regra de preço do frete", () => {
 })
 
 describe("parâmetros do ambiente", () => {
+  // Padrão de MG: R$ 499 na spec, R$ 399 desde 2026-10-10 (sócia). P (R$ 499) continua valendo nos cálculos acima.
+  const PADRAO = { ...P, pisoMg: 39900 }
+
   it("usa os padrões da spec quando não há env", () => {
-    expect(parametrosDoAmbiente({})).toEqual(P)
+    expect(parametrosDoAmbiente({})).toEqual(PADRAO)
   })
 
   it("env sobrescreve, e valor inválido cai no padrão", () => {
     expect(parametrosDoAmbiente({ FRETE_MARGEM_CENTAVOS: "300", FRETE_GRATIS_MG_CENTAVOS: "abc" })).toEqual({
-      ...P,
+      ...PADRAO,
       margem: 300,
     })
   })
