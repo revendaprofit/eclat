@@ -24,13 +24,13 @@ function porCor(products: HttpTypes.StoreProduct[], cardsPorCor: boolean): Listi
   return entradasPorCor(products, DEFAULT_FILTERS, cardsPorCor).slice(0, MAX)
 }
 
-function Grade({ entradas, region, listName }: { entradas: ListingEntry[]; region: HttpTypes.StoreRegion; listName: string }) {
+function Grade({ entradas, region, listName, prioridade = 0 }: { entradas: ListingEntry[]; region: HttpTypes.StoreRegion; listName: string; prioridade?: number }) {
   if (!entradas.length) return <p className="text-center text-sm text-eclat-grafite/60">Em breve.</p>
   return (
     <ul className="grid grid-cols-2 small:grid-cols-4 gap-x-4 gap-y-10 small:gap-x-6 small:gap-y-12">
-      {entradas.map((e) => (
+      {entradas.map((e, i) => (
         <li key={entryKey(e)}>
-          <ProductPreview product={e.product} cor={e.cor} region={region} listName={listName} />
+          <ProductPreview product={e.product} cor={e.cor} region={region} listName={listName} prioridade={i < prioridade} />
         </li>
       ))}
     </ul>
@@ -56,7 +56,7 @@ export default async function VitrineAbas({ region, countryCode }: { region: Htt
   const cardsConjunto = [...conjuntos.curados, ...conjuntos.colecoes.flatMap((c) => c.cards)].slice(0, MAX)
 
   const abas: Aba[] = [
-    { id: "mais-vendidos", rotulo: "Mais vendidos", href: "/store", painel: <Grade entradas={porCor(maisVendidos, cardsPorCor)} region={region} listName="Home · Mais vendidos" /> },
+    { id: "mais-vendidos", rotulo: "Mais vendidos", href: "/store", painel: <Grade entradas={porCor(maisVendidos, cardsPorCor)} region={region} listName="Home · Mais vendidos" prioridade={2} /> },
     { id: "novidades", rotulo: "Novidades", href: "/store?ordenar=novidades", painel: <Grade entradas={porCor(novidades, cardsPorCor)} region={region} listName="Home · Novidades" /> },
   ]
   if (cardsConjunto.length) {

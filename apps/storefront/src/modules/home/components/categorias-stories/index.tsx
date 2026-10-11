@@ -44,7 +44,7 @@ export default async function CategoriasStories({ countryCode }: { countryCode: 
             <LocalizedClientLink href={`/categories/${i.handle}`} className="group flex flex-col items-center gap-2.5 w-[88px] small:w-[112px]">
               <span className="relative block w-[84px] h-[112px] small:w-[104px] small:h-[138px] p-[3px] border border-eclat-terracota outline outline-1 outline-offset-[3px] outline-[#C9A24C] bg-eclat-luz">
                 <span className="relative block w-full h-full overflow-hidden bg-eclat-areia/40">
-                  <Image src={i.foto.url} alt="" fill sizes="104px" quality={72} className={`object-cover transition-transform duration-500 group-hover:scale-110 ${i.foto.detalhe ? "object-center" : "object-[50%_40%]"}`} />
+                  <Image src={i.foto.url} alt="" fill sizes="104px" quality={72} priority className={`object-cover transition-transform duration-500 group-hover:scale-110 ${i.foto.detalhe ? "object-center" : "object-[50%_40%]"}`} />
                 </span>
               </span>
               <span className="text-[10px] small:text-[11px] uppercase tracking-[0.15em] text-eclat-grafite text-center leading-tight">{i.nome}</span>

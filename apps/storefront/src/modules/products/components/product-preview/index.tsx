@@ -12,6 +12,7 @@ export default async function ProductPreview({
   listName,
   formaConjunto,
   cor,
+  prioridade,
 }: {
   product: HttpTypes.StoreProduct
   isFeatured?: boolean
@@ -20,6 +21,8 @@ export default async function ProductPreview({
   formaConjunto?: boolean
   // Card por cor: cor (grafia do catálogo) que o card mostra e leva para a PDP via ?cor=.
   cor?: string | null
+  // capa com prioridade de carregamento (primeiros cards da home)
+  prioridade?: boolean
 }) {
   const [colorMap, condicoes] = await Promise.all([getColorMap(), getCondicoes()])
   const countryCode = region.countries?.[0]?.iso_2 ?? "br"
@@ -31,6 +34,7 @@ export default async function ProductPreview({
       aspect={isFeatured ? "featured" : "portrait"}
       initialColor={cor ?? null}
       condicoes={condicoes}
+      prioridade={prioridade}
     />
   )
 }

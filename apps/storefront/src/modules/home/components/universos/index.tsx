@@ -15,7 +15,7 @@ export default function Universos({ content }: { content?: UniversosType | null 
     <section className="content-container py-10 small:py-16" data-testid="universos">
       {c.heading && <h2 className="sr-only">{c.heading}</h2>}
       <ul className="grid grid-cols-2 small:grid-cols-4 gap-2 small:gap-3">
-        {itens.map((i) => {
+        {itens.map((i, idx) => {
           const emBreve = !i.href
           const miolo = (
             <>
@@ -25,6 +25,7 @@ export default function Universos({ content }: { content?: UniversosType | null 
                 fill
                 sizes="(max-width: 1024px) 50vw, 25vw"
                 quality={80}
+                priority={idx < 2}
                 className={`object-cover transition-transform duration-700 ${emBreve ? "grayscale-[35%] opacity-80" : "group-hover:scale-105"}`}
               />
               <div className="absolute inset-0 bg-gradient-to-t from-eclat-grafite/70 via-eclat-grafite/10 to-transparent" />

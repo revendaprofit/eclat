@@ -27,7 +27,9 @@ function indiceInicial(data: ProductCardData, initialColor: string | null): numb
   return Math.max(0, data.colors.findIndex((c) => c.available))
 }
 
-export default function ProductCard({ data, countryCode, listName, aspect = "portrait", initialColor = null, condicoes }: { data: ProductCardData; countryCode: string; listName?: string; aspect?: "portrait" | "featured"; initialColor?: string | null; condicoes?: Condicoes }) {
+// `prioridade`: capa carrega já (eager + preload) — primeiros cards da home no celular (sócia, 2026-10-11: fotos
+// demoravam a aparecer ao abrir o site).
+export default function ProductCard({ data, countryCode, listName, aspect = "portrait", initialColor = null, condicoes, prioridade }: { data: ProductCardData; countryCode: string; listName?: string; aspect?: "portrait" | "featured"; initialColor?: string | null; condicoes?: Condicoes; prioridade?: boolean }) {
   const [active, setActive] = useState(() => indiceInicial(data, initialColor))
   const [sheet, setSheet] = useState(false)
   const color = data.colors[active] ?? data.colors[0]
@@ -53,7 +55,7 @@ export default function ProductCard({ data, countryCode, listName, aspect = "por
         <LocalizedClientLink href={href} onClick={() => pushSelectItem(data, listName, color?.name || undefined)} className="absolute inset-0 block" aria-label={data.title}>
           <Badge badge={badge} percent={data.price?.percentage_diff} />
           {img1 ? (
-            <Image src={img1} alt={`${data.title} — ${color?.name || "use.ÉCLAT"}`} fill quality={80} sizes="(max-width: 576px) 50vw, (max-width: 1024px) 33vw, 25vw" className={clx("object-cover object-center transition-opacity duration-300", img2 && "small:group-hover:opacity-0")} draggable={false} />
+            <Image src={img1} alt={`${data.title} — ${color?.name || "use.ÉCLAT"}`} fill quality={80} priority={!!prioridade} sizes="(max-width: 576px) 50vw, (max-width: 1024px) 33vw, 25vw" className={clx("object-cover object-center transition-opacity duration-300", img2 && "small:group-hover:opacity-0")} draggable={false} />
           ) : null}
           {img2 && <Image src={img2} alt="" aria-hidden fill quality={80} sizes="(max-width: 576px) 50vw, (max-width: 1024px) 33vw, 25vw" className="object-cover object-center opacity-0 transition-opacity duration-300 small:group-hover:opacity-100" draggable={false} />}
         </LocalizedClientLink>
