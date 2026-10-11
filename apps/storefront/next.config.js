@@ -24,6 +24,8 @@ const nextConfig = {
       // navegador do celular deixa de abrir DNS + TLS para *.supabase.co e reaproveita a conexão da
       // página; a Vercel repassa e guarda no cache da borda (Cache-Control vem do Storage, 1 ano).
       // O loader (src/lib/util/image-loader.ts) troca a URL pública do Storage por /midia/<caminho>.
+      // (2026-10-11: a Vercel não recebeu o aviso do commit 61b305e e pulou o commit vazio como "não afetado";
+      // este comentário existe só para o deploy seguinte enxergar mudança em apps/storefront.)
       { source: "/midia/:path*", destination: `${SUPABASE_URL}/storage/v1/object/public/site/:path*` },
     ]
   },
