@@ -190,9 +190,9 @@ export const HOME_DEFAULTS = {
     eyebrow: "Conheça a fundadora",
     name: "Camila",
     text:
-      "Aos 40, eu decidi que não queria mais escolher entre a mulher que treina e a mulher que vive o resto do dia. A ÉCLAT nasceu dessa decisão: peças para a mulher inteira, a que acorda cedo, cuida de quem ama, trabalha, treina e ainda quer se olhar no espelho e gostar do que vê.\n\nCada modelo passa pelo meu corpo antes de chegar ao seu. Eu testo no treino, na praia e no dia corrido. Se não segura, não respira ou não valoriza, não entra na coleção.\n\nÉclat é brilho, em francês. Não o brilho que vem de fora: o que você já tem e às vezes esquece. A minha missão é fazer você lembrar.",
+      "Aos 40, eu decidi que não queria mais escolher entre a mulher que treina e a mulher que vive o resto do dia. A ÉCLAT nasceu dessa decisão: peças para a mulher inteira, a que acorda cedo, cuida de quem ama, trabalha, treina e ainda quer se olhar no espelho e amar o que vê.\n\nCada modelo passa pelo meu corpo antes de chegar ao seu. Eu testo no corpo, no treino em casa, no dia a dia. Lavo de todas as maneiras, até as erradas. Se não segura, não respira ou não valoriza, não entra na coleção.\n\nÉclat é brilho, em francês. Não o brilho que vem de fora: o que você já tem e às vezes esquece. A minha missão é fazer você lembrar.",
     signature: "Camila, fundadora da use.ÉCLAT",
-    image_url: "https://hqphayoyusbzfhyrxjga.supabase.co/storage/v1/object/public/site/banners/fundadora/fundadora-87bcdadf.jpg",
+    image_url: "https://hqphayoyusbzfhyrxjga.supabase.co/storage/v1/object/public/site/banners/fundadora/fundadora-falesia-81e96cbf.jpg",
   } as Fundadora,
   momentos: {
     eyebrow: "Da areia ao treino",
