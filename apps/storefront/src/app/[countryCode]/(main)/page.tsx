@@ -10,6 +10,7 @@ import VitrineCores from "@modules/home/components/vitrine-cores"
 import Testimonials from "@modules/home/components/testimonials"
 import Newsletter from "@modules/home/components/newsletter"
 import ClubeEclat from "@modules/home/components/clube-eclat"
+import BannerMomentos from "@modules/home/components/banner-momentos"
 import Instagram from "@modules/home/components/instagram"
 import { listCollections } from "@lib/data/collections"
 import { getRegion } from "@lib/data/regions"
@@ -21,6 +22,7 @@ import {
   Newsletter as NewsletterType,
   Clube as ClubeType,
   Instagram as InstagramType,
+  BannerMomentos as BannerMomentosType,
 } from "@modules/home/content"
 
 export async function generateMetadata(props: {
@@ -58,7 +60,7 @@ export default async function Home(props: {
 }) {
   const { countryCode } = await props.params
 
-  const [region, collectionsRes, heroContent, banner, newsletter, testimonials, clube, instagram] = await Promise.all([
+  const [region, collectionsRes, heroContent, banner, newsletter, testimonials, clube, instagram, momentos] = await Promise.all([
     getRegion(countryCode),
     listCollections({ fields: "id, handle, title" }),
     getSiteContent<HeroContent>("hero"),
@@ -67,6 +69,7 @@ export default async function Home(props: {
     getSiteContent<TestimonialsType>("home.testimonials"),
     getSiteContent<ClubeType>("home.clube"),
     getSiteContent<InstagramType>("home.instagram"),
+    getSiteContent<BannerMomentosType>("home.momentos"),
   ])
 
   const collections = collectionsRes?.collections
@@ -89,7 +92,7 @@ export default async function Home(props: {
 
       {/* Home de 2026-10-10 (sócia, referência bechose.com.br): metade da altura de antes. Ordem:
           capa → condições → categorias (stories) → vitrine com abas → Conjuntos → vitrine por cor →
-          Clube → depoimentos → Instagram → newsletter. Manifesto, "Nossas linhas", "Detalhes que fazem
+          banner "todos os momentos" (praia) → Clube → depoimentos → Instagram (reels) → newsletter. Manifesto, "Nossas linhas", "Detalhes que fazem
           a diferença", benefícios e FAQ saíram da home (os dois últimos continuam na página do produto). */}
       <CategoriasStories countryCode={countryCode} />
 
@@ -98,6 +101,8 @@ export default async function Home(props: {
       {isVisible(banner) && <EditorialBanner content={banner} />}
 
       <VitrineCores region={region} countryCode={countryCode} />
+
+      {isVisible(momentos) && <BannerMomentos content={momentos} />}
 
       {isVisible(clube) && <ClubeEclat content={clube} />}
 

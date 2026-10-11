@@ -63,11 +63,31 @@ export type Clube = {
 
 // Grade "Acompanhe @eclat.use". Fotos hospedadas no Storage do site (as URLs do Instagram expiram).
 export type InstagramItem = { image_url: string; href?: string; alt?: string }
+// Reels "em movimento" (2026-10-10): vídeo curto hospedado no Storage (site/instagram/reels/), pôster,
+// legenda e um link — do post no Instagram (https://www.instagram.com/...) ou interno ("/products/...",
+// "/categories/...") que vira "Comprar o look".
+export type InstagramReel = { video_url: string; poster_url?: string; caption?: string; href?: string; cta_label?: string }
 export type Instagram = {
   visible?: boolean
   handle?: string
   heading?: string
+  // título grande do bloco novo; `heading` segue como o da grade de fotos antiga
+  title?: string
+  text?: string
+  reels?: InstagramReel[]
   items?: InstagramItem[]
+}
+
+// Banner de largura total "Éclat em todos os momentos" (fotos da praia, 2026-10-10).
+export type BannerMomentos = {
+  visible?: boolean
+  eyebrow?: string
+  title?: string
+  text?: string
+  cta_label?: string
+  cta_href?: string
+  image_url?: string
+  image_url_mobile?: string
 }
 
 export type FaqItem = { q: string; a: string }
@@ -138,8 +158,20 @@ export const HOME_DEFAULTS = {
   instagram: {
     handle: "eclat.use",
     heading: "Acompanhe a Éclat",
+    title: "ÉCLAT em movimento",
+    text: "Treino, praia, bastidores e o que vem por aí. Entra lá: a conversa continua no perfil.",
+    reels: [],
     items: [],
   } as Instagram,
+  momentos: {
+    eyebrow: "Da areia ao treino",
+    title: "ÉCLAT em todos os momentos.",
+    text: "No sol da praia, no costão, no treino e no café depois. A peça que acompanha a mulher inteira, do primeiro raio ao fim do dia.",
+    cta_label: "Ver a coleção",
+    cta_href: "/store",
+    image_url: "https://hqphayoyusbzfhyrxjga.supabase.co/storage/v1/object/public/site/banners/momentos/momentos-desktop-2c68972c.jpg",
+    image_url_mobile: "https://hqphayoyusbzfhyrxjga.supabase.co/storage/v1/object/public/site/banners/momentos/momentos-mobile-efbebf96.jpg",
+  } as BannerMomentos,
   faq: {
     heading: "Perguntas frequentes",
     items: [
