@@ -60,14 +60,14 @@ describe("buildGalleryItems", () => {
       { kind: "image", id: "b", url: "https://x/b.jpg" },
     ])
   })
-  it("com vídeo do YouTube insere como 2º item (após o hero)", () => {
+  it("com vídeo do YouTube insere como 1º item (vídeo grande, como na Versiani — 2026-10-11)", () => {
     const items = buildGalleryItems(imgs, YT)
-    expect(items.map((i) => i.kind)).toEqual(["image", "video", "image"])
-    expect(items[1]).toEqual({ kind: "video", id: "video-p5hcJujKDEc", source: YT })
+    expect(items.map((i) => i.kind)).toEqual(["video", "image", "image"])
+    expect(items[0]).toEqual({ kind: "video", id: "video-p5hcJujKDEc", source: YT })
   })
   it("com MP4 o id do slide vem do arquivo (troca de cor = slide novo)", () => {
     const items = buildGalleryItems(imgs, MP4)
-    expect(items[1]).toEqual({ kind: "video", id: "video-https://s/x/orvalho-telha.mp4", source: MP4 })
+    expect(items[0]).toEqual({ kind: "video", id: "video-https://s/x/orvalho-telha.mp4", source: MP4 })
   })
   it("produto sem fotos: vídeo vira o único item", () => {
     expect(buildGalleryItems([], YT)).toEqual([{ kind: "video", id: "video-p5hcJujKDEc", source: YT }])

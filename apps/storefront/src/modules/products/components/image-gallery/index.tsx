@@ -97,28 +97,31 @@ const ImageGallery = ({ images, productTitle, productHandle, video }: ImageGalle
         className="flex w-full gap-x-2 overflow-x-auto snap-x snap-mandatory no-scrollbar small:grid small:grid-cols-2 small:gap-2 small:overflow-visible small:snap-none"
         data-testid="image-gallery"
       >
-        {items.map((item) => {
+        {items.map((item, idx) => {
+          // Computador (2026-10-11, referência versianiswim.com.br): o 1º item (vídeo, quando há; senão a
+          // 1ª foto) ocupa a largura toda da coluna; os demais seguem em 2 colunas.
+          const grande = idx === 0 ? " small:col-span-2" : ""
           if (item.kind === "video") {
             return (
               <Container
                 key={item.id}
-                className="relative aspect-[2/3] w-full shrink-0 snap-center overflow-hidden bg-ui-bg-subtle small:shrink"
+                className={"relative aspect-[2/3] w-full shrink-0 snap-center overflow-hidden bg-ui-bg-subtle small:shrink" + grande}
                 id={item.id}
                 data-testid="product-video"
               >
-                <ProductVideo source={item.source} productTitle={productTitle} productHandle={productHandle} />
+                <ProductVideo source={item.source} productTitle={productTitle} productHandle={productHandle} autoplay={idx === 0} />
               </Container>
             )
           }
           fotoN += 1
           const alt = productTitle ? `${productTitle} — use.ÉCLAT — foto ${fotoN}` : `Foto ${fotoN} do produto`
           return (
-            <Container key={item.id} className="relative aspect-[2/3] w-full shrink-0 snap-center overflow-hidden bg-ui-bg-subtle small:shrink" id={item.id}>
+            <Container key={item.id} className={"relative aspect-[2/3] w-full shrink-0 snap-center overflow-hidden bg-ui-bg-subtle small:shrink" + grande} id={item.id}>
               {/* follow-up #2: `priority` conta FOTOS, não itens da galeria — o slide de vídeo não
                   pode consumir uma das duas prioridades. Sem vídeo o HTML sai idêntico ao de antes
                   desta feature (as 2 primeiras imagens com fetchpriority=high). */}
               <Image src={item.url} priority={fotoN <= 2} className="absolute inset-0 rounded-rounded" alt={alt} fill quality={80}
-                sizes="(max-width: 1024px) 100vw, 480px" style={{ objectFit: "cover" }} />
+                sizes={idx === 0 ? "(max-width: 1024px) 100vw, 720px" : "(max-width: 1024px) 100vw, 360px"} style={{ objectFit: "cover" }} />
             </Container>
           )
         })}

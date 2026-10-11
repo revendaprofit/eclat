@@ -113,9 +113,9 @@ export function resolveVideoSource(
   return youtubeId ? { kind: "youtube", id: youtubeId } : null
 }
 
-// Vídeo entra como 2º item: a 1ª foto continua sendo o hero (LCP/SEO) e o vídeo
-// aparece no 1º scroll. Decisão 1 do plano; mude aqui se optar por "último".
-export const VIDEO_POSITION = 1
+// Vídeo entra como 1º item, grande e tocando sozinho (sem som), como na página da Versiani Swim
+// (pedido da sócia, 2026-10-11). Era o 2º (hero = foto); mude aqui para voltar.
+export const VIDEO_POSITION = 0
 
 export function buildGalleryItems(
   images: { id: string; url?: string | null }[],

@@ -16,12 +16,15 @@ type Props = {
   source: VideoSource
   productTitle?: string
   productHandle?: string
+  // MP4 tocando sozinho (mudo, em loop) desde o carregamento — 1º item da galeria (2026-10-11).
+  // YouTube continua como "facade" (iframe só ao clique).
+  autoplay?: boolean
 }
 
 // Fundo do estúdio dos vídeos da Lumière (medido no 1º quadro); vira a "moldura" do 9:16.
 const FUNDO = "#242328"
 
-export default function ProductVideo({ source, productTitle, productHandle }: Props) {
+export default function ProductVideo({ source, productTitle, productHandle, autoplay }: Props) {
   const [playing, setPlaying] = useState(false)
   const title = productTitle ? `Vídeo — ${productTitle}` : "Vídeo do produto"
   const isMp4 = source.kind === "mp4"
@@ -42,6 +45,25 @@ export default function ProductVideo({ source, productTitle, productHandle }: Pr
     } catch {
       /* noop */
     }
+  }
+
+  if (autoplay && source.kind === "mp4") {
+    return (
+      <div className="absolute inset-0 overflow-hidden rounded-rounded" style={{ background: FUNDO }}>
+        <video
+          src={source.src}
+          poster={source.poster ?? undefined}
+          autoPlay
+          muted
+          loop
+          playsInline
+          preload="metadata"
+          aria-label={title}
+          className="absolute inset-0 h-full w-full object-contain"
+          data-testid="product-video-mp4"
+        />
+      </div>
+    )
   }
 
   if (playing) {
