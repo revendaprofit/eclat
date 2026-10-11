@@ -39,9 +39,10 @@ export default async function CategoriasStories({ countryCode }: { countryCode: 
         {itens.map((i) => (
           <li key={i.id} className="shrink-0 snap-start">
             {/* Retângulo 3:4 com moldura dupla (terracota + filete dourado), no lugar das bolinhas — escolha da
-                sócia em 2026-10-10 ("mais original ÉCLAT"), sobre mock com as fotos reais. */}
+                sócia em 2026-10-10 ("mais original ÉCLAT"), sobre mock com as fotos reais. O filete é dourado de
+                verdade (#C9A24C): o token `eclat-dourado` do Tailwind é só um apelido antigo do terracota. */}
             <LocalizedClientLink href={`/categories/${i.handle}`} className="group flex flex-col items-center gap-2.5 w-[88px] small:w-[112px]">
-              <span className="relative block w-[84px] h-[112px] small:w-[104px] small:h-[138px] p-[3px] border border-eclat-terracota outline outline-1 outline-offset-[3px] outline-eclat-dourado bg-eclat-luz">
+              <span className="relative block w-[84px] h-[112px] small:w-[104px] small:h-[138px] p-[3px] border border-eclat-terracota outline outline-1 outline-offset-[3px] outline-[#C9A24C] bg-eclat-luz">
                 <span className="relative block w-full h-full overflow-hidden bg-eclat-areia/40">
                   <Image src={i.foto.url} alt="" fill sizes="104px" quality={72} className={`object-cover transition-transform duration-500 group-hover:scale-110 ${i.foto.detalhe ? "object-center" : "object-[50%_40%]"}`} />
                 </span>
