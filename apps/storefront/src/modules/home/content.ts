@@ -45,10 +45,14 @@ export type Newsletter = {
   button_label?: string
 }
 
-export type Testimonial = { quote: string; author?: string; origem?: string } // origem: "WhatsApp", "Instagram"
+// `image_url` = print real da mensagem (Storage site/depoimentos/), com dados pessoais escondidos. Com print, o
+// card mostra o print e a frase vira o alt; sem print, o card de texto de antes (sócia, 2026-10-11: "a imagem do
+// Whats com a msg fica mais real e confiável"). `image_width`/`image_height` evitam salto de layout.
+export type Testimonial = { quote: string; author?: string; origem?: string; image_url?: string; image_width?: number; image_height?: number } // origem: "WhatsApp", "Instagram"
 export type Testimonials = {
   visible?: boolean
   heading?: string
+  subheading?: string
   items?: Testimonial[]
 }
 
@@ -145,6 +149,7 @@ export const HOME_DEFAULTS = {
   testimonials: {
     // Sem itens de propósito: depoimento só de cliente real, gravado no Cockpit (lib/util/depoimentos.ts).
     heading: "O que elas dizem",
+    subheading: "Mensagens reais, do jeito que chegaram no WhatsApp e no Instagram.",
     items: [],
   } as Testimonials,
   clube: {
