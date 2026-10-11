@@ -1,4 +1,5 @@
 import { listRegions } from "@lib/data/regions";
+import BandeirasPagamento from "@modules/layout/components/bandeiras-pagamento"
 import { getNavigation } from "@lib/data/navigation";
 import { StoreRegion } from "@medusajs/types";
 import Image from "next/image";
@@ -71,8 +72,6 @@ const ICONE_EMAIL = "M3 5h18a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V6a1 
 const ICONE_LOCAL = "M12 2a7 7 0 0 1 7 7c0 5.2-7 13-7 13S5 14.2 5 9a7 7 0 0 1 7-7Zm0 4.5A2.5 2.5 0 1 0 12 11.5 2.5 2.5 0 0 0 12 6.5Z";
 const ICONE_INSTAGRAM =
   "M12 2.2c3.2 0 3.6 0 4.8.1 3.3.1 4.8 1.7 4.9 4.9.1 1.3.1 1.6.1 4.8s0 3.6-.1 4.8c-.1 3.2-1.7 4.8-4.9 4.9-1.3.1-1.6.1-4.8.1s-3.6 0-4.8-.1c-3.3-.1-4.8-1.7-4.9-4.9C2.2 15.6 2.2 15.2 2.2 12s0-3.6.1-4.8C2.4 3.9 3.9 2.4 7.2 2.3 8.4 2.2 8.8 2.2 12 2.2Zm0 4.9a4.9 4.9 0 1 0 0 9.8 4.9 4.9 0 0 0 0-9.8Zm0 8.1a3.2 3.2 0 1 1 0-6.4 3.2 3.2 0 0 1 0 6.4Zm5.1-9.4a1.2 1.2 0 1 0 0 2.4 1.2 1.2 0 0 0 0-2.4Z";
-
-const FORMAS_DE_PAGAMENTO = ["Pix", "Visa", "Mastercard", "Elo", "Amex", "Hipercard"];
 
 export default async function Footer() {
   // I8: mesma árvore de navegação da barra/menu (getNavigation) — só raízes visíveis
@@ -171,34 +170,34 @@ export default async function Footer() {
           </a>
         </div>
 
-        {/* pagamento e segurança */}
-        <div className="mt-12 flex flex-col items-center gap-4 text-center">
-          <span className="text-sm text-eclat-luz/80">Formas de pagamento</span>
-          <ul className="flex flex-wrap justify-center gap-2">
-            {FORMAS_DE_PAGAMENTO.map((f) => (
-              <li key={f} className="bg-eclat-luz text-eclat-grafite text-xs font-semibold px-3 py-1.5 rounded">
-                {f}
-              </li>
-            ))}
-          </ul>
-          {/* Selos (referência bechose.com.br, 2026-10-10): a cliente lê "compra protegida" antes do CNPJ. */}
-          <ul className="flex flex-wrap justify-center gap-3" aria-label="Segurança da compra">
-            {[
-              { titulo: "Compra protegida", texto: "Pagamento pelo Mercado Pago" },
-              { titulo: "Site seguro", texto: "Certificado SSL · dados criptografados" },
-              { titulo: "Troca garantida", texto: "7 dias para desistir · 30 para defeito" },
-            ].map((s) => (
-              <li key={s.titulo} className="flex items-center gap-3 border border-eclat-luz/20 px-4 py-2.5 text-left">
-                <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5 shrink-0 fill-current text-eclat-terracota-claro">
-                  <path d="M12 1.5 4 4.5v6c0 5.1 3.4 9.8 8 11.5 4.6-1.7 8-6.4 8-11.5v-6l-8-3Zm-1.2 14.2-3.3-3.3 1.4-1.4 1.9 1.9 4.5-4.5 1.4 1.4-5.9 5.9Z" />
-                </svg>
-                <span>
-                  <span className="block text-xs font-semibold text-eclat-luz">{s.titulo}</span>
-                  <span className="block text-[11px] text-eclat-luz/60">{s.texto}</span>
-                </span>
-              </li>
-            ))}
-          </ul>
+        {/* Pagamento e segurança (referência bechose.com.br; sócia, 2026-10-11: bandeiras e selos passam
+            confiança). Esquerda: bandeiras desenhadas em SVG + condições. Direita: selos em cartão claro. */}
+        <div className="mt-12 grid grid-cols-1 small:grid-cols-2 gap-8 small:gap-12 border-t border-eclat-luz/15 pt-10">
+          <div className="flex flex-col gap-3">
+            <span className="text-[11px] uppercase tracking-[0.2em] text-eclat-luz/60">Pagamento seguro</span>
+            <BandeirasPagamento />
+            <span className="text-xs text-eclat-luz/60">Até 4x sem juros no cartão · Pix com 5% de desconto e aprovação na hora</span>
+          </div>
+          <div className="flex flex-col gap-3">
+            <span className="text-[11px] uppercase tracking-[0.2em] text-eclat-luz/60">Compre com confiança</span>
+            <ul className="flex flex-wrap gap-3" aria-label="Segurança da compra">
+              {[
+                { titulo: "Compra protegida", texto: "Pagamento pelo Mercado Pago" },
+                { titulo: "Site seguro", texto: "Certificado SSL · dados criptografados" },
+                { titulo: "Troca garantida", texto: "7 dias para desistir · 30 para defeito" },
+              ].map((s) => (
+                <li key={s.titulo} className="flex items-center gap-3 rounded-md bg-eclat-luz px-4 py-2.5 text-left text-eclat-grafite shadow-[0_1px_2px_rgba(0,0,0,.25)]">
+                  <svg aria-hidden="true" viewBox="0 0 24 24" className="h-6 w-6 shrink-0 fill-current text-eclat-terracota">
+                    <path d="M12 1.5 4 4.5v6c0 5.1 3.4 9.8 8 11.5 4.6-1.7 8-6.4 8-11.5v-6l-8-3Zm-1.2 14.2-3.3-3.3 1.4-1.4 1.9 1.9 4.5-4.5 1.4 1.4-5.9 5.9Z" />
+                  </svg>
+                  <span>
+                    <span className="block text-xs font-semibold">{s.titulo}</span>
+                    <span className="block text-[11px] text-eclat-grafite/60">{s.texto}</span>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
 
         <div className="mt-12 border-t border-eclat-luz/15 pt-8 flex flex-col small:flex-row gap-4 small:items-end justify-between">
