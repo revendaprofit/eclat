@@ -190,13 +190,7 @@ export const HOME_DEFAULTS = {
     eyebrow: "Conheça a fundadora",
     name: "Camila",
     text:
-      "Aos 40 anos, eu entendi que já tinha conquistado o que mais importa: não preciso de motivação externa para treinar, e a constância é o segredo de tudo na vida.
-
-A ÉCLAT nasceu da decisão de levar isso adiante. Para grandes mulheres que já conquistaram esse conhecimento e essa rotina. Para a mulher que comemora o 1% de cada dia e adora viver saudável. Que acorda cedo, cuida de quem ama, trabalha, e se olha no espelho e ama o que vê refletido.
-
-Cada decisão da ÉCLAT passa por mim: pelo meu corpo, pelos meus testes. E só chega até você com o rigor que eu imprimo em tudo o que faço.
-
-Éclat é brilho, em francês. O estouro do raiar do sol. Não o brilho que vem de fora, mas o que você já tem e às vezes esquece. A minha missão é fazer você lembrar.",
+      "Aos 40 anos, eu entendi que já tinha conquistado o que mais importa: não preciso de motivação externa para treinar, e a constância é o segredo de tudo na vida.\n\nA ÉCLAT nasceu da decisão de levar isso adiante. Para grandes mulheres que já conquistaram esse conhecimento e essa rotina. Para a mulher que comemora o 1% de cada dia e adora viver saudável. Que acorda cedo, cuida de quem ama, trabalha, e se olha no espelho e ama o que vê refletido.\n\nCada decisão da ÉCLAT passa por mim: pelo meu corpo, pelos meus testes. E só chega até você com o rigor que eu imprimo em tudo o que faço.\n\nÉclat é brilho, em francês. O estouro do raiar do sol. Não o brilho que vem de fora, mas o que você já tem e às vezes esquece. A minha missão é fazer você lembrar.",
     signature: "Camila, fundadora da use.ÉCLAT",
     image_url: "https://hqphayoyusbzfhyrxjga.supabase.co/storage/v1/object/public/site/banners/fundadora/fundadora-orvalho-eb3f262b.jpg",
   } as Fundadora,
