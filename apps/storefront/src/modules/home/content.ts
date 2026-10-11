@@ -169,8 +169,8 @@ export const HOME_DEFAULTS = {
     text: "No sol da praia, no costão, no treino e no café depois. A peça que acompanha a mulher inteira, do primeiro raio ao fim do dia.",
     cta_label: "Ver a coleção",
     cta_href: "/store",
-    image_url: "https://hqphayoyusbzfhyrxjga.supabase.co/storage/v1/object/public/site/banners/momentos/momentos-desktop-2c68972c.jpg",
-    image_url_mobile: "https://hqphayoyusbzfhyrxjga.supabase.co/storage/v1/object/public/site/banners/momentos/momentos-mobile-efbebf96.jpg",
+    image_url: "https://hqphayoyusbzfhyrxjga.supabase.co/storage/v1/object/public/site/banners/momentos/momentos-desktop-ea5b3393.jpg",
+    image_url_mobile: "https://hqphayoyusbzfhyrxjga.supabase.co/storage/v1/object/public/site/banners/momentos/momentos-mobile-769d86f7.jpg",
   } as BannerMomentos,
   faq: {
     heading: "Perguntas frequentes",

@@ -16,9 +16,9 @@ export default function BannerMomentos({ content }: { content?: BannerMomentosTy
       <div className="relative aspect-[4/5] small:aspect-[12/5] w-full">
         <Image src={mobile} alt={c.title || "use.ÉCLAT"} fill priority={false} sizes="100vw" quality={82} className="object-cover small:hidden" />
         <Image src={c.image_url} alt={c.title || "use.ÉCLAT"} fill priority={false} sizes="100vw" quality={82} className="hidden small:block object-cover" />
-        <div className="absolute inset-0 bg-gradient-to-t from-eclat-grafite/85 via-eclat-grafite/25 to-transparent small:bg-gradient-to-r small:from-eclat-grafite/80 small:via-eclat-grafite/20 small:to-transparent" />
-        <div className="absolute inset-0 flex items-end small:items-center">
-          <div className="content-container w-full pb-10 small:pb-0">
+        <div className="absolute inset-0 bg-gradient-to-t from-eclat-grafite/85 via-eclat-grafite/30 to-transparent" />
+        <div className="absolute inset-0 flex items-end">
+          <div className="content-container w-full pb-10 small:pb-12">
             <div className="max-w-xl flex flex-col gap-3 small:gap-4">
               {c.eyebrow && <span className="uppercase tracking-[0.25em] text-xs text-eclat-terracota-claro">{c.eyebrow}</span>}
               {c.title && <h2 className="font-serif text-4xl small:text-6xl leading-[1.02] text-balance">{c.title}</h2>}
