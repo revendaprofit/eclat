@@ -181,7 +181,8 @@ export const HOME_DEFAULTS = {
       { title: "Fitness", image_url: "https://hqphayoyusbzfhyrxjga.supabase.co/storage/v1/object/public/site/banners/universos/fitness-0f804018.jpg", href: "/collections/lumiere", cta_label: "Comprar agora" },
       { title: "Masculino", image_url: "https://hqphayoyusbzfhyrxjga.supabase.co/storage/v1/object/public/site/banners/universos/masculino-1d1afae9.jpg", href: "/categories/masculino", cta_label: "Comprar agora" },
       { title: "Acessórios", image_url: "https://hqphayoyusbzfhyrxjga.supabase.co/storage/v1/object/public/site/banners/universos/acessorios-4a2ce1a7.jpg", href: "/categories/acessorios", cta_label: "Comprar agora" },
-      { title: "Athleisure", image_url: "https://hqphayoyusbzfhyrxjga.supabase.co/storage/v1/object/public/site/banners/universos/athleisure-5c495191.jpg", cta_label: "Em breve" },
+      // Athleisure: foto 134 do ensaio (pasta ATHLEISURE no Drive da sócia, 2026-10-11), estúdio.
+      { title: "Athleisure", image_url: "https://hqphayoyusbzfhyrxjga.supabase.co/storage/v1/object/public/site/banners/universos/athleisure-e3d7a40a.jpg", cta_label: "Em breve" },
     ],
   } as Universos,
   fundadora: {
