@@ -13,7 +13,7 @@ const PASSOS = [
     titulo: "Primeira compra",
     texto: "Você recebe a experiência ÉCLAT: conhece nossa história, nossos conceitos e nossa qualidade. E ganha um voucher especial para a segunda compra, enviado quando a peça chega.",
   },
-  { n: "2", titulo: "Segunda compra", texto: "Você já entra para o Clube: fica sabendo de tudo antes de todo mundo e participa das decisões da marca." },
+  { n: "2", titulo: "Segunda compra", texto: "Você já entra para o Clube: fica sabendo de tudo antes de todo mundo e participa das decisões da marca. Faça o unboxing, marque a ÉCLAT e ganhe 10% off." },
   { n: "3", titulo: "Terceira compra", texto: "Um mega presente para te motivar a continuar treinando e um colecionável das Auroras." },
 ]
 
