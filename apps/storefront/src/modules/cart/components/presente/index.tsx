@@ -21,11 +21,15 @@ export default function Presente({
   opcoes,
   moeda,
   aviso,
+  destaque,
 }: {
   estado: EstadoBrinde | null
   opcoes: Partial<Record<FaixaId, OpcaoDePresente[]>>
   moeda: string
   aviso?: string | null
+  // Bloco em destaque no topo da sacola/checkout (sócia, 2026-10-11): só aparece quando a cliente ganhou e
+  // ainda não escolheu; some assim que escolhe (o resumo continua mostrando o presente).
+  destaque?: boolean
 }) {
   const escolhiveis = estado ? faixasParaEscolher(estado).filter((f) => (opcoes[f] ?? []).some((o) => o.disponivel)) : []
   const [faixa, setFaixa] = useState<FaixaId | null>(escolhiveis[0] ?? null)
@@ -39,6 +43,7 @@ export default function Presente({
   const faixaAtiva = faixa && escolhiveis.includes(faixa) ? faixa : escolhiveis[0] ?? null
   const podeSubir = !!atual && escolhiveis.some((f) => f !== atual.faixa && f === "oculos")
   const mostrarEscolha = escolhiveis.length > 0 && (!atual || aberto)
+  if (destaque && (atual || !escolhiveis.length)) return null
 
   const confirmar = () =>
     iniciar(async () => {
@@ -52,7 +57,20 @@ export default function Presente({
     })
 
   return (
-    <div className="flex flex-col gap-y-2 rounded-base border border-eclat-terracota/25 bg-eclat-blush-claro/40 px-3 py-3" data-testid="presente">
+    <div
+      id={destaque ? "presente-destaque" : undefined}
+      className={
+        destaque
+          ? "flex flex-col gap-y-3 rounded-xl border-2 border-eclat-terracota bg-eclat-blush-claro/60 px-4 py-4 small:px-6 small:py-5 shadow-[0_4px_18px_rgba(122,59,44,.12)]"
+          : "flex flex-col gap-y-2 rounded-base border border-eclat-terracota/25 bg-eclat-blush-claro/40 px-3 py-3"
+      }
+      data-testid={destaque ? "presente-destaque" : "presente"}
+    >
+      {destaque && (
+        <span className="font-serif text-xl small:text-2xl text-eclat-grafite leading-tight">
+          🎁 Você ganhou {NOME_DO_PRESENTE[escolhiveis[0]]} de presente. Escolha {escolhiveis[0] === "oculos" ? "o modelo" : "tamanho e cor"}:
+        </span>
+      )}
       {aviso && (
         <span className="text-xs text-eclat-terracota" role="status">
           {aviso}

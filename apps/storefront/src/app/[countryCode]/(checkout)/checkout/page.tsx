@@ -38,7 +38,7 @@ export default async function Checkout({
     <div className="grid grid-cols-1 small:grid-cols-[1fr_416px] content-container gap-x-40 py-12">
       <Track event="begin_checkout" ecommerce={cartToBeginCheckout(cart)} />
       <PaymentWrapper cart={cart}>
-        <CheckoutForm cart={cart} customer={customer} />
+        <CheckoutForm cart={cart} customer={customer} presente={presente} />
       </PaymentWrapper>
       <CheckoutSummary cart={cart} etiquetas={etiquetas} presente={presente} />
     </div>

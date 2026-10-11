@@ -1,7 +1,9 @@
 "use client"
 import { RadioGroup } from "@headlessui/react"
 import { isManual, isStripeLike, paymentInfoMap } from "@lib/constants"
-import { ajustarDescontoPix, initiatePaymentSession } from "@lib/data/cart"
+import { ajustarDescontoPix, initiatePaymentSession, updateCart } from "@lib/data/cart"
+import type { DadosDoPresente } from "@lib/data/brinde"
+import { NOME_DO_PRESENTE } from "@lib/util/brinde"
 import {
   ehMetodoMercadoPago,
   isMercadoPago,
@@ -32,12 +34,19 @@ const Payment = ({
   cart,
   availablePaymentMethods,
   condicoes = CONDICOES_PADRAO,
+  presente,
 }: {
   cart: HttpTypes.StoreCart
   availablePaymentMethods: { id: string }[]
   // Condições da loja (site_content "condicoes"): rótulo "5% de desconto" no Pix e "até 4x" no cartão.
   condicoes?: Condicoes
+  // Presente por faixa: se ganhou e não escolheu, pergunta uma vez antes de seguir (sócia, 2026-10-11).
+  presente?: DadosDoPresente
 }) => {
+  const faixaGanha = presente?.estado?.ativo && !presente.estado.presente ? presente.estado.liberadas[0]?.id ?? null : null
+  const presentePendente = !!faixaGanha && (presente?.opcoes[faixaGanha] ?? []).some((o) => o.disponivel)
+  const [perguntarPresente, setPerguntarPresente] = useState(false)
+  const [presenteRespondido, setPresenteRespondido] = useState(false)
   const activeSession = cart.payment_collection?.payment_sessions?.find(
     (paymentSession) => paymentSession.status === "pending"
   )
@@ -106,6 +115,10 @@ const Payment = ({
   }
 
   const handleSubmit = async () => {
+    if (presentePendente && !presenteRespondido) {
+      setPerguntarPresente(true)
+      return
+    }
     setIsLoading(true)
     try {
       const { metodo } = lerOpcao(selectedPaymentMethod)
@@ -250,6 +263,40 @@ const Payment = ({
             error={error}
             data-testid="payment-method-error-message"
           />
+
+          {perguntarPresente && faixaGanha && (
+            <div className="mt-6 rounded-xl border-2 border-eclat-terracota bg-eclat-blush-claro/60 p-4 flex flex-col gap-3" role="alertdialog" aria-labelledby="pergunta-presente" data-testid="pergunta-presente">
+              <p id="pergunta-presente" className="font-serif text-lg text-eclat-grafite leading-tight">
+                🎁 Você ganhou {NOME_DO_PRESENTE[faixaGanha]} e ainda não escolheu. Quer escolher agora?
+              </p>
+              <div className="flex flex-col small:flex-row gap-2">
+                <button
+                  type="button"
+                  className="h-11 flex-1 bg-eclat-terracota text-eclat-luz text-xs font-semibold uppercase tracking-widest"
+                  onClick={() => {
+                    setPerguntarPresente(false)
+                    document.getElementById("presente-destaque")?.scrollIntoView({ behavior: "smooth", block: "center" })
+                  }}
+                  data-testid="pergunta-presente-escolher"
+                >
+                  Escolher agora
+                </button>
+                <button
+                  type="button"
+                  className="h-11 flex-1 border border-eclat-grafite text-eclat-grafite text-xs uppercase tracking-widest"
+                  onClick={async () => {
+                    // Fica registrado no pedido (cart.metadata vira order.metadata) que a cliente seguiu sem escolher.
+                    setPerguntarPresente(false)
+                    setPresenteRespondido(true)
+                    await updateCart({ metadata: { ...(cart.metadata ?? {}), brinde_pendente: faixaGanha } }).catch(() => null)
+                  }}
+                  data-testid="pergunta-presente-seguir"
+                >
+                  Seguir sem escolher
+                </button>
+              </div>
+            </div>
+          )}
 
           <Button
             size="large"

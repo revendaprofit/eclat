@@ -7,6 +7,8 @@ import type { Gatilho } from "@lib/util/carrinho-conjunto"
 import type { RegrasDeFrete } from "@lib/util/frete"
 import GatilhosConjunto from "../components/gatilhos-conjunto"
 import type { DadosDoPresente } from "@lib/data/brinde"
+import Presente from "../components/presente"
+import PresentePopup from "../components/presente-popup"
 
 const CartTemplate = ({
   cart,
@@ -32,6 +34,13 @@ const CartTemplate = ({
         {cart?.items?.length ? (
           <div className="grid grid-cols-1 small:grid-cols-[1fr_380px] gap-x-16 gap-y-10 items-start">
             <div className="flex flex-col gap-y-6">
+              {/* Presente ganho e ainda não escolhido: destaque no topo + pop-up com fogos (sócia, 2026-10-11) */}
+              {presente && (
+                <>
+                  <Presente estado={presente.estado} opcoes={presente.opcoes} aviso={presente.aviso} moeda={cart.currency_code} destaque />
+                  <PresentePopup estado={presente.estado} opcoes={presente.opcoes} cartId={cart.id} />
+                </>
+              )}
               <ItemsTemplate cart={cart} etiquetas={etiquetas} />
               <GatilhosConjunto gatilhos={gatilhos ?? []} countryCode={countryCode} />
               {!customer && <SignInPrompt />}
