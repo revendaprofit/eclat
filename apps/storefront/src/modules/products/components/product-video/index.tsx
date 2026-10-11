@@ -29,11 +29,31 @@ export default function ProductVideo({ source, productTitle, productHandle, auto
   const autoRef = useRef<HTMLVideoElement>(null)
   // O React não escreve o atributo `muted` no HTML do servidor, e sem ele o navegador bloqueia o
   // autoplay: garante mudo e dá o play depois da hidratação (visto em produção em 2026-10-11).
+  // Toca só enquanto está na tela (IntersectionObserver, como os reels da home) e retoma quando a
+  // aba volta a ficar visível — aba aberta em segundo plano chega pausada.
   useEffect(() => {
     const v = autoRef.current
     if (!v) return
     v.muted = true
-    v.play().catch(() => {})
+    let naTela = true
+    const tocar = () => {
+      if (naTela && document.visibilityState === "visible") v.play().catch(() => {})
+      else v.pause()
+    }
+    const io = new IntersectionObserver(
+      ([e]) => {
+        naTela = e.isIntersecting
+        tocar()
+      },
+      { threshold: 0.25 }
+    )
+    io.observe(v)
+    document.addEventListener("visibilitychange", tocar)
+    tocar()
+    return () => {
+      io.disconnect()
+      document.removeEventListener("visibilitychange", tocar)
+    }
   }, [source])
   const title = productTitle ? `Vídeo — ${productTitle}` : "Vídeo do produto"
   const isMp4 = source.kind === "mp4"
