@@ -81,7 +81,7 @@ export default function Presente({
         <span className="text-small-regular text-ui-fg-base">
           🎁 Seu presente: <strong>{NOME_DO_PRESENTE[atual.faixa]}</strong> já está na sacola.
         </span>
-      ) : escolhiveis.length ? (
+      ) : escolhiveis.length && !destaque ? (
         <span className="text-small-regular text-ui-fg-base">
           🎁 Você ganhou <strong>{NOME_DO_PRESENTE[escolhiveis[0]]}</strong>! Escolha abaixo.
         </span>
