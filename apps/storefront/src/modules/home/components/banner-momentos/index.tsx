@@ -19,7 +19,7 @@ export default function BannerMomentos({ content }: { content?: BannerMomentosTy
         <div className="absolute inset-0 bg-gradient-to-t from-eclat-grafite/85 via-eclat-grafite/30 to-transparent" />
         <div className="absolute inset-0 flex items-end">
           <div className="content-container w-full pb-10 small:pb-12">
-            <div className="max-w-xl flex flex-col gap-3 small:gap-4">
+            <div className="max-w-xl flex flex-col gap-3 small:gap-4 [text-shadow:0_1px_12px_rgba(0,0,0,.45)]">
               {c.eyebrow && <span className="uppercase tracking-[0.25em] text-xs text-eclat-terracota-claro">{c.eyebrow}</span>}
               {c.title && <h2 className="font-serif text-4xl small:text-6xl leading-[1.02] text-balance">{c.title}</h2>}
               {c.text && <p className="text-sm small:text-lg text-eclat-luz/85 max-w-md text-balance">{c.text}</p>}

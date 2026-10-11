@@ -68,11 +68,11 @@ function Card({ reel, handle, index }: { reel: InstagramReel; handle: string; in
         {reel.caption && <p className="text-xs small:text-sm leading-snug text-eclat-luz/90 line-clamp-2">{reel.caption}</p>}
         {reel.href &&
           (interno ? (
-            <LocalizedClientLink href={reel.href} className="inline-flex items-center justify-center rounded-full bg-eclat-luz px-4 py-2.5 text-[11px] font-semibold uppercase tracking-widest text-eclat-grafite hover:bg-eclat-terracota hover:text-eclat-luz transition-colors">
+            <LocalizedClientLink href={reel.href} className="inline-flex items-center justify-center whitespace-nowrap rounded-full bg-eclat-luz px-3 py-2 text-[10px] small:px-4 small:py-2.5 small:text-[11px] font-semibold uppercase tracking-wider small:tracking-widest text-eclat-grafite hover:bg-eclat-terracota hover:text-eclat-luz transition-colors">
               {rotulo}
             </LocalizedClientLink>
           ) : (
-            <a href={reel.href} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center rounded-full bg-eclat-luz px-4 py-2.5 text-[11px] font-semibold uppercase tracking-widest text-eclat-grafite hover:bg-eclat-terracota hover:text-eclat-luz transition-colors">
+            <a href={reel.href} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center whitespace-nowrap rounded-full bg-eclat-luz px-3 py-2 text-[10px] small:px-4 small:py-2.5 small:text-[11px] font-semibold uppercase tracking-wider small:tracking-widest text-eclat-grafite hover:bg-eclat-terracota hover:text-eclat-luz transition-colors">
               {rotulo}
             </a>
           ))}
