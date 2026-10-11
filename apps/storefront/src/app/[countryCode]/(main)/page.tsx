@@ -6,7 +6,6 @@ import EditorialBanner from "@modules/home/components/editorial-banner"
 import FaixaCondicoes from "@modules/home/components/faixa-condicoes"
 import CategoriasStories from "@modules/home/components/categorias-stories"
 import VitrineAbas from "@modules/home/components/vitrine-abas"
-import VitrineCores from "@modules/home/components/vitrine-cores"
 import Testimonials from "@modules/home/components/testimonials"
 import Newsletter from "@modules/home/components/newsletter"
 import ClubeEclat from "@modules/home/components/clube-eclat"
@@ -108,7 +107,9 @@ export default async function Home(props: {
 
       {isVisible(banner) && <EditorialBanner content={banner} />}
 
-      <VitrineCores region={region} countryCode={countryCode} />
+      {/* "Escolha a cor" (VitrineCores) saiu da home em 2026-10-11 (sócia): com só Telha e Grafitti o bloco
+          repete a vitrine. O componente fica em modules/home/components/vitrine-cores — volta quando houver
+          mais cores. */}
 
       {isVisible(momentos) && <BannerMomentos content={momentos} />}
 

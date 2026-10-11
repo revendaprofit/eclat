@@ -14,6 +14,7 @@ export default function EditorialBanner({
   const c = { ...HOME_DEFAULTS.banner, ...(content || {}) }
   const imageRight = (c.image_side || "right") === "right"
   // 2+ fotos em `image_urls` = carrossel de fotos inteiras (2:3); senão, a imagem única de sempre.
+  // Celular: texto ("Conjuntos") primeiro e as fotos abaixo (sócia, 2026-10-11).
   const fotos = (c.image_urls || []).filter((u) => typeof u === "string" && u.trim())
   const carrossel = fotos.length > 1
 
@@ -26,7 +27,7 @@ export default function EditorialBanner({
         <div
           className={`relative w-full ${
             carrossel ? "aspect-[2/3] small:aspect-[4/3] bg-[#09090d]" : "min-h-[280px] small:min-h-[440px] bg-eclat-areia/40"
-          } ${imageRight ? "small:order-2" : "small:order-1"}`}
+          } order-2 ${imageRight ? "small:order-2" : "small:order-1"}`}
         >
           {carrossel ? (
             <CarrosselBanner fotos={fotos} alt={c.title || "use.ÉCLAT"} />
@@ -45,7 +46,7 @@ export default function EditorialBanner({
 
         {/* texto */}
         <div
-          className={`flex flex-col justify-center gap-4 p-8 small:p-14 bg-eclat-luz ${
+          className={`flex flex-col justify-center gap-4 p-8 small:p-14 bg-eclat-luz order-1 ${
             imageRight ? "small:order-1" : "small:order-2"
           }`}
         >
