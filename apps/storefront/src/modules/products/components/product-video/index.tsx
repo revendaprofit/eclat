@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import Image from "next/image"
 import { youtubeEmbedUrl, youtubeThumbUrl, type VideoSource } from "@lib/util/product-video"
 
@@ -26,6 +26,15 @@ const FUNDO = "#242328"
 
 export default function ProductVideo({ source, productTitle, productHandle, autoplay }: Props) {
   const [playing, setPlaying] = useState(false)
+  const autoRef = useRef<HTMLVideoElement>(null)
+  // O React não escreve o atributo `muted` no HTML do servidor, e sem ele o navegador bloqueia o
+  // autoplay: garante mudo e dá o play depois da hidratação (visto em produção em 2026-10-11).
+  useEffect(() => {
+    const v = autoRef.current
+    if (!v) return
+    v.muted = true
+    v.play().catch(() => {})
+  }, [source])
   const title = productTitle ? `Vídeo — ${productTitle}` : "Vídeo do produto"
   const isMp4 = source.kind === "mp4"
   const poster = source.kind === "youtube" ? youtubeThumbUrl(source.id) : source.poster
@@ -51,13 +60,14 @@ export default function ProductVideo({ source, productTitle, productHandle, auto
     return (
       <div className="absolute inset-0 overflow-hidden rounded-rounded" style={{ background: FUNDO }}>
         <video
+          ref={autoRef}
           src={source.src}
           poster={source.poster ?? undefined}
           autoPlay
           muted
           loop
           playsInline
-          preload="metadata"
+          preload="auto"
           aria-label={title}
           className="absolute inset-0 h-full w-full object-contain"
           data-testid="product-video-mp4"
