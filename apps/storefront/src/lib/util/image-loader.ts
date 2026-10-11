@@ -19,6 +19,8 @@ const HOST_SUPABASE = /^https:\/\/[a-z0-9-]+\.supabase\.co\//
 const COM_VARIANTES = /\/site\/(?:products|detalhes-pecas)\/[^/?]+\/[^/?]+-[0-9a-f]{8}\.jpg$/
 export const LARGURAS_VARIANTES = [480, 960] as const
 
+const MESMA_ORIGEM = process.env.NEXT_PUBLIC_IMAGENS_ORIGEM !== "storage"
+
 export type ModoImagens = "direto" | "supabase"
 type Entrada = { src: string; width: number; quality?: number }
 
@@ -30,9 +32,15 @@ export function urlDaImagem({ src, width, quality }: Entrada, modo: ModoImagens)
     // resize=contain: mantém a proporção da foto inteira (o padrão do Supabase, `cover`, exige altura e cortaria)
     return `${semQuery.slice(0, i)}${RENDER}${semQuery.slice(i + PUBLICO.length)}?width=${width}&quality=${quality ?? 75}&resize=contain`
   }
-  if (!COM_VARIANTES.test(semQuery)) return semQuery
+  // Mesma origem (2026-10-11): /midia/<caminho> é reescrito pelo next.config.js para o Storage. No celular,
+  // abrir outra origem (DNS + TLS de *.supabase.co) era o que segurava as fotos; pela origem do site a
+  // conexão da página é reaproveitada e a Vercel guarda a resposta na borda. NEXT_PUBLIC_IMAGENS_ORIGEM=storage
+  // volta a apontar direto para o Storage.
+  const caminho = semQuery.slice(i + PUBLICO.length)           // "site/products/..."
+  const base = MESMA_ORIGEM && caminho.startsWith("site/") ? `/midia/${caminho.slice("site/".length)}` : semQuery
+  if (!COM_VARIANTES.test(semQuery)) return base
   const largura = LARGURAS_VARIANTES.find((l) => l >= width)
-  return largura ? semQuery.replace(/\.jpg$/, `.w${largura}.jpg`) : semQuery
+  return largura ? base.replace(/\.jpg$/, `.w${largura}.jpg`) : base
 }
 
 const MODO: ModoImagens = process.env.NEXT_PUBLIC_IMAGENS_MODO === "supabase" ? "supabase" : "direto"

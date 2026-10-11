@@ -4,30 +4,32 @@ import loader, { urlDaImagem } from "./image-loader"
 const BASE = "https://abc123.supabase.co/storage/v1/object/public/site/"
 const PRODUTO = BASE + "products/camiseta-raglan-dry/telha-01-7342967b.jpg"
 const COCKPIT = BASE + "1789346520235-gu34au.jpg"
+// modo direto sai pela mesma origem: /midia/<caminho dentro do bucket>
+const M = (url: string) => url.replace(BASE, "/midia/")
 
 describe("modo direto (padrão, custo zero)", () => {
   it("foto de produto com hash usa a menor variante pronta que cobre a largura", () => {
-    expect(urlDaImagem({ src: PRODUTO, width: 384 }, "direto")).toBe(PRODUTO.replace(".jpg", ".w480.jpg"))
-    expect(urlDaImagem({ src: PRODUTO, width: 480 }, "direto")).toBe(PRODUTO.replace(".jpg", ".w480.jpg"))
-    expect(urlDaImagem({ src: PRODUTO, width: 828 }, "direto")).toBe(PRODUTO.replace(".jpg", ".w960.jpg"))
+    expect(urlDaImagem({ src: PRODUTO, width: 384 }, "direto")).toBe(M(PRODUTO).replace(".jpg", ".w480.jpg"))
+    expect(urlDaImagem({ src: PRODUTO, width: 480 }, "direto")).toBe(M(PRODUTO).replace(".jpg", ".w480.jpg"))
+    expect(urlDaImagem({ src: PRODUTO, width: 828 }, "direto")).toBe(M(PRODUTO).replace(".jpg", ".w960.jpg"))
   })
   it("capa/recorte da peça em detalhes-pecas (com hash) também usa as variantes", () => {
     const capa = BASE + "detalhes-pecas/short-aurora/grafitti-capa-f16008c8.jpg"
-    expect(urlDaImagem({ src: capa, width: 384 }, "direto")).toBe(capa.replace(".jpg", ".w480.jpg"))
-    expect(urlDaImagem({ src: capa, width: 828 }, "direto")).toBe(capa.replace(".jpg", ".w960.jpg"))
+    expect(urlDaImagem({ src: capa, width: 384 }, "direto")).toBe(M(capa).replace(".jpg", ".w480.jpg"))
+    expect(urlDaImagem({ src: capa, width: 828 }, "direto")).toBe(M(capa).replace(".jpg", ".w960.jpg"))
   })
   it("acima da maior variante sai o original", () => {
-    expect(urlDaImagem({ src: PRODUTO, width: 1200 }, "direto")).toBe(PRODUTO)
+    expect(urlDaImagem({ src: PRODUTO, width: 1200 }, "direto")).toBe(M(PRODUTO))
   })
   it("imagem sem variante garantida (upload do Cockpit, banner, categoria) sai no original, sem query", () => {
-    expect(urlDaImagem({ src: COCKPIT + "?v=2", width: 640 }, "direto")).toBe(COCKPIT)
+    expect(urlDaImagem({ src: COCKPIT + "?v=2", width: 640 }, "direto")).toBe(M(COCKPIT))
     expect(urlDaImagem({ src: BASE + "banners/conjuntos/editorial-conjuntos-duplo-7fab6443.jpg", width: 640 }, "direto")).toBe(
-      BASE + "banners/conjuntos/editorial-conjuntos-duplo-7fab6443.jpg"
+      "/midia/banners/conjuntos/editorial-conjuntos-duplo-7fab6443.jpg"
     )
-    expect(urlDaImagem({ src: BASE + "products/meia/foto-sem-hash.jpg", width: 640 }, "direto")).toBe(BASE + "products/meia/foto-sem-hash.jpg")
+    expect(urlDaImagem({ src: BASE + "products/meia/foto-sem-hash.jpg", width: 640 }, "direto")).toBe("/midia/products/meia/foto-sem-hash.jpg")
   })
   it("o loader exportado usa o modo direto quando a variável não está definida", () => {
-    expect(loader({ src: PRODUTO, width: 640, quality: 80 })).toBe(PRODUTO.replace(".jpg", ".w960.jpg"))
+    expect(loader({ src: PRODUTO, width: 640, quality: 80 })).toBe(M(PRODUTO).replace(".jpg", ".w960.jpg"))
   })
 })
 
@@ -41,6 +43,13 @@ describe("modo supabase (redimensionamento pago do Supabase)", () => {
     expect(urlDaImagem({ src: COCKPIT + "?v=2", width: 256 }, "supabase")).toBe(
       "https://abc123.supabase.co/storage/v1/render/image/public/site/1789346520235-gu34au.jpg?width=256&quality=75&resize=contain"
     )
+  })
+})
+
+describe("outra pasta do Storage (fora do bucket site) fica no endereço original", () => {
+  it("não vira /midia", () => {
+    const outro = "https://abc123.supabase.co/storage/v1/object/public/outro/a.jpg"
+    expect(urlDaImagem({ src: outro, width: 640 }, "direto")).toBe(outro)
   })
 })
 

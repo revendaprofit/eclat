@@ -7,6 +7,8 @@ checkEnvVariables()
  */
 const S3_HOSTNAME = process.env.MEDUSA_CLOUD_S3_HOSTNAME
 const S3_PATHNAME = process.env.MEDUSA_CLOUD_S3_PATHNAME
+// Storage do site (bucket público `site`); o fallback é o projeto de produção.
+const SUPABASE_URL = (process.env.NEXT_PUBLIC_SUPABASE_URL || "https://hqphayoyusbzfhyrxjga.supabase.co").replace(/\/$/, "")
 
 /**
  * @type {import('next').NextConfig}
@@ -18,6 +20,19 @@ const nextConfig = {
       // Catálogo digital da coleção: página estática em public/catalogo/index.html.
       // O middleware libera /catalogo antes do redirecionamento de região.
       { source: "/catalogo", destination: "/catalogo/index.html" },
+      // Imagens do site pela MESMA origem (2026-10-11, sócia: fotos não carregavam no celular). O
+      // navegador do celular deixa de abrir DNS + TLS para *.supabase.co e reaproveita a conexão da
+      // página; a Vercel repassa e guarda no cache da borda (Cache-Control vem do Storage, 1 ano).
+      // O loader (src/lib/util/image-loader.ts) troca a URL pública do Storage por /midia/<caminho>.
+      { source: "/midia/:path*", destination: `${SUPABASE_URL}/storage/v1/object/public/site/:path*` },
+    ]
+  },
+  async headers() {
+    return [
+      {
+        source: "/midia/:path*",
+        headers: [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }],
+      },
     ]
   },
   logging: {
