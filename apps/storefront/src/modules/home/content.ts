@@ -119,7 +119,7 @@ export const HOME_DEFAULTS = {
   newsletter: {
     title: "Faça parte da Éclat",
     text:
-      "Novidades, lançamentos e acesso antecipado — direto no seu e-mail.",
+      "Novidades, lançamentos e acesso antecipado, direto no seu e‑mail.",   // hífen que não quebra (e-mail quebrava no fim da linha)
     button_label: "Quero receber",
   } as Newsletter,
   testimonials: {

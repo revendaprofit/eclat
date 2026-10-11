@@ -37,23 +37,25 @@ export default function Newsletter({
   }
 
   return (
-    <section className="bg-eclat-grafite text-eclat-luz">
-      <div className="content-container py-16 small:py-20 text-center flex flex-col items-center gap-4">
-        <h2 className="font-serif text-3xl small:text-4xl">{c.title}</h2>
-        {c.text && (
-          <p className="text-eclat-luz/75 max-w-lg text-sm small:text-base">
-            {c.text}
-          </p>
-        )}
+    // Bloco claro, separado do rodapé escuro por cor e por uma linha (sócia, 2026-10-10: "e-mail" quebrava
+    // no meio e a newsletter se fundia com o rodapé). No computador: texto à esquerda, formulário à direita.
+    <section className="bg-eclat-areia/40 border-t border-b border-eclat-pedra/40 text-eclat-grafite" data-testid="newsletter">
+      <div className="content-container py-12 small:py-16 grid grid-cols-1 small:grid-cols-[1.1fr_1fr] gap-8 small:gap-16 items-center">
+        <div className="flex flex-col gap-3 text-center small:text-left">
+          <span className="uppercase tracking-[0.25em] text-xs text-eclat-terracota">Newsletter</span>
+          <h2 className="font-serif text-3xl small:text-4xl text-balance">{c.title}</h2>
+          {c.text && <p className="text-eclat-grafite/70 max-w-md mx-auto small:mx-0 text-sm small:text-base text-balance">{c.text}</p>}
+        </div>
+        <div className="flex flex-col items-center small:items-stretch gap-3">
 
         {state === "done" ? (
-          <p className="mt-2 text-eclat-terracota text-lg">
+          <p className="text-eclat-terracota text-lg text-center">
             Pronto! Você faz parte da Éclat. ✨
           </p>
         ) : (
           <form
             onSubmit={submit}
-            className="mt-2 w-full max-w-md flex flex-col sm:flex-row gap-3"
+            className="w-full max-w-md small:max-w-none flex flex-col sm:flex-row gap-3"
           >
             <input
               type="email"
@@ -62,7 +64,7 @@ export default function Newsletter({
               onChange={(e) => setEmail(e.target.value)}
               placeholder="seu@email.com"
               aria-label="Seu e-mail"
-              className="flex-1 bg-transparent border border-eclat-luz/40 px-4 py-3 text-eclat-luz placeholder:text-eclat-luz/40 focus:outline-none focus:border-eclat-terracota"
+              className="flex-1 min-w-0 bg-white border border-eclat-pedra px-4 py-3 text-eclat-grafite placeholder:text-eclat-grafite/40 focus:outline-none focus:border-eclat-terracota"
             />
             <button
               type="submit"
@@ -73,9 +75,9 @@ export default function Newsletter({
             </button>
           </form>
         )}
-        {state === "error" && (
-          <p className="text-sm text-red-300">{msg}</p>
-        )}
+          {state === "error" && <p className="text-sm text-red-600 text-center">{msg}</p>}
+          <p className="text-[11px] text-eclat-grafite/50 text-center small:text-left">Sem spam. Você sai quando quiser.</p>
+        </div>
       </div>
     </section>
   )
