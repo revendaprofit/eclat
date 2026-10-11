@@ -38,10 +38,12 @@ export default async function CategoriasStories({ countryCode }: { countryCode: 
       <ul className="flex gap-4 small:gap-8 overflow-x-auto no-scrollbar -mx-4 px-4 small:mx-0 small:px-0 small:justify-center snap-x">
         {itens.map((i) => (
           <li key={i.id} className="shrink-0 snap-start">
-            <LocalizedClientLink href={`/categories/${i.handle}`} className="group flex flex-col items-center gap-2 w-[76px] small:w-[96px]">
-              <span className="relative block w-[72px] h-[72px] small:w-[92px] small:h-[92px] rounded-full p-[3px] bg-gradient-to-br from-eclat-terracota via-eclat-dourado to-eclat-terracota">
-                <span className="relative block w-full h-full rounded-full overflow-hidden bg-eclat-areia/40 ring-2 ring-eclat-luz">
-                  <Image src={i.foto.url} alt="" fill sizes="92px" quality={70} className={`object-cover transition-transform duration-500 group-hover:scale-110 ${i.foto.detalhe ? "object-center" : "object-[50%_40%]"}`} />
+            {/* Retângulo 3:4 com moldura dupla (terracota + filete dourado), no lugar das bolinhas — escolha da
+                sócia em 2026-10-10 ("mais original ÉCLAT"), sobre mock com as fotos reais. */}
+            <LocalizedClientLink href={`/categories/${i.handle}`} className="group flex flex-col items-center gap-2.5 w-[88px] small:w-[112px]">
+              <span className="relative block w-[84px] h-[112px] small:w-[104px] small:h-[138px] p-[3px] border border-eclat-terracota outline outline-1 outline-offset-[3px] outline-eclat-dourado bg-eclat-luz">
+                <span className="relative block w-full h-full overflow-hidden bg-eclat-areia/40">
+                  <Image src={i.foto.url} alt="" fill sizes="104px" quality={72} className={`object-cover transition-transform duration-500 group-hover:scale-110 ${i.foto.detalhe ? "object-center" : "object-[50%_40%]"}`} />
                 </span>
               </span>
               <span className="text-[10px] small:text-[11px] uppercase tracking-[0.15em] text-eclat-grafite text-center leading-tight">{i.nome}</span>
