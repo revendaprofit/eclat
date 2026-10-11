@@ -14,7 +14,7 @@ const PASSOS = [
     texto: "Você recebe a experiência ÉCLAT: conhece nossa história, nossos conceitos e nossa qualidade. E ganha um voucher especial para a segunda compra, enviado quando a peça chega.",
   },
   { n: "2", titulo: "Segunda compra", texto: "Você já entra para o Clube: fica sabendo de tudo antes de todo mundo e participa das decisões da marca. Faça o unboxing, marque a ÉCLAT e ganhe 10% off." },
-  { n: "3", titulo: "Terceira compra", texto: "Um mega presente para te motivar a continuar treinando e um colecionável das Auroras." },
+  { n: "3", titulo: "Terceira compra", texto: "Um mega presente para te motivar a continuar treinando e um colecionável das Auroras. Vale para compras a partir de R$ 400." },
 ]
 
 export default async function ClubeEclat({ content }: { content?: Clube | null }) {

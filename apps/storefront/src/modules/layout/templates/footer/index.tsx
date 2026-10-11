@@ -162,7 +162,7 @@ export default async function Footer() {
         <div className="mt-12 flex flex-col small:flex-row items-start small:items-center justify-between gap-4 border border-eclat-luz/15 p-6">
           <div>
             <p className="font-serif text-2xl">Clube Éclat</p>
-            <p className="text-sm text-eclat-luz/70">A cada 3 compras, um mega presente especial. Lançamentos antes de todo mundo e condições só do grupo.</p>
+            <p className="text-sm text-eclat-luz/70">A cada 3 compras a partir de R$ 400, um mega presente e um colecionável das Auroras. Lançamentos antes de todo mundo e condições só do grupo.</p>
           </div>
           <a
             href={linkClube}

@@ -162,9 +162,9 @@ export const HOME_DEFAULTS = {
   clube: {
     // Mecânica decidida pela sócia em 10/10/2026: a cada 3 compras, um mega presente especial.
     eyebrow: "Clube Éclat",
-    title: "A cada 3 compras, um mega presente especial.",
+    title: "A cada 3 compras, um mega presente e um colecionável das Auroras.",
     text:
-      "Cada compra abre uma porta: a primeira traz a experiência ÉCLAT e um voucher para a próxima; a segunda coloca você dentro do Clube; a terceira vem com um mega presente e um colecionável das Auroras.",
+      "Vale para compras a partir de R$ 400. A primeira traz a experiência ÉCLAT e um voucher para a próxima; a segunda coloca você dentro do Clube; a terceira vem com o mega presente e o colecionável.",
     cta_label: "Quero entrar no Clube",
   } as Clube,
   instagram: {
@@ -197,7 +197,7 @@ export const HOME_DEFAULTS = {
   momentos: {
     eyebrow: "Da areia ao treino",
     title: "ÉCLAT em todos os momentos.",
-    text: "No sol da praia, no costão, no treino e no café depois. A peça que acompanha a mulher inteira, do primeiro raio ao fim do dia.",
+    text: "No treino de crossfit ou pilates, na praia ou no escritório, do café ao mercado, da reunião ao jantar. ÉCLAT acompanha a mulher inteira, do amanhecer ao fim do dia.",
     cta_label: "Ver a coleção",
     cta_href: "/store",
     image_url: "https://hqphayoyusbzfhyrxjga.supabase.co/storage/v1/object/public/site/banners/momentos/momentos-desktop-ea5b3393.jpg",
