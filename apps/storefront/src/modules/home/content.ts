@@ -186,13 +186,19 @@ export const HOME_DEFAULTS = {
     ],
   } as Universos,
   fundadora: {
-    // RASCUNHO (2026-10-11): a sócia vai mandar o roteiro do aniversário de 40 anos; trocar o texto por ele.
+    // Texto da sócia (2026-10-11), revisado; foto 4 do Conjunto Orvalho Grafitti na falésia.
     eyebrow: "Conheça a fundadora",
     name: "Camila",
     text:
-      "Aos 40, eu decidi que não queria mais escolher entre a mulher que treina e a mulher que vive o resto do dia. A ÉCLAT nasceu dessa decisão: peças para a mulher inteira, a que acorda cedo, cuida de quem ama, trabalha, treina e ainda quer se olhar no espelho e amar o que vê.\n\nCada modelo passa pelo meu corpo antes de chegar ao seu. Eu testo no corpo, no treino em casa, no dia a dia. Lavo de todas as maneiras, até as erradas. Se não segura, não respira ou não valoriza, não entra na coleção.\n\nÉclat é brilho, em francês. Não o brilho que vem de fora: o que você já tem e às vezes esquece. A minha missão é fazer você lembrar.",
+      "Aos 40 anos, eu entendi que já tinha conquistado o que mais importa: não preciso de motivação externa para treinar, e a constância é o segredo de tudo na vida.
+
+A ÉCLAT nasceu da decisão de levar isso adiante. Para grandes mulheres que já conquistaram esse conhecimento e essa rotina. Para a mulher que comemora o 1% de cada dia e adora viver saudável. Que acorda cedo, cuida de quem ama, trabalha, e se olha no espelho e ama o que vê refletido.
+
+Cada decisão da ÉCLAT passa por mim: pelo meu corpo, pelos meus testes. E só chega até você com o rigor que eu imprimo em tudo o que faço.
+
+Éclat é brilho, em francês. O estouro do raiar do sol. Não o brilho que vem de fora, mas o que você já tem e às vezes esquece. A minha missão é fazer você lembrar.",
     signature: "Camila, fundadora da use.ÉCLAT",
-    image_url: "https://hqphayoyusbzfhyrxjga.supabase.co/storage/v1/object/public/site/banners/fundadora/fundadora-falesia-81e96cbf.jpg",
+    image_url: "https://hqphayoyusbzfhyrxjga.supabase.co/storage/v1/object/public/site/banners/fundadora/fundadora-orvalho-eb3f262b.jpg",
   } as Fundadora,
   momentos: {
     eyebrow: "Da areia ao treino",
