@@ -6,9 +6,15 @@ import { Clube, HOME_DEFAULTS } from "@modules/home/content"
 // aqui; textos editáveis no Cockpit (site_content home.clube). A entrada é pelo WhatsApp da marca
 // com a frase-gatilho — é o que cria o lead no Cockpit (lib/data/prevenda.ts).
 const PASSOS = [
-  { n: "1", titulo: "Primeira compra", texto: "Você entra no Clube e já recebe as condições só do grupo." },
-  { n: "2", titulo: "Segunda compra", texto: "Vê os lançamentos antes de todo mundo e opina nas próximas coleções." },
-  { n: "3", titulo: "Terceira compra", texto: "Um mega presente especial chega junto com o seu pedido." },
+  // Texto dos três passos definido pela sócia em 10/10/2026 (à noite). O voucher da 1ª compra é enviado
+  // quando a peça chega (mensagem de "entregue", architecture/envios.md).
+  {
+    n: "1",
+    titulo: "Primeira compra",
+    texto: "Você recebe a experiência ÉCLAT: conhece nossa história, nossos conceitos e nossa qualidade. E ganha um voucher especial para a segunda compra, enviado quando a peça chega.",
+  },
+  { n: "2", titulo: "Segunda compra", texto: "Você já entra para o Clube: fica sabendo de tudo antes de todo mundo e participa das decisões da marca." },
+  { n: "3", titulo: "Terceira compra", texto: "Um mega presente para te motivar a continuar treinando e um colecionável das Auroras." },
 ]
 
 export default async function ClubeEclat({ content }: { content?: Clube | null }) {

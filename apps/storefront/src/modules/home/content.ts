@@ -132,7 +132,7 @@ export const HOME_DEFAULTS = {
     eyebrow: "Clube Éclat",
     title: "A cada 3 compras, um mega presente especial.",
     text:
-      "No Clube você vê os lançamentos antes de todo mundo, opina nas próximas coleções e recebe condições só do grupo. Na terceira compra, o presente vai junto com o pedido.",
+      "Cada compra abre uma porta: a primeira traz a experiência ÉCLAT e um voucher para a próxima; a segunda coloca você dentro do Clube; a terceira vem com um mega presente e um colecionável das Auroras.",
     cta_label: "Quero entrar no Clube",
   } as Clube,
   instagram: {
