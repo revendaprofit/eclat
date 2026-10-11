@@ -5,7 +5,7 @@ import { IconeCondicao, type NomeIconeCondicao } from "@modules/common/component
 // Lista de condições colada no botão de compra (referência beatco.com.br, relatório de 2026-09-30).
 // Substitui os selos que ficavam antes da FAQ: a dúvida "e se não servir?" aparece na hora de
 // decidir, não depois. Prazos reais da política (7 dias CDC, 30 dias defeito) — sem promessa inflada.
-export default function CompraSegura({ loja }: { loja: CondicoesDaLoja }) {
+export default function CompraSegura({ loja, whatsapp }: { loja: CondicoesDaLoja; whatsapp?: string }) {
   const { condicoes, pisos } = loja
   const frete = fraseFreteGratis(pisos, (c) => reais(c, { curto: true }))
   const linhas: { icone: NomeIconeCondicao; titulo: string; texto: string }[] = [
@@ -32,6 +32,18 @@ export default function CompraSegura({ loja }: { loja: CondicoesDaLoja }) {
             <span className="block font-semibold text-eclat-grafite">{l.titulo}</span>
             <span className="block text-xs text-eclat-grafite/70">{l.texto}</span>
           </span>
+          {/* Linha do WhatsApp vira atalho para o atendimento (sócia, 2026-10-11) */}
+          {l.icone === "whatsapp" && whatsapp && (
+            <a
+              href={whatsapp}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Falar com a ÉCLAT no WhatsApp"
+              className="ml-auto inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#25D366] text-white shadow-sm hover:brightness-95 [&_span]:!text-white"
+            >
+              <IconeCondicao nome="whatsapp" className="h-4 w-4 text-white" />
+            </a>
+          )}
         </li>
       ))}
     </ul>

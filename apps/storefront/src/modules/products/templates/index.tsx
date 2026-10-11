@@ -24,7 +24,7 @@ import Track from "@modules/analytics/track"
 import { productToViewItem } from "@modules/analytics/items"
 import { ProductJsonLd } from "@modules/seo/jsonld"
 import PrevendaNota from "@modules/products/components/prevenda-nota"
-import { getPrevenda } from "@lib/data/prevenda"
+import { getPrevenda, linkAtendimentoWhatsapp } from "@lib/data/prevenda"
 import { getBaseURL } from "@lib/util/env"
 import { getColorMap } from "@lib/data/colors"
 import { ProductSelectionProvider } from "@modules/products/components/product-selection"
@@ -156,7 +156,7 @@ const ProductTemplate = async ({
                 {allOut && <NotifyMe productId={product.handle ?? product.id} />}
                 {/* Condições coladas no botão (referência beatco.com.br, 2026-09-30). Substituem os selos
                     que ficavam antes da FAQ desde 2026-09-13. */}
-                {!prevenda.ativa && <CompraSegura loja={loja} />}
+                {!prevenda.ativa && <CompraSegura loja={loja} whatsapp={linkAtendimentoWhatsapp(prevenda, "Oi! Estou vendo o " + product.title + " no site e tenho uma dúvida.")} />}
               </div>
               <div className="flex flex-col gap-y-6 pb-4">
                 <ProductDescription product={product} />

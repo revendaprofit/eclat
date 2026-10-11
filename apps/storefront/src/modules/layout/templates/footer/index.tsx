@@ -132,7 +132,12 @@ export default async function Footer() {
                 <Icone d={ICONE_LOCAL} />
                 <span>{enderecoEmUmaLinha()}</span>
               </p>
-              <p className="text-xs text-eclat-luz/60 pl-8">Atendimento pelo WhatsApp de segunda a sexta, em horário comercial.</p>
+              <p className="text-xs text-eclat-luz/60 pl-8 flex items-center gap-2">
+                Atendimento pelo WhatsApp de segunda a sexta, em horário comercial.
+                <a href={linkWhatsapp} target="_blank" rel="noopener noreferrer" aria-label="Falar com a ÉCLAT no WhatsApp" className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#25D366] text-white hover:brightness-95">
+                  <Icone d={ICONE_WHATSAPP} className="h-3.5 w-3.5" />
+                </a>
+              </p>
             </div>
             <div className="flex items-center gap-4">
               {linkInstagram && (

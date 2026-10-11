@@ -11,6 +11,8 @@ import Testimonials from "@modules/home/components/testimonials"
 import Newsletter from "@modules/home/components/newsletter"
 import ClubeEclat from "@modules/home/components/clube-eclat"
 import BannerMomentos from "@modules/home/components/banner-momentos"
+import Universos from "@modules/home/components/universos"
+import Fundadora from "@modules/home/components/fundadora"
 import Instagram from "@modules/home/components/instagram"
 import { listCollections } from "@lib/data/collections"
 import { getRegion } from "@lib/data/regions"
@@ -23,6 +25,8 @@ import {
   Clube as ClubeType,
   Instagram as InstagramType,
   BannerMomentos as BannerMomentosType,
+  Universos as UniversosType,
+  Fundadora as FundadoraType,
 } from "@modules/home/content"
 
 export async function generateMetadata(props: {
@@ -60,7 +64,7 @@ export default async function Home(props: {
 }) {
   const { countryCode } = await props.params
 
-  const [region, collectionsRes, heroContent, banner, newsletter, testimonials, clube, instagram, momentos] = await Promise.all([
+  const [region, collectionsRes, heroContent, banner, newsletter, testimonials, clube, instagram, momentos, universos, fundadora] = await Promise.all([
     getRegion(countryCode),
     listCollections({ fields: "id, handle, title" }),
     getSiteContent<HeroContent>("hero"),
@@ -70,6 +74,8 @@ export default async function Home(props: {
     getSiteContent<ClubeType>("home.clube"),
     getSiteContent<InstagramType>("home.instagram"),
     getSiteContent<BannerMomentosType>("home.momentos"),
+    getSiteContent<UniversosType>("home.universos"),
+    getSiteContent<FundadoraType>("home.fundadora"),
   ])
 
   const collections = collectionsRes?.collections
@@ -98,6 +104,8 @@ export default async function Home(props: {
 
       <VitrineAbas region={region} countryCode={countryCode} />
 
+      {isVisible(universos) && <Universos content={universos} />}
+
       {isVisible(banner) && <EditorialBanner content={banner} />}
 
       <VitrineCores region={region} countryCode={countryCode} />
@@ -107,6 +115,8 @@ export default async function Home(props: {
       {isVisible(clube) && <ClubeEclat content={clube} />}
 
       {isVisible(testimonials) && <Testimonials content={testimonials} />}
+
+      {isVisible(fundadora) && <Fundadora content={fundadora} />}
 
       {isVisible(instagram) && <Instagram content={instagram} />}
 

@@ -7,14 +7,14 @@ import { depoimentosReais } from "@lib/util/depoimentos"
 // WhatsApp/Instagram (dados pessoais escondidos antes de subir, scripts na sessão de 11/10), numa moldura
 // igual à das categorias (linha terracota + filete dourado). A frase vira o alt. Sem print, card de texto.
 // Computador: mosaico em 3 colunas (alturas diferentes); celular: rolagem lateral com encaixe.
-export default function Testimonials({ content }: { content?: TestimonialsType | null }) {
-  const items = depoimentosReais(content?.items)
+export default function Testimonials({ content, max, compacto }: { content?: TestimonialsType | null; max?: number; compacto?: boolean }) {
+  const items = depoimentosReais(content?.items).slice(0, max || undefined)
   if (items.length === 0) return null
   const heading = content?.heading ?? HOME_DEFAULTS.testimonials.heading
   const subheading = content?.subheading ?? HOME_DEFAULTS.testimonials.subheading
 
   return (
-    <section className="content-container py-16 small:py-24" data-testid="depoimentos">
+    <section className={compacto ? "content-container py-12 small:py-16" : "content-container py-16 small:py-24"} data-testid="depoimentos">
       <div className="text-center mb-8 small:mb-12 flex flex-col items-center gap-2">
         {heading && <h2 className="font-serif text-3xl small:text-4xl text-eclat-grafite">{heading}</h2>}
         {subheading && <p className="text-sm small:text-base text-eclat-grafite/65 max-w-md text-balance">{subheading}</p>}

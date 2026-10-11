@@ -82,6 +82,13 @@ export type Instagram = {
   items?: InstagramItem[]
 }
 
+// Universos em painéis de foto (referência versianiswim.com.br, 2026-10-11). Item sem `href` = "em breve".
+export type UniversoItem = { title: string; image_url: string; href?: string; cta_label?: string }
+export type Universos = { visible?: boolean; heading?: string; items?: UniversoItem[] }
+
+// "Conheça a fundadora" (referência versianiswim.com.br, 2026-10-11).
+export type Fundadora = { visible?: boolean; eyebrow?: string; name?: string; text?: string; signature?: string; image_url?: string }
+
 // Banner de largura total "Éclat em todos os momentos" (fotos da praia, 2026-10-10).
 export type BannerMomentos = {
   visible?: boolean
@@ -168,6 +175,24 @@ export const HOME_DEFAULTS = {
     reels: [],
     items: [],
   } as Instagram,
+  universos: {
+    heading: "Compre por universo",
+    items: [
+      { title: "Fitness", image_url: "https://hqphayoyusbzfhyrxjga.supabase.co/storage/v1/object/public/site/banners/universos/fitness-0f804018.jpg", href: "/collections/lumiere", cta_label: "Comprar agora" },
+      { title: "Masculino", image_url: "https://hqphayoyusbzfhyrxjga.supabase.co/storage/v1/object/public/site/banners/universos/masculino-1d1afae9.jpg", href: "/categories/masculino", cta_label: "Comprar agora" },
+      { title: "Acessórios", image_url: "https://hqphayoyusbzfhyrxjga.supabase.co/storage/v1/object/public/site/banners/universos/acessorios-4a2ce1a7.jpg", href: "/categories/acessorios", cta_label: "Comprar agora" },
+      { title: "Athleisure", image_url: "https://hqphayoyusbzfhyrxjga.supabase.co/storage/v1/object/public/site/banners/universos/athleisure-5c495191.jpg", cta_label: "Em breve" },
+    ],
+  } as Universos,
+  fundadora: {
+    // RASCUNHO (2026-10-11): a sócia vai mandar o roteiro do aniversário de 40 anos; trocar o texto por ele.
+    eyebrow: "Conheça a fundadora",
+    name: "Camila",
+    text:
+      "Aos 40, eu decidi que não queria mais escolher entre a mulher que treina e a mulher que vive o resto do dia. A ÉCLAT nasceu dessa decisão: peças para a mulher inteira, a que acorda cedo, cuida de quem ama, trabalha, treina e ainda quer se olhar no espelho e gostar do que vê.\n\nCada modelo passa pelo meu corpo antes de chegar ao seu. Eu testo no treino, na praia e no dia corrido. Se não segura, não respira ou não valoriza, não entra na coleção.\n\nÉclat é brilho, em francês. Não o brilho que vem de fora: o que você já tem e às vezes esquece. A minha missão é fazer você lembrar.",
+    signature: "Camila, fundadora da use.ÉCLAT",
+    image_url: "https://hqphayoyusbzfhyrxjga.supabase.co/storage/v1/object/public/site/banners/fundadora/fundadora-87bcdadf.jpg",
+  } as Fundadora,
   momentos: {
     eyebrow: "Da areia ao treino",
     title: "ÉCLAT em todos os momentos.",

@@ -1,4 +1,5 @@
 import { getCondicoesDaLoja } from "@lib/data/condicoes"
+import { getPrevenda, linkAtendimentoWhatsapp } from "@lib/data/prevenda"
 import { fraseCartao, fraseFreteGratis, frasePix, reais } from "@lib/util/condicoes"
 import { IconeCondicao, type NomeIconeCondicao as NomeIcone } from "@modules/common/components/icones-condicoes"
 
@@ -11,7 +12,8 @@ import { IconeCondicao, type NomeIconeCondicao as NomeIcone } from "@modules/com
 type Item = { icone: NomeIcone; titulo: string; texto: string }
 
 export default async function FaixaCondicoes() {
-  const { condicoes, cupom, pisos } = await getCondicoesDaLoja()
+  const [{ condicoes, cupom, pisos }, prevenda] = await Promise.all([getCondicoesDaLoja(), getPrevenda()])
+  const whatsapp = linkAtendimentoWhatsapp(prevenda, "Oi! Quero tirar uma dúvida sobre troca de tamanho.")
   const frete = fraseFreteGratis(pisos, (c) => reais(c, { curto: true }))
 
   const itens: Item[] = [
@@ -41,7 +43,14 @@ export default async function FaixaCondicoes() {
             </span>
             <span className="min-w-0">
               <span className="block text-[13px] font-semibold text-eclat-grafite leading-snug">{item.titulo}</span>
-              <span className="block text-xs text-eclat-grafite/70 leading-snug">{item.texto}</span>
+              <span className="block text-xs text-eclat-grafite/70 leading-snug">
+                {item.texto}
+                {item.icone === "troca" && (
+                  <a href={whatsapp} target="_blank" rel="noopener noreferrer" aria-label="Falar com a ÉCLAT no WhatsApp" className="ml-1.5 inline-flex h-5 w-5 translate-y-[3px] items-center justify-center rounded-full bg-[#25D366] text-white align-middle hover:brightness-95 [&_span]:!text-white">
+                    <IconeCondicao nome="whatsapp" className="h-3 w-3 text-white" />
+                  </a>
+                )}
+              </span>
             </span>
           </li>
         ))}

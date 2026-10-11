@@ -37,6 +37,11 @@ export function fraseEnvios(p: Prevenda): string {
 // Entrada do Clube Éclat: WhatsApp da marca com a frase-gatilho da resposta automática
 // (apps/backend/src/lib/clube.ts). Entrar por aqui, e não pelo link direto do grupo,
 // é o que transforma a pessoa em lead no Cockpit.
+/** Atendimento pelo WhatsApp da marca, com a primeira mensagem pronta (sócia, 2026-10-11: ícone clicável onde o site cita o WhatsApp). */
+export function linkAtendimentoWhatsapp(p: Prevenda, texto = "Oi! Vim pelo site da ÉCLAT e quero uma ajuda."): string {
+  return `https://wa.me/${p.whatsapp}?text=${encodeURIComponent(texto)}`
+}
+
 export function linkClubeWhatsapp(p: Prevenda): string {
   return `https://wa.me/${p.whatsapp}?text=${encodeURIComponent("Quero entrar no Clube Éclat ✨")}`
 }
