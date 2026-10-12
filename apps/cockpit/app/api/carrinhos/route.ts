@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { medusaAdmin } from "@/lib/medusa"
 import { montarCarrinho, resumo, type CarrinhoCru } from "@/lib/carrinhos"
+import { lerIgnorados } from "@/lib/carrinhos-ignorados"
 
 // Carrinhos abandonados (Medusa = fonte da verdade; só leitura).
 export async function GET(req: Request) {
@@ -14,8 +15,15 @@ export async function GET(req: Request) {
     }
     if (!r.ok) throw new Error(`Medusa respondeu HTTP ${r.status}: ${(await r.text()).slice(0, 200)}`)
     const { carrinhos, dias, min_parado_min } = (await r.json()) as { carrinhos: CarrinhoCru[]; dias: number; min_parado_min: number }
-    const lista = carrinhos.map((c) => montarCarrinho(c))
-    return NextResponse.json({ dias, min_parado_min, resumo: resumo(lista), carrinhos: lista })
+    // Carrinhos marcados como teste pela equipe (lib/carrinhos-ignorados.ts) saem da lista e do resumo;
+    // com ?ignorados=1 voltam, marcados, para a equipe poder restaurar.
+    const ignorados = await lerIgnorados()
+    const marcados = new Set(ignorados.ids)
+    const todos = carrinhos.map((c) => ({ ...montarCarrinho(c), ignorado: marcados.has(c.id) }))
+    const mostrarIgnorados = p.get("ignorados") === "1"
+    const lista = mostrarIgnorados ? todos : todos.filter((c) => !c.ignorado)
+    const ativos = todos.filter((c) => !c.ignorado)
+    return NextResponse.json({ dias, min_parado_min, resumo: resumo(ativos), ignorados: todos.length - ativos.length, carrinhos: lista })
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 502 })
   }

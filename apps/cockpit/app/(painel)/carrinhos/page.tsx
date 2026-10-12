@@ -7,7 +7,8 @@ type Resposta = {
   dias: number
   min_parado_min: number
   resumo: { total: number; valor: number; com_contato: number; valor_com_contato: number; pagamento: number }
-  carrinhos: CarrinhoAbandonado[]
+  ignorados: number
+  carrinhos: (CarrinhoAbandonado & { ignorado?: boolean })[]
 }
 
 const brl = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
@@ -37,12 +38,14 @@ export default function CarrinhosPage() {
   const [dias, setDias] = useState(30)
   const [filtro, setFiltro] = useState<Filtro>("contato")
   const [aberto, setAberto] = useState<string | null>(null)
+  const [mostrarIgnorados, setMostrarIgnorados] = useState(false)
+  const [salvando, setSalvando] = useState(false)
 
   const carregar = useCallback(async () => {
     setLoading(true)
     setErro("")
     try {
-      const r = await fetch(`/api/carrinhos?dias=${dias}`, { cache: "no-store" })
+      const r = await fetch(`/api/carrinhos?dias=${dias}${mostrarIgnorados ? "&ignorados=1" : ""}`, { cache: "no-store" })
       const j = await r.json()
       if (!r.ok) throw new Error(j.error || `HTTP ${r.status}`)
       setDados(j)
@@ -51,11 +54,27 @@ export default function CarrinhosPage() {
     } finally {
       setLoading(false)
     }
-  }, [dias])
+  }, [dias, mostrarIgnorados])
 
   useEffect(() => {
     carregar()
   }, [carregar])
+
+  // Marca como teste (some da lista) ou restaura. Só grava no Supabase (site_content); o carrinho no Medusa fica
+  // intacto — sócia, 2026-10-11: tirar da lista os carrinhos que foram testes das edições.
+  const marcar = async (acao: "ignorar" | "restaurar", ids: string[]) => {
+    if (!ids.length) return
+    setSalvando(true)
+    try {
+      const r = await fetch("/api/carrinhos/ignorar", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ acao, ids }) })
+      if (!r.ok) throw new Error((await r.json().catch(() => ({})))?.error || `HTTP ${r.status}`)
+      await carregar()
+    } catch (e) {
+      setErro((e as Error).message)
+    } finally {
+      setSalvando(false)
+    }
+  }
 
   const lista = useMemo(() => (dados?.carrinhos ?? []).filter((c) => noFiltro(c, filtro)), [dados, filtro])
 
@@ -101,7 +120,7 @@ export default function CarrinhosPage() {
         </div>
       )}
 
-      <div className="flex flex-wrap gap-2 mb-3">
+      <div className="flex flex-wrap items-center gap-2 mb-3">
         {FILTROS.map((f) => {
           const n = (dados?.carrinhos ?? []).filter((c) => noFiltro(c, f.id)).length
           return (
@@ -116,6 +135,21 @@ export default function CarrinhosPage() {
             </button>
           )
         })}
+        <span className="flex-1" />
+        {filtro === "sacola" && lista.some((c) => !c.ignorado) && (
+          <button
+            onClick={() => marcar("ignorar", lista.filter((c) => !c.ignorado).map((c) => c.id))}
+            disabled={salvando}
+            className="text-meta px-3 py-1.5 rounded-md border border-eclat-pedra/50 bg-white hover:bg-eclat-areia/40 disabled:opacity-50"
+            title="Carrinho sem contato não tem como ser recuperado; marca todos desta lista como teste"
+          >
+            Ignorar todos sem contato ({lista.filter((c) => !c.ignorado).length})
+          </button>
+        )}
+        <label className="text-meta text-eclat-texto-3 flex items-center gap-1.5 cursor-pointer">
+          <input type="checkbox" checked={mostrarIgnorados} onChange={(e) => setMostrarIgnorados(e.target.checked)} />
+          Mostrar ignorados{dados ? ` (${dados.ignorados})` : ""}
+        </label>
       </div>
 
       {loading && <p className="text-corpo text-eclat-texto-3">Carregando…</p>}
@@ -140,9 +174,12 @@ export default function CarrinhosPage() {
                 const e = ESTAGIOS[c.estagio]
                 const wa = linkWhatsApp(c)
                 return (
-                  <tr key={c.id} className="border-b border-eclat-pedra/10 last:border-0 align-top hover:bg-eclat-areia/30">
+                  <tr key={c.id} className={`border-b border-eclat-pedra/10 last:border-0 align-top hover:bg-eclat-areia/30 ${c.ignorado ? "opacity-50" : ""}`}>
                     <td className="px-4 py-2">
-                      <div className="font-medium">{c.nome || c.email || "Visitante sem identificação"}</div>
+                      <div className="font-medium">
+                        {c.nome || c.email || "Visitante sem identificação"}
+                        {c.ignorado && <span className="ml-2 text-meta px-1.5 py-0.5 rounded bg-eclat-pedra/30 text-eclat-texto-3">ignorado</span>}
+                      </div>
                       <div className="text-meta text-eclat-texto-3">
                         {[c.nome ? c.email : null, c.telefone, c.cidade].filter(Boolean).join(" · ") || "sem contato"}
                       </div>
@@ -184,6 +221,14 @@ export default function CarrinhosPage() {
                       ) : (
                         <span className="text-meta text-eclat-texto/30">—</span>
                       )}
+                      <button
+                        onClick={() => marcar(c.ignorado ? "restaurar" : "ignorar", [c.id])}
+                        disabled={salvando}
+                        className="ml-2 text-meta px-2 py-1.5 rounded-md border border-eclat-pedra/50 bg-white hover:bg-eclat-areia/40 disabled:opacity-50"
+                        title={c.ignorado ? "Volta para a lista" : "Era teste: some da lista (nada é apagado no Medusa)"}
+                      >
+                        {c.ignorado ? "Restaurar" : "Ignorar"}
+                      </button>
                     </td>
                   </tr>
                 )
