@@ -647,8 +647,10 @@ export type CustomerAddress = {
   city: string | null
   province: string | null
   address_1: string | null
+  address_2?: string | null
   postal_code: string | null
   country_code: string | null
+  metadata?: Record<string, unknown> | null
 }
 
 export type OrderItem = {
@@ -856,7 +858,7 @@ export async function medusaGetCustomer(id: string): Promise<{
   addresses: CustomerAddress[]
 }> {
   const r = await medusaAdmin(
-    `/admin/customers/${id}?fields=id,first_name,last_name,email,phone,created_at,addresses.city,addresses.province,addresses.address_1,addresses.postal_code,addresses.country_code`
+    `/admin/customers/${id}?fields=id,first_name,last_name,email,phone,created_at,addresses.city,addresses.province,addresses.address_1,addresses.address_2,addresses.postal_code,addresses.country_code,addresses.metadata`
   )
   if (!r.ok) throw new Error(`buscar cliente falhou (HTTP ${r.status})`)
   const c = (await r.json()).customer

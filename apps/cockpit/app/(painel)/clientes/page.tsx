@@ -1,6 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useState } from "react"
+import { enderecoEmLinha } from "@/lib/endereco"
 
 type Customer = {
   id: string
@@ -67,8 +68,10 @@ type Address = {
   city: string | null
   province: string | null
   address_1: string | null
+  address_2?: string | null
   postal_code: string | null
   country_code: string | null
+  metadata?: Record<string, unknown> | null
 }
 type Order = {
   id: string
@@ -337,7 +340,7 @@ export default function ClientesPage() {
                     <h4 className="text-meta uppercase tracking-wider text-eclat-texto-3 mb-2">Endereços</h4>
                     {ficha.addresses.map((a, i) => (
                       <p key={i} className="text-corpo text-eclat-texto-2">
-                        {[a.address_1, a.city, a.province, a.postal_code].filter(Boolean).join(", ")}
+                        {enderecoEmLinha(a)}
                       </p>
                     ))}
                   </section>

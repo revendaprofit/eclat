@@ -1,6 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useState } from "react"
+import { enderecoEmLinha } from "@/lib/endereco"
 import { agruparDescontosPedido, etiquetaConjunto, residualDesconto } from "@/lib/pedido-conjunto"
 import { resumoConferencia, type ItemPedido, type RegistroConferencia } from "@/lib/leitor"
 import ConferenciaPedido from "@/components/conferencia-pedido"
@@ -64,6 +65,7 @@ type OrderDetail = Order & {
     first_name: string | null
     last_name: string | null
     address_1: string | null
+    address_2?: string | null
     city: string | null
     province: string | null
     postal_code: string | null
@@ -511,11 +513,7 @@ export default function PedidosPage() {
                     <p className="text-corpo">
                       {[det.shipping_address.first_name, det.shipping_address.last_name].filter(Boolean).join(" ")}
                     </p>
-                    <p className="text-corpo text-eclat-texto-2">
-                      {[det.shipping_address.address_1, det.shipping_address.city, det.shipping_address.province, det.shipping_address.postal_code]
-                        .filter(Boolean)
-                        .join(", ")}
-                    </p>
+                    <p className="text-corpo text-eclat-texto-2">{enderecoEmLinha(det.shipping_address)}</p>
                     {det.shipping_address.phone && (
                       <p className="text-corpo text-eclat-texto-3">{det.shipping_address.phone}</p>
                     )}
