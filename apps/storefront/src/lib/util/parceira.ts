@@ -19,6 +19,20 @@ export function limparNumeroDoVideo(v: unknown): number | null {
   return Number.isInteger(n) && n >= 1 && n <= 999 ? n : null
 }
 
+const HANDLE_DO_PRODUTO = /^[a-z0-9][a-z0-9-]{0,79}$/
+
+/**
+ * Para onde o link da creator manda: a loja (`/br`) ou, com `?produto=<handle>[&cor=<cor>]`, direto na página da
+ * peça (a PDP já pré-seleciona a cor por `?cor=`). O caminho é MONTADO aqui a partir de um handle validado — nunca
+ * se repassa endereço, caminho ou barra vindos do link, então não há redirecionamento aberto.
+ */
+export function destinoDoLink(produto: unknown, cor: unknown): string {
+  const handle = typeof produto === "string" ? produto.trim().toLowerCase() : ""
+  if (!HANDLE_DO_PRODUTO.test(handle)) return "/br"
+  const c = typeof cor === "string" ? cor.trim().slice(0, 40) : ""
+  return `/br/products/${handle}${c ? `?cor=${encodeURIComponent(c)}` : ""}`
+}
+
 const CODIGO = /^[A-Z0-9][A-Z0-9_-]{1,39}$/
 
 export function serializarParceira(p: Parceira): string {
