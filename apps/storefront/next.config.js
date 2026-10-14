@@ -20,6 +20,9 @@ const nextConfig = {
       // Catálogo digital da coleção: página estática em public/catalogo/index.html.
       // O middleware libera /catalogo antes do redirecionamento de região.
       { source: "/catalogo", destination: "/catalogo/index.html" },
+      // Link da bio do Instagram (sócia, 2026-10-14: link com o nome da marca, não claude.ai). Página estática
+      // em public/links/index.html — a mesma do artifact anterior. O middleware libera /links.
+      { source: "/links", destination: "/links/index.html" },
       // Imagens do site pela MESMA origem (2026-10-11, sócia: fotos não carregavam no celular). O
       // navegador do celular deixa de abrir DNS + TLS para *.supabase.co e reaproveita a conexão da
       // página; a Vercel repassa e guarda no cache da borda (Cache-Control vem do Storage, 1 ano).
