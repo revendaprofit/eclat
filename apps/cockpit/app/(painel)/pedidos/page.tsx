@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { enderecoEmLinha } from "@/lib/endereco"
+import { ehCupomDeAniversario } from "@/lib/aniversario"
 import { agruparDescontosPedido, etiquetaConjunto, residualDesconto } from "@/lib/pedido-conjunto"
 import { resumoConferencia, type ItemPedido, type RegistroConferencia } from "@/lib/leitor"
 import ConferenciaPedido from "@/components/conferencia-pedido"
@@ -548,6 +549,12 @@ export default function PedidosPage() {
                 {det.fulfillment_status === "not_fulfilled" && travaDeDespacho(det).pode ? (
                   <section className="border border-eclat-dourado/40 rounded-lg p-4 bg-white/60 flex flex-col gap-3">
                     <h4 className="text-corpo font-medium text-eclat-texto">Despachar pedido</h4>
+                    {/* Programa de aniversário: cupom <NOME>ANIV<AA> no pedido = a Aurora aniversariante ganhou um presente especial. */}
+                    {det.items.some((i) => (i.adjustments ?? []).some((a) => ehCupomDeAniversario(a.code))) && (
+                      <div className="rounded-lg border border-eclat-dourado/60 bg-eclat-dourado/10 p-3 text-corpo text-eclat-texto">
+                        🎂 <b>Aniversariante!</b> Este pedido usou o cupom de aniversário. Coloque na caixa o <b>presente especial da Aurora aniversariante</b> e um bilhete de parabéns.
+                      </div>
+                    )}
                     {/* Só no caminho que a rota trava: a etiqueta (lib/pagamento-despacho). */}
                     {pedeConfirmacaoDePagamento(det) && (
                       <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-corpo text-red-900 flex flex-col gap-2">

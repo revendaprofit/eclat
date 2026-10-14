@@ -1,6 +1,7 @@
 "use server"
 
 import { sdk } from "@lib/config"
+import { chaveDeAniversario, ERRO_ANIVERSARIO } from "@lib/util/aniversario"
 import medusaError from "@lib/util/medusa-error"
 import { cpfValido, normalizarCpf } from "@lib/util/cpf"
 import { montarMetadataFiscal } from "@lib/util/endereco-fiscal"
@@ -432,13 +433,20 @@ export async function salvarContato(_estado: unknown, formData: FormData) {
     email: String(formData.get("email") ?? ""),
   })
   if ("erro" in r) return r.erro
+  const aniversario = chaveDeAniversario(String(formData.get("aniversario") ?? ""))
+  if (aniversario === undefined) return ERRO_ANIVERSARIO
   try {
     const cartId = await getCartId()
     if (!cartId) throw new Error("Sua sacola expirou. Volte à sacola e tente de novo.")
     const cart = await retrieveCart(cartId, "id,email,metadata")
     await updateCart({
       email: r.contato.email,
-      metadata: { ...(cart?.metadata ?? {}), whatsapp: r.contato.whatsapp, ...(await sinaisDoMeta()) },
+      metadata: {
+        ...(cart?.metadata ?? {}),
+        whatsapp: r.contato.whatsapp,
+        ...(aniversario ? { aniversario } : {}),
+        ...(await sinaisDoMeta()),
+      },
     })
     await setContatoGuardado(serializarContato(r.contato))
   } catch (e) {

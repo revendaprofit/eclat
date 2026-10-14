@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
-import { medusaGetCustomer, medusaOrdersByCustomer } from "@/lib/medusa"
+import { medusaGetCustomer, medusaOrdersByCustomer, medusaUpdateCustomerMetadata } from "@/lib/medusa"
+import { chaveDeAniversario } from "@/lib/aniversario"
 import { sb } from "@/lib/sb-admin"
 
 // Ficha 360°: dados do cliente + endereços + pedidos + vínculo de relacionamento
@@ -54,6 +55,21 @@ export async function GET(
     }
 
     return NextResponse.json({ customer, addresses, orders, lead, cliente_rel })
+  } catch (e) {
+    return NextResponse.json({ error: (e as Error).message }, { status: 502 })
+  }
+}
+
+// PATCH { aniversario: "14/10" | "" } — grava (ou apaga) o aniversário na ficha (programa de aniversário).
+export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
+  const body = (await req.json().catch(() => ({}))) as { aniversario?: string }
+  if (typeof body.aniversario !== "string") return NextResponse.json({ error: "Informe aniversario (dia/mês)." }, { status: 400 })
+  const chave = chaveDeAniversario(body.aniversario)
+  if (chave === undefined) return NextResponse.json({ error: "Aniversário: use dia e mês, assim: 14/10." }, { status: 400 })
+  try {
+    const metadata = await medusaUpdateCustomerMetadata(id, { aniversario: chave, aniversario_origem: chave ? "cockpit" : null })
+    return NextResponse.json({ ok: true, aniversario: metadata.aniversario ?? null })
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 502 })
   }

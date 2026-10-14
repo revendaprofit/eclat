@@ -4,6 +4,7 @@ import ProfilePhone from "@modules/account//components/profile-phone"
 import ProfileBillingAddress from "@modules/account/components/profile-billing-address"
 import ProfileEmail from "@modules/account/components/profile-email"
 import ProfileName from "@modules/account/components/profile-name"
+import ProfileAniversario from "@modules/account/components/profile-aniversario"
 import { notFound } from "next/navigation"
 import { listRegions } from "@lib/data/regions"
 import { retrieveCustomer } from "@lib/data/customer"
@@ -26,7 +27,7 @@ export default async function Profile() {
       <div className="mb-8 flex flex-col gap-y-4">
         <h1 className="text-2xl-semi">Perfil</h1>
         <p className="text-base-regular">
-          Veja e atualize suas informações de perfil — nome, e-mail e telefone. Você também pode atualizar seu endereço de cobrança ou trocar a senha.
+          Veja e atualize suas informações de perfil — nome, e-mail, telefone e aniversário. Você também pode atualizar seu endereço de cobrança ou trocar a senha.
         </p>
       </div>
       <div className="flex flex-col gap-y-8 w-full">
@@ -35,6 +36,8 @@ export default async function Profile() {
         <ProfileEmail customer={customer} />
         <Divider />
         <ProfilePhone customer={customer} />
+        <Divider />
+        <ProfileAniversario customer={customer} />
         <Divider />
         {/* <ProfilePassword customer={customer} />
         <Divider /> */}

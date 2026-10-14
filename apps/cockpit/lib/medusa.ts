@@ -563,6 +563,8 @@ export type CockpitCustomer = {
   email: string
   phone: string | null
   created_at: string
+  // aniversario ("MM-DD"), aniversario_pedido_em, aniversario_parabens — programa de aniversário (lib/aniversario.ts)
+  metadata?: Record<string, unknown> | null
 }
 
 export type CockpitOrder = {
@@ -580,7 +582,7 @@ export type CockpitOrder = {
 
 export async function medusaListCustomers(): Promise<CockpitCustomer[]> {
   const r = await medusaAdmin(
-    `/admin/customers?limit=500&fields=id,first_name,last_name,email,phone,created_at`
+    `/admin/customers?limit=500&fields=id,first_name,last_name,email,phone,created_at,metadata`
   )
   if (!r.ok) throw new Error(`listar clientes falhou (HTTP ${r.status})`)
   return (await r.json()).customers
@@ -858,7 +860,7 @@ export async function medusaGetCustomer(id: string): Promise<{
   addresses: CustomerAddress[]
 }> {
   const r = await medusaAdmin(
-    `/admin/customers/${id}?fields=id,first_name,last_name,email,phone,created_at,addresses.city,addresses.province,addresses.address_1,addresses.address_2,addresses.postal_code,addresses.country_code,addresses.metadata`
+    `/admin/customers/${id}?fields=id,first_name,last_name,email,phone,created_at,metadata,addresses.city,addresses.province,addresses.address_1,addresses.address_2,addresses.postal_code,addresses.country_code,addresses.metadata`
   )
   if (!r.ok) throw new Error(`buscar cliente falhou (HTTP ${r.status})`)
   const c = (await r.json()).customer
@@ -870,9 +872,19 @@ export async function medusaGetCustomer(id: string): Promise<{
       email: c.email,
       phone: c.phone,
       created_at: c.created_at,
+      metadata: c.metadata ?? null,
     },
     addresses: c.addresses ?? [],
   }
+}
+
+/** Mescla chaves em customer.metadata (lê antes: a Admin API troca o objeto inteiro). */
+export async function medusaUpdateCustomerMetadata(id: string, patch: Record<string, unknown>): Promise<Record<string, unknown>> {
+  const { customer } = await medusaGetCustomer(id)
+  const metadata = { ...(customer.metadata ?? {}), ...patch }
+  const r = await medusaAdmin(`/admin/customers/${id}`, { method: "POST", body: JSON.stringify({ metadata }) })
+  if (!r.ok) throw new Error(`atualizar cliente falhou (HTTP ${r.status})`)
+  return metadata
 }
 
 export type NewProductInput = {

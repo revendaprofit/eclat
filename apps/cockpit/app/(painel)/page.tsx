@@ -24,6 +24,7 @@ type Dash = {
   estoque_baixo: { count: number; itens: { produto: string; variacao: string; sku: string | null; estoque: number }[] }
   reativacao: number
   clientes_total: number
+  aniversariantes: { id: string; nome: string; phone: string | null; aniversario: string; dias: number; parabens_enviado: boolean }[]
 }
 
 const brl = (cent: number) =>
@@ -73,8 +74,40 @@ export default function DashboardPage() {
               <Metrica href="/leads" rotulo="Leads novos" valor={d.leads_novos} detalhe="atender" atencao={d.leads_novos > 0} />
               <Metrica href="/produtos" rotulo="Estoque baixo" valor={d.estoque_baixo.count} detalhe="≤ 5 unidades" atencao={d.estoque_baixo.count > 0} />
               <Metrica href="/clientes" rotulo="Reativação" valor={d.reativacao} detalhe="recorrentes inativos +60d" />
+              <Metrica
+                href="/aniversarios"
+                rotulo="Aniversariantes"
+                valor={(d.aniversariantes ?? []).filter((a) => a.dias === 0).length}
+                detalhe={`hoje · ${(d.aniversariantes ?? []).length} nos próximos 7 dias`}
+                atencao={(d.aniversariantes ?? []).some((a) => a.dias === 0)}
+              />
             </div>
           </Secao>
+
+          {(d.aniversariantes ?? []).length > 0 && (
+            <Secao titulo="Aniversários — esta semana 🎂">
+              <ul className="flex flex-col gap-2">
+                {d.aniversariantes.map((a) => (
+                  <li key={a.id} className={`flex flex-wrap items-center gap-3 rounded-lg border px-4 py-2.5 ${a.dias === 0 ? "border-eclat-dourado/60 bg-eclat-dourado/10" : "border-eclat-pedra/40 bg-white/60"}`}>
+                    <div className="flex-1 min-w-[160px]">
+                      <span className="font-medium text-eclat-texto">{a.nome}</span>
+                      <span className="text-meta text-eclat-texto-3 ml-2">{a.dias === 0 ? "é hoje" : a.dias === 1 ? "amanhã" : `em ${a.dias} dias`} · {a.aniversario.slice(3)}/{a.aniversario.slice(0, 2)}</span>
+                    </div>
+                    {a.dias === 0 && (
+                      <span className={`text-meta px-2 py-0.5 rounded-full ${a.parabens_enviado ? "bg-green-100 text-green-800" : "bg-amber-100 text-amber-800"}`}>
+                        {a.parabens_enviado ? "parabéns + cupom enviados" : "parabéns saem às 9h"}
+                      </span>
+                    )}
+                    {a.phone && (
+                      <a href={`https://wa.me/${a.phone.replace(/\D/g, "").replace(/^(?!55)/, "55")}`} target="_blank" rel="noopener noreferrer" className="text-meta px-3 py-1.5 rounded-md bg-eclat-grafite text-eclat-luz hover:opacity-90">
+                        💬 WhatsApp
+                      </a>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </Secao>
+          )}
 
           {d.estoque_baixo.itens.length > 0 && (
             <Secao titulo="Estoque baixo — repor">

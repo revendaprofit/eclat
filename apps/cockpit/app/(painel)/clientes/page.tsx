@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { enderecoEmLinha } from "@/lib/endereco"
+import { aniversarioCurto, aniversarioPorExtenso } from "@/lib/aniversario"
 
 type Customer = {
   id: string
@@ -13,6 +14,7 @@ type Customer = {
   pedidos: number
   total_gasto: number
   ultimo_pedido_em: string | null
+  metadata?: Record<string, unknown> | null
 }
 
 const VIP_MIN = 1000 // R$ — cliente VIP/alto valor
@@ -126,6 +128,27 @@ export default function ClientesPage() {
   const [fichaLoading, setFichaLoading] = useState(false)
   const [fupText, setFupText] = useState("")
   const [fupSending, setFupSending] = useState(false)
+  const [aniv, setAniv] = useState("")
+  const [anivSalvando, setAnivSalvando] = useState(false)
+  const [anivMsg, setAnivMsg] = useState<string | null>(null)
+
+  // Programa de aniversário: a equipe grava dia/mês na ficha (ex.: a cliente respondeu no WhatsApp por áudio).
+  const salvarAniversario = async () => {
+    if (!ficha) return
+    setAnivSalvando(true)
+    setAnivMsg(null)
+    try {
+      const r = await fetch(`/api/customers/${ficha.customer.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ aniversario: aniv.trim() }) })
+      const d = await r.json()
+      if (!r.ok) throw new Error(d.error || `HTTP ${r.status}`)
+      setFicha({ ...ficha, customer: { ...ficha.customer, metadata: { ...(ficha.customer.metadata ?? {}), aniversario: d.aniversario } } })
+      setAnivMsg(d.aniversario ? `✓ ${aniversarioPorExtenso(d.aniversario)}` : "✓ apagado")
+    } catch (e) {
+      setAnivMsg((e as Error).message)
+    } finally {
+      setAnivSalvando(false)
+    }
+  }
 
   const carregar = useCallback(async () => {
     setLoading(true)
@@ -153,6 +176,8 @@ export default function ClientesPage() {
     }
     setFupText("")
     setFichaLoading(true)
+    setAniv("")
+    setAnivMsg(null)
     fetch(`/api/customers/${fichaId}`, { cache: "no-store" })
       .then((r) => r.json())
       .then((d) => setFicha(d.error ? null : d))
@@ -299,6 +324,22 @@ export default function ClientesPage() {
                       <b>{brl(ficha.orders.reduce((s, o) => s + (o.total ?? 0), 0))}</b>
                     </span>
                     <span className="text-eclat-texto-3">desde {data(ficha.customer.created_at)}</span>
+                  </div>
+                  <div className="mt-3 flex flex-wrap items-center gap-2 text-corpo" data-testid="ficha-aniversario">
+                    <span className="text-eclat-texto-3">🎂 Aniversário</span>
+                    <input
+                      value={aniv || aniversarioCurto(String(ficha.customer.metadata?.aniversario ?? ""))}
+                      onChange={(e) => setAniv(e.target.value.replace(/\D/g, "").slice(0, 4).replace(/^(\d{2})(\d)/, "$1/$2") || " ")}
+                      placeholder="dia/mês"
+                      className="w-24 border border-eclat-pedra/50 rounded-md px-2 py-1 bg-white text-corpo focus:outline-none focus:border-eclat-dourado"
+                    />
+                    <button onClick={salvarAniversario} disabled={anivSalvando || !aniv} className="text-meta px-3 py-1.5 rounded-md border border-eclat-pedra/50 bg-white hover:bg-eclat-areia/40 disabled:opacity-50">
+                      {anivSalvando ? "Salvando…" : "Salvar"}
+                    </button>
+                    {anivMsg && <span className="text-meta text-eclat-texto-3">{anivMsg}</span>}
+                    {!ficha.customer.metadata?.aniversario && !!ficha.customer.metadata?.aniversario_pedido_em && (
+                      <span className="text-meta text-eclat-texto-3">perguntado no WhatsApp em {data(String(ficha.customer.metadata.aniversario_pedido_em))}</span>
+                    )}
                   </div>
                 </section>
 

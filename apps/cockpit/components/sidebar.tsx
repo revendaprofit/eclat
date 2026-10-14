@@ -19,6 +19,7 @@ const GRUPOS: { titulo: string | null; itens: { href: string; label: string }[] 
       { href: "/avaliacoes", label: "Avaliações" },
       { href: "/conversas", label: "Conversas" },
       { href: "/clientes", label: "Clientes" },
+      { href: "/aniversarios", label: "Aniversários" },
       { href: "/leads", label: "Leads" },
     ],
   },

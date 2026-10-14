@@ -1,6 +1,7 @@
 "use server"
 
 import { sdk } from "@lib/config"
+import { chaveDeAniversario, ERRO_ANIVERSARIO } from "@lib/util/aniversario"
 import medusaError from "@lib/util/medusa-error"
 import { montarMetadataFiscal } from "@lib/util/endereco-fiscal"
 import { HttpTypes } from "@medusajs/types"
@@ -62,11 +63,15 @@ export const updateCustomer = async (body: HttpTypes.StoreUpdateCustomer) => {
 
 export async function signup(_currentState: unknown, formData: FormData) {
   const password = formData.get("password") as string
+  // Programa de aniversário (sócia, 2026-10-14): dia/mês opcional no cadastro → customer.metadata.aniversario ("MM-DD").
+  const aniversario = chaveDeAniversario(String(formData.get("aniversario") ?? ""))
+  if (aniversario === undefined) return ERRO_ANIVERSARIO
   const customerForm = {
     email: formData.get("email") as string,
     first_name: formData.get("first_name") as string,
     last_name: formData.get("last_name") as string,
     phone: formData.get("phone") as string,
+    ...(aniversario ? { metadata: { aniversario, aniversario_origem: "cadastro" } } : {}),
   }
 
   try {

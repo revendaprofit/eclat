@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { medusaListOrders, medusaListProducts, medusaListCustomers } from "@/lib/medusa"
 import { sb } from "@/lib/sb-admin"
 import { PAGAMENTOS_CONFIRMADOS } from "@/lib/pagamento-despacho"
+import { hojeChave, nomeDe, proximosAniversariantes } from "@/lib/aniversario"
 
 // Consolida as filas de ação do dia (Fase 6). Tudo em uma chamada server-side.
 const ESTOQUE_BAIXO = 5
@@ -68,8 +69,19 @@ export async function GET() {
       /* opcional */
     }
 
+    // Aniversariantes de hoje e dos próximos 7 dias (programa de aniversário, lib/aniversario.ts).
+    const aniversariantes = proximosAniversariantes(customers, hojeChave(), 7).map((c) => ({
+      id: c.id,
+      nome: nomeDe(c),
+      phone: c.phone,
+      aniversario: c.aniversario,
+      dias: c.dias,
+      parabens_enviado: c.parabens_enviado,
+    }))
+
     return NextResponse.json({
       vendas_hoje: { pedidos: vendasHojePedidos, receita_centavos: vendasHojeReceita },
+      aniversariantes,
       a_enviar: aEnviar,
       leads_novos: leadsNovos,
       conversas_pendentes: conversasPendentes,

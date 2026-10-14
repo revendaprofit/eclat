@@ -2,6 +2,7 @@
 
 import { salvarContato } from "@lib/data/cart"
 import { mascararCelular } from "@lib/util/boas-vindas"
+import { aniversarioParaCampo, mascararAniversario } from "@lib/util/aniversario"
 import { CheckCircleSolid } from "@medusajs/icons"
 import { HttpTypes } from "@medusajs/types"
 import Divider from "@modules/common/components/divider"
@@ -32,6 +33,8 @@ export default function Contato({
   const meta = (cart.metadata ?? {}) as Record<string, unknown>
   const [whatsapp, setWhatsapp] = useState(mascararCelular(String(meta.whatsapp ?? customer?.phone ?? "")))
   const [email, setEmail] = useState(cart.email || customer?.email || "")
+  // Programa de aniversário (sócia, 2026-10-14): dia/mês opcional; vai em cart.metadata.aniversario e, no pedido, para a ficha da cliente.
+  const [aniversario, setAniversario] = useState(aniversarioParaCampo(meta.aniversario ?? (customer?.metadata as Record<string, unknown> | null)?.aniversario))
   const [message, formAction] = useActionState(salvarContato, null)
 
   return (
@@ -80,6 +83,16 @@ export default function Contato({
             required
             data-testid="contato-email-input"
           />
+          <Input
+            label="Aniversário — dia/mês (opcional)"
+            name="aniversario"
+            inputMode="numeric"
+            maxLength={5}
+            value={aniversario}
+            onChange={(e) => setAniversario(mascararAniversario(e.target.value))}
+            data-testid="contato-aniversario-input"
+          />
+          <p className="text-xs text-ui-fg-subtle -mt-2">No seu dia você ganha 10% off e um presente da ÉCLAT. 🎂</p>
           <SubmitButton className="mt-2" data-testid="submit-contato-button">
             Continuar para o endereço
           </SubmitButton>

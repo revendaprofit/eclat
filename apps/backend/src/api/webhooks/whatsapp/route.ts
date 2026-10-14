@@ -10,6 +10,7 @@ import {
 import { getMediaBase64 } from "../../../lib/evolution"
 import { ehGatilhoDoClube, responderClube } from "../../../lib/clube"
 import { ehClienteComPedido } from "../../../lib/convite-clube"
+import { tratarRespostaDeAniversario } from "../../../lib/aniversario-envios"
 import { tratarMensagemRecebida } from "../../../lib/recuperacao"
 import { tratarRespostaDeAvaliacao } from "../../../lib/avaliacao"
 
@@ -152,11 +153,21 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
       // equipe pelo celular tira a automação da conversa (lib/recuperacao.ts).
       // Pedido de avaliação (lib/avaliacao.ts): resposta de quem comprou. Se a mensagem é de uma
       // avaliação em andamento, a recuperação não a trata (uma mensagem pertence a uma automação só).
-      let daAvaliacao = false
+      // Programa de aniversário (lib/aniversario-envios.ts): quem foi perguntada e manda a data tem a resposta
+      // tratada aqui e nenhuma outra automação mexe na mensagem.
+      let doAniversario = false
       try {
-        daAvaliacao = await tratarRespostaDeAvaliacao({ number, fromMe, texto, tipo, log: logger })
+        doAniversario = await tratarRespostaDeAniversario(req.scope, { number, fromMe, texto, tipo, log: logger })
       } catch (e) {
-        logger.warn(`[avaliacao] resposta não tratada: ${(e as Error).message}`)
+        logger.warn(`[aniversario] resposta não tratada: ${(e as Error).message}`)
+      }
+      let daAvaliacao = doAniversario
+      if (!doAniversario) {
+        try {
+          daAvaliacao = await tratarRespostaDeAvaliacao({ number, fromMe, texto, tipo, log: logger })
+        } catch (e) {
+          logger.warn(`[avaliacao] resposta não tratada: ${(e as Error).message}`)
+        }
       }
       if (!daAvaliacao) {
         try {

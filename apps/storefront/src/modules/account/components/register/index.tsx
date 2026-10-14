@@ -7,6 +7,7 @@ import ErrorMessage from "@modules/checkout/components/error-message"
 import { SubmitButton } from "@modules/checkout/components/submit-button"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import { signup } from "@lib/data/customer"
+import { mascararAniversario } from "@lib/util/aniversario"
 
 type Props = {
   setCurrentView: (view: LOGIN_VIEW) => void
@@ -57,6 +58,15 @@ const Register = ({ setCurrentView }: Props) => {
             autoComplete="tel"
             data-testid="phone-input"
           />
+          <Input
+            label="Aniversário — dia/mês (ex.: 14/10)"
+            name="aniversario"
+            inputMode="numeric"
+            maxLength={5}
+            onChange={(e) => (e.target.value = mascararAniversario(e.target.value))}
+            data-testid="aniversario-input"
+          />
+          <span className="text-xs text-ui-fg-subtle -mt-1">Opcional. No seu dia você ganha 10% off e um presente da ÉCLAT. 🎂</span>
           <Input
             label="Senha"
             name="password"
