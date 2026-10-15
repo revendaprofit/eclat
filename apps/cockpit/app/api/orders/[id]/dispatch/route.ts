@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { medusaGetOrder, medusaFulfillOrder, medusaMergeOrderMetadata, medusaShipFulfillment, medusaAdmin } from "@/lib/medusa"
+import { medusaGetOrder, medusaFulfillOrder, medusaMergeOrderMetadata, medusaShipFulfillment, medusaAdmin, medusaPrecosDeCatalogo } from "@/lib/medusa"
 import { podeDespachar } from "@/lib/despacho-permitido"
 import { validarConferencia, type ConferenciaEnviada } from "@/lib/leitor"
 import { decidirDespacho, type ResultadoEmissao } from "@/lib/fiscal-despacho"
@@ -22,6 +22,7 @@ import {
 import { garantirEtiqueta, lerEstadoDoFrete } from "@/lib/etiqueta-segura"
 import { executarComTrava, DespachoEmAndamento } from "@/lib/trava-despacho"
 import { lerDadosFiscais } from "@/lib/dados-fiscais"
+import { precoParaDeclaracao } from "@/lib/superfrete-etiqueta"
 import { AVISO_PAGAMENTO, pagamentoConfirmado } from "@/lib/pagamento-despacho"
 import { sendWhatsappText } from "@/lib/evolution"
 
@@ -252,8 +253,24 @@ export async function POST(
       let label: { tracking_number: string; tracking_url: string; label_url: string } | undefined
       if (body.use_carrier) {
         const fiscais = lerDadosFiscais(order)
+        // Linha zerada (brinde) precisa de um preço na declaração de conteúdo — a SuperFrete recusa
+        // valor 0. Busca o preço de catálogo SÓ nesse caso, e por melhor esforço: se a consulta
+        // falhar, `precoParaDeclaracao` usa o valor simbólico e a etiqueta sai do mesmo jeito.
+        const zerados = order.items.filter((i) => !(Number(i.unit_price) > 0))
+        let precosDeCatalogo = new Map<string, number>()
+        if (zerados.length) {
+          try {
+            precosDeCatalogo = await medusaPrecosDeCatalogo(zerados)
+          } catch (e) {
+            console.warn(`[etiqueta] pedido ${id}: preço de catálogo do brinde não veio — ${(e as Error).name}`)
+          }
+        }
         const pedidoParaEtiqueta = {
-          itens: order.items.map((i) => ({ titulo: [i.title, i.variant_title].filter(Boolean).join(" — "), quantidade: i.quantity, preco_unitario: i.unit_price })),
+          itens: order.items.map((i) => ({
+            titulo: [i.title, i.variant_title].filter(Boolean).join(" — "),
+            quantidade: i.quantity,
+            preco_unitario: precoParaDeclaracao(i.unit_price, precosDeCatalogo.get(i.variant_id ?? "")),
+          })),
           endereco: order.shipping_address,
           email: order.email ?? null,
           cpf: fiscais.cpf,

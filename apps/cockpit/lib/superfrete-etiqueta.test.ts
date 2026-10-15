@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { montarCorpoDoCart, pacoteDoPedido, remetenteDoAmbiente, servicoDoPedido, type PedidoParaEtiqueta, type Remetente } from "./superfrete-etiqueta"
+import { montarCorpoDoCart, pacoteDoPedido, precoParaDeclaracao, remetenteDoAmbiente, servicoDoPedido, type PedidoParaEtiqueta, type Remetente } from "./superfrete-etiqueta"
 
 // Forma exata do corpo devolvido por montarCorpoDoCart — usado para tipar os testes sem `any`
 // (montarCorpoDoCart devolve Record<string, unknown> porque é o que vai literalmente no POST,
@@ -80,6 +80,17 @@ describe("corpo do POST /api/v0/cart", () => {
       options: { insurance_value: 0, receipt: false, own_hand: false, non_commercial: true, tags: [{ tag: "1042" }] },
       platform: "use.ECLAT",
     })
+  })
+
+  it("preço da declaração: o pago; se a linha veio zerada (brinde), o preço de catálogo", () => {
+    expect(precoParaDeclaracao(159, undefined)).toBe(159)
+    expect(precoParaDeclaracao(159, 189)).toBe(159)
+    // Brinde: usa o preço real da peça (decisão do dono em 2026-10-15).
+    expect(precoParaDeclaracao(0, 34.9)).toBe(34.9)
+    // Catálogo indisponível ou zerado: valor simbólico, para a etiqueta não travar.
+    expect(precoParaDeclaracao(0, undefined)).toBe(0.01)
+    expect(precoParaDeclaracao(0, 0)).toBe(0.01)
+    expect(precoParaDeclaracao(Number.NaN, Number.NaN)).toBe(0.01)
   })
 
   it("item de brinde (preço 0) vai com valor simbólico — a SuperFrete recusa unitary_value 0", () => {
