@@ -46,10 +46,21 @@ const UF_VALIDA = /^[A-Z]{2}$/
 // A SuperFrete recusa `unitary_value` 0 — em produção, 2026-10-15, pedido #30 (meia de brinde):
 // HTTP 400 "products.unitary_value é obrigatório" (a validação dela trata 0 como campo ausente).
 // O brinde nasce com `unit_price: 0` de propósito (`apps/backend/src/modules/brinde`), e o mesmo
-// vale para qualquer linha que venha 100% descontada. Vai com valor simbólico: é só a declaração
-// de conteúdo, o seguro é 0 (`insurance_value`) e o preço do frete não depende deste número.
+// vale para qualquer linha que venha 100% descontada.
 const VALOR_SIMBOLICO = 0.01
-const valorDeclarado = (preco: number): number => (Number.isFinite(preco) && preco > 0 ? preco : VALOR_SIMBOLICO)
+
+/**
+ * Preço de cada peça na declaração de conteúdo: o que a cliente pagou. Linha zerada (brinde) vai
+ * pelo preço real da peça no catálogo — decisão do dono em 2026-10-15, para a declaração refletir
+ * o que vai dentro da caixa e valer num ressarcimento dos Correios. Sem preço de catálogo (busca
+ * falhou, peça sem preço), cai no valor simbólico: a etiqueta nunca trava por causa disso.
+ */
+export function precoParaDeclaracao(pago: number, deCatalogo?: number | null): number {
+  const positivo = (v: unknown) => (Number.isFinite(Number(v)) && Number(v) > 0 ? Number(v) : null)
+  return positivo(pago) ?? positivo(deCatalogo) ?? VALOR_SIMBOLICO
+}
+
+const valorDeclarado = (preco: number): number => precoParaDeclaracao(preco)
 
 export function servicoDoPedido(dados: Record<string, unknown> | null): 1 | 2 | 17 {
   const s = Number(dados?.servico)

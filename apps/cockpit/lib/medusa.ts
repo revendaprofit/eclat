@@ -661,6 +661,8 @@ export type OrderItem = {
   variant_id?: string | null
   variant_sku?: string | null
   variant_title: string | null
+  // Só para achar o preço de catálogo de uma linha zerada (brinde) — ver medusaPrecosDeCatalogo.
+  product_id?: string | null
   quantity: number
   unit_price: number
   total: number
@@ -717,7 +719,7 @@ export type CockpitOrderDetail = CockpitOrder & {
 // tudo, mesmo em pedido completo (achado da revisão final; ver medusa-order-fields.test.ts).
 export const ORDER_DETAIL_FIELDS =
   "id,display_id,status,payment_status,fulfillment_status,email,customer_id,currency_code,created_at,subtotal,item_subtotal,discount_total,shipping_total,shipping_subtotal,tax_total,total,metadata," +
-  "items.id,items.title,items.variant_id,items.variant_sku,items.variant_title,items.quantity,items.detail.quantity,items.unit_price,items.total,items.metadata,items.adjustments.code,items.adjustments.amount," +
+  "items.id,items.title,items.variant_id,items.product_id,items.variant_sku,items.variant_title,items.quantity,items.detail.quantity,items.unit_price,items.total,items.metadata,items.adjustments.code,items.adjustments.amount," +
   "shipping_address.first_name,shipping_address.last_name,shipping_address.address_1,shipping_address.address_2,shipping_address.city,shipping_address.province,shipping_address.postal_code,shipping_address.country_code,shipping_address.phone,shipping_address.metadata," +
   "billing_address.metadata," +
   "shipping_methods.name,shipping_methods.amount,shipping_methods.total,shipping_methods.data," +
@@ -728,6 +730,32 @@ export async function medusaGetOrder(id: string): Promise<CockpitOrderDetail> {
   const r = await medusaAdmin(`/admin/orders/${id}?fields=${ORDER_DETAIL_FIELDS}`)
   if (!r.ok) throw new Error(`buscar pedido falhou (HTTP ${r.status})`)
   return (await r.json()).order
+}
+
+// Preço de catálogo (BRL) das variantes de um pedido, por `variant_id`. Serve a UM caso: a linha do
+// brinde chega ao pedido com `unit_price` 0 (modules/brinde), e a etiqueta da SuperFrete precisa de
+// um valor maior que zero na declaração de conteúdo. Decisão do dono em 2026-10-15: declarar o preço
+// real da peça. Busca um produto por chamada, só os produtos que o chamador pedir.
+export async function medusaPrecosDeCatalogo(
+  itens: { product_id?: string | null; variant_id?: string | null }[]
+): Promise<Map<string, number>> {
+  const precos = new Map<string, number>()
+  const produtos = [...new Set(itens.map((i) => i.product_id).filter((id): id is string => !!id))]
+  for (const produtoId of produtos) {
+    const r = await medusaAdmin(
+      `/admin/products/${produtoId}?fields=variants.id,variants.prices.amount,variants.prices.currency_code`
+    )
+    if (!r.ok) continue
+    const produto = (await r.json())?.product as
+      | { variants?: { id?: string; prices?: { amount?: unknown; currency_code?: unknown }[] | null }[] }
+      | undefined
+    for (const v of produto?.variants ?? []) {
+      const brl = (v.prices ?? []).find((p) => String(p?.currency_code ?? "").toLowerCase() === "brl")
+      const valor = Number(brl?.amount)
+      if (v.id && Number.isFinite(valor) && valor > 0) precos.set(v.id, valor)
+    }
+  }
+  return precos
 }
 
 // Grava chaves no metadata do pedido preservando as existentes (Admin API substitui o objeto inteiro).
