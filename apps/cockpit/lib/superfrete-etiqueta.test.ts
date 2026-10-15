@@ -82,6 +82,21 @@ describe("corpo do POST /api/v0/cart", () => {
     })
   })
 
+  it("item de brinde (preço 0) vai com valor simbólico — a SuperFrete recusa unitary_value 0", () => {
+    // Visto em produção em 2026-10-15 (pedido #30, meia de brinde): HTTP 400
+    // "products.unitary_value é obrigatório". O brinde nasce com unit_price 0 (modules/brinde).
+    const comBrinde = pedido({
+      itens: [
+        { titulo: "Top Orvalho", quantidade: 1, preco_unitario: 159 },
+        { titulo: "Meia Cano Médio", quantidade: 1, preco_unitario: 0 },
+      ],
+    })
+    expect((montarCorpoDoCart(comBrinde, REMETENTE, null) as CorpoDoCart).products).toEqual([
+      { name: "Top Orvalho", quantity: 1, unitary_value: 159 },
+      { name: "Meia Cano Médio", quantity: 1, unitary_value: 0.01 },
+    ])
+  })
+
   it("com a chave da NFe, vai como nota e não como declaração de conteúdo", () => {
     const chave = "3".repeat(44)
     expect((montarCorpoDoCart(pedido(), REMETENTE, chave) as CorpoDoCart).options).toEqual({

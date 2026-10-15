@@ -43,6 +43,14 @@ function telefoneNacional(raw: unknown): string {
 // chamada à API — melhor um erro claro pro operador do que um 400 da SuperFrete sem contexto.
 const UF_VALIDA = /^[A-Z]{2}$/
 
+// A SuperFrete recusa `unitary_value` 0 — em produção, 2026-10-15, pedido #30 (meia de brinde):
+// HTTP 400 "products.unitary_value é obrigatório" (a validação dela trata 0 como campo ausente).
+// O brinde nasce com `unit_price: 0` de propósito (`apps/backend/src/modules/brinde`), e o mesmo
+// vale para qualquer linha que venha 100% descontada. Vai com valor simbólico: é só a declaração
+// de conteúdo, o seguro é 0 (`insurance_value`) e o preço do frete não depende deste número.
+const VALOR_SIMBOLICO = 0.01
+const valorDeclarado = (preco: number): number => (Number.isFinite(preco) && preco > 0 ? preco : VALOR_SIMBOLICO)
+
 export function servicoDoPedido(dados: Record<string, unknown> | null): 1 | 2 | 17 {
   const s = Number(dados?.servico)
   // Pedido antigo ("Entrega Padrão", sem serviço gravado) sai como PAC — spec §4.7.
@@ -133,7 +141,7 @@ export function montarCorpoDoCart(pedido: PedidoParaEtiqueta, remetente: Remeten
     to: { ...destinatario, email: pedido.email },
     service: servicoDoPedido(pedido.dados_do_frete),
     volumes: pacoteDoPedido(pedido.dados_do_frete, pecas),
-    products: pedido.itens.map((i) => ({ name: i.titulo, quantity: i.quantidade, unitary_value: i.preco_unitario })),
+    products: pedido.itens.map((i) => ({ name: i.titulo, quantity: i.quantidade, unitary_value: valorDeclarado(i.preco_unitario) })),
     options,
     platform: "use.ECLAT",
   }
