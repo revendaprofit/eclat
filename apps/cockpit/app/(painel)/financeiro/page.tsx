@@ -12,6 +12,7 @@ type Dre = {
   lucro_bruto: number
   margem_bruta: number
   taxas_pagamento: number
+  taxas_fora_site?: number
   pagamentos_sem_tarifa: number
   despesas: number
   resultado: number
@@ -186,6 +187,9 @@ export default function FinanceiroPage() {
             </div>
             <div className="flex justify-between mt-1"><span className="text-eclat-texto-2">(+) Frete recebido</span><span>{brl(dre.frete)}</span></div>
             <div className="flex justify-between" data-testid="dre-taxas-pagamento"><span className="text-eclat-texto-2">(−) Taxas de pagamento</span><span className="text-red-700">−{brl(dre.taxas_pagamento ?? 0)}</span></div>
+            {(dre.taxas_fora_site ?? 0) > 0 && (
+              <div className="flex justify-between text-meta text-eclat-texto-3"><span>· sendo maquininha (vendas fora do site)</span><span>−{brl(dre.taxas_fora_site ?? 0)}</span></div>
+            )}
             <div className="flex justify-between"><span className="text-eclat-texto-2">(−) Despesas</span><span className="text-red-700">−{brl(dre.despesas)}</span></div>
             <div className="flex justify-between border-t-2 border-eclat-grafite/40 pt-2 mt-1 font-serif text-lg">
               <span>= Resultado</span>

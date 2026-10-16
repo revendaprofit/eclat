@@ -64,12 +64,14 @@ export async function GET(req: Request) {
     // (sócia, 2026-10-15). Tabela ausente (migration 0016 não aplicada) não derruba o DRE.
     let vendasForaSite = 0
     let receitaForaSite = 0
+    let taxasForaSite = 0 // taxa da maquininha nas vendas no cartão (16/10): despesa financeira, como a do gateway
     try {
-      const vr = await sb(`venda_externa?select=total_centavos,itens&pago=eq.true&cancelada_em=is.null&data=gte.${de}&data=lte.${ate}`)
+      const vr = await sb(`venda_externa?select=total_centavos,taxa_centavos,itens&pago=eq.true&cancelada_em=is.null&data=gte.${de}&data=lte.${ate}`)
       if (vr.ok)
-        for (const v of (await vr.json()) as { total_centavos: number; itens: { variant_id: string; quantidade: number }[] }[]) {
+        for (const v of (await vr.json()) as { total_centavos: number; taxa_centavos?: number | null; itens: { variant_id: string; quantidade: number }[] }[]) {
           vendasForaSite++
           receitaForaSite += v.total_centavos
+          taxasForaSite += v.taxa_centavos ?? 0
           for (const it of v.itens ?? []) {
             const c = custoMap[it.variant_id]
             if (c == null) itensSemCusto += it.quantidade
@@ -83,9 +85,10 @@ export async function GET(req: Request) {
 
     // 4) taxas de pagamento (tarifa real gravada pelo provider em cada pagamento)
     const taxas = taxasDePagamento(orders)
+    const taxasTotal = taxas.total_centavos + taxasForaSite
 
     const lucro_bruto = receita - cogs
-    const resultado = receita + frete - cogs - taxas.total_centavos - despesas
+    const resultado = receita + frete - cogs - taxasTotal - despesas
     const margem_bruta = receita > 0 ? lucro_bruto / receita : 0
 
     return NextResponse.json({
@@ -98,7 +101,8 @@ export async function GET(req: Request) {
       cogs,
       lucro_bruto,
       margem_bruta,
-      taxas_pagamento: taxas.total_centavos,
+      taxas_pagamento: taxasTotal,
+      taxas_fora_site: taxasForaSite,
       pagamentos_sem_tarifa: taxas.sem_tarifa,
       despesas,
       despesas_por_categoria: porCategoria,

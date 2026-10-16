@@ -1,14 +1,18 @@
-// Vendas fora do site (sócia, 2026-10-15). Regras puras: validação, totais, situação da cobrança e textos.
-// Dinheiro em centavos. Desenho em docs/superpowers/specs/2026-10-15-vendas-fora-do-site-design.md.
+// Vendas fora do site (sócia, 2026-10-15/16). Regras puras: validação, desconto (R$ ou %), perfil (cliente /
+// embaixadora 20% / creator custo zero ou % livre), taxa do cartão por parcela → líquido, situação da cobrança e
+// textos. Dinheiro em centavos. Desenho em docs/superpowers/specs/2026-10-15-vendas-fora-do-site-design.md.
 
-export type Pagamento = "pix" | "dinheiro" | "cartao" | "a_prazo"
+export type Pagamento = "pix" | "dinheiro" | "cartao" | "a_prazo" | "cortesia"
 export type Canal = "whatsapp" | "presencial" | "instagram" | "outro"
+export type TipoDesconto = "valor" | "percentual"
+export type Perfil = "cliente" | "embaixadora" | "creator"
 
 export const PAGAMENTOS: { id: Pagamento; label: string }[] = [
   { id: "pix", label: "Pix" },
   { id: "dinheiro", label: "Dinheiro" },
-  { id: "cartao", label: "Cartão" },
+  { id: "cartao", label: "Cartão (maquininha)" },
   { id: "a_prazo", label: "A prazo (combinar a data)" },
+  { id: "cortesia", label: "Cortesia (sem cobrança)" },
 ]
 export const CANAIS: { id: Canal; label: string }[] = [
   { id: "whatsapp", label: "WhatsApp" },
@@ -16,6 +20,36 @@ export const CANAIS: { id: Canal; label: string }[] = [
   { id: "instagram", label: "Instagram" },
   { id: "outro", label: "Outro" },
 ]
+export const PERFIS: { id: Perfil; label: string }[] = [
+  { id: "cliente", label: "Cliente" },
+  { id: "embaixadora", label: "Embaixadora" },
+  { id: "creator", label: "Creator" },
+]
+/** Desconto fixo da embaixadora (sócia, 2026-10-16). */
+export const EMBAIXADORA_PERCENTUAL = 20
+
+/** Taxas da maquininha, em % (ex.: 3.49). `debito` e crédito por nº de parcelas. Editável na tela; nasce vazia. */
+export type TaxasCartao = { debito: number | null; credito: Record<string, number | null> }
+export const PARCELAS_MAX = 12
+export function taxasVazias(): TaxasCartao {
+  const credito: Record<string, number | null> = {}
+  for (let i = 1; i <= PARCELAS_MAX; i++) credito[String(i)] = null
+  return { debito: null, credito }
+}
+export function normalizarTaxas(raw: unknown): TaxasCartao {
+  const base = taxasVazias()
+  const r = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>
+  const num = (v: unknown) => (typeof v === "number" && Number.isFinite(v) && v >= 0 && v < 100 ? Math.round(v * 100) / 100 : null)
+  base.debito = num(r.debito)
+  const c = (r.credito && typeof r.credito === "object" ? r.credito : {}) as Record<string, unknown>
+  for (const k of Object.keys(base.credito)) base.credito[k] = num(c[k])
+  return base
+}
+/** Taxa (em %) para o nº de parcelas: 0 = débito, 1..12 = crédito. Null quando não configurada. */
+export function taxaPara(taxas: TaxasCartao, parcelas: number): number | null {
+  if (parcelas === 0) return taxas.debito
+  return taxas.credito[String(parcelas)] ?? null
+}
 
 export type ItemVenda = {
   variant_id: string
@@ -49,6 +83,14 @@ export type VendaExterna = {
   unboxing_enviado_em: string | null
   observacoes: string | null
   cancelada_em: string | null
+  // parte 2 (16/10)
+  tipo_desconto?: TipoDesconto
+  desconto_percentual?: number | null
+  perfil?: Perfil
+  parcelas?: number | null
+  taxa_percentual?: number | null
+  taxa_centavos?: number
+  liquido_centavos?: number | null
 }
 
 export type NovaVenda = {
@@ -58,8 +100,12 @@ export type NovaVenda = {
   cliente_whatsapp: string
   cliente_email?: string
   itens: ItemVenda[]
-  desconto_centavos?: number
+  tipo_desconto?: TipoDesconto
+  desconto_centavos?: number // quando tipo_desconto = valor
+  desconto_percentual?: number // quando tipo_desconto = percentual
+  perfil?: Perfil
   pagamento: Pagamento
+  parcelas?: number // cartão: 0 = débito
   pago?: boolean
   vencimento?: string
   observacoes?: string
@@ -78,13 +124,34 @@ export function whatsappValido(d: string): boolean {
   return /^55\d{10,11}$/.test(d)
 }
 
+export function subtotalDe(itens: ItemVenda[]): number {
+  return itens.reduce((s, i) => s + i.quantidade * i.preco_centavos, 0)
+}
+
+/** Desconto em centavos a partir do tipo: R$ direto ou % do subtotal (arredondado ao centavo). */
+export function descontoEmCentavos(subtotal: number, tipo: TipoDesconto, valorCentavos = 0, percentual = 0): number {
+  if (tipo === "percentual") {
+    const p = Math.min(100, Math.max(0, Number(percentual) || 0))
+    return Math.min(subtotal, Math.round((subtotal * p) / 100))
+  }
+  return Math.min(subtotal, Math.max(0, Math.round(Number(valorCentavos) || 0)))
+}
+
 export function totais(itens: ItemVenda[], descontoCentavos = 0): { subtotal: number; total: number } {
-  const subtotal = itens.reduce((s, i) => s + i.quantidade * i.preco_centavos, 0)
+  const subtotal = subtotalDe(itens)
   return { subtotal, total: Math.max(0, subtotal - Math.max(0, descontoCentavos)) }
 }
 
+/** Taxa do cartão em centavos e líquido. Sem taxa configurada → null (a tela avisa). */
+export function liquidoDoCartao(total: number, parcelas: number, taxas: TaxasCartao): { taxa_percentual: number; taxa_centavos: number; liquido_centavos: number } | null {
+  const t = taxaPara(taxas, parcelas)
+  if (t == null) return null
+  const taxa_centavos = Math.round((total * t) / 100)
+  return { taxa_percentual: t, taxa_centavos, liquido_centavos: total - taxa_centavos }
+}
+
 /** Valida e normaliza o lançamento. Devolve a linha pronta para o Supabase ou o erro. */
-export function prepararVenda(v: NovaVenda, hoje: string): { linha: Record<string, unknown> } | { erro: string } {
+export function prepararVenda(v: NovaVenda, hoje: string, taxas: TaxasCartao = taxasVazias()): { linha: Record<string, unknown> } | { erro: string } {
   const nome = String(v.cliente_nome ?? "").trim()
   if (!nome) return { erro: "Informe o nome da cliente." }
   const whatsapp = normalizarWhatsapp(v.cliente_whatsapp)
@@ -95,10 +162,37 @@ export function prepararVenda(v: NovaVenda, hoje: string): { linha: Record<strin
     if (!Number.isInteger(i.quantidade) || i.quantidade <= 0) return { erro: `Quantidade inválida em ${i.produto}.` }
     if (!Number.isInteger(i.preco_centavos) || i.preco_centavos < 0) return { erro: `Preço inválido em ${i.produto}.` }
   }
-  if (!PAGAMENTOS.some((p) => p.id === v.pagamento)) return { erro: "Escolha a forma de pagamento." }
-  const desconto = Math.max(0, Math.round(Number(v.desconto_centavos ?? 0)))
-  const { subtotal, total } = totais(itens, desconto)
-  const aPrazo = v.pagamento === "a_prazo"
+  const perfil: Perfil = PERFIS.some((p) => p.id === v.perfil) ? (v.perfil as Perfil) : "cliente"
+  // Embaixadora: sempre 20%. Creator: custo zero (100%) ou o % informado.
+  let tipo: TipoDesconto = v.tipo_desconto === "percentual" ? "percentual" : "valor"
+  let percentual = Number(v.desconto_percentual ?? 0)
+  if (perfil === "embaixadora") {
+    tipo = "percentual"
+    percentual = EMBAIXADORA_PERCENTUAL
+  } else if (perfil === "creator") {
+    tipo = "percentual"
+    if (v.desconto_percentual == null || !Number.isFinite(percentual) || percentual < 0 || percentual > 100) return { erro: "Creator: informe o % de desconto (100 = custo zero)." }
+  }
+  if (tipo === "percentual" && (!Number.isFinite(percentual) || percentual < 0 || percentual > 100)) return { erro: "Desconto em %: entre 0 e 100." }
+  const subtotal = subtotalDe(itens)
+  const desconto = descontoEmCentavos(subtotal, tipo, v.desconto_centavos, percentual)
+  const total = Math.max(0, subtotal - desconto)
+
+  let pagamento = v.pagamento
+  if (total === 0) pagamento = "cortesia"
+  if (!PAGAMENTOS.some((p) => p.id === pagamento)) return { erro: "Escolha a forma de pagamento." }
+  if (pagamento === "cortesia" && total > 0) return { erro: "Cortesia só quando o total é zero (use 100% de desconto)." }
+
+  let parcelas: number | null = null
+  let cartao: { taxa_percentual: number; taxa_centavos: number; liquido_centavos: number } | null = null
+  if (pagamento === "cartao") {
+    parcelas = Number(v.parcelas)
+    if (!Number.isInteger(parcelas) || parcelas < 0 || parcelas > PARCELAS_MAX) return { erro: "Cartão: informe débito ou o número de parcelas (1 a 12)." }
+    cartao = liquidoDoCartao(total, parcelas, taxas)
+    if (!cartao) return { erro: `Cartão: a taxa para ${parcelas === 0 ? "débito" : `${parcelas}x`} não está configurada. Preencha as taxas da maquininha na tela.` }
+  }
+
+  const aPrazo = pagamento === "a_prazo"
   if (aPrazo && !/^\d{4}-\d{2}-\d{2}$/.test(String(v.vencimento ?? ""))) return { erro: "Venda a prazo: informe a data combinada do pagamento." }
   if (aPrazo && String(v.vencimento) < hoje) return { erro: "A data combinada do pagamento já passou." }
   const pago = aPrazo ? false : v.pago !== false
@@ -120,9 +214,16 @@ export function prepararVenda(v: NovaVenda, hoje: string): { linha: Record<strin
         inventory_item_id: i.inventory_item_id ?? null,
       })),
       subtotal_centavos: subtotal,
+      tipo_desconto: tipo,
+      desconto_percentual: tipo === "percentual" ? percentual : null,
       desconto_centavos: desconto,
       total_centavos: total,
-      pagamento: v.pagamento,
+      perfil,
+      pagamento,
+      parcelas,
+      taxa_percentual: cartao?.taxa_percentual ?? null,
+      taxa_centavos: cartao?.taxa_centavos ?? 0,
+      liquido_centavos: cartao ? cartao.liquido_centavos : total,
       pago,
       pago_em: pago ? new Date().toISOString() : null,
       vencimento: aPrazo ? v.vencimento : null,

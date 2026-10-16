@@ -12,6 +12,14 @@ Desenho: `docs/superpowers/specs/2026-10-15-vendas-fora-do-site-design.md`. Sóc
 | lembrete automático 9h | `apps/backend/src/jobs/venda-externa-lembretes.ts` → `lib/venda-externa.ts` (texto igual ao do Cockpit) |
 | DRE | `app/api/finance/dre/route.ts` (vendas pagas pela data; `receita_fora_site`, `vendas_fora_site`) |
 
+## Parte 2 (16/10): desconto, perfil e cartão
+- Desconto em **R$ ou %** (botão R$ / %). Perfil: **Cliente** (livre), **Embaixadora** (20% travado), **Creator** (100% =
+  custo zero → vira "Cortesia", paga, sem cobrança; ou um % menor que ela paga a diferença).
+- **Cartão**: pede débito ou 1x..12x; a taxa vem da tabela "💳 Taxas da maquininha" (site_content
+  `cockpit.taxas_cartao`, em %); grava `taxa_centavos` e `liquido_centavos`. Sem a taxa daquela parcela, a venda
+  não fecha. No DRE a taxa entra em "(−) Taxas de pagamento" (sublinha "maquininha").
+- Migration `0017_venda_externa_desconto_cartao.sql`.
+
 ## Operação
 - Lançar: nome, WhatsApp, peças, pagamento. A prazo pede a data combinada (não aceita data passada).
 - O estoque baixa no Medusa ao salvar (check ligado). Peça sem controle de estoque não baixa e a tela avisa.

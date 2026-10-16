@@ -3,6 +3,7 @@ import { sb } from "@/lib/sb-admin"
 import { medusaCreateCustomer, medusaListCustomers, medusaListProducts, medusaUpdateStock } from "@/lib/medusa"
 import { enviarERegistrar } from "@/lib/whatsapp-registro"
 import { normalizarWhatsapp, prepararVenda, textoUnboxing, type NovaVenda, type VendaExterna } from "@/lib/venda-externa"
+import { lerTaxas } from "./taxas-cartao/route"
 
 // Vendas fora do site (sócia, 2026-10-15). GET lista (mais recentes primeiro); POST lança uma venda:
 // valida → grava no Supabase → vincula/cria a cliente no Medusa → baixa o estoque (Admin API) → convite ao unboxing
@@ -13,12 +14,12 @@ export async function GET() {
   const r = await sb("venda_externa?select=*&order=criado_em.desc&limit=300")
   if (!r.ok) return NextResponse.json({ error: await r.text() }, { status: 502 })
   const vendas = (await r.json()) as VendaExterna[]
-  return NextResponse.json({ hoje: hojeBr(), vendas })
+  return NextResponse.json({ hoje: hojeBr(), vendas, taxas: await lerTaxas() })
 }
 
 export async function POST(req: Request) {
   const body = (await req.json().catch(() => ({}))) as NovaVenda
-  const prep = prepararVenda(body, hojeBr())
+  const prep = prepararVenda(body, hojeBr(), await lerTaxas())
   if ("erro" in prep) return NextResponse.json({ error: prep.erro }, { status: 400 })
   const linha = prep.linha
   const avisos: string[] = []
