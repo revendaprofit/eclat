@@ -60,6 +60,27 @@ export async function GET(req: Request) {
         porCategoria[k] = (porCategoria[k] ?? 0) + e.valor_centavos
       }
 
+    // 3b) vendas fora do site (Supabase venda_externa), pagas, pela data da venda — entram na receita e no COGS
+    // (sócia, 2026-10-15). Tabela ausente (migration 0016 não aplicada) não derruba o DRE.
+    let vendasForaSite = 0
+    let receitaForaSite = 0
+    try {
+      const vr = await sb(`venda_externa?select=total_centavos,itens&pago=eq.true&cancelada_em=is.null&data=gte.${de}&data=lte.${ate}`)
+      if (vr.ok)
+        for (const v of (await vr.json()) as { total_centavos: number; itens: { variant_id: string; quantidade: number }[] }[]) {
+          vendasForaSite++
+          receitaForaSite += v.total_centavos
+          for (const it of v.itens ?? []) {
+            const c = custoMap[it.variant_id]
+            if (c == null) itensSemCusto += it.quantidade
+            else cogs += c * it.quantidade
+          }
+        }
+    } catch {
+      /* opcional */
+    }
+    receita += receitaForaSite
+
     // 4) taxas de pagamento (tarifa real gravada pelo provider em cada pagamento)
     const taxas = taxasDePagamento(orders)
 
@@ -71,6 +92,8 @@ export async function GET(req: Request) {
       periodo: { de, ate },
       pedidos: orders.length,
       receita_produtos: receita,
+      vendas_fora_site: vendasForaSite,
+      receita_fora_site: receitaForaSite,
       frete,
       cogs,
       lucro_bruto,

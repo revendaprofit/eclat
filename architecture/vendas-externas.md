@@ -1,0 +1,26 @@
+# Vendas fora do site (SOP)
+
+Desenho: `docs/superpowers/specs/2026-10-15-vendas-fora-do-site-design.md`. Sócia, 15/10/2026.
+
+| peça | onde |
+|---|---|
+| tabela | `supabase/migrations/0016_venda_externa.sql` (`venda_externa`, RLS sem policies: só service_role) |
+| regras puras + textos | `apps/cockpit/lib/venda-externa.ts` (teste `venda-externa.test.ts`) |
+| tela | `apps/cockpit/app/(painel)/vendas-externas/page.tsx` (menu Vender) |
+| API | `app/api/vendas-externas/route.ts` (GET, POST) e `[id]/route.ts` (PATCH: pago, lembrar, unboxing, cancelar) |
+| envio + registro na conversa | `apps/cockpit/lib/whatsapp-registro.ts` |
+| lembrete automático 9h | `apps/backend/src/jobs/venda-externa-lembretes.ts` → `lib/venda-externa.ts` (texto igual ao do Cockpit) |
+| DRE | `app/api/finance/dre/route.ts` (vendas pagas pela data; `receita_fora_site`, `vendas_fora_site`) |
+
+## Operação
+- Lançar: nome, WhatsApp, peças, pagamento. A prazo pede a data combinada (não aceita data passada).
+- O estoque baixa no Medusa ao salvar (check ligado). Peça sem controle de estoque não baixa e a tela avisa.
+- "✓ Recebi" marca paga. "💬 Lembrar agora" manda o lembrete na hora. "🎥 Convite ao unboxing" manda o roteiro.
+- Cancelar não devolve estoque: ajustar em Produtos se a peça voltou.
+
+## Se der errado
+- `estoque não baixado` na lista: a Admin API falhou na hora; ajustar à mão em Produtos.
+- Cliente sem vínculo (`medusa_customer_id` nulo): a criação falhou (ex.: e-mail já usado por outra conta); a venda
+  vale igual, só não aparece na ficha 360°.
+- Lembrete não saiu às 9h: ver o log `[venda-externa]`; WhatsApp desconectado espera o dia seguinte. Tabela
+  inexistente (migration não aplicada) só gera aviso no log.

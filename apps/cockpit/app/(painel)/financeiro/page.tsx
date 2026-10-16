@@ -5,6 +5,8 @@ import { useCallback, useEffect, useMemo, useState } from "react"
 type Dre = {
   pedidos: number
   receita_produtos: number
+  vendas_fora_site?: number
+  receita_fora_site?: number
   frete: number
   cogs: number
   lucro_bruto: number
@@ -174,6 +176,9 @@ export default function FinanceiroPage() {
           </div>
           <div className="max-w-md flex flex-col gap-1.5 text-corpo">
             <div className="flex justify-between"><span className="text-eclat-texto-2">Receita de produtos</span><span>{brl(dre.receita_produtos)}</span></div>
+            {(dre.receita_fora_site ?? 0) > 0 && (
+              <div className="flex justify-between text-meta text-eclat-texto-3"><span>· sendo vendas fora do site ({dre.vendas_fora_site})</span><span>{brl(dre.receita_fora_site ?? 0)}</span></div>
+            )}
             <div className="flex justify-between"><span className="text-eclat-texto-2">(−) CMV / COGS</span><span className="text-red-700">−{brl(dre.cogs)}</span></div>
             <div className="flex justify-between border-t border-eclat-pedra/30 pt-1.5 font-medium">
               <span>= Lucro bruto</span>

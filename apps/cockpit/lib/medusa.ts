@@ -26,7 +26,7 @@ export async function medusaAdminToken(): Promise<string> {
 }
 
 export async function medusaCreateCustomer(input: {
-  email: string
+  email?: string
   first_name?: string
   last_name?: string
   phone?: string

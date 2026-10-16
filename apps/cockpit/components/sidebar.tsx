@@ -14,6 +14,7 @@ const GRUPOS: { titulo: string | null; itens: { href: string; label: string }[] 
     titulo: "Vender",
     itens: [
       { href: "/pedidos", label: "Pedidos" },
+      { href: "/vendas-externas", label: "Vendas fora do site" },
       { href: "/carrinhos", label: "Carrinhos abandonados" },
       { href: "/recuperacao", label: "Recuperação automática" },
       { href: "/avaliacoes", label: "Avaliações" },
