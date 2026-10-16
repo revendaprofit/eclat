@@ -8,16 +8,16 @@ describe("textos dos avisos de entrega", () => {
 
   it("despacho com código e link", () => {
     expect(textoDespacho(base)).toBe(
-      "Oi, Ana! 💛\nSeu pedido *#21* da use.ÉCLAT acabou de ser enviado.\n\n📦 Código de rastreio: *AA123456789BR*\nAcompanhe: https://exemplo.invalid/AA\n\nQualquer dúvida, é só chamar por aqui. Obrigada por vestir a sua luz. ✨"
+      "Oi, Ana! 💛\nSeu pedido *#21* da use.ÉCLAT acabou de ser enviado.\n\n📦 Código de rastreio: *AA123456789BR*\nAcompanhe: https://exemplo.invalid/AA\n\nQuando a caixa chegar, que tal fazer um unboxing e mostrar pra gente? 🎥 Um roteiro simples:\n1. Abra a caixa mostrando a embalagem e a tag.\n2. Mostre a peça de perto: a frente, as costas, o tecido.\n3. Vista ou treine com ela, do seu jeito.\n4. Poste nos stories marcando *@eclat.use*.\n\nMarcou? Me manda o print aqui que você ganha um *voucher de 10% OFF* para a sua próxima compra. 💛\n\nQualquer dúvida, é só chamar por aqui. Obrigada por vestir a sua luz. ✨"
     )
   })
 
   it("despacho com código e sem link, e sem código", () => {
     expect(textoDespacho({ ...base, link: "" })).toBe(
-      "Oi, Ana! 💛\nSeu pedido *#21* da use.ÉCLAT acabou de ser enviado.\n\n📦 Código de rastreio: *AA123456789BR*\n\nQualquer dúvida, é só chamar por aqui. Obrigada por vestir a sua luz. ✨"
+      "Oi, Ana! 💛\nSeu pedido *#21* da use.ÉCLAT acabou de ser enviado.\n\n📦 Código de rastreio: *AA123456789BR*\n\nQuando a caixa chegar, que tal fazer um unboxing e mostrar pra gente? 🎥 Um roteiro simples:\n1. Abra a caixa mostrando a embalagem e a tag.\n2. Mostre a peça de perto: a frente, as costas, o tecido.\n3. Vista ou treine com ela, do seu jeito.\n4. Poste nos stories marcando *@eclat.use*.\n\nMarcou? Me manda o print aqui que você ganha um *voucher de 10% OFF* para a sua próxima compra. 💛\n\nQualquer dúvida, é só chamar por aqui. Obrigada por vestir a sua luz. ✨"
     )
     expect(textoDespacho({ ...base, codigo: "", link: "" })).toBe(
-      "Oi, Ana! 💛\nSeu pedido *#21* da use.ÉCLAT acabou de ser enviado.\n\nQualquer dúvida, é só chamar por aqui. Obrigada por vestir a sua luz. ✨"
+      "Oi, Ana! 💛\nSeu pedido *#21* da use.ÉCLAT acabou de ser enviado.\n\nQuando a caixa chegar, que tal fazer um unboxing e mostrar pra gente? 🎥 Um roteiro simples:\n1. Abra a caixa mostrando a embalagem e a tag.\n2. Mostre a peça de perto: a frente, as costas, o tecido.\n3. Vista ou treine com ela, do seu jeito.\n4. Poste nos stories marcando *@eclat.use*.\n\nMarcou? Me manda o print aqui que você ganha um *voucher de 10% OFF* para a sua próxima compra. 💛\n\nQualquer dúvida, é só chamar por aqui. Obrigada por vestir a sua luz. ✨"
     )
   })
 
@@ -27,11 +27,12 @@ describe("textos dos avisos de entrega", () => {
     )
   })
 
-  it("entregue: convida para o unboxing, com roteiro, perfil e voucher (não fala de rastreio)", () => {
+  it("entregue: lembrete curto do unboxing e do voucher (o roteiro já foi no despacho; não fala de rastreio)", () => {
     expect(textoEntregue(base)).toBe(
-      "Oi, Ana! 💛\nSeu pedido *#21* da use.ÉCLAT foi entregue. Esperamos que você ame! ✨\n\nQue tal fazer um unboxing e mostrar pra gente? 🎥 Um roteiro simples:\n1. Abra a caixa mostrando a embalagem e a tag.\n2. Mostre a peça de perto: a frente, as costas, o tecido.\n3. Vista ou treine com ela, do seu jeito.\n4. Poste nos stories marcando *@eclat.use*.\n\nMarcou? Me manda o print aqui que você ganha um *voucher de 10% OFF* para a sua próxima compra. 💛"
+      "Oi, Ana! 💛\nSeu pedido *#21* da use.ÉCLAT foi entregue. Esperamos que você ame! ✨\n\nSe fizer o unboxing marcando *@eclat.use*, me manda o print aqui: tem *voucher de 10% OFF* esperando por você. 💛"
     )
     expect(textoEntregue(base)).not.toContain("rastreio")
+    expect(textoDespacho(base)).toContain("unboxing")
   })
 
   it("sem nome, a saudação vira 'tudo bem' (mesma regra do Cockpit)", () => {

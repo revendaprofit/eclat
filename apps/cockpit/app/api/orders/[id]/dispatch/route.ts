@@ -367,7 +367,9 @@ export async function POST(
         const rastreio = label?.tracking_number
           ? `\n\n📦 Código de rastreio: *${label.tracking_number}*${label.tracking_url ? `\nAcompanhe: ${label.tracking_url}` : ""}`
           : ""
-        const texto = `Oi, ${nome}! 💛\nSeu pedido *#${order.display_id}* da use.ÉCLAT acabou de ser enviado.${rastreio}\n\nQualquer dúvida, é só chamar por aqui. Obrigada por vestir a sua luz. ✨`
+        // Convite ao unboxing no despacho (sócia, 2026-10-15) — mesmo texto de apps/backend/src/lib/superfrete-avisos.ts.
+        const unboxing = `\n\nQuando a caixa chegar, que tal fazer um unboxing e mostrar pra gente? 🎥 Um roteiro simples:\n1. Abra a caixa mostrando a embalagem e a tag.\n2. Mostre a peça de perto: a frente, as costas, o tecido.\n3. Vista ou treine com ela, do seu jeito.\n4. Poste nos stories marcando *@eclat.use*.\n\nMarcou? Me manda o print aqui que você ganha um *voucher de 10% OFF* para a sua próxima compra. 💛`
+        const texto = `Oi, ${nome}! 💛\nSeu pedido *#${order.display_id}* da use.ÉCLAT acabou de ser enviado.${rastreio}${unboxing}\n\nQualquer dúvida, é só chamar por aqui. Obrigada por vestir a sua luz. ✨`
         whatsapp = await sendWhatsappText(normalizaWhatsapp(phone), texto)
       }
 

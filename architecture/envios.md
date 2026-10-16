@@ -212,6 +212,11 @@ usada no despacho manual e com o interruptor desligado — mudou um, mude o outr
 - Etiqueta comprada fora do Cockpit (sem o número do pedido em `tags`) é ignorada, com registro no log.
 
 ## Depois do despacho: convite para o Clube e convite ao unboxing (2026-10-08, sócia)
+
+> **2026-10-15 (sócia):** o convite ao unboxing (roteiro + promessa do voucher) passou a ir **na mensagem de despacho**
+> (Cockpit, no bipe das peças; ou backend, com o interruptor ligado). O aviso "entregue" da SuperFrete pode chegar depois
+> da caixa, então ele virou só um lembrete curto. Textos em `apps/backend/src/lib/superfrete-avisos.ts` (e a cópia do
+> despacho em `apps/cockpit/app/api/orders/[id]/dispatch/route.ts`).
 Pedido da sócia depois do pedido #28: a cliente respondeu "Amei!!" ao rastreio e o robô de LEAD do Clube
 (`lib/clube.ts`, saudação + cupom de primeira compra) respondeu — confuso para quem acabou de comprar.
 - **Robô de lead não fala com quem comprou.** `api/webhooks/whatsapp/route.ts` consulta `ehClienteComPedido`

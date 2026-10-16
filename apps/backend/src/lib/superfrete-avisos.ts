@@ -38,9 +38,16 @@ function blocoRastreio(codigo?: string | null, link?: string | null): string {
   return codigo ? `\n\n📦 Código de rastreio: *${codigo}*${link ? `\nAcompanhe: ${link}` : ""}` : ""
 }
 
+// Convite ao unboxing (sócia, 2026-10-15): vai NO DESPACHO, não na entrega. O aviso "entregue" da SuperFrete pode
+// chegar depois da caixa, e a cliente abriria o pacote sem saber do roteiro e do voucher. O voucher NÃO sai sozinho:
+// a cliente manda o print aqui e a equipe cria o cupom (node scripts/cupom.mjs) e responde.
+export function blocoUnboxing(): string {
+  return `\n\nQuando a caixa chegar, que tal fazer um unboxing e mostrar pra gente? 🎥 Um roteiro simples:\n1. Abra a caixa mostrando a embalagem e a tag.\n2. Mostre a peça de perto: a frente, as costas, o tecido.\n3. Vista ou treine com ela, do seu jeito.\n4. Poste nos stories marcando *${INSTAGRAM_ECLAT}*.\n\nMarcou? Me manda o print aqui que você ganha um *voucher de 10% OFF* para a sua próxima compra. 💛`
+}
+
 /** Pedido despachado (etiqueta comprada). É o MESMO texto que o Cockpit manda no despacho. */
 export function textoDespacho(d: DadosDoAviso): string {
-  return `Oi, ${saudacao(d.nome)}! 💛\nSeu pedido *#${d.numero}* da use.ÉCLAT acabou de ser enviado.${blocoRastreio(d.codigo, d.link)}\n\nQualquer dúvida, é só chamar por aqui. Obrigada por vestir a sua luz. ✨`
+  return `Oi, ${saudacao(d.nome)}! 💛\nSeu pedido *#${d.numero}* da use.ÉCLAT acabou de ser enviado.${blocoRastreio(d.codigo, d.link)}${blocoUnboxing()}\n\nQualquer dúvida, é só chamar por aqui. Obrigada por vestir a sua luz. ✨`
 }
 
 /** A transportadora recebeu o pacote (webhook `order.posted`). */
@@ -49,22 +56,15 @@ export function textoPostado(d: DadosDoAviso): string {
 }
 
 /**
- * Pacote entregue (webhook `order.delivered`). Pedido da sócia (2026-10-08): convida para o unboxing com
- * um roteiro curto; quem marca o perfil ganha voucher de 10% na próxima compra. O voucher NÃO sai sozinho:
- * a cliente manda o print aqui e a equipe cria o cupom (node scripts/cupom.mjs) e responde.
+ * Pacote entregue (webhook `order.delivered`). Desde 2026-10-15 o roteiro do unboxing vai no despacho; aqui fica só
+ * um lembrete curto — o aviso da SuperFrete pode chegar depois da caixa.
  */
 export function textoEntregue(d: DadosDoAviso): string {
   return [
     `Oi, ${saudacao(d.nome)}! 💛`,
     `Seu pedido *#${d.numero}* da use.ÉCLAT foi entregue. Esperamos que você ame! ✨`,
     "",
-    "Que tal fazer um unboxing e mostrar pra gente? 🎥 Um roteiro simples:",
-    "1. Abra a caixa mostrando a embalagem e a tag.",
-    "2. Mostre a peça de perto: a frente, as costas, o tecido.",
-    "3. Vista ou treine com ela, do seu jeito.",
-    `4. Poste nos stories marcando *${INSTAGRAM_ECLAT}*.`,
-    "",
-    "Marcou? Me manda o print aqui que você ganha um *voucher de 10% OFF* para a sua próxima compra. 💛",
+    `Se fizer o unboxing marcando *${INSTAGRAM_ECLAT}*, me manda o print aqui: tem *voucher de 10% OFF* esperando por você. 💛`,
   ].join("\n")
 }
 
