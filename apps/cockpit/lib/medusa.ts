@@ -641,13 +641,18 @@ export async function medusaOrdersForDre(de: string, ate: string): Promise<DreOr
 export type ItemVendido = { variant_id: string | null; quantity: number; total: number; created_at: string; display_id: number }
 export async function medusaItensVendidos(): Promise<ItemVendido[]> {
   const params = new URLSearchParams({ limit: "1000", order: "-created_at" })
-  params.set("fields", "display_id,status,payment_status,created_at,items.variant_id,items.quantity,items.total")
+  // A listagem não devolve items.total (só o GET de um pedido): o total do item é preço × quantidade − ajustes
+  // (conjunto, cupom, Pix), que a listagem devolve.
+  params.set("fields", "display_id,status,payment_status,created_at,items.variant_id,items.quantity,items.unit_price,items.adjustments.amount")
   const r = await medusaAdmin(`/admin/orders?${params.toString()}`)
   if (!r.ok) throw new Error(`itens vendidos falhou (HTTP ${r.status})`)
   const out: ItemVendido[] = []
-  for (const o of (await r.json()).orders as { display_id: number; status: string; payment_status: string; created_at: string; items?: { variant_id: string | null; quantity: number; total: number }[] }[]) {
+  for (const o of (await r.json()).orders as { display_id: number; status: string; payment_status: string; created_at: string; items?: { variant_id: string | null; quantity: number; unit_price: number; adjustments?: { amount?: number | null }[] | null }[] }[]) {
     if (o.status === "canceled" || !PAGAMENTOS_CONFIRMADOS_LOCAL.has(o.payment_status)) continue
-    for (const it of o.items ?? []) out.push({ variant_id: it.variant_id, quantity: it.quantity, total: Number(it.total ?? 0), created_at: o.created_at, display_id: o.display_id })
+    for (const it of o.items ?? []) {
+      const ajustes = (it.adjustments ?? []).reduce((s, a) => s + Number(a.amount ?? 0), 0)
+      out.push({ variant_id: it.variant_id, quantity: it.quantity, total: Math.max(0, Number(it.unit_price ?? 0) * it.quantity - ajustes), created_at: o.created_at, display_id: o.display_id })
+    }
   }
   return out
 }
