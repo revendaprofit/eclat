@@ -39,7 +39,7 @@ export function hojeEmBrasilia(agora: Date = new Date()): string {
   return new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(agora)
 }
 
-/** Vendas a prazo, em aberto, com vencimento até hoje e sem lembrete: recebem o lembrete uma vez. */
+/** Vendas em aberto (qualquer forma) com data combinada até hoje e sem lembrete: recebem o lembrete uma vez. */
 export function vencidasSemLembrete(vendas: (VendaAPrazo & { pago?: boolean; cancelada_em?: string | null; lembrete_enviado_em?: string | null })[], hoje: string): VendaAPrazo[] {
   return vendas.filter((v) => !v.pago && !v.cancelada_em && !v.lembrete_enviado_em && !!v.vencimento && v.vencimento <= hoje)
 }
@@ -65,7 +65,7 @@ export async function enviarLembretesDePagamento(log: Log, agora: Date = new Dat
   try {
     vendas = await sbSelect<VendaAPrazo>(
       "venda_externa",
-      `pagamento=eq.a_prazo&pago=eq.false&cancelada_em=is.null&lembrete_enviado_em=is.null&vencimento=lte.${hoje}&select=id,cliente_nome,cliente_whatsapp,total_centavos,vencimento`
+      `pago=eq.false&cancelada_em=is.null&lembrete_enviado_em=is.null&vencimento=lte.${hoje}&select=id,cliente_nome,cliente_whatsapp,total_centavos,vencimento`
     )
   } catch (e) {
     // Tabela ainda não existe (migration 0016 não aplicada): nada a fazer hoje.

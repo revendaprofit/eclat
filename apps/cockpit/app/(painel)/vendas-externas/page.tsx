@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { Fragment, useCallback, useEffect, useMemo, useState } from "react"
 import { Aviso, Carregando, Metrica, Secao, TituloPagina } from "@/components/ui"
 import {
   CANAIS,
@@ -47,6 +47,31 @@ export default function VendasExternasPage() {
   const [aviso, setAviso] = useState<string | null>(null)
   const [mostrarForm, setMostrarForm] = useState(false)
   const [mostrarTaxas, setMostrarTaxas] = useState(false)
+  // Editar (sócia, 2026-10-22): forma, pago/não pago, data combinada, observações — sem relançar.
+  const [editando, setEditando] = useState<string | null>(null)
+  const [ePag, setEPag] = useState<Pagamento>("pix")
+  const [ePago, setEPago] = useState(true)
+  const [eVenc, setEVenc] = useState("")
+  const [eObs, setEObs] = useState("")
+  const abrirEdicao = (v: VendaExterna) => {
+    setEditando(v.id)
+    setEPag(v.pagamento)
+    setEPago(v.pago)
+    setEVenc(v.vencimento ?? "")
+    setEObs(v.observacoes ?? "")
+  }
+  const salvarEdicao = async (id: string) => {
+    setErro(null)
+    try {
+      const r = await fetch(`/api/vendas-externas/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ acao: "editar", pagamento: ePag, pago: ePago, vencimento: eVenc || null, observacoes: eObs }) })
+      const d = await r.json()
+      if (!r.ok) throw new Error(d.error || `HTTP ${r.status}`)
+      setEditando(null)
+      await carregar()
+    } catch (e) {
+      setErro((e as Error).message)
+    }
+  }
   const [salvando, setSalvando] = useState(false)
 
   // formulário
@@ -368,7 +393,8 @@ export default function VendasExternasPage() {
                       const s = situacao(v, hojeBr)
                       const st = SITUACOES[s]
                       return (
-                        <tr key={v.id} className={`border-b border-eclat-pedra/10 last:border-0 align-top hover:bg-eclat-areia/30 ${v.cancelada_em ? "opacity-50" : ""}`}>
+                        <Fragment key={v.id}>
+                        <tr className={`border-b border-eclat-pedra/10 last:border-0 align-top hover:bg-eclat-areia/30 ${v.cancelada_em ? "opacity-50" : ""}`}>
                           <td className="px-4 py-2 whitespace-nowrap">{dataBr(v.data)}<div className="text-meta text-eclat-texto/40">{CANAIS.find((c) => c.id === v.canal)?.label}</div></td>
                           <td className="px-4 py-2">
                             <div className="font-medium">{v.cliente_nome} {v.perfil && v.perfil !== "cliente" && <span className="ml-1 text-meta px-1.5 py-0.5 rounded bg-eclat-dourado/30 text-eclat-texto">{PERFIS.find((p) => p.id === v.perfil)?.label}</span>}</div>
@@ -395,13 +421,37 @@ export default function VendasExternasPage() {
                             {!v.cancelada_em && (
                               <div className="flex flex-col items-end gap-1">
                                 {!v.pago && <button onClick={() => acao(v.id, "pago")} className="text-meta px-3 py-1.5 rounded-md bg-eclat-grafite text-eclat-luz hover:opacity-90">✓ Recebi</button>}
-                                {!v.pago && v.pagamento === "a_prazo" && <button onClick={() => acao(v.id, "lembrar")} className="text-meta px-3 py-1.5 rounded-md border border-eclat-pedra/50 bg-white hover:bg-eclat-areia/40">💬 Lembrar agora</button>}
+                                {!v.pago && v.vencimento && <button onClick={() => acao(v.id, "lembrar")} className="text-meta px-3 py-1.5 rounded-md border border-eclat-pedra/50 bg-white hover:bg-eclat-areia/40">💬 Lembrar agora</button>}
                                 {!v.unboxing_enviado_em && <button onClick={() => acao(v.id, "unboxing")} className="text-meta px-3 py-1.5 rounded-md border border-eclat-pedra/50 bg-white hover:bg-eclat-areia/40">🎥 Convite ao unboxing</button>}
+                                <button onClick={() => (editando === v.id ? setEditando(null) : abrirEdicao(v))} className="text-meta px-3 py-1.5 rounded-md border border-eclat-pedra/50 bg-white hover:bg-eclat-areia/40">✎ Editar</button>
                                 <button onClick={() => acao(v.id, "cancelar")} className="text-meta text-eclat-texto/50 hover:text-red-700">cancelar</button>
                               </div>
                             )}
                           </td>
                         </tr>
+                        {editando === v.id && (
+                          <tr className="border-b border-eclat-pedra/10 bg-eclat-areia/30">
+                            <td colSpan={6} className="px-4 py-3">
+                              <div className="flex flex-wrap items-end gap-3">
+                                <span className="text-meta text-eclat-texto-3 pb-2">Editar venda de <b>{v.cliente_nome}</b>:</span>
+                                <label className="flex flex-col gap-1 text-meta text-eclat-texto-3">Pagamento
+                                  <select value={ePag} onChange={(e) => setEPag(e.target.value as Pagamento)} className={inputCls}>
+                                    {PAGAMENTOS.filter((p) => p.id !== "cortesia" || v.total_centavos === 0).map((p) => (
+                                      <option key={p.id} value={p.id} disabled={p.id === "cartao" && v.pagamento !== "cartao"}>{p.label}</option>
+                                    ))}
+                                  </select>
+                                </label>
+                                <label className="flex items-center gap-2 text-corpo pb-2"><input type="checkbox" checked={ePago} onChange={(e) => setEPago(e.target.checked)} /> Paga</label>
+                                {!ePago && <label className="flex flex-col gap-1 text-meta text-eclat-texto-3">Data combinada do pagamento<input type="date" value={eVenc} onChange={(e) => setEVenc(e.target.value)} className={inputCls} /></label>}
+                                <label className="flex flex-col gap-1 text-meta text-eclat-texto-3 flex-1 min-w-[220px]">Observações<input value={eObs} onChange={(e) => setEObs(e.target.value)} className={inputCls} /></label>
+                                <button onClick={() => salvarEdicao(v.id)} className="text-meta px-3 py-2 rounded-md bg-eclat-grafite text-eclat-luz hover:opacity-90">Salvar</button>
+                                <button onClick={() => setEditando(null)} className="text-meta px-3 py-2 rounded-md border border-eclat-pedra/50 bg-white">Fechar</button>
+                              </div>
+                              {!ePago && <p className="text-meta text-eclat-texto-3 mt-2">Em aberto: o lembrete sai às 9h da data combinada. Data nova = lembrete novo.</p>}
+                            </td>
+                          </tr>
+                        )}
+                        </Fragment>
                       )
                     })}
                   </tbody>
