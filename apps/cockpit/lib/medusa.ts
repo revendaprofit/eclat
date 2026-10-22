@@ -637,6 +637,23 @@ export async function medusaOrdersForDre(de: string, ate: string): Promise<DreOr
   return (await r.json()).orders
 }
 
+/** Itens vendidos de todos os pedidos pagos/autorizados (não cancelados): base do "investido no lote × vendas". */
+export type ItemVendido = { variant_id: string | null; quantity: number; total: number; created_at: string; display_id: number }
+export async function medusaItensVendidos(): Promise<ItemVendido[]> {
+  const params = new URLSearchParams({ limit: "1000", order: "-created_at" })
+  params.set("fields", "display_id,status,payment_status,created_at,items.variant_id,items.quantity,items.total")
+  const r = await medusaAdmin(`/admin/orders?${params.toString()}`)
+  if (!r.ok) throw new Error(`itens vendidos falhou (HTTP ${r.status})`)
+  const out: ItemVendido[] = []
+  for (const o of (await r.json()).orders as { display_id: number; status: string; payment_status: string; created_at: string; items?: { variant_id: string | null; quantity: number; total: number }[] }[]) {
+    if (o.status === "canceled" || !PAGAMENTOS_CONFIRMADOS_LOCAL.has(o.payment_status)) continue
+    for (const it of o.items ?? []) out.push({ variant_id: it.variant_id, quantity: it.quantity, total: Number(it.total ?? 0), created_at: o.created_at, display_id: o.display_id })
+  }
+  return out
+}
+// Mesmos status de lib/pagamento-despacho.ts (replicado para não criar import circular).
+const PAGAMENTOS_CONFIRMADOS_LOCAL = new Set(["captured", "authorized", "partially_captured"])
+
 export async function medusaOrdersByCustomer(customerId: string): Promise<CockpitOrder[]> {
   const r = await medusaAdmin(
     `/admin/orders?customer_id=${customerId}&order=-created_at&fields=${ORDER_FIELDS}`

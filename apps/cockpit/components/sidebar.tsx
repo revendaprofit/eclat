@@ -53,6 +53,7 @@ const GRUPOS: { titulo: string | null; itens: { href: string; label: string }[] 
   {
     titulo: "Dinheiro",
     itens: [
+      { href: "/investimentos", label: "Visão geral" },
       { href: "/financeiro", label: "Financeiro" },
       { href: "/fiscal", label: "Fiscal" },
     ],
