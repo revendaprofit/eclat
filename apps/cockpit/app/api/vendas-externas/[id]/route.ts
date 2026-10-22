@@ -1,13 +1,14 @@
 import { NextResponse } from "next/server"
 import { sb } from "@/lib/sb-admin"
 import { enviarERegistrar } from "@/lib/whatsapp-registro"
+import { medusaListProducts, medusaUpdateStock } from "@/lib/medusa"
 import { PAGAMENTOS, textoLembretePagamento, textoUnboxing, type Pagamento, type VendaExterna } from "@/lib/venda-externa"
 
 // Ações sobre uma venda fora do site:
 //   { acao: "pago" }       marca como paga (para a cobrança)
 //   { acao: "lembrar" }    manda o lembrete de pagamento agora (além do automático das 9h)
 //   { acao: "unboxing" }   manda o convite ao unboxing agora
-//   { acao: "cancelar" }   cancela (não devolve estoque sozinho: a equipe ajusta em Produtos, se for o caso)
+//   { acao: "cancelar" }   cancela e DEVOLVE o estoque ao Medusa (sócia, 2026-10-22), se a venda tinha baixado
 //   { acao: "editar", pagamento?, pago?, vencimento?, observacoes? }
 //                          sócia, 2026-10-22: "pode chegar o dia do pagamento e acontecer algo" — muda forma, paga/não
 //                          paga, data combinada e observações. Data nova zera o lembrete (sai de novo no novo dia).
@@ -53,7 +54,28 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     if (!Object.keys(campos).length) return NextResponse.json({ error: "Nada para mudar." }, { status: 400 })
     return patch(campos)
   }
-  if (acao === "cancelar") return patch({ cancelada_em: agora })
+  if (acao === "cancelar") {
+    if (v.cancelada_em) return NextResponse.json({ error: "Esta venda já está cancelada." }, { status: 400 })
+    const avisos: string[] = []
+    if (v.estoque_baixado) {
+      try {
+        const produtos = await medusaListProducts()
+        const porVariante = new Map(produtos.flatMap((p) => p.variants.map((x) => [x.id, x] as const)))
+        for (const it of v.itens) {
+          const var_ = porVariante.get(it.variant_id)
+          if (!var_?.inventory_item_id || var_.stock == null) {
+            avisos.push(`${it.produto} ${it.variacao ?? ""}: sem controle de estoque, não devolveu.`)
+            continue
+          }
+          await medusaUpdateStock(var_.inventory_item_id, var_.stock + it.quantidade)
+        }
+      } catch (e) {
+        return NextResponse.json({ error: `Estoque não devolvido, venda NÃO cancelada: ${(e as Error).message}` }, { status: 502 })
+      }
+    }
+    const p = await sb(`venda_externa?id=eq.${encodeURIComponent(id)}`, { method: "PATCH", headers: { Prefer: "return=minimal" }, body: JSON.stringify({ cancelada_em: agora, estoque_baixado: false }) })
+    return p.ok ? NextResponse.json({ ok: true, avisos }) : NextResponse.json({ error: `Supabase ${p.status}` }, { status: 502 })
+  }
   if (acao === "lembrar") {
     if (v.pago) return NextResponse.json({ error: "Esta venda já está paga." }, { status: 400 })
     const env = await enviarERegistrar({ numero: v.cliente_whatsapp, texto: textoLembretePagamento(v.cliente_nome, v.total_centavos, v.vencimento ?? v.data), nome: v.cliente_nome, medusa_customer_id: v.medusa_customer_id })

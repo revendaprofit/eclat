@@ -10,7 +10,7 @@ Desenho: `docs/superpowers/specs/2026-10-15-vendas-fora-do-site-design.md`. Sóc
 | API | `app/api/vendas-externas/route.ts` (GET, POST) e `[id]/route.ts` (PATCH: pago, lembrar, unboxing, cancelar) |
 | envio + registro na conversa | `apps/cockpit/lib/whatsapp-registro.ts` |
 | lembrete automático 9h | `apps/backend/src/jobs/venda-externa-lembretes.ts` → `lib/venda-externa.ts` (texto igual ao do Cockpit) |
-| DRE | `app/api/finance/dre/route.ts` (vendas pagas pela data; `receita_fora_site`, `vendas_fora_site`) |
+| DRE | `app/api/finance/dre/route.ts` (vendas pagas pela data; `receita_fora_site`, `vendas_fora_site`; peças de **creator** saem do COGS e viram `marketing_creators` + lista `creators` com nome e peças — sócia, 22/10: só o custo da peça, o resto é direto no WhatsApp) |
 
 ## Parte 2 (16/10): desconto, perfil e cartão
 - Desconto em **R$ ou %** (botão R$ / %). Perfil: **Cliente** (livre), **Embaixadora** (20% travado), **Creator** (100% =
@@ -24,7 +24,7 @@ Desenho: `docs/superpowers/specs/2026-10-15-vendas-fora-do-site-design.md`. Sóc
 - Lançar: nome, WhatsApp, peças, pagamento. A prazo pede a data combinada (não aceita data passada).
 - O estoque baixa no Medusa ao salvar (check ligado). Peça sem controle de estoque não baixa e a tela avisa.
 - "✓ Recebi" marca paga. "💬 Lembrar agora" manda o lembrete na hora. "🎥 Convite ao unboxing" manda o roteiro.
-- Cancelar não devolve estoque: ajustar em Produtos se a peça voltou.
+- Cancelar DEVOLVE o estoque ao Medusa (22/10) quando a venda tinha baixado; se a devolução falhar, a venda não cancela.
 
 ## Se der errado
 - `estoque não baixado` na lista: a Admin API falhou na hora; ajustar à mão em Produtos.

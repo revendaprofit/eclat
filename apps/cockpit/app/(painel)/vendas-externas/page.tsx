@@ -207,12 +207,13 @@ export default function VendasExternasPage() {
   }
 
   const acao = async (id: string, a: "pago" | "lembrar" | "unboxing" | "cancelar") => {
-    if (a === "cancelar" && !confirm("Cancelar esta venda? O estoque não volta sozinho.")) return
+    if (a === "cancelar" && !confirm("Cancelar esta venda? As peças voltam para o estoque.")) return
     setErro(null)
     try {
       const r = await fetch(`/api/vendas-externas/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ acao: a }) })
       const d = await r.json()
       if (!r.ok) throw new Error(d.error || `HTTP ${r.status}`)
+      if (d.avisos?.length) setAviso(`Cancelada. Atenção: ${d.avisos.join(" · ")}`)
       await carregar()
     } catch (e) {
       setErro((e as Error).message)

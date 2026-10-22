@@ -13,6 +13,8 @@ type Dre = {
   margem_bruta: number
   taxas_pagamento: number
   taxas_fora_site?: number
+  marketing_creators?: number
+  creators?: { data: string; nome: string; pecas: string; custo_centavos: number }[]
   pagamentos_sem_tarifa: number
   despesas: number
   resultado: number
@@ -191,6 +193,14 @@ export default function FinanceiroPage() {
               <div className="flex justify-between text-meta text-eclat-texto-3"><span>· sendo maquininha (vendas fora do site)</span><span>−{brl(dre.taxas_fora_site ?? 0)}</span></div>
             )}
             <div className="flex justify-between"><span className="text-eclat-texto-2">(−) Despesas</span><span className="text-red-700">−{brl(dre.despesas)}</span></div>
+            {(dre.marketing_creators ?? 0) > 0 && (
+              <>
+                <div className="flex justify-between"><span className="text-eclat-texto-2">(−) Marketing · peças para creators</span><span className="text-red-700">−{brl(dre.marketing_creators ?? 0)}</span></div>
+                {(dre.creators ?? []).map((c, i) => (
+                  <div key={i} className="flex justify-between text-meta text-eclat-texto-3"><span>· Creator {c.nome} — {c.pecas} ({c.data.split("-").reverse().join("/")})</span><span>−{brl(c.custo_centavos)}</span></div>
+                ))}
+              </>
+            )}
             <div className="flex justify-between border-t-2 border-eclat-grafite/40 pt-2 mt-1 font-serif text-lg">
               <span>= Resultado</span>
               <span className={dre.resultado >= 0 ? "text-green-700" : "text-red-700"}>{brl(dre.resultado)}</span>
