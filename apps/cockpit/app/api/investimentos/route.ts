@@ -1,145 +1,175 @@
 import { NextResponse } from "next/server"
 import { sb } from "@/lib/sb-admin"
-import { medusaItensVendidos } from "@/lib/medusa"
+import { medusaItensVendidos, medusaListProducts } from "@/lib/medusa"
 
-// Visão geral do financeiro (sócia, 2026-10-22): tudo o que foi investido (finance_expense, por categoria e etapa),
-// o lote da Lumière (fichas de custo × lote produzido) contra o que já vendeu (pedidos do site + vendas fora do
-// site), desenvolvimento, marketing por mês e demais gastos. Base: levantamento de 16/09 importado + lançamentos
-// novos feitos no Cockpit. Tudo em centavos.
-type Despesa = { id: string; data: string; descricao: string | null; valor_centavos: number; fornecedor: string | null; recorrencia: string | null; etapa: string | null; quantidade: number | null; custo_unitario_centavos: number | null; observacao: string | null; categoria: { nome: string } | null }
-type Peca = {
-  id: string; name: string; colorway: string | null; lote_pecas: number; faccao_centavos: number; estampa_centavos: number; perda_pct: number
-  preco_venda_centavos: number | null; medusa_variant_ids: string[]; costing_model: { name: string; category: string | null } | null
-  costing_item: { kind: string; name: string; unit: string; consumption: number; unit_price_centavos: number; position: number }[]
+// Visão geral do financeiro em QUADROS (sócia, 2026-10-23: "um quadro por assunto, sem detalhar"):
+// coleção (investimento final para ter as peças prontas), modelagem e pilotos (por família, com a coleção onde as
+// peças nasceram), marketing total, creators, social media, tráfego, fotos, site, insumos, embalagem, fixos,
+// acessórios; e as VENDAS por coleção (site + fora do site), para comparar coleções quando houver mais de uma.
+// Fonte: finance_expense (categorias "1 · …" a "8 · …", marketing em 5a..5e; etapa = coleção), costing_piece
+// (fichas + lote), pedidos pagos do Medusa e venda_externa pagas. Tudo em centavos.
+type Despesa = { id: string; data: string; descricao: string | null; valor_centavos: number; fornecedor: string | null; recorrencia: string | null; etapa: string | null; observacao: string | null; categoria: { nome: string } | null }
+type Peca = { id: string; name: string; colorway: string | null; collection: string | null; lote_pecas: number; faccao_centavos: number; estampa_centavos: number; perda_pct: number; preco_venda_centavos: number | null; medusa_variant_ids: string[]; costing_model: { name: string } | null; costing_item: { kind: string; name: string; unit: string; consumption: number; unit_price_centavos: number; position: number }[] }
+type VendaExt = { data: string; itens: { variant_id: string; quantidade: number; preco_centavos: number }[]; perfil?: string | null; total_centavos: number; subtotal_centavos: number }
+
+export type Quadro = { id: string; titulo: string; total: number; linhas: { rotulo: string; valor: number; nota?: string }[]; nota?: string; lancamentos: { id: string; data: string; descricao: string | null; fornecedor: string | null; etapa: string | null; valor: number }[] }
+
+const codigo = (cat: string | null | undefined) => (cat ?? "").split(" · ")[0].trim() // "1", "5a", ...
+const lanc = (d: Despesa) => ({ id: d.id, data: d.data, descricao: d.descricao, fornecedor: d.fornecedor, etapa: d.etapa, valor: d.valor_centavos })
+const soma = (l: Despesa[]) => l.reduce((s, d) => s + d.valor_centavos, 0)
+const porEtapa = (l: Despesa[]) => {
+  const m: Record<string, number> = {}
+  for (const d of l) m[d.etapa ?? "Marca (geral)"] = (m[d.etapa ?? "Marca (geral)"] ?? 0) + d.valor_centavos
+  return Object.entries(m).sort(([, a], [, b]) => b - a).map(([rotulo, valor]) => ({ rotulo, valor }))
 }
-
-const LUMIERE = "Lumière parte 01"
-const mesDe = (iso: string) => iso.slice(0, 7)
 
 export async function GET() {
   try {
     const [dr, pr, vr] = await Promise.all([
-      sb("finance_expense?select=id,data,descricao,valor_centavos,fornecedor,recorrencia,etapa,quantidade,custo_unitario_centavos,observacao,categoria:finance_expense_category(nome)&order=data.desc"),
-      sb(`costing_piece?select=id,name,colorway,lote_pecas,faccao_centavos,estampa_centavos,perda_pct,preco_venda_centavos,medusa_variant_ids,costing_model(name,category),costing_item(kind,name,unit,consumption,unit_price_centavos,position)&collection=eq.${encodeURIComponent(LUMIERE)}&order=name.asc`),
-      sb("venda_externa?select=data,itens,perfil,total_centavos,subtotal_centavos,desconto_centavos&pago=eq.true&cancelada_em=is.null"),
+      sb("finance_expense?select=id,data,descricao,valor_centavos,fornecedor,recorrencia,etapa,observacao,categoria:finance_expense_category(nome)&order=data.desc"),
+      sb("costing_piece?select=id,name,colorway,collection,lote_pecas,faccao_centavos,estampa_centavos,perda_pct,preco_venda_centavos,medusa_variant_ids,costing_model(name),costing_item(kind,name,unit,consumption,unit_price_centavos,position)&order=name.asc"),
+      sb("venda_externa?select=data,itens,perfil,total_centavos,subtotal_centavos&pago=eq.true&cancelada_em=is.null"),
     ])
     if (!dr.ok) throw new Error(`despesas: HTTP ${dr.status}`)
     const despesas = (await dr.json()) as Despesa[]
     const pecas = pr.ok ? ((await pr.json()) as Peca[]) : []
-    const externas = vr.ok ? ((await vr.json()) as { data: string; itens: { variant_id: string; quantidade: number; preco_centavos: number }[]; perfil?: string | null; total_centavos: number; subtotal_centavos: number; desconto_centavos: number }[]) : []
+    const externas = vr.ok ? ((await vr.json()) as VendaExt[]) : []
+    const cat = (...codigos: string[]) => despesas.filter((d) => codigos.includes(codigo(d.categoria?.nome)))
 
-    // 1) Investido: por categoria, por etapa, total
-    let total = 0
-    const porCategoria: Record<string, number> = {}
-    const porEtapa: Record<string, number> = {}
-    const porMes: Record<string, Record<string, number>> = {} // mês → categoria → centavos
-    for (const d of despesas) {
-      total += d.valor_centavos
-      const cat = d.categoria?.nome ?? "Sem categoria"
-      porCategoria[cat] = (porCategoria[cat] ?? 0) + d.valor_centavos
-      const et = d.etapa ?? "Marca (geral)"
-      porEtapa[et] = (porEtapa[et] ?? 0) + d.valor_centavos
-      const m = mesDe(d.data)
-      porMes[m] = porMes[m] ?? {}
-      porMes[m][cat] = (porMes[m][cat] ?? 0) + d.valor_centavos
-    }
-
-    // 2) Lote Lumière: ficha × lote, vendas por variação (site + fora do site)
-    const vendidoPorVariante = new Map<string, { qtd: number; receita: number }>()
-    const soma = (vid: string | null, qtd: number, receita: number) => {
-      if (!vid) return
-      const a = vendidoPorVariante.get(vid) ?? { qtd: 0, receita: 0 }
-      a.qtd += qtd
-      a.receita += receita
-      vendidoPorVariante.set(vid, a)
-    }
-    let itensSite: Awaited<ReturnType<typeof medusaItensVendidos>> = []
-    try {
-      itensSite = await medusaItensVendidos()
-    } catch {
-      /* Medusa fora: a visão continua, sem as vendas do site */
-    }
-    for (const it of itensSite) soma(it.variant_id, it.quantity, Math.round(it.total * 100))
-    for (const v of externas) {
-      // receita por item proporcional ao desconto da venda
-      const fator = v.subtotal_centavos > 0 ? v.total_centavos / v.subtotal_centavos : 0
-      for (const it of v.itens ?? []) soma(it.variant_id, it.quantidade, Math.round(it.quantidade * it.preco_centavos * fator))
-    }
-    const lote = pecas.map((p) => {
-      const itens = [...(p.costing_item ?? [])].sort((a, b) => a.position - b.position)
-      const materiais = itens.reduce((s, i) => s + i.consumption * i.unit_price_centavos, 0) * (1 + (p.perda_pct || 0) / 100)
-      const custoUnit = Math.round(materiais + p.faccao_centavos + p.estampa_centavos)
-      let vendidas = 0
-      let receita = 0
+    // Custo por variação (fichas) e coleção por variação (Medusa; fallback ficha)
+    const custoVar = new Map<string, number>()
+    const colecaoVar = new Map<string, string>()
+    for (const p of pecas) {
+      const itens = p.costing_item ?? []
+      const mat = itens.reduce((s, i) => s + i.consumption * i.unit_price_centavos, 0) * (1 + (p.perda_pct || 0) / 100)
+      const custo = Math.round(mat + p.faccao_centavos + p.estampa_centavos)
       for (const vid of p.medusa_variant_ids ?? []) {
-        const a = vendidoPorVariante.get(vid)
-        if (a) {
-          vendidas += a.qtd
-          receita += a.receita
-        }
+        custoVar.set(vid, custo)
+        if (p.collection) colecaoVar.set(vid, p.collection)
       }
+    }
+    let produtos: Awaited<ReturnType<typeof medusaListProducts>> = []
+    try {
+      produtos = await medusaListProducts()
+    } catch {
+      /* sem Medusa: usa só as fichas */
+    }
+    const nomeVar = new Map<string, string>()
+    for (const p of produtos)
+      for (const v of p.variants) {
+        nomeVar.set(v.id, `${p.title}${v.title ? ` ${v.title}` : ""}`)
+        if (!colecaoVar.has(v.id)) colecaoVar.set(v.id, p.collection ?? (p.title.toLowerCase().includes("meia") ? "Acessórios" : "Sem coleção"))
+      }
+    const colecaoDe = (vid: string | null) => (vid ? (colecaoVar.get(vid) ?? "Sem coleção") : "Sem coleção")
+
+    // Vendas por coleção
+    type V = { pecas: number; receita: number; custo: number; site: number; fora: number }
+    const vendas: Record<string, V> = {}
+    const add = (col: string, qtd: number, receita: number, vid: string | null, origem: "site" | "fora") => {
+      const v = (vendas[col] = vendas[col] ?? { pecas: 0, receita: 0, custo: 0, site: 0, fora: 0 })
+      v.pecas += qtd
+      v.receita += receita
+      v.custo += (vid ? custoVar.get(vid) ?? 0 : 0) * qtd
+      v[origem] += receita
+    }
+    try {
+      for (const it of await medusaItensVendidos()) add(colecaoDe(it.variant_id), it.quantity, Math.round(it.total * 100), it.variant_id, "site")
+    } catch {
+      /* sem Medusa */
+    }
+    let creatorsPecas = 0
+    const creatorsLinhas: { rotulo: string; valor: number; nota?: string }[] = []
+    for (const v of externas) {
+      const fator = v.subtotal_centavos > 0 ? v.total_centavos / v.subtotal_centavos : 0
+      for (const it of v.itens ?? []) {
+        if (v.perfil === "creator") {
+          const c = (custoVar.get(it.variant_id) ?? 0) * it.quantidade
+          creatorsPecas += c
+          creatorsLinhas.push({ rotulo: `${it.quantidade}× ${nomeVar.get(it.variant_id) ?? "peça"} · ${colecaoDe(it.variant_id)}`, valor: c, nota: v.data })
+        } else add(colecaoDe(it.variant_id), it.quantidade, Math.round(it.quantidade * it.preco_centavos * fator), it.variant_id, "fora")
+      }
+    }
+
+    // Lote por coleção (fichas)
+    const lotePorColecao: Record<string, { producao: number; custo: number }> = {}
+    for (const p of pecas) {
+      const col = p.collection ?? "Sem coleção"
+      const l = (lotePorColecao[col] = lotePorColecao[col] ?? { producao: 0, custo: 0 })
+      l.producao += p.lote_pecas
+      l.custo += (custoVar.get((p.medusa_variant_ids ?? [])[0] ?? "") ?? 0) * p.lote_pecas
+    }
+
+    // Quadros
+    const colecoes = Array.from(new Set(despesas.filter((d) => ["1", "2", "6"].includes(codigo(d.categoria?.nome)) && d.etapa && d.etapa !== "Marca (geral)").map((d) => d.etapa as string)))
+    const quadrosColecao: Quadro[] = colecoes.map((col) => {
+      const l = despesas.filter((d) => d.etapa === col && ["1", "2", "6"].includes(codigo(d.categoria?.nome)))
+      const producao = soma(l.filter((d) => codigo(d.categoria?.nome) === "1"))
+      const desenvolvimento = soma(l.filter((d) => codigo(d.categoria?.nome) === "2"))
+      const moldes = soma(l.filter((d) => codigo(d.categoria?.nome) === "6"))
+      const lote = lotePorColecao[col]
       return {
-        id: p.id,
-        modelo: p.costing_model?.name ?? p.name,
-        cor: p.colorway,
-        nome: p.name,
-        lote: p.lote_pecas,
-        custo_unitario: custoUnit,
-        custo_lote: custoUnit * p.lote_pecas,
-        preco_venda: p.preco_venda_centavos,
-        vendidas,
-        receita,
-        em_estoque: Math.max(0, p.lote_pecas - vendidas),
-        composicao: {
-          itens: itens.map((i) => ({ kind: i.kind, nome: i.name, unidade: i.unit, consumo: i.consumption, preco_unit: i.unit_price_centavos, custo: Math.round(i.consumption * i.unit_price_centavos) })),
-          faccao: p.faccao_centavos,
-          estampa: p.estampa_centavos,
-          perda_pct: p.perda_pct,
-        },
+        id: `colecao:${col}`,
+        titulo: col,
+        total: soma(l),
+        linhas: [
+          { rotulo: "Produção (tecido, facção, aviamentos)", valor: producao },
+          { rotulo: "Desenvolvimento (estilista, pilotos, envios)", valor: desenvolvimento },
+          { rotulo: "Modelagem e pilotos da família", valor: moldes },
+        ].filter((x) => x.valor > 0),
+        nota: lote?.producao ? `${lote.producao} peças prontas · ${((soma(l) / lote.producao) / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })} investidos por peça` : undefined,
+        lancamentos: l.map(lanc),
       }
     })
-    const investidoLumiere = porEtapa[LUMIERE] ?? 0
-    const custoLote = lote.reduce((s, p) => s + p.custo_lote, 0)
-    const producao = lote.reduce((s, p) => s + p.lote, 0)
-    const vendidas = lote.reduce((s, p) => s + p.vendidas, 0)
-    const receita = lote.reduce((s, p) => s + p.receita, 0)
-    const custoVendido = lote.reduce((s, p) => s + p.custo_unitario * p.vendidas, 0)
+    const modelagem = cat("6")
+    const quadroModelagem: Quadro = {
+      id: "modelagem",
+      titulo: "Modelagem e pilotos",
+      total: soma(modelagem),
+      linhas: modelagem.map((d) => ({ rotulo: (d.descricao ?? "").replace(/^Modelagem e pilotos - /i, ""), valor: d.valor_centavos, nota: `peças nasceram na ${d.etapa ?? "—"}` })),
+      nota: "Moldes são reaproveitados em novas cores: entram no investimento da família, não no custo da peça.",
+      lancamentos: modelagem.map(lanc),
+    }
+    const mk = (id: string, titulo: string, codigos: string[], extra?: { total: number; linhas: Quadro["linhas"] }): Quadro => {
+      const l = cat(...codigos)
+      return { id, titulo, total: soma(l) + (extra?.total ?? 0), linhas: [...porEtapa(l).filter((x) => x.rotulo !== "Marca (geral)"), ...(extra?.linhas ?? [])], lancamentos: l.map(lanc) }
+    }
+    const social = mk("social", "Social media", ["5a"])
+    const trafego = mk("trafego", "Tráfego pago", ["5b"])
+    const fotos = mk("fotos", "Fotos e vídeos", ["5c"])
+    const site = mk("site", "Site e e-commerce", ["5d"])
+    const creators = mk("creators", "Creators e embaixadoras", ["5e"], { total: creatorsPecas, linhas: creatorsLinhas })
+    const marketing: Quadro = {
+      id: "marketing",
+      titulo: "Marketing (tudo)",
+      total: social.total + trafego.total + fotos.total + site.total + creators.total,
+      linhas: [
+        { rotulo: "Social media", valor: social.total },
+        { rotulo: "Tráfego pago", valor: trafego.total },
+        { rotulo: "Fotos e vídeos", valor: fotos.total },
+        { rotulo: "Site e e-commerce", valor: site.total },
+        { rotulo: "Creators e embaixadoras (peças)", valor: creators.total },
+      ].filter((x) => x.valor > 0),
+      lancamentos: [],
+    }
+    const insumos = mk("insumos", "Insumos de estoque", ["3"])
+    const embalagem = mk("embalagem", "Embalagem", ["4"])
+    const fixos = mk("fixos", "Fixos mensais e anuais", ["7"])
+    const acessorios = mk("acessorios", "Acessórios da marca", ["8"])
+    const totalGeral = soma(despesas) + creatorsPecas
 
-    // 3) Marketing por mês (categoria 5) + peças de creators (custo) por mês
-    const marketingPorMes: Record<string, { gastos: number; creators: number }> = {}
-    for (const d of despesas) {
-      if (!(d.categoria?.nome ?? "").startsWith("5")) continue
-      const m = mesDe(d.data)
-      marketingPorMes[m] = marketingPorMes[m] ?? { gastos: 0, creators: 0 }
-      marketingPorMes[m].gastos += d.valor_centavos
-    }
-    const custoPorVariante = new Map<string, number>()
-    for (const p of lote) for (const vid of pecas.find((x) => x.id === p.id)?.medusa_variant_ids ?? []) custoPorVariante.set(vid, p.custo_unitario)
-    for (const v of externas) {
-      if (v.perfil !== "creator") continue
-      const m = mesDe(v.data)
-      marketingPorMes[m] = marketingPorMes[m] ?? { gastos: 0, creators: 0 }
-      for (const it of v.itens ?? []) marketingPorMes[m].creators += (custoPorVariante.get(it.variant_id) ?? 0) * it.quantidade
-    }
+    // Investimento por ano (para o "quadro 2026")
+    const porAno: Record<string, number> = {}
+    for (const d of despesas) porAno[d.data.slice(0, 4)] = (porAno[d.data.slice(0, 4)] ?? 0) + d.valor_centavos
+
+    const vendasPorColecao = Object.entries(vendas)
+      .map(([colecao, v]) => ({ colecao, ...v, investido: quadrosColecao.find((q) => q.titulo === colecao)?.total ?? 0, producao: lotePorColecao[colecao]?.producao ?? 0 }))
+      .sort((a, b) => b.receita - a.receita)
 
     return NextResponse.json({
-      total,
-      por_categoria: porCategoria,
-      por_etapa: porEtapa,
-      por_mes: porMes,
-      lumiere: {
-        investido: investidoLumiere,
-        custo_lote: custoLote,
-        producao,
-        vendidas,
-        em_estoque: Math.max(0, producao - vendidas),
-        receita,
-        custo_vendido: custoVendido,
-        recuperado_pct: investidoLumiere > 0 ? receita / investidoLumiere : 0,
-        pecas: lote,
-      },
-      marketing_por_mes: marketingPorMes,
-      despesas,
+      total: totalGeral,
+      por_ano: porAno,
+      quadros: { colecoes: quadrosColecao, modelagem: quadroModelagem, marketing, creators, social, trafego, fotos, site, insumos, embalagem, fixos, acessorios },
+      vendas_por_colecao: vendasPorColecao,
     })
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 502 })
