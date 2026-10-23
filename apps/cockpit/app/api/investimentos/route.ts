@@ -244,6 +244,27 @@ export async function GET() {
     const embalagem = mk("embalagem", "Embalagem", ["4"])
     const fixos = mk("fixos", "Fixos mensais e anuais", ["7"])
     const acessorios = mk("acessorios", "Acessórios da marca", ["8"])
+    // Mimos e presentes do mês (sócia, 23/10): categoria 9, uma linha por mês com o que foi o mimo.
+    const mimosL = cat("9")
+    const porMes: Record<string, { valor: number; itens: string[] }> = {}
+    for (const d of mimosL) {
+      const m = d.data.slice(0, 7)
+      const x = (porMes[m] = porMes[m] ?? { valor: 0, itens: [] })
+      x.valor += d.valor_centavos
+      x.itens.push((d.descricao ?? "").replace(/^Mimo de [^:]+:\s*/i, ""))
+    }
+    const MESES = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"]
+    const nomeMes = (m: string) => `${MESES[Number(m.slice(5, 7)) - 1]}/${m.slice(0, 4)}`
+    const mimos: Quadro = {
+      id: "mimos",
+      titulo: "Mimos e presentes do mês",
+      total: soma(mimosL),
+      linhas: Object.entries(porMes)
+        .sort(([a], [b]) => (a < b ? 1 : -1))
+        .map(([m, x]) => ({ rotulo: nomeMes(m), valor: x.valor, nota: x.itens.join(" · ") })),
+      nota: "Presentinhos que vão com os pedidos, mês a mês.",
+      lancamentos: mimosL.map(lanc),
+    }
     const totalGeral = soma(despesas) + creatorsPecas + usoProprioPecas
 
     // Investimento por ano (para o "quadro 2026")
@@ -263,7 +284,7 @@ export async function GET() {
     return NextResponse.json({
       total: totalGeral,
       por_ano: porAno,
-      quadros: { colecoes: quadrosColecao, modelagem: quadroModelagem, marketing, creators, social, trafego, fotos, site, claude, uso_proprio: usoProprio, insumos, embalagem, fixos, acessorios },
+      quadros: { colecoes: quadrosColecao, modelagem: quadroModelagem, marketing, creators, social, trafego, fotos, site, claude, uso_proprio: usoProprio, insumos, embalagem, fixos, acessorios, mimos },
       vendas_por_colecao: vendasPorColecao,
     })
   } catch (e) {
