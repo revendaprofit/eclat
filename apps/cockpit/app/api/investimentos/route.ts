@@ -99,11 +99,12 @@ export async function GET() {
     // Lote por coleção (fichas × lote), separando o que a peça consumiu: tecido (kg), insumos do estoque (tiras,
     // etiquetas, tag, lacre, Zebra), rateios de compras da produção (DTF, composição) e serviços (facção,
     // acompanhamento). Sócia, 2026-10-23: "sobrou tecido nos rolos, calcule o que foi gasto".
-    type Lote = { producao: number; custo: number; tecido: number; tecido_kg: Record<string, number>; insumos: number; rateios: number; servicos: number }
+    type Lote = { producao: number; custo: number; tecido: number; tecido_kg: Record<string, number>; aviamentos: number; insumos: number; servicos: number }
+    const EH_AVIAMENTO = /z[ií]per|bojo|el[áa]stico|regulador/i
     const lotePorColecao: Record<string, Lote> = {}
     for (const p of pecas) {
       const col = p.collection ?? "Sem coleção"
-      const l = (lotePorColecao[col] = lotePorColecao[col] ?? { producao: 0, custo: 0, tecido: 0, tecido_kg: {}, insumos: 0, rateios: 0, servicos: 0 })
+      const l = (lotePorColecao[col] = lotePorColecao[col] ?? { producao: 0, custo: 0, tecido: 0, tecido_kg: {}, aviamentos: 0, insumos: 0, servicos: 0 })
       const n = p.lote_pecas
       l.producao += n
       l.custo += (custoVar.get((p.medusa_variant_ids ?? [])[0] ?? "") ?? 0) * n
@@ -112,8 +113,8 @@ export async function GET() {
         if (i.kind === "material") {
           l.tecido += v
           l.tecido_kg[i.name] = (l.tecido_kg[i.name] ?? 0) + i.consumption * n
-        } else if (/rateio/i.test(i.name)) l.rateios += v
-        else if (i.kind === "servico") l.servicos += v
+        } else if (i.kind === "servico") l.servicos += v
+        else if (EH_AVIAMENTO.test(i.name)) l.aviamentos += v
         else l.insumos += v
       }
       l.servicos += (p.faccao_centavos + p.estampa_centavos) * n
@@ -132,33 +133,39 @@ export async function GET() {
       // comprados (a sobra fica nos rolos). Insumos: consumidos do estoque geral. Facção, acompanhamento, DTF e
       // composição: compras integrais da produção. Modelagem e pilotos ficam fora (quadro próprio).
       const comprasTecido = soma(l.filter((d) => codigo(d.categoria?.nome) === "1" && /tecido|rolo|malha/i.test(d.descricao ?? "")))
-      const comprasOutras = producao - comprasTecido
+      const estilista = soma(l.filter((d) => codigo(d.categoria?.nome) === "2" && /estilista/i.test(d.descricao ?? "")))
       const temFichas = !!lote && lote.producao > 0
+      // Linhas pedidas pela sócia (23/10): tecido · facção · aviamentos (zíper) · insumos (DTF, etiquetas) · estilista.
+      // Tudo pelas fichas × lote (cada peça leva só o que consome); sem ficha, cai nas compras.
       const tecidoConsumido = temFichas ? lote.tecido : comprasTecido
       const sobraTecido = Math.max(0, comprasTecido - tecidoConsumido)
       const kgs = temFichas ? Object.entries(lote.tecido_kg).map(([nome, kg]) => `${kg.toFixed(1)} kg ${nome.replace(/\s*\(.*\)\s*$/, "")}`).join(" · ") : ""
-      const totalReal = tecidoConsumido + (temFichas ? lote.insumos : 0) + comprasOutras + desenvolvimento
+      const faccao = temFichas ? lote.servicos : soma(l.filter((d) => codigo(d.categoria?.nome) === "1" && /fac[çc][ãa]o|acompanhamento/i.test(d.descricao ?? "")))
+      const aviamentos = temFichas ? lote.aviamentos : soma(l.filter((d) => codigo(d.categoria?.nome) === "1" && EH_AVIAMENTO.test(d.descricao ?? "")))
+      const insumosPecas = temFichas ? lote.insumos : soma(l.filter((d) => codigo(d.categoria?.nome) === "1" && /dtf|etiqueta|composi/i.test(d.descricao ?? "")))
+      const totalReal = tecidoConsumido + faccao + aviamentos + insumosPecas + estilista
       if (temFichas) sobrasPorColecao[col] = sobraTecido
       return {
         id: `colecao:${col}`,
         titulo: col,
         total: totalReal,
         linhas: [
-          { rotulo: "Tecido consumido pelas peças", valor: tecidoConsumido, nota: temFichas ? `${kgs} · comprado ${brl(comprasTecido)} · sobra nos rolos ${brl(sobraTecido)}` : undefined },
-          ...(temFichas ? [{ rotulo: "Tiras 3D, etiquetas, tag, lacre e Zebra (do estoque de insumos)", valor: lote.insumos }] : []),
-          { rotulo: "Facção, acompanhamento, DTF, composição e zíper (compras da produção)", valor: comprasOutras },
-          { rotulo: "Desenvolvimento (estilista, pilotos, envios)", valor: desenvolvimento },
+          { rotulo: "Tecido", valor: tecidoConsumido, nota: temFichas ? `${kgs} · comprado ${brl(comprasTecido)} · sobra nos rolos ${brl(sobraTecido)}` : undefined },
+          { rotulo: "Facção e acompanhamento da produção", valor: faccao },
+          { rotulo: "Aviamentos (zíper, bojo, elástico)", valor: aviamentos },
+          { rotulo: "Insumos (DTF, etiquetas 3D e de composição, tiras, tag, lacre)", valor: insumosPecas },
+          { rotulo: "Estilista", valor: estilista },
         ].filter((x) => x.valor > 0),
         nota: temFichas ? `${lote.producao} peças prontas · ${brl(Math.round(totalReal / lote.producao))} investidos por peça` : undefined,
-        lancamentos: l.map(lanc),
+        lancamentos: l.filter((d) => codigo(d.categoria?.nome) === "1" || /estilista/i.test(d.descricao ?? "")).map(lanc),
       }
     })
-    const modelagem = cat("6")
+    const modelagem = [...cat("6"), ...cat("2").filter((d) => !/estilista/i.test(d.descricao ?? ""))]
     const quadroModelagem: Quadro = {
       id: "modelagem",
       titulo: "Modelagem e pilotos (investimento anual na marca)",
       total: soma(modelagem),
-      linhas: modelagem.map((d) => ({ rotulo: (d.descricao ?? "").replace(/^Modelagem e pilotos - /i, ""), valor: d.valor_centavos, nota: `peças nasceram na ${d.etapa ?? "—"}` })),
+      linhas: modelagem.map((d) => ({ rotulo: (d.descricao ?? "").replace(/^Modelagem e pilotos - /i, ""), valor: d.valor_centavos, nota: `desenvolvida na ${d.etapa ?? "—"}` })),
       nota: "Investimento anual na marca: os moldes servem a várias coleções e cores. Não entram no investimento da coleção nem no custo da peça.",
       lancamentos: modelagem.map(lanc),
     }
@@ -192,7 +199,7 @@ export async function GET() {
     const insumos = mk("insumos", "Insumos de estoque", ["3"])
     const insumosConsumidos = Object.values(lotePorColecao).reduce((s2, l) => s2 + l.insumos, 0)
     if (insumosConsumidos > 0) {
-      insumos.linhas.push({ rotulo: "Consumido pelas peças produzidas", valor: insumosConsumidos, nota: "tiras 3D, etiquetas, tags, lacres, Zebra" })
+      insumos.linhas.push({ rotulo: "Consumido pelas peças produzidas", valor: insumosConsumidos, nota: "tiras 3D, etiquetas 3D e de composição, DTF, tags, lacres, Zebra" })
       insumos.linhas.push({ rotulo: "Estoque restante (compras − consumido)", valor: Math.max(0, insumos.total - insumosConsumidos), nota: "para as próximas produções" })
     }
     for (const [col, sobra] of Object.entries(sobrasPorColecao)) {
