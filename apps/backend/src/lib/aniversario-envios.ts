@@ -25,6 +25,7 @@ import {
 } from "./aniversario"
 import { connectionState, evolutionConfigured, EvolutionHttpError, sendWhatsappText } from "./evolution"
 import { normalizarContato, primeiroNome } from "./recuperacao-regras"
+import { sbSelect, supabaseConfigured } from "./supabase"
 
 type Log = { info: (m: string) => void; warn: (m: string) => void }
 const MIN = 60_000
@@ -64,6 +65,25 @@ export async function clientesComPedido(container: MedusaContainer): Promise<Cli
     if (tel && !telefonePorCliente.has(p.customer_id)) telefonePorCliente.set(p.customer_id, tel)
     const nome = primeiroNome(p.shipping_address?.first_name)
     if (nome && !nomePorCliente.has(p.customer_id)) nomePorCliente.set(p.customer_id, nome)
+  }
+  // Vendas fora do site (sócia, 2026-10-23): a cliente lançada no Cockpit também entra no programa. A venda fica no
+  // Supabase (venda_externa) com o vínculo medusa_customer_id; sem a tabela (migration pendente) segue só com pedidos.
+  if (supabaseConfigured()) {
+    try {
+      const externas = await sbSelect<{ medusa_customer_id: string | null; cliente_whatsapp: string | null; cliente_nome: string | null }>(
+        "venda_externa",
+        "cancelada_em=is.null&medusa_customer_id=not.is.null&select=medusa_customer_id,cliente_whatsapp,cliente_nome"
+      )
+      for (const v of externas) {
+        if (!v.medusa_customer_id) continue
+        const tel = normalizarContato(v.cliente_whatsapp)
+        if (tel && !telefonePorCliente.has(v.medusa_customer_id)) telefonePorCliente.set(v.medusa_customer_id, tel)
+        const nome = primeiroNome(v.cliente_nome)
+        if (nome && !nomePorCliente.has(v.medusa_customer_id)) nomePorCliente.set(v.medusa_customer_id, nome)
+      }
+    } catch {
+      /* best-effort */
+    }
   }
   if (!telefonePorCliente.size && !nomePorCliente.size) return []
   const ids = Array.from(new Set([...telefonePorCliente.keys(), ...nomePorCliente.keys()]))
