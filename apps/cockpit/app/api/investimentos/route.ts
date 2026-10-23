@@ -108,10 +108,9 @@ export async function GET() {
     const colecoes = Array.from(new Set(despesas.filter((d) => ["1", "2", "6"].includes(codigo(d.categoria?.nome)) && d.etapa && d.etapa !== "Marca (geral)").map((d) => d.etapa as string)))
     const sobrasPorColecao: Record<string, number> = {}
     const quadrosColecao: Quadro[] = colecoes.map((col) => {
-      const l = despesas.filter((d) => d.etapa === col && ["1", "2", "6"].includes(codigo(d.categoria?.nome)))
+      const l = despesas.filter((d) => d.etapa === col && ["1", "2"].includes(codigo(d.categoria?.nome)))
       const producao = soma(l.filter((d) => codigo(d.categoria?.nome) === "1"))
       const desenvolvimento = soma(l.filter((d) => codigo(d.categoria?.nome) === "2"))
-      const moldes = soma(l.filter((d) => codigo(d.categoria?.nome) === "6"))
       const lote = lotePorColecao[col]
       // Investimento REAL na coleção (sócia, 2026-10-23): o que as peças consumiram pelas fichas (preço unitário =
       // valor pago ÷ quantidade comprada; cada peça leva só o que vai nela: tecido, tiras 3D, etiquetas, tag, DTF,
@@ -120,7 +119,8 @@ export async function GET() {
       const consumido = lote?.custo ?? 0
       const sobra = Math.max(0, producao - consumido)
       if (consumido) sobrasPorColecao[col] = sobra
-      const totalReal = (consumido || producao) + desenvolvimento + moldes
+      // Modelagem e pilotos NÃO entram na coleção (sócia, 2026-10-23): são investimento anual na marca, quadro próprio.
+      const totalReal = (consumido || producao) + desenvolvimento
       return {
         id: `colecao:${col}`,
         titulo: col,
@@ -128,7 +128,6 @@ export async function GET() {
         linhas: [
           { rotulo: consumido ? "Peças prontas pelas fichas (tecido, aviamentos, tags, facção)" : "Produção (tecido, facção, aviamentos)", valor: consumido || producao, nota: consumido ? `compras de produção ${brl(producao)} · sobra em estoque ${brl(sobra)}` : undefined },
           { rotulo: "Desenvolvimento (estilista, pilotos, envios)", valor: desenvolvimento },
-          { rotulo: "Modelagem e pilotos da família", valor: moldes },
         ].filter((x) => x.valor > 0),
         nota: lote?.producao ? `${lote.producao} peças prontas · ${brl(Math.round(totalReal / lote.producao))} investidos por peça` : undefined,
         lancamentos: l.map(lanc),
@@ -137,10 +136,10 @@ export async function GET() {
     const modelagem = cat("6")
     const quadroModelagem: Quadro = {
       id: "modelagem",
-      titulo: "Modelagem e pilotos",
+      titulo: "Modelagem e pilotos (investimento anual na marca)",
       total: soma(modelagem),
       linhas: modelagem.map((d) => ({ rotulo: (d.descricao ?? "").replace(/^Modelagem e pilotos - /i, ""), valor: d.valor_centavos, nota: `peças nasceram na ${d.etapa ?? "—"}` })),
-      nota: "Moldes são reaproveitados em novas cores: entram no investimento da família, não no custo da peça.",
+      nota: "Investimento anual na marca: os moldes servem a várias coleções e cores. Não entram no investimento da coleção nem no custo da peça.",
       lancamentos: modelagem.map(lanc),
     }
     const mk = (id: string, titulo: string, codigos: string[], extra?: { total: number; linhas: Quadro["linhas"] }): Quadro => {
