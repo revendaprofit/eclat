@@ -26,10 +26,11 @@ const porEtapa = (l: Despesa[]) => {
 
 export async function GET() {
   try {
-    const [dr, pr, vr] = await Promise.all([
+    const [dr, pr, vr, cr] = await Promise.all([
       sb("finance_expense?select=id,data,descricao,valor_centavos,fornecedor,recorrencia,etapa,observacao,categoria:finance_expense_category(nome)&order=data.desc"),
       sb("costing_piece?select=id,name,colorway,collection,lote_pecas,faccao_centavos,estampa_centavos,perda_pct,preco_venda_centavos,medusa_variant_ids,costing_model(name),costing_item(kind,name,unit,consumption,unit_price_centavos,position)&order=name.asc"),
       sb("venda_externa?select=data,itens,perfil,total_centavos,subtotal_centavos&pago=eq.true&cancelada_em=is.null"),
+      sb("site_content?key=eq.cockpit.insumos_contagem&select=value"),
     ])
     if (!dr.ok) throw new Error(`despesas: HTTP ${dr.status}`)
     const despesas = (await dr.json()) as Despesa[]
@@ -196,6 +197,24 @@ export async function GET() {
     }
     for (const [col, sobra] of Object.entries(sobrasPorColecao)) {
       if (sobra > 0) insumos.linhas.push({ rotulo: `Tecido que sobrou nos rolos da ${col}`, valor: sobra, nota: "estoque de tecido; não soma no total do quadro" })
+    }
+    // Contagem física de sobras (sócia, 23/10/2026; site_content cockpit.insumos_contagem). Estoque útil = sobra − 5%
+    // (perda, uso próprio, reposição). Consumo real = comprado − sobra, quando a quantidade comprada é conhecida.
+    type Contagem = { data: string; reserva_pct: number; nota?: string; itens: { grupo: string; nome: string; sobra: number; comprado?: number | null; unit_centavos?: number | null }[] }
+    const contagem = cr.ok ? (((await cr.json()) as { value: Contagem }[])[0]?.value ?? null) : null
+    if (contagem) {
+      const fator = 1 - (contagem.reserva_pct || 0) / 100
+      let valorEstoque = 0
+      const linhasContagem: Quadro["linhas"] = []
+      for (const it of contagem.itens) {
+        const util = Math.floor(it.sobra * fator)
+        const valor = it.unit_centavos ? util * it.unit_centavos : 0
+        valorEstoque += valor
+        const consumo = it.comprado != null ? ` · usadas ${it.comprado - it.sobra} de ${it.comprado}` : ""
+        linhasContagem.push({ rotulo: `${it.grupo} · ${it.nome}: ${it.sobra} contadas, ${util} úteis${consumo}`, valor })
+      }
+      insumos.linhas.push({ rotulo: `Contagem de ${contagem.data.split("-").reverse().join("/")}: estoque útil (sobra − ${contagem.reserva_pct}% de reserva)`, valor: valorEstoque, nota: contagem.nota })
+      insumos.linhas.push(...linhasContagem)
     }
     const embalagem = mk("embalagem", "Embalagem", ["4"])
     const fixos = mk("fixos", "Fixos mensais e anuais", ["7"])
