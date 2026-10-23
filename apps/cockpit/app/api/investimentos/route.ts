@@ -14,6 +14,7 @@ type VendaExt = { data: string; itens: { variant_id: string; quantidade: number;
 
 export type Quadro = { id: string; titulo: string; total: number; linhas: { rotulo: string; valor: number; nota?: string }[]; nota?: string; lancamentos: { id: string; data: string; descricao: string | null; fornecedor: string | null; etapa: string | null; valor: number }[] }
 
+const brl = (c: number) => (c / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
 const codigo = (cat: string | null | undefined) => (cat ?? "").split(" · ")[0].trim() // "1", "5a", ...
 const lanc = (d: Despesa) => ({ id: d.id, data: d.data, descricao: d.descricao, fornecedor: d.fornecedor, etapa: d.etapa, valor: d.valor_centavos })
 const soma = (l: Despesa[]) => l.reduce((s, d) => s + d.valor_centavos, 0)
@@ -105,22 +106,31 @@ export async function GET() {
 
     // Quadros
     const colecoes = Array.from(new Set(despesas.filter((d) => ["1", "2", "6"].includes(codigo(d.categoria?.nome)) && d.etapa && d.etapa !== "Marca (geral)").map((d) => d.etapa as string)))
+    const sobrasPorColecao: Record<string, number> = {}
     const quadrosColecao: Quadro[] = colecoes.map((col) => {
       const l = despesas.filter((d) => d.etapa === col && ["1", "2", "6"].includes(codigo(d.categoria?.nome)))
       const producao = soma(l.filter((d) => codigo(d.categoria?.nome) === "1"))
       const desenvolvimento = soma(l.filter((d) => codigo(d.categoria?.nome) === "2"))
       const moldes = soma(l.filter((d) => codigo(d.categoria?.nome) === "6"))
       const lote = lotePorColecao[col]
+      // Investimento REAL na coleção (sócia, 2026-10-23): o que as peças consumiram pelas fichas (preço unitário =
+      // valor pago ÷ quantidade comprada; cada peça leva só o que vai nela: tecido, tiras 3D, etiquetas, tag, DTF,
+      // composição, facção, acompanhamento) × lote produzido, mais desenvolvimento e moldes. O que foi comprado e
+      // não entrou nas peças é sobra em estoque (aparece no quadro Insumos).
+      const consumido = lote?.custo ?? 0
+      const sobra = Math.max(0, producao - consumido)
+      if (consumido) sobrasPorColecao[col] = sobra
+      const totalReal = (consumido || producao) + desenvolvimento + moldes
       return {
         id: `colecao:${col}`,
         titulo: col,
-        total: soma(l),
+        total: totalReal,
         linhas: [
-          { rotulo: "Produção (tecido, facção, aviamentos)", valor: producao },
+          { rotulo: consumido ? "Peças prontas pelas fichas (tecido, aviamentos, tags, facção)" : "Produção (tecido, facção, aviamentos)", valor: consumido || producao, nota: consumido ? `compras de produção ${brl(producao)} · sobra em estoque ${brl(sobra)}` : undefined },
           { rotulo: "Desenvolvimento (estilista, pilotos, envios)", valor: desenvolvimento },
           { rotulo: "Modelagem e pilotos da família", valor: moldes },
         ].filter((x) => x.valor > 0),
-        nota: lote?.producao ? `${lote.producao} peças prontas · ${((soma(l) / lote.producao) / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })} investidos por peça` : undefined,
+        nota: lote?.producao ? `${lote.producao} peças prontas · ${brl(Math.round(totalReal / lote.producao))} investidos por peça` : undefined,
         lancamentos: l.map(lanc),
       }
     })
@@ -161,6 +171,9 @@ export async function GET() {
       lancamentos: [...social.lancamentos, ...trafego.lancamentos, ...fotos.lancamentos, ...site.lancamentos, ...creators.lancamentos].sort((a, b) => (a.data < b.data ? 1 : -1)),
     }
     const insumos = mk("insumos", "Insumos de estoque", ["3"])
+    for (const [col, sobra] of Object.entries(sobrasPorColecao)) {
+      if (sobra > 0) insumos.linhas.push({ rotulo: `Sobra das compras da ${col} (tecido, DTF, composição)`, valor: sobra, nota: "estoque para a próxima produção; não soma no total do quadro" })
+    }
     const embalagem = mk("embalagem", "Embalagem", ["4"])
     const fixos = mk("fixos", "Fixos mensais e anuais", ["7"])
     const acessorios = mk("acessorios", "Acessórios da marca", ["8"])
