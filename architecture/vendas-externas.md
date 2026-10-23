@@ -32,3 +32,10 @@ Desenho: `docs/superpowers/specs/2026-10-15-vendas-fora-do-site-design.md`. Sóc
   vale igual, só não aparece na ficha 360°.
 - Lembrete não saiu às 9h: ver o log `[venda-externa]`; WhatsApp desconectado espera o dia seguinte. Tabela
   inexistente (migration não aplicada) só gera aviso no log.
+
+## Almoxarifado (22–23/10/2026)
+Cockpit → Catálogo → Almoxarifado. Estoque de insumos em `site_content` chave `cockpit.almoxarifado` (`lib/almoxarifado.ts`,
+API `app/api/almoxarifado`). Cada item tem `chave` (trecho do nome do insumo na ficha de custo); a simulação "tenho insumo
+para a próxima produção?" soma `consumption × peças planejadas` das fichas (`costing_item`) e compara com o estoque útil
+(contado − `reserva_pct`). A Visão geral (`/api/investimentos`) lê o mesmo estoque no quadro Insumos.
+
