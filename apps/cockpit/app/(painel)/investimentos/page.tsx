@@ -12,7 +12,7 @@ type VendaCol = { colecao: string; pecas: number; receita: number; custo: number
 type Resposta = {
   total: number
   por_ano: Record<string, number>
-  quadros: { colecoes: Quadro[]; modelagem: Quadro; marketing: Quadro; creators: Quadro; social: Quadro; trafego: Quadro; fotos: Quadro; site: Quadro; insumos: Quadro; embalagem: Quadro; fixos: Quadro; acessorios: Quadro }
+  quadros: { colecoes: Quadro[]; modelagem: Quadro; marketing: Quadro; creators: Quadro; social: Quadro; trafego: Quadro; fotos: Quadro; site: Quadro; claude: Quadro; uso_proprio: Quadro; insumos: Quadro; embalagem: Quadro; fixos: Quadro; acessorios: Quadro }
   vendas_por_colecao: VendaCol[]
 }
 
@@ -133,6 +133,7 @@ export default function InvestimentosPage() {
               <Card q={q.trafego} aberto={aberto === "trafego"} onToggle={() => toggle("trafego")} />
               <Card q={q.fotos} aberto={aberto === "fotos"} onToggle={() => toggle("fotos")} />
               <Card q={q.site} aberto={aberto === "site"} onToggle={() => toggle("site")} />
+              <Card q={q.claude} aberto={aberto === "claude"} onToggle={() => toggle("claude")} />
             </div>
           </Secao>
 
@@ -142,6 +143,7 @@ export default function InvestimentosPage() {
               <Card q={q.embalagem} aberto={aberto === "embalagem"} onToggle={() => toggle("embalagem")} />
               <Card q={q.fixos} aberto={aberto === "fixos"} onToggle={() => toggle("fixos")} />
               <Card q={q.acessorios} aberto={aberto === "acessorios"} onToggle={() => toggle("acessorios")} />
+              <Card q={q.uso_proprio} aberto={aberto === "uso_proprio"} onToggle={() => toggle("uso_proprio")} />
             </div>
           </Secao>
         </>

@@ -10,7 +10,7 @@ import { medusaItensVendidos, medusaListProducts } from "@/lib/medusa"
 // (fichas + lote), pedidos pagos do Medusa e venda_externa pagas. Tudo em centavos.
 type Despesa = { id: string; data: string; descricao: string | null; valor_centavos: number; fornecedor: string | null; recorrencia: string | null; etapa: string | null; observacao: string | null; categoria: { nome: string } | null }
 type Peca = { id: string; name: string; colorway: string | null; collection: string | null; lote_pecas: number; faccao_centavos: number; estampa_centavos: number; perda_pct: number; preco_venda_centavos: number | null; medusa_variant_ids: string[]; costing_model: { name: string } | null; costing_item: { kind: string; name: string; unit: string; consumption: number; unit_price_centavos: number; position: number }[] }
-type VendaExt = { data: string; itens: { variant_id: string; quantidade: number; preco_centavos: number }[]; perfil?: string | null; total_centavos: number; subtotal_centavos: number }
+type VendaExt = { data: string; cliente_nome: string; itens: { variant_id: string; quantidade: number; preco_centavos: number }[]; perfil?: string | null; total_centavos: number; subtotal_centavos: number }
 
 export type Quadro = { id: string; titulo: string; total: number; linhas: { rotulo: string; valor: number; nota?: string }[]; nota?: string; lancamentos: { id: string; data: string; descricao: string | null; fornecedor: string | null; etapa: string | null; valor: number }[] }
 
@@ -29,7 +29,7 @@ export async function GET() {
     const [dr, pr, vr, cr] = await Promise.all([
       sb("finance_expense?select=id,data,descricao,valor_centavos,fornecedor,recorrencia,etapa,observacao,categoria:finance_expense_category(nome)&order=data.desc"),
       sb("costing_piece?select=id,name,colorway,collection,lote_pecas,faccao_centavos,estampa_centavos,perda_pct,preco_venda_centavos,medusa_variant_ids,costing_model(name),costing_item(kind,name,unit,consumption,unit_price_centavos,position)&order=name.asc"),
-      sb("venda_externa?select=data,itens,perfil,total_centavos,subtotal_centavos&pago=eq.true&cancelada_em=is.null"),
+      sb("venda_externa?select=data,cliente_nome,itens,perfil,total_centavos,subtotal_centavos&pago=eq.true&cancelada_em=is.null"),
       sb("site_content?key=eq.cockpit.almoxarifado&select=value"),
     ])
     if (!dr.ok) throw new Error(`despesas: HTTP ${dr.status}`)
@@ -83,15 +83,24 @@ export async function GET() {
     } catch {
       /* sem Medusa */
     }
+    // Creators (nome da pessoa em cada linha — sócia, 23/10) e uso próprio (sócia e família): custo puro da peça,
+    // fora das vendas por coleção.
     let creatorsPecas = 0
     const creatorsLinhas: { rotulo: string; valor: number; nota?: string }[] = []
+    let usoProprioPecas = 0
+    const usoProprioLinhas: { rotulo: string; valor: number; nota?: string }[] = []
     for (const v of externas) {
       const fator = v.subtotal_centavos > 0 ? v.total_centavos / v.subtotal_centavos : 0
       for (const it of v.itens ?? []) {
+        const rotulo = `${v.cliente_nome} · ${it.quantidade}× ${nomeVar.get(it.variant_id) ?? "peça"} · ${colecaoDe(it.variant_id)}`
         if (v.perfil === "creator") {
           const c = (custoVar.get(it.variant_id) ?? 0) * it.quantidade
           creatorsPecas += c
-          creatorsLinhas.push({ rotulo: `${it.quantidade}× ${nomeVar.get(it.variant_id) ?? "peça"} · ${colecaoDe(it.variant_id)}`, valor: c, nota: v.data })
+          creatorsLinhas.push({ rotulo, valor: c, nota: v.data })
+        } else if (v.perfil === "uso_proprio") {
+          const c = (custoVar.get(it.variant_id) ?? 0) * it.quantidade
+          usoProprioPecas += c
+          usoProprioLinhas.push({ rotulo, valor: c, nota: v.data })
         } else add(colecaoDe(it.variant_id), it.quantidade, Math.round(it.quantidade * it.preco_centavos * fator), it.variant_id, "fora")
       }
     }
@@ -152,7 +161,7 @@ export async function GET() {
         linhas: [
           { rotulo: "Tecido", valor: tecidoConsumido, nota: temFichas ? `${kgs} · comprado ${brl(comprasTecido)} · sobra nos rolos ${brl(sobraTecido)}` : undefined },
           { rotulo: "Facção e acompanhamento da produção", valor: faccao },
-          { rotulo: "Aviamentos (zíper, bojo, elástico)", valor: aviamentos },
+          { rotulo: "Aviamentos (zíper e silicone guia; bojo e elástico vêm na facção)", valor: aviamentos },
           { rotulo: "Insumos (DTF, etiquetas 3D e de composição, tiras, tag, lacre)", valor: insumosPecas },
           { rotulo: "Estilista", valor: estilista },
         ].filter((x) => x.valor > 0),
@@ -181,20 +190,30 @@ export async function GET() {
     // Peças dadas a creators entram como "lançamentos" do quadro (clicou, vê o que compõe a soma).
     creators.lancamentos = [
       ...creators.lancamentos,
-      ...creatorsLinhas.map((l, i) => ({ id: `creator-${i}`, data: l.nota ?? "", descricao: l.rotulo, fornecedor: "peça para creator (custo)", etapa: null, valor: l.valor })),
+      ...creatorsLinhas.map((l, i) => ({ id: `creator-${i}`, data: l.nota ?? "", descricao: l.rotulo, fornecedor: "peça para creator (custo da peça)", etapa: null, valor: l.valor })),
     ]
+    const claude = mk("claude", "Claude (IA e automação)", ["5f"])
+    const usoProprio: Quadro = {
+      id: "uso_proprio",
+      titulo: "Uso próprio (peças da sócia e família)",
+      total: usoProprioPecas,
+      linhas: usoProprioLinhas,
+      nota: "Custo puro da peça, pelas fichas. Não é venda nem marketing.",
+      lancamentos: usoProprioLinhas.map((l, i) => ({ id: `uso-${i}`, data: l.nota ?? "", descricao: l.rotulo, fornecedor: "uso próprio (custo da peça)", etapa: null, valor: l.valor })),
+    }
     const marketing: Quadro = {
       id: "marketing",
       titulo: "Marketing (tudo)",
-      total: social.total + trafego.total + fotos.total + site.total + creators.total,
+      total: social.total + trafego.total + fotos.total + site.total + creators.total + claude.total,
       linhas: [
         { rotulo: "Social media", valor: social.total },
         { rotulo: "Tráfego pago", valor: trafego.total },
         { rotulo: "Fotos e vídeos", valor: fotos.total },
         { rotulo: "Site e e-commerce", valor: site.total },
         { rotulo: "Creators e embaixadoras (peças)", valor: creators.total },
+        { rotulo: "Claude (IA e automação)", valor: claude.total },
       ].filter((x) => x.valor > 0),
-      lancamentos: [...social.lancamentos, ...trafego.lancamentos, ...fotos.lancamentos, ...site.lancamentos, ...creators.lancamentos].sort((a, b) => (a.data < b.data ? 1 : -1)),
+      lancamentos: [...social.lancamentos, ...trafego.lancamentos, ...fotos.lancamentos, ...site.lancamentos, ...creators.lancamentos, ...claude.lancamentos].sort((a, b) => (a.data < b.data ? 1 : -1)),
     }
     const insumos = mk("insumos", "Insumos de estoque", ["3"])
     const insumosConsumidos = Object.values(lotePorColecao).reduce((s2, l) => s2 + l.insumos, 0)
@@ -225,7 +244,7 @@ export async function GET() {
     const embalagem = mk("embalagem", "Embalagem", ["4"])
     const fixos = mk("fixos", "Fixos mensais e anuais", ["7"])
     const acessorios = mk("acessorios", "Acessórios da marca", ["8"])
-    const totalGeral = soma(despesas) + creatorsPecas
+    const totalGeral = soma(despesas) + creatorsPecas + usoProprioPecas
 
     // Investimento por ano (para o "quadro 2026")
     const porAno: Record<string, number> = {}
@@ -244,7 +263,7 @@ export async function GET() {
     return NextResponse.json({
       total: totalGeral,
       por_ano: porAno,
-      quadros: { colecoes: quadrosColecao, modelagem: quadroModelagem, marketing, creators, social, trafego, fotos, site, insumos, embalagem, fixos, acessorios },
+      quadros: { colecoes: quadrosColecao, modelagem: quadroModelagem, marketing, creators, social, trafego, fotos, site, claude, uso_proprio: usoProprio, insumos, embalagem, fixos, acessorios },
       vendas_por_colecao: vendasPorColecao,
     })
   } catch (e) {

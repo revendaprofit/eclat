@@ -20,6 +20,12 @@ Desenho: `docs/superpowers/specs/2026-10-15-vendas-fora-do-site-design.md`. Sóc
   não fecha. No DRE a taxa entra em "(−) Taxas de pagamento" (sublinha "maquininha").
 - Migration `0017_venda_externa_desconto_cartao.sql`.
 
+## Parte 3 (23/10): uso próprio
+- Perfil **Uso próprio** = peças que a sócia pega para ela e para a família. Sempre 100% (cortesia, nasce paga), baixa
+  o estoque como qualquer venda. No DRE o custo puro da peça sai na linha "(−) Uso próprio" (não é COGS nem marketing);
+  na Visão geral é o quadro "Uso próprio (peças da sócia e família)", somado no total investido.
+- Creators: cada linha do quadro leva o nome da pessoa. Migration `0019_venda_externa_uso_proprio.sql`.
+
 ## Operação
 - Lançar: nome, WhatsApp, peças, pagamento. A prazo pede a data combinada (não aceita data passada).
 - O estoque baixa no Medusa ao salvar (check ligado). Peça sem controle de estoque não baixa e a tela avisa.

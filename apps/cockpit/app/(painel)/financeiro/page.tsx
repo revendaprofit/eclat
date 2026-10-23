@@ -15,6 +15,8 @@ type Dre = {
   taxas_fora_site?: number
   marketing_creators?: number
   creators?: { data: string; nome: string; pecas: string; custo_centavos: number }[]
+  uso_proprio?: number
+  uso_proprio_lista?: { data: string; nome: string; pecas: string; custo_centavos: number }[]
   pagamentos_sem_tarifa: number
   despesas: number
   resultado: number
@@ -198,6 +200,14 @@ export default function FinanceiroPage() {
                 <div className="flex justify-between"><span className="text-eclat-texto-2">(−) Marketing · peças para creators</span><span className="text-red-700">−{brl(dre.marketing_creators ?? 0)}</span></div>
                 {(dre.creators ?? []).map((c, i) => (
                   <div key={i} className="flex justify-between text-meta text-eclat-texto-3"><span>· Creator {c.nome} — {c.pecas} ({c.data.split("-").reverse().join("/")})</span><span>−{brl(c.custo_centavos)}</span></div>
+                ))}
+              </>
+            )}
+            {(dre.uso_proprio ?? 0) > 0 && (
+              <>
+                <div className="flex justify-between"><span className="text-eclat-texto-2">(−) Uso próprio · peças para a sócia e família</span><span className="text-red-700">−{brl(dre.uso_proprio ?? 0)}</span></div>
+                {(dre.uso_proprio_lista ?? []).map((c, i) => (
+                  <div key={i} className="flex justify-between text-meta text-eclat-texto-3"><span>· {c.nome} — {c.pecas} ({c.data.split("-").reverse().join("/")})</span><span>−{brl(c.custo_centavos)}</span></div>
                 ))}
               </>
             )}

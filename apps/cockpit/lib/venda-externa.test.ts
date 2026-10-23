@@ -43,6 +43,8 @@ describe("vendas fora do site", () => {
     const c2 = linha({ ...base, perfil: "creator", desconto_percentual: 50 })
     expect([c2.total_centavos, c2.pagamento]).toEqual([7950, "pix"])
     expect(prepararVenda({ ...base, perfil: "creator" }, "2026-10-15")).toEqual({ erro: "Creator: informe o % de desconto (100 = custo zero)." })
+    const u = linha({ ...base, perfil: "uso_proprio", tipo_desconto: "valor", desconto_centavos: 500 })
+    expect([u.perfil, u.desconto_percentual, u.total_centavos, u.pagamento, u.pago]).toEqual(["uso_proprio", 100, 0, "cortesia", true])
   })
   it("cartão: parcelas + taxa da maquininha → líquido; sem taxa configurada, recusa", () => {
     expect(liquidoDoCartao(15900, 1, taxas)).toEqual({ taxa_percentual: 3.49, taxa_centavos: 555, liquido_centavos: 15345 })

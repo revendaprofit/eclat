@@ -69,6 +69,10 @@ export async function GET(req: Request) {
     // da creator e as peças. Só o custo da peça entra (tudo o mais é combinado direto no WhatsApp, sem custo).
     let marketingCreators = 0
     const creators: { data: string; nome: string; pecas: string; custo_centavos: number }[] = []
+    // Uso próprio (sócia, 2026-10-23): peças que a sócia pega para ela e para a família. Não é venda nem COGS:
+    // o custo puro da peça sai numa linha própria, como as creators.
+    let usoProprio = 0
+    const usoProprioLista: { data: string; nome: string; pecas: string; custo_centavos: number }[] = []
     try {
       const vr = await sb(`venda_externa?select=data,cliente_nome,perfil,total_centavos,taxa_centavos,itens&pago=eq.true&cancelada_em=is.null&data=gte.${de}&data=lte.${ate}`)
       if (vr.ok)
@@ -77,21 +81,21 @@ export async function GET(req: Request) {
           receitaForaSite += v.total_centavos
           taxasForaSite += v.taxa_centavos ?? 0
           const ehCreator = v.perfil === "creator"
+          const ehUsoProprio = v.perfil === "uso_proprio"
           let custoDaVenda = 0
           for (const it of v.itens ?? []) {
             const c = custoMap[it.variant_id]
             if (c == null) itensSemCusto += it.quantidade
-            else if (ehCreator) custoDaVenda += c * it.quantidade
+            else if (ehCreator || ehUsoProprio) custoDaVenda += c * it.quantidade
             else cogs += c * it.quantidade
           }
+          const pecas = (v.itens ?? []).map((it) => `${it.quantidade}× ${it.produto ?? "peça"}${it.variacao ? ` ${it.variacao}` : ""}`).join(", ")
           if (ehCreator) {
             marketingCreators += custoDaVenda
-            creators.push({
-              data: v.data,
-              nome: v.cliente_nome,
-              pecas: (v.itens ?? []).map((it) => `${it.quantidade}× ${it.produto ?? "peça"}${it.variacao ? ` ${it.variacao}` : ""}`).join(", "),
-              custo_centavos: custoDaVenda,
-            })
+            creators.push({ data: v.data, nome: v.cliente_nome, pecas, custo_centavos: custoDaVenda })
+          } else if (ehUsoProprio) {
+            usoProprio += custoDaVenda
+            usoProprioLista.push({ data: v.data, nome: v.cliente_nome, pecas, custo_centavos: custoDaVenda })
           }
         }
     } catch {
@@ -104,7 +108,7 @@ export async function GET(req: Request) {
     const taxasTotal = taxas.total_centavos + taxasForaSite
 
     const lucro_bruto = receita - cogs
-    const resultado = receita + frete - cogs - taxasTotal - despesas - marketingCreators
+    const resultado = receita + frete - cogs - taxasTotal - despesas - marketingCreators - usoProprio
     const margem_bruta = receita > 0 ? lucro_bruto / receita : 0
 
     return NextResponse.json({
@@ -121,6 +125,8 @@ export async function GET(req: Request) {
       taxas_fora_site: taxasForaSite,
       marketing_creators: marketingCreators,
       creators,
+      uso_proprio: usoProprio,
+      uso_proprio_lista: usoProprioLista,
       pagamentos_sem_tarifa: taxas.sem_tarifa,
       despesas,
       despesas_por_categoria: porCategoria,

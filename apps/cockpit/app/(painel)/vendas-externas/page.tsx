@@ -139,7 +139,7 @@ export default function VendasExternasPage() {
     if (p === "embaixadora") {
       setFTipoDesc("percentual")
       setFDesconto(String(EMBAIXADORA_PERCENTUAL))
-    } else if (p === "creator") {
+    } else if (p === "creator" || p === "uso_proprio") {
       setFTipoDesc("percentual")
       setFDesconto("100")
     } else {
@@ -264,7 +264,7 @@ export default function VendasExternasPage() {
               <span className="text-meta text-eclat-texto-3 mr-1">Quem compra:</span>
               {PERFIS.map((p) => (
                 <button key={p.id} type="button" onClick={() => escolherPerfil(p.id)} className={chipCls(fPerfil === p.id)}>
-                  {p.id === "embaixadora" ? `Embaixadora · ${EMBAIXADORA_PERCENTUAL}% off` : p.id === "creator" ? "Creator · custo zero ou %" : p.label}
+                  {p.id === "embaixadora" ? `Embaixadora · ${EMBAIXADORA_PERCENTUAL}% off` : p.id === "creator" ? "Creator · custo zero ou %" : p.id === "uso_proprio" ? "Uso próprio · custo zero (eu e família)" : p.label}
                 </button>
               ))}
             </div>

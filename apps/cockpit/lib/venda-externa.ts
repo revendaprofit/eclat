@@ -1,11 +1,11 @@
 // Vendas fora do site (sócia, 2026-10-15/16). Regras puras: validação, desconto (R$ ou %), perfil (cliente /
-// embaixadora 20% / creator custo zero ou % livre), taxa do cartão por parcela → líquido, situação da cobrança e
+// embaixadora 20% / creator custo zero ou % livre / uso próprio = custo zero, sócia e família), taxa do cartão por parcela → líquido, situação da cobrança e
 // textos. Dinheiro em centavos. Desenho em docs/superpowers/specs/2026-10-15-vendas-fora-do-site-design.md.
 
 export type Pagamento = "pix" | "dinheiro" | "cartao" | "a_prazo" | "cortesia"
 export type Canal = "whatsapp" | "presencial" | "instagram" | "outro"
 export type TipoDesconto = "valor" | "percentual"
-export type Perfil = "cliente" | "embaixadora" | "creator"
+export type Perfil = "cliente" | "embaixadora" | "creator" | "uso_proprio"
 
 export const PAGAMENTOS: { id: Pagamento; label: string }[] = [
   { id: "pix", label: "Pix" },
@@ -24,6 +24,7 @@ export const PERFIS: { id: Perfil; label: string }[] = [
   { id: "cliente", label: "Cliente" },
   { id: "embaixadora", label: "Embaixadora" },
   { id: "creator", label: "Creator" },
+  { id: "uso_proprio", label: "Uso próprio" },
 ]
 /** Desconto fixo da embaixadora (sócia, 2026-10-16). */
 export const EMBAIXADORA_PERCENTUAL = 20
@@ -163,7 +164,8 @@ export function prepararVenda(v: NovaVenda, hoje: string, taxas: TaxasCartao = t
     if (!Number.isInteger(i.preco_centavos) || i.preco_centavos < 0) return { erro: `Preço inválido em ${i.produto}.` }
   }
   const perfil: Perfil = PERFIS.some((p) => p.id === v.perfil) ? (v.perfil as Perfil) : "cliente"
-  // Embaixadora: sempre 20%. Creator: custo zero (100%) ou o % informado.
+  // Embaixadora: sempre 20%. Creator: custo zero (100%) ou o % informado. Uso próprio (sócia, 23/10): peças que a
+  // sócia pega para ela e para a família — sempre custo zero; o custo puro da peça vai para o financeiro, como creator.
   let tipo: TipoDesconto = v.tipo_desconto === "percentual" ? "percentual" : "valor"
   let percentual = Number(v.desconto_percentual ?? 0)
   if (perfil === "embaixadora") {
@@ -172,6 +174,9 @@ export function prepararVenda(v: NovaVenda, hoje: string, taxas: TaxasCartao = t
   } else if (perfil === "creator") {
     tipo = "percentual"
     if (v.desconto_percentual == null || !Number.isFinite(percentual) || percentual < 0 || percentual > 100) return { erro: "Creator: informe o % de desconto (100 = custo zero)." }
+  } else if (perfil === "uso_proprio") {
+    tipo = "percentual"
+    percentual = 100
   }
   if (tipo === "percentual" && (!Number.isFinite(percentual) || percentual < 0 || percentual > 100)) return { erro: "Desconto em %: entre 0 e 100." }
   const subtotal = subtotalDe(itens)
