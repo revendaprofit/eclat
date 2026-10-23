@@ -95,13 +95,27 @@ export async function GET() {
       }
     }
 
-    // Lote por coleção (fichas)
-    const lotePorColecao: Record<string, { producao: number; custo: number }> = {}
+    // Lote por coleção (fichas × lote), separando o que a peça consumiu: tecido (kg), insumos do estoque (tiras,
+    // etiquetas, tag, lacre, Zebra), rateios de compras da produção (DTF, composição) e serviços (facção,
+    // acompanhamento). Sócia, 2026-10-23: "sobrou tecido nos rolos, calcule o que foi gasto".
+    type Lote = { producao: number; custo: number; tecido: number; tecido_kg: Record<string, number>; insumos: number; rateios: number; servicos: number }
+    const lotePorColecao: Record<string, Lote> = {}
     for (const p of pecas) {
       const col = p.collection ?? "Sem coleção"
-      const l = (lotePorColecao[col] = lotePorColecao[col] ?? { producao: 0, custo: 0 })
-      l.producao += p.lote_pecas
-      l.custo += (custoVar.get((p.medusa_variant_ids ?? [])[0] ?? "") ?? 0) * p.lote_pecas
+      const l = (lotePorColecao[col] = lotePorColecao[col] ?? { producao: 0, custo: 0, tecido: 0, tecido_kg: {}, insumos: 0, rateios: 0, servicos: 0 })
+      const n = p.lote_pecas
+      l.producao += n
+      l.custo += (custoVar.get((p.medusa_variant_ids ?? [])[0] ?? "") ?? 0) * n
+      for (const i of p.costing_item ?? []) {
+        const v = Math.round(i.consumption * i.unit_price_centavos) * n
+        if (i.kind === "material") {
+          l.tecido += v
+          l.tecido_kg[i.name] = (l.tecido_kg[i.name] ?? 0) + i.consumption * n
+        } else if (/rateio/i.test(i.name)) l.rateios += v
+        else if (i.kind === "servico") l.servicos += v
+        else l.insumos += v
+      }
+      l.servicos += (p.faccao_centavos + p.estampa_centavos) * n
     }
 
     // Quadros
@@ -113,23 +127,28 @@ export async function GET() {
       const desenvolvimento = soma(l.filter((d) => codigo(d.categoria?.nome) === "2"))
       const lote = lotePorColecao[col]
       // Investimento REAL na coleção (sócia, 2026-10-23): o que as peças consumiram pelas fichas (preço unitário =
-      // valor pago ÷ quantidade comprada; cada peça leva só o que vai nela: tecido, tiras 3D, etiquetas, tag, DTF,
-      // composição, facção, acompanhamento) × lote produzido, mais desenvolvimento e moldes. O que foi comprado e
-      // não entrou nas peças é sobra em estoque (aparece no quadro Insumos).
-      const consumido = lote?.custo ?? 0
-      const sobra = Math.max(0, producao - consumido)
-      if (consumido) sobrasPorColecao[col] = sobra
-      // Modelagem e pilotos NÃO entram na coleção (sócia, 2026-10-23): são investimento anual na marca, quadro próprio.
-      const totalReal = (consumido || producao) + desenvolvimento
+      // valor pago ÷ quantidade comprada; cada peça leva só o que vai nela) × lote. Tecido: consumido contra os rolos
+      // comprados (a sobra fica nos rolos). Insumos: consumidos do estoque geral. Facção, acompanhamento, DTF e
+      // composição: compras integrais da produção. Modelagem e pilotos ficam fora (quadro próprio).
+      const comprasTecido = soma(l.filter((d) => codigo(d.categoria?.nome) === "1" && /tecido|rolo|malha/i.test(d.descricao ?? "")))
+      const comprasOutras = producao - comprasTecido
+      const temFichas = !!lote && lote.producao > 0
+      const tecidoConsumido = temFichas ? lote.tecido : comprasTecido
+      const sobraTecido = Math.max(0, comprasTecido - tecidoConsumido)
+      const kgs = temFichas ? Object.entries(lote.tecido_kg).map(([nome, kg]) => `${kg.toFixed(1)} kg ${nome.replace(/\s*\(.*\)\s*$/, "")}`).join(" · ") : ""
+      const totalReal = tecidoConsumido + (temFichas ? lote.insumos : 0) + comprasOutras + desenvolvimento
+      if (temFichas) sobrasPorColecao[col] = sobraTecido
       return {
         id: `colecao:${col}`,
         titulo: col,
         total: totalReal,
         linhas: [
-          { rotulo: consumido ? "Peças prontas pelas fichas (tecido, aviamentos, tags, facção)" : "Produção (tecido, facção, aviamentos)", valor: consumido || producao, nota: consumido ? `compras de produção ${brl(producao)} · sobra em estoque ${brl(sobra)}` : undefined },
+          { rotulo: "Tecido consumido pelas peças", valor: tecidoConsumido, nota: temFichas ? `${kgs} · comprado ${brl(comprasTecido)} · sobra nos rolos ${brl(sobraTecido)}` : undefined },
+          ...(temFichas ? [{ rotulo: "Tiras 3D, etiquetas, tag, lacre e Zebra (do estoque de insumos)", valor: lote.insumos }] : []),
+          { rotulo: "Facção, acompanhamento, DTF, composição e zíper (compras da produção)", valor: comprasOutras },
           { rotulo: "Desenvolvimento (estilista, pilotos, envios)", valor: desenvolvimento },
         ].filter((x) => x.valor > 0),
-        nota: lote?.producao ? `${lote.producao} peças prontas · ${brl(Math.round(totalReal / lote.producao))} investidos por peça` : undefined,
+        nota: temFichas ? `${lote.producao} peças prontas · ${brl(Math.round(totalReal / lote.producao))} investidos por peça` : undefined,
         lancamentos: l.map(lanc),
       }
     })
@@ -170,8 +189,13 @@ export async function GET() {
       lancamentos: [...social.lancamentos, ...trafego.lancamentos, ...fotos.lancamentos, ...site.lancamentos, ...creators.lancamentos].sort((a, b) => (a.data < b.data ? 1 : -1)),
     }
     const insumos = mk("insumos", "Insumos de estoque", ["3"])
+    const insumosConsumidos = Object.values(lotePorColecao).reduce((s2, l) => s2 + l.insumos, 0)
+    if (insumosConsumidos > 0) {
+      insumos.linhas.push({ rotulo: "Consumido pelas peças produzidas", valor: insumosConsumidos, nota: "tiras 3D, etiquetas, tags, lacres, Zebra" })
+      insumos.linhas.push({ rotulo: "Estoque restante (compras − consumido)", valor: Math.max(0, insumos.total - insumosConsumidos), nota: "para as próximas produções" })
+    }
     for (const [col, sobra] of Object.entries(sobrasPorColecao)) {
-      if (sobra > 0) insumos.linhas.push({ rotulo: `Sobra das compras da ${col} (tecido, DTF, composição)`, valor: sobra, nota: "estoque para a próxima produção; não soma no total do quadro" })
+      if (sobra > 0) insumos.linhas.push({ rotulo: `Tecido que sobrou nos rolos da ${col}`, valor: sobra, nota: "estoque de tecido; não soma no total do quadro" })
     }
     const embalagem = mk("embalagem", "Embalagem", ["4"])
     const fixos = mk("fixos", "Fixos mensais e anuais", ["7"])
