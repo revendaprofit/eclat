@@ -30,6 +30,7 @@ const GRUPOS: { titulo: string | null; itens: { href: string; label: string }[] 
       { href: "/produtos", label: "Produtos e estoque" },
       { href: "/conjuntos", label: "Conjuntos" },
       { href: "/custos", label: "Custos de coleção" },
+      { href: "/almoxarifado", label: "Almoxarifado" },
     ],
   },
   {

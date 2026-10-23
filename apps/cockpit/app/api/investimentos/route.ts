@@ -30,7 +30,7 @@ export async function GET() {
       sb("finance_expense?select=id,data,descricao,valor_centavos,fornecedor,recorrencia,etapa,observacao,categoria:finance_expense_category(nome)&order=data.desc"),
       sb("costing_piece?select=id,name,colorway,collection,lote_pecas,faccao_centavos,estampa_centavos,perda_pct,preco_venda_centavos,medusa_variant_ids,costing_model(name),costing_item(kind,name,unit,consumption,unit_price_centavos,position)&order=name.asc"),
       sb("venda_externa?select=data,itens,perfil,total_centavos,subtotal_centavos&pago=eq.true&cancelada_em=is.null"),
-      sb("site_content?key=eq.cockpit.insumos_contagem&select=value"),
+      sb("site_content?key=eq.cockpit.almoxarifado&select=value"),
     ])
     if (!dr.ok) throw new Error(`despesas: HTTP ${dr.status}`)
     const despesas = (await dr.json()) as Despesa[]
@@ -205,23 +205,22 @@ export async function GET() {
     for (const [col, sobra] of Object.entries(sobrasPorColecao)) {
       if (sobra > 0) insumos.linhas.push({ rotulo: `Tecido que sobrou nos rolos da ${col}`, valor: sobra, nota: "estoque de tecido; não soma no total do quadro" })
     }
-    // Contagem física de sobras (sócia, 23/10/2026; site_content cockpit.insumos_contagem). Estoque útil = sobra − 5%
-    // (perda, uso próprio, reposição). Consumo real = comprado − sobra, quando a quantidade comprada é conhecida.
-    type Contagem = { data: string; reserva_pct: number; nota?: string; itens: { grupo: string; nome: string; sobra: number; comprado?: number | null; unit_centavos?: number | null }[] }
-    const contagem = cr.ok ? (((await cr.json()) as { value: Contagem }[])[0]?.value ?? null) : null
-    if (contagem) {
-      const fator = 1 - (contagem.reserva_pct || 0) / 100
+    // Almoxarifado (site_content cockpit.almoxarifado, tela própria): sobras contadas; estoque útil = contado − reserva.
+    type Almox = { reserva_pct: number; nota?: string | null; itens: { grupo: string; nome: string; unidade: string; quantidade: number; custo_unitario_centavos: number | null; atualizado_em?: string | null }[] }
+    const almox = cr.ok ? (((await cr.json()) as { value: Almox }[])[0]?.value ?? null) : null
+    if (almox?.itens?.length) {
+      const fator = 1 - (almox.reserva_pct || 0) / 100
       let valorEstoque = 0
-      const linhasContagem: Quadro["linhas"] = []
-      for (const it of contagem.itens) {
-        const util = Math.floor(it.sobra * fator)
-        const valor = it.unit_centavos ? util * it.unit_centavos : 0
+      const linhasAlmox: Quadro["linhas"] = []
+      for (const it of almox.itens) {
+        const util = Math.floor(it.quantidade * fator)
+        const valor = it.custo_unitario_centavos ? util * it.custo_unitario_centavos : 0
         valorEstoque += valor
-        const consumo = it.comprado != null ? ` · usadas ${it.comprado - it.sobra} de ${it.comprado}` : ""
-        linhasContagem.push({ rotulo: `${it.grupo} · ${it.nome}: ${it.sobra} contadas, ${util} úteis${consumo}`, valor })
+        linhasAlmox.push({ rotulo: `${it.grupo} · ${it.nome}: ${it.quantidade} ${it.unidade} contadas, ${util} úteis`, valor })
       }
-      insumos.linhas.push({ rotulo: `Contagem de ${contagem.data.split("-").reverse().join("/")}: estoque útil (sobra − ${contagem.reserva_pct}% de reserva)`, valor: valorEstoque, nota: contagem.nota })
-      insumos.linhas.push(...linhasContagem)
+      const ultima = almox.itens.reduce((m, i) => (i.atualizado_em && i.atualizado_em > m ? i.atualizado_em : m), "").slice(0, 10)
+      insumos.linhas.push({ rotulo: `Almoxarifado (contagem de ${ultima.split("-").reverse().join("/")}): estoque útil, já sem ${almox.reserva_pct}% de reserva`, valor: valorEstoque, nota: almox.nota ?? undefined })
+      insumos.linhas.push(...linhasAlmox)
     }
     const embalagem = mk("embalagem", "Embalagem", ["4"])
     const fixos = mk("fixos", "Fixos mensais e anuais", ["7"])
