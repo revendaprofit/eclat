@@ -63,14 +63,18 @@ export async function GET() {
     const colecaoDe = (vid: string | null) => (vid ? (colecaoVar.get(vid) ?? "Sem coleção") : "Sem coleção")
 
     // Vendas por coleção
-    type V = { pecas: number; receita: number; custo: number; site: number; fora: number }
+    type V = { pecas: number; receita: number; custo: number; site: number; fora: number; itens: Record<string, { pecas: number; receita: number }> }
     const vendas: Record<string, V> = {}
     const add = (col: string, qtd: number, receita: number, vid: string | null, origem: "site" | "fora") => {
-      const v = (vendas[col] = vendas[col] ?? { pecas: 0, receita: 0, custo: 0, site: 0, fora: 0 })
+      const v = (vendas[col] = vendas[col] ?? { pecas: 0, receita: 0, custo: 0, site: 0, fora: 0, itens: {} })
       v.pecas += qtd
       v.receita += receita
       v.custo += (vid ? custoVar.get(vid) ?? 0 : 0) * qtd
       v[origem] += receita
+      const nome = (vid ? nomeVar.get(vid) : null) ?? "peça"
+      const it = (v.itens[nome] = v.itens[nome] ?? { pecas: 0, receita: 0 })
+      it.pecas += qtd
+      it.receita += receita
     }
     try {
       for (const it of await medusaItensVendidos()) add(colecaoDe(it.variant_id), it.quantity, Math.round(it.total * 100), it.variant_id, "site")
@@ -138,6 +142,11 @@ export async function GET() {
     const fotos = mk("fotos", "Fotos e vídeos", ["5c"])
     const site = mk("site", "Site e e-commerce", ["5d"])
     const creators = mk("creators", "Creators e embaixadoras", ["5e"], { total: creatorsPecas, linhas: creatorsLinhas })
+    // Peças dadas a creators entram como "lançamentos" do quadro (clicou, vê o que compõe a soma).
+    creators.lancamentos = [
+      ...creators.lancamentos,
+      ...creatorsLinhas.map((l, i) => ({ id: `creator-${i}`, data: l.nota ?? "", descricao: l.rotulo, fornecedor: "peça para creator (custo)", etapa: null, valor: l.valor })),
+    ]
     const marketing: Quadro = {
       id: "marketing",
       titulo: "Marketing (tudo)",
@@ -149,7 +158,7 @@ export async function GET() {
         { rotulo: "Site e e-commerce", valor: site.total },
         { rotulo: "Creators e embaixadoras (peças)", valor: creators.total },
       ].filter((x) => x.valor > 0),
-      lancamentos: [],
+      lancamentos: [...social.lancamentos, ...trafego.lancamentos, ...fotos.lancamentos, ...site.lancamentos, ...creators.lancamentos].sort((a, b) => (a.data < b.data ? 1 : -1)),
     }
     const insumos = mk("insumos", "Insumos de estoque", ["3"])
     const embalagem = mk("embalagem", "Embalagem", ["4"])
@@ -162,7 +171,13 @@ export async function GET() {
     for (const d of despesas) porAno[d.data.slice(0, 4)] = (porAno[d.data.slice(0, 4)] ?? 0) + d.valor_centavos
 
     const vendasPorColecao = Object.entries(vendas)
-      .map(([colecao, v]) => ({ colecao, ...v, investido: quadrosColecao.find((q) => q.titulo === colecao)?.total ?? 0, producao: lotePorColecao[colecao]?.producao ?? 0 }))
+      .map(([colecao, v]) => ({
+        colecao,
+        ...v,
+        itens: Object.entries(v.itens).map(([nome, x]) => ({ nome, ...x })).sort((a, b) => b.receita - a.receita),
+        investido: quadrosColecao.find((q) => q.titulo === colecao)?.total ?? 0,
+        producao: lotePorColecao[colecao]?.producao ?? 0,
+      }))
       .sort((a, b) => b.receita - a.receita)
 
     return NextResponse.json({
