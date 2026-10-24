@@ -54,7 +54,8 @@ type Banner = {
 type BenefitItem = { title: string; text?: string }
 type Beneficios = { visible?: boolean; heading?: string; items?: BenefitItem[] }
 type News = { visible?: boolean; title?: string; text?: string; button_label?: string }
-type Depoimento = { quote: string; author?: string }
+type Depoimento = { quote: string; author?: string; origem?: string; image_url?: string; image_width?: number; image_height?: number; tipo?: "print" | "foto"; produtos?: string[] }
+type ProdutoVitrine = { id: string; title: string; handle: string }
 type Depoimentos = { visible?: boolean; heading?: string; items?: Depoimento[] }
 type FaqItem = { q: string; a: string }
 type Faq = { visible?: boolean; heading?: string; items?: FaqItem[] }
@@ -92,6 +93,7 @@ export default function VitrinePage() {
   const [depoimentos, setDepoimentos] = useState<Depoimentos>({})
   const [faq, setFaq] = useState<Faq>({})
   const [colecoes, setColecoes] = useState<Colecao[]>([])
+  const [produtos, setProdutos] = useState<ProdutoVitrine[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState<string | null>(null)
 
@@ -114,6 +116,7 @@ export default function VitrinePage() {
         fetch(`/api/site-content/${k}`, { cache: "no-store" }).then((r) => r.json())
       ),
       fetch("/api/taxonomy/collections", { cache: "no-store" }).then((r) => r.json()),
+      fetch("/api/products", { cache: "no-store" }).then((r) => r.json()).catch(() => []),
     ])
     const ok = (x: unknown) => (x && !(x as { error?: string }).error ? x : {})
     setHero(ok(h) as Hero)
@@ -168,14 +171,13 @@ export default function VitrinePage() {
           { title: "Frete para todo o Brasil", text: "Rápido e rastreado." },
           { title: "Troca fácil", text: "30 dias para trocar ou devolver." },
         ]
-  const depItems: Depoimento[] =
-    depoimentos.items && depoimentos.items.length
-      ? depoimentos.items
-      : [
-          { quote: "O caimento é perfeito, valoriza demais. Não tiro mais.", author: "Marina S." },
-          { quote: "Tecido premium de verdade — sustenta no treino e fica linda na rua.", author: "Camila R." },
-          { quote: "Entrega rápida e a peça é ainda mais bonita pessoalmente.", author: "Juliana P." },
-        ]
+  // Sem exemplo inventado: depoimento só de cliente real (lib/util/depoimentos.ts na vitrine).
+  const depItems: Depoimento[] = depoimentos.items ?? []
+  const setDep = (i: number, patch: Partial<Depoimento>) => {
+    const items = [...depItems]
+    items[i] = { ...items[i], ...patch }
+    setDepoimentos({ ...depoimentos, items })
+  }
   const faqItems: FaqItem[] =
     faq.items && faq.items.length
       ? faq.items
@@ -615,25 +617,73 @@ export default function VitrinePage() {
           <label className={label}>Título da seção</label>
           <input value={depoimentos.heading ?? "O que dizem nossos clientes"} onChange={(e) => setDepoimentos({ ...depoimentos, heading: e.target.value })} className={input} />
         </div>
+        <p className="text-meta text-eclat-texto-3">
+          Só cliente real, com autorização. <b>Print</b> = recorte da mensagem (sem nome nem foto de perfil), aparece na home e nas
+          páginas das peças marcadas. <b>Foto</b> = a cliente com o look, aparece só na faixa &quot;Quem já veste&quot; das peças marcadas.
+          Marque as peças em cada item; sem marcação, a página da peça mostra o bloco geral.
+        </p>
         {depItems.map((it, i) => (
-          <div key={i} className="border border-eclat-pedra/30 rounded p-3 flex flex-col gap-2">
-            <div>
-              <label className={label}>Depoimento {i + 1}</label>
-              <textarea value={it.quote} onChange={(e) => {
-                const items = [...depItems]; items[i] = { ...it, quote: e.target.value }; setDepoimentos({ ...depoimentos, items })
-              }} rows={2} className={input + " resize-y"} />
+          <div key={i} className="border border-eclat-pedra/30 rounded p-3 flex flex-col gap-3">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <span className={label + " mb-0"}>Item {i + 1}</span>
+                {(["print", "foto"] as const).map((t) => (
+                  <button key={t} type="button" onClick={() => setDep(i, { tipo: t })} className={`text-meta px-2.5 py-1 rounded-full border ${(it.tipo ?? "print") === t ? "bg-eclat-grafite text-eclat-luz border-eclat-grafite" : "border-eclat-pedra/50 bg-white hover:bg-eclat-areia/40"}`}>
+                    {t === "print" ? "Print da mensagem" : "Foto com o look"}
+                  </button>
+                ))}
+              </div>
+              <button type="button" onClick={() => setDepoimentos({ ...depoimentos, items: depItems.filter((_, k) => k !== i) })} className="text-meta text-eclat-texto-3 hover:text-red-700">✕ remover</button>
             </div>
-            <div>
-              <label className={label}>Autora</label>
-              <input value={it.author || ""} onChange={(e) => {
-                const items = [...depItems]; items[i] = { ...it, author: e.target.value }; setDepoimentos({ ...depoimentos, items })
-              }} className={input} placeholder="Marina S." />
+            <div className="grid grid-cols-1 md:grid-cols-[auto_1fr] gap-3 items-start">
+              <div className="flex flex-col gap-1">
+                <span className={label}>{it.tipo === "foto" ? "Foto" : "Print"}</span>
+                {it.image_url && <img src={it.image_url} alt="" className="w-28 rounded border border-eclat-pedra/40" />}
+                <UploadImagem url={it.image_url} onChange={(u) => setDep(i, { image_url: u, image_width: undefined, image_height: undefined })} />
+              </div>
+              <div className="flex flex-col gap-2">
+                <div>
+                  <label className={label}>{it.tipo === "foto" ? "Frase (opcional)" : "Texto da mensagem"}</label>
+                  <textarea value={it.quote} onChange={(e) => setDep(i, { quote: e.target.value })} rows={2} className={input + " resize-y"} />
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className={label}>Nome</label>
+                    <input value={it.author || ""} onChange={(e) => setDep(i, { author: e.target.value })} className={input} placeholder="Luana" />
+                  </div>
+                  <div>
+                    <label className={label}>Origem</label>
+                    <select value={it.origem || ""} onChange={(e) => setDep(i, { origem: e.target.value || undefined })} className={input}>
+                      <option value="">—</option>
+                      <option value="WhatsApp">WhatsApp</option>
+                      <option value="Instagram">Instagram</option>
+                    </select>
+                  </div>
+                </div>
+                <div>
+                  <label className={label}>Peças (faixa &quot;Quem já veste&quot;)</label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {produtos.map((p) => {
+                      const on = (it.produtos ?? []).includes(p.handle)
+                      return (
+                        <button key={p.id} type="button" onClick={() => setDep(i, { produtos: on ? (it.produtos ?? []).filter((h) => h !== p.handle) : [...(it.produtos ?? []), p.handle] })} className={`text-meta px-2 py-0.5 rounded-full border ${on ? "bg-eclat-dourado/40 border-eclat-dourado text-eclat-texto" : "border-eclat-pedra/40 bg-white hover:bg-eclat-areia/40 text-eclat-texto-2"}`}>
+                          {p.title}
+                        </button>
+                      )
+                    })}
+                    {produtos.length === 0 && <span className="text-meta text-eclat-texto-3">carregando peças…</span>}
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         ))}
-        <button onClick={() => salvar("home.testimonials", { ...depoimentos, items: depItems })} disabled={saving === "home.testimonials"} className={btn}>
-          {saving === "home.testimonials" ? "Salvando…" : "Salvar depoimentos"}
-        </button>
+        <div className="flex items-center gap-3">
+          <button type="button" onClick={() => setDepoimentos({ ...depoimentos, items: [...depItems, { quote: "", author: "", tipo: "print", origem: "WhatsApp" }] })} className="text-meta px-3 py-1.5 rounded-md border border-eclat-pedra/50 bg-white hover:bg-eclat-areia/40">+ Depoimento ou foto</button>
+          <button onClick={() => salvar("home.testimonials", { ...depoimentos, items: depItems })} disabled={saving === "home.testimonials"} className={btn}>
+            {saving === "home.testimonials" ? "Salvando…" : "Salvar depoimentos"}
+          </button>
+        </div>
       </section>
 
       {/* FAQ (perguntas frequentes — GEO) */}

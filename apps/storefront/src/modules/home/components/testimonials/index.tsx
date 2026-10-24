@@ -1,6 +1,6 @@
 import Image from "next/image"
 import { HOME_DEFAULTS, Testimonials as TestimonialsType } from "@modules/home/content"
-import { depoimentosReais } from "@lib/util/depoimentos"
+import { depoimentosReais, somentePrints } from "@lib/util/depoimentos"
 
 // Provas sociais — editável no Cockpit (site_content home.testimonials).
 // 2026-10-11 (sócia): o print real da mensagem "fica mais real e confiável" — cada card é o print do
@@ -9,7 +9,8 @@ import { depoimentosReais } from "@lib/util/depoimentos"
 // Computador: mosaico em 4 colunas estreitas (alturas diferentes); celular: rolagem lateral com encaixe.
 export default function Testimonials({ content, max, compacto }: { content?: TestimonialsType | null; max?: number; compacto?: boolean }) {
   // Até 8 na home (sócia, 2026-10-11: "está muito grande"); a PDP passa 6.
-  const items = depoimentosReais(content?.items).slice(0, max || 8)
+  // Fotos de cliente com o look ficam só na faixa da peça (PDP); aqui, prints e falas.
+  const items = somentePrints(depoimentosReais(content?.items)).slice(0, max || 8)
   if (items.length === 0) return null
   const heading = content?.heading ?? HOME_DEFAULTS.testimonials.heading
   const subheading = content?.subheading ?? HOME_DEFAULTS.testimonials.subheading
