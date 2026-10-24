@@ -613,7 +613,7 @@ export default function VitrinePage() {
         </div>
         <div>
           <label className={label}>Título da seção</label>
-          <input value={depoimentos.heading ?? "Quem veste, ama"} onChange={(e) => setDepoimentos({ ...depoimentos, heading: e.target.value })} className={input} />
+          <input value={depoimentos.heading ?? "O que dizem nossos clientes"} onChange={(e) => setDepoimentos({ ...depoimentos, heading: e.target.value })} className={input} />
         </div>
         {depItems.map((it, i) => (
           <div key={i} className="border border-eclat-pedra/30 rounded p-3 flex flex-col gap-2">

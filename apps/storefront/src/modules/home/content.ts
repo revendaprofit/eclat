@@ -155,7 +155,7 @@ export const HOME_DEFAULTS = {
   } as Newsletter,
   testimonials: {
     // Sem itens de propósito: depoimento só de cliente real, gravado no Cockpit (lib/util/depoimentos.ts).
-    heading: "O que elas dizem",
+    heading: "O que dizem nossos clientes",
     subheading: "Mensagens reais, do jeito que chegaram no WhatsApp e no Instagram.",
     items: [],
   } as Testimonials,
