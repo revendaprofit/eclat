@@ -12,6 +12,7 @@ import { HttpTypes } from "@medusajs/types"
 import Track from "@modules/analytics/track"
 import { orderToPurchase } from "@modules/analytics/items"
 import { fireCapiPurchase } from "@modules/analytics/capi"
+import { ehPedidoDeTeste } from "@lib/util/teste-interno"
 import { fraseEnvios, getPrevenda, linkClubeWhatsapp } from "@lib/data/prevenda"
 
 type OrderCompletedTemplateProps = {
@@ -28,15 +29,19 @@ export default async function OrderCompletedTemplate({
   // CAPI Purchase server-side (dedup via event_id purchase_<orderId>).
   // No-op se META_CAPI_TOKEN / Pixel não estiverem configurados.
   await fireCapiPurchase(order)
+  // Pedido de teste (produto oculto ou navegador marcado) não vai para o dataLayer.
+  const pedidoDeTeste = ehPedidoDeTeste(order as never)
   const prevenda = await getPrevenda()
 
   return (
     <div className="py-6 min-h-[calc(100vh-64px)]">
-      <Track
-        event="purchase"
-        ecommerce={orderToPurchase(order)}
-        eventId={`purchase_${order.id}`}
-      />
+      {!pedidoDeTeste && (
+        <Track
+          event="purchase"
+          ecommerce={orderToPurchase(order)}
+          eventId={`purchase_${order.id}`}
+        />
+      )}
       <div className="content-container flex flex-col justify-center items-center gap-y-10 max-w-4xl h-full w-full">
         {isOnboarding && <OnboardingCta orderId={order.id} />}
         <div

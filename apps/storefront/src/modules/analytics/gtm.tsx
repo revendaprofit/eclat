@@ -6,11 +6,13 @@ import Script from "next/script"
 
 // Renderizar DENTRO do <body> (nunca como filho direto de <html> — quebra a
 // hidratação). A verificação do Search Console vai pela Metadata API no layout.
+// Navegador de teste interno (`window.__eclatTeste`, gravado pelo ConsentDefault a partir do cookie
+// `eclat_teste`): o GTM não carrega — sem pixel da Meta, GA4 e Google Ads. Ver lib/util/teste-interno.ts.
 export function GtmHead({ gtmId }: { gtmId?: string }) {
   if (!gtmId) return null
   return (
     <Script id="gtm-base" strategy="afterInteractive">
-      {`(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer','${gtmId}');`}
+      {`if(!window.__eclatTeste)(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer','${gtmId}');`}
     </Script>
   )
 }

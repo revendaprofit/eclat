@@ -4,6 +4,7 @@ import { headers, cookies } from "next/headers"
 import { HttpTypes } from "@medusajs/types"
 import { getSiteContent } from "@lib/data/site-content"
 import { getBaseURL } from "@lib/util/env"
+import { COOKIE_TESTE, ehPedidoDeTeste } from "@lib/util/teste-interno"
 import { Marketing } from "./config"
 
 // API de Conversões da Meta (server-side). Envia eventos direto do servidor,
@@ -33,12 +34,19 @@ export type CapiResult = {
   meta?: unknown // resposta bruta da Graph API (events_received, fbtrace_id, error)
 }
 
+// Navegador de teste interno (`?eclat_teste=1`, lib/util/teste-interno.ts).
+async function navegadorDeTeste(): Promise<boolean> {
+  return (await cookies()).get(COOKIE_TESTE)?.value === "1"
+}
+
 async function sendCapi(eventName: string, opts: CapiOpts): Promise<CapiResult> {
   const token = process.env.META_CAPI_TOKEN
   const marketing = await getSiteContent<Marketing>("marketing")
   const pixel = marketing?.meta_pixel_id
   const configured = { pixel: Boolean(pixel), token: Boolean(token) }
   if (!token || !pixel) return { configured, sent: false }
+  // Teste interno nunca vai para a Meta — exceto o diagnóstico com código de teste (aba "Eventos de teste").
+  if (!opts.testEventCode && (await navegadorDeTeste())) return { configured, sent: false }
 
   const h = await headers()
   const c = await cookies()
@@ -99,8 +107,10 @@ async function sendCapi(eventName: string, opts: CapiOpts): Promise<CapiResult> 
 // (apps/backend/src/subscribers/compra-meta.ts). Com Pix a cliente paga no app do banco e muitas
 // vezes não volta: a página de confirmação não abre e o Purchase daqui nunca sai. Vão no metadata
 // do carrinho (que vira metadata do pedido) e só existem com o aceite de cookies.
+// Navegador de teste interno: em vez dos sinais, marca `eclat_teste` — o backend não manda o Purchase.
 export async function sinaisDoMeta(): Promise<Record<string, string>> {
   const c = await cookies()
+  if (c.get(COOKIE_TESTE)?.value === "1") return { eclat_teste: "1" }
   if (c.get("eclat_consent")?.value !== "granted") return {}
   const h = await headers()
   const sinais: Record<string, string> = {}
@@ -134,6 +144,7 @@ export async function fireCapiTest(testEventCode?: string): Promise<CapiResult> 
 // Dispara Purchase server-side a partir do pedido concluído.
 /* eslint-disable @typescript-eslint/no-explicit-any */
 export async function fireCapiPurchase(order: HttpTypes.StoreOrder) {
+  if (ehPedidoDeTeste(order as any)) return
   await sendCapi("Purchase", {
     eventId: `purchase_${order.id}`,
     value: typeof (order as any).total === "number" ? (order as any).total : undefined,

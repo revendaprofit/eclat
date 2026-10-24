@@ -17,7 +17,7 @@ export type PedidoParaMeta = {
   total?: unknown
   currency_code?: string | null
   metadata?: Record<string, unknown> | null
-  items?: Array<{ variant_id?: string | null; product_id?: string | null; id: string; quantity?: unknown; unit_price?: unknown }> | null
+  items?: Array<{ variant_id?: string | null; product_id?: string | null; product_handle?: string | null; id: string; quantity?: unknown; unit_price?: unknown }> | null
   shipping_address?: { phone?: string | null; first_name?: string | null; last_name?: string | null; city?: string | null; province?: string | null; postal_code?: string | null } | null
 }
 
@@ -32,6 +32,27 @@ export function telefoneParaMeta(bruto: string): string | undefined {
   const d = soDigitos(bruto)
   if (d.length < 10) return undefined
   return d.length <= 11 ? `55${d}` : d
+}
+
+// Compra de teste interno — nunca vai para a Meta (suja a otimização e os públicos dos anúncios):
+// navegador marcado com `?eclat_teste=1` (a vitrine grava `metadata.eclat_teste` no carrinho), produto
+// oculto de teste (scripts/produto-teste.mjs) ou e-mail de teste. E-mails reais de teste só por env
+// (`EMAILS_TESTE`, separados por vírgula) — o repositório é público.
+export const HANDLE_PRODUTO_TESTE = "teste-interno"
+const DOMINIOS_TESTE = ["@eclat.local", "@exemplo.com", "@local.test"]
+
+export function ehPedidoDeTeste(pedido: PedidoParaMeta, emailsTeste = process.env.EMAILS_TESTE ?? ""): boolean {
+  const m = pedido.metadata?.eclat_teste
+  if (m === true || m === "1" || m === 1) return true
+  if ((pedido.items ?? []).some((it) => it.product_handle === HANDLE_PRODUTO_TESTE)) return true
+  const email = texto(pedido.email)?.toLowerCase()
+  if (!email) return false
+  if (DOMINIOS_TESTE.some((d) => email.endsWith(d))) return true
+  return emailsTeste
+    .split(",")
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean)
+    .includes(email)
 }
 
 /** Corpo do evento (puro, testável). `agora` em ms. */
@@ -102,6 +123,7 @@ async function pixelDoCockpit(): Promise<string | undefined> {
 export async function enviarCompraParaMeta(pedido: PedidoParaMeta, lojaUrl: string): Promise<string> {
   const token = process.env.META_CAPI_TOKEN
   if (!token) return "desligado (sem META_CAPI_TOKEN)"
+  if (ehPedidoDeTeste(pedido)) return "ignorado (pedido de teste interno)"
   const pixel = await pixelDoCockpit()
   if (!pixel) return "desligado (sem pixel no Cockpit)"
 

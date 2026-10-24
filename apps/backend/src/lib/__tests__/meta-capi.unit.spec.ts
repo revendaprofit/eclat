@@ -1,5 +1,5 @@
 import crypto from "crypto"
-import { montarEventoDeCompra, telefoneParaMeta } from "../meta-capi"
+import { ehPedidoDeTeste, montarEventoDeCompra, telefoneParaMeta } from "../meta-capi"
 
 const sha = (s: string) => crypto.createHash("sha256").update(s).digest("hex")
 
@@ -53,5 +53,25 @@ describe("montarEventoDeCompra", () => {
     expect(semSinais.action_source).toBe("system_generated")
     expect(semSinais.user_data.fbp).toBeUndefined()
     expect("event_source_url" in semSinais).toBe(false)
+  })
+})
+
+describe("ehPedidoDeTeste", () => {
+  it("pedido de cliente segue medido", () => {
+    expect(ehPedidoDeTeste({ ...PEDIDO, email: "cliente@gmail.com" }, "")).toBe(false)
+  })
+
+  it("navegador marcado (?eclat_teste=1 → metadata.eclat_teste)", () => {
+    expect(ehPedidoDeTeste({ ...PEDIDO, email: "x@gmail.com", metadata: { eclat_teste: "1" } }, "")).toBe(true)
+  })
+
+  it("produto oculto de teste", () => {
+    const items = [{ id: "it_t", product_handle: "teste-interno", quantity: 1, unit_price: 1 }]
+    expect(ehPedidoDeTeste({ ...PEDIDO, email: "x@gmail.com", items }, "")).toBe(true)
+  })
+
+  it("e-mail de teste: domínio de enfeite ou lista do env", () => {
+    expect(ehPedidoDeTeste({ ...PEDIDO, email: "operador@eclat.local" }, "")).toBe(true)
+    expect(ehPedidoDeTeste({ ...PEDIDO, email: " Teste.Leo@Gmail.com " }, "outra@x.com, teste.leo@gmail.com")).toBe(true)
   })
 })

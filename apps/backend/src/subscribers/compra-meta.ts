@@ -1,6 +1,7 @@
 // order.placed → Purchase na API de Conversões da Meta (lib/meta-capi.ts).
 // O pedido só nasce com o pagamento aprovado, então `order.placed` É a compra.
 // Falha de medição NUNCA pode afetar o pedido: tudo aqui é try/catch + log.
+// Pedido de teste interno não é enviado (`ehPedidoDeTeste` em lib/meta-capi.ts).
 import type { SubscriberArgs, SubscriberConfig } from "@medusajs/framework"
 import { ContainerRegistrationKeys } from "@medusajs/framework/utils"
 import { enviarCompraParaMeta } from "../lib/meta-capi"

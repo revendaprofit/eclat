@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { SCRIPT_MARCADOR_TESTE } from "@lib/util/teste-interno"
 
 // Google Consent Mode v2 + banner de cookies (LGPD).
 // Default = negado (cookieless pings). O usuário concede/recusa no banner.
@@ -37,12 +38,13 @@ function setConsent(granted: boolean) {
 // a ordem é garantida. NÃO usar next/script fora do <body>: <script> como filho
 // direto de <html> é HTML inválido e QUEBRA a hidratação do React (bug que
 // deixava o botão de compra travado em "Out of stock").
+// O marcador de teste interno (`?eclat_teste=1`) roda aqui também, antes do GTM.
 export function ConsentDefault() {
   return (
     <script
       id="consent-default"
       dangerouslySetInnerHTML={{
-        __html: `window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('consent','default',{ad_storage:'denied',ad_user_data:'denied',ad_personalization:'denied',analytics_storage:'denied',wait_for_update:500});`,
+        __html: SCRIPT_MARCADOR_TESTE + `window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('consent','default',{ad_storage:'denied',ad_user_data:'denied',ad_personalization:'denied',analytics_storage:'denied',wait_for_update:500});`,
       }}
     />
   )
