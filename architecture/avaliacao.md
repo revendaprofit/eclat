@@ -54,3 +54,14 @@ não a trata (webhook do WhatsApp).
 ## Testes
 `apps/backend/src/lib/__tests__/avaliacao-regras.unit.spec.ts`, `apps/cockpit/lib/avaliacao.test.ts`.
 Não testado em execução: job contra Supabase/Evolution reais (depende da migration e do deploy).
+
+## Prints, fotos de clientes e faixa por peça (sócia, 2026-10-23)
+Cada item de `home.testimonials` pode ter `tipo` (`print` = recorte da mensagem, padrão; `foto` = a cliente com o
+look, precisa de imagem e nome, frase opcional) e `produtos` (handles das peças). Regras em
+`apps/storefront/src/lib/util/depoimentos.ts`:
+- **Home**: só prints e falas (nunca fotos), até 8.
+- **PDP**: se há itens marcados para a peça, a faixa **"Quem já veste"** mostra só esse material (prints e fotos
+  misturados, `modules/products/components/pdp-testimonials`); sem marcação, cai no bloco geral (6).
+- **Cockpit → Vitrine → Depoimentos**: adicionar/remover, tipo, upload, origem e chips das peças. O editor não traz
+  exemplo inventado. O clique "publicar" das Avaliações continua acrescentando a fala sem `produtos` (bloco geral).
+- Imagens só do Storage do site (`site/depoimentos/`), sempre sem nome, foto de perfil ou cabeçalho do WhatsApp.
