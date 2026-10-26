@@ -130,3 +130,9 @@ Decisão do dono: a Camila fixa o cupom no grupo (texto em `docs/marketing/mensa
 robô entrega o cupom na 2ª mensagem (`CLUBE_CONVITE` em `src/lib/clube.ts`, constante `CLUBE_CUPOM`, override por env
 `CLUBE_ECLAT_CUPOM`). Cupom `CLUBE10`: 10%, 1 uso por cliente, não alcança peças em conjunto (conjunto já sai por R$ 299).
 Deploy do backend via `railway up` em 17/09 à noite.
+
+## Resposta automática vira só apresentação — 26/10/2026
+Decisão da sócia: quem escreve para o número (gatilho do Clube ou anúncio) recebe **uma** mensagem curta de
+apresentação e agradecimento (`CLUBE_APRESENTACAO` em `src/lib/clube.ts`), sem link do grupo, sem cupom e sem
+texto de coleção. A Camila dá continuidade pessoalmente. O convite ao grupo continua saindo depois do despacho
+(`lib/convite-clube.ts`, sem cupom). O cupom CLUBE10 segue existindo no Medusa e fixado no grupo.

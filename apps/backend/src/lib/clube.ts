@@ -1,6 +1,6 @@
-// Clube Éclat — resposta automática no WhatsApp (pré-lançamento).
-// Quem manda "Quero entrar no Clube Éclat" (botão da página Em breve, anúncio
-// click-to-WhatsApp ou texto parecido) recebe o link do grupo e vira lead marcado.
+// Clube Éclat — resposta automática no WhatsApp.
+// Quem manda "Quero entrar no Clube Éclat" (botão do site, anúncio click-to-WhatsApp ou texto
+// parecido) recebe uma apresentação curta e vira lead marcado; a conversa segue com a Camila.
 // Regras: só mensagens recebidas (nunca as nossas), uma vez por contato, nunca quebra o webhook.
 
 import { getLeadByWhatsapp, insertMessageIdempotent, updateLead } from "./supabase"
@@ -13,37 +13,25 @@ export const CLUBE_GRUPO_URL =
 
 const GATILHO = /clube|primeira m[ãa]o|quero entrar|lan[çc]amento|vip|em breve|lista/i
 
-// Texto pós-pré-venda (18/09/2026): loja aberta de verdade, estoque chegou, envios já
-// começaram, pagamento pelo checkout (Mercado Pago). Ajustar de novo se mudar o gateway.
-//
-// Proteção do número (API não oficial): duas mensagens com "digitando…" entre elas,
-// a saudação sem link primeiro e o convite depois, e um teto de respostas por hora.
+// Sócia, 26/10/2026: a resposta automática é SÓ apresentação e agradecimento, uma mensagem, sem link do grupo
+// e sem cupom. Quem escreveu perguntou uma coisa; a Camila dá continuidade pessoalmente. (Até 26/10 saíam duas
+// mensagens com coleção, link do grupo e cupom CLUBE10 — a pessoa "recebeu uma caralhada de informação".)
+// Proteção do número (API não oficial): "digitando…" antes, teto de respostas por hora, uma vez por contato.
 // Nunca usar este caminho para disparo a quem não escreveu primeiro.
-export const CLUBE_SAUDACAO = [
-  "Oi! Que bom ter você no Clube Éclat ✨",
+export const CLUBE_APRESENTACAO = [
+  "Oi! Aqui é a Camila, da ÉCLAT 💛",
   "",
-  "A Coleção Lumière já está disponível em useeclat.com.br, com envios já começando. Você compra pelo site, com Pix ou cartão.",
-  "",
-  "São poucas peças nesse primeiro lote: quem garantir primeiro leva. No Clube você fica sabendo primeiro da reposição e das próximas cores.",
+  "Obrigada por falar com a gente. Já vi a sua mensagem e te respondo pessoalmente em instantes.",
 ].join("\n")
 
-// Cupom de primeira compra (criado em 17/09/2026: 10%, 1 uso por cliente, não vale para
-// peças em conjunto — o conjunto já sai por R$ 299). Override por env se o código mudar.
+// Cupom de primeira compra (CLUBE10): continua existindo no Medusa e fixado no grupo, mas NÃO sai mais na
+// resposta automática. Mantido aqui porque outras partes leem o código.
 export const CLUBE_CUPOM = process.env.CLUBE_ECLAT_CUPOM || "CLUBE10"
 
-export const CLUBE_CONVITE = [
-  `Aqui está a sua entrada no grupo: ${CLUBE_GRUPO_URL}`,
-  "",
-  `E o seu cupom de primeira compra: *${CLUBE_CUPOM}* — 10% na peça avulsa ou no macaquinho, uso único, é só digitar na sacola. O conjunto top + short já sai por R$ 299.`,
-  "",
-  "Te espero lá 💛",
-].join("\n")
+// Texto registrado na conversa do Cockpit (igual ao enviado).
+export const CLUBE_BOAS_VINDAS = CLUBE_APRESENTACAO
 
-// Compatibilidade: texto completo (usado só para registro na conversa).
-export const CLUBE_BOAS_VINDAS = `${CLUBE_SAUDACAO}\n\n${CLUBE_CONVITE}`
-
-const DELAY_SAUDACAO_MS = 4000
-const DELAY_CONVITE_MS = 6000
+const DELAY_APRESENTACAO_MS = 4000
 const TETO_POR_HORA = Number(process.env.CLUBE_MAX_RESPOSTAS_HORA || 40)
 const janela: number[] = [] // timestamps das respostas na última hora (processo único no Railway)
 
@@ -85,8 +73,7 @@ export async function responderClube(opts: {
     return false
   }
 
-  await sendWhatsappText(opts.number, CLUBE_SAUDACAO, DELAY_SAUDACAO_MS)
-  const sent = (await sendWhatsappText(opts.number, CLUBE_CONVITE, DELAY_CONVITE_MS)) as
+  const sent = (await sendWhatsappText(opts.number, CLUBE_APRESENTACAO, DELAY_APRESENTACAO_MS)) as
     | { key?: { id?: string } }
     | undefined
   const msgId = sent?.key?.id || `clube_${opts.number}_${Date.now()}`

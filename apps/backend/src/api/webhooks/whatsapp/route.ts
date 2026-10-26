@@ -131,9 +131,8 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
         evolution_msg_id: key.id,
       })
 
-      // Clube Éclat: resposta automática com o link do grupo (só entrada, uma vez por contato).
-      // Quem já comprou fica de fora: recebe o convite depois do despacho (lib/convite-clube.ts), e a
-      // saudação de lead (com cupom de primeira compra) não faz sentido para quem acabou de receber o rastreio.
+      // Clube Éclat: resposta automática de apresentação (sem link, sem cupom — sócia, 26/10), uma vez por contato.
+      // Quem já comprou fica de fora: recebe o convite ao grupo depois do despacho (lib/convite-clube.ts).
       if (!fromMe && tipo === "texto" && ehGatilhoDoClube(texto, m)) {
         try {
           if (await ehClienteComPedido(req.scope, number)) {
