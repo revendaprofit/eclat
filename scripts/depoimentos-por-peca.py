@@ -8,7 +8,7 @@ SÓ falas reais, de clientes que autorizaram (contexto-claude/diario/pessoas.md)
 - Acrescenta no FIM da lista (a home continua igual):
   * print da Samara (áudio de 1:03 no WhatsApp + transcrição): short e top Orvalho, que ela comprou no #30;
   * recorte do print da Luana "O top orvalho que perfeição" (versão com a frase sensível coberta, 24/10);
-  * falas em texto: Samara no Instagram, Alana e Poli (macaquinho), Alayse (camiseta).
+  * falas em texto: Samara no Instagram, Alana e Pollianna (macaquinho), Alayse (camiseta).
 Fora de propósito: Thais (conjunto não identificado), Bruno (áudio sem fala clara), áudio da Fabi (corta numa crítica).
 
 Imagens novas: brand-assets/depoimentos-site/samara-short-nao-sobe.jpg e luana-top-orvalho.jpg.
@@ -48,7 +48,7 @@ NOVOS_PRINTS = [
 NOVOS_TEXTOS = [
     {"quote": "APROVADO! Extremamente confortável, esse e os próximos.", "author": "Samara", "origem": "Instagram", "produtos": ["short-orvalho", "top-orvalho"]},
     {"quote": "Esse macaquinho é um arraso!! Super firme!!", "author": "Alana", "origem": "Instagram", "produtos": ["macaquinho-solaris"]},
-    {"quote": "Super aprovado! Não sobe, não enrola, macaquinho que garante sucesso no seu treino.", "author": "Poli", "origem": "Instagram", "produtos": ["macaquinho-solaris"]},
+    {"quote": "Super aprovado! Não sobe, não enrola, macaquinho que garante sucesso no seu treino.", "author": "Pollianna", "origem": "Instagram", "produtos": ["macaquinho-solaris"]},
     {"quote": "Que pacote lindo, cheiro maravilhoso, que sensação boa, o tecido da camiseta é perfeito.", "author": "Alayse", "origem": "WhatsApp", "produtos": ["camiseta-raglan-dry"]},
 ]
 
