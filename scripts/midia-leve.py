@@ -85,6 +85,7 @@ def main():
             if tam <= (LIMITE_VIDEO if video else LIMITE_FOTO): continue
             data = baixar(url)
             nova = video_leve(data, pasta) if video else foto_leve(data)
+            if len(nova) >= tam * 0.9: continue   # já estava no limite do formato: não troca à toa
             dest = novo_destino(caminho(url), nova, "mp4" if video else "jpg")
             troca[url] = sb + PUBLICO + dest; uploads.append((dest, nova, "video/mp4" if video else "image/jpeg"))
             total_antes += tam; total_depois += len(nova)
