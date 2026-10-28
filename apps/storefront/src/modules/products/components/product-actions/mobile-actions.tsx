@@ -129,9 +129,11 @@ const MobileActions: React.FC<MobileActionsProps> = ({
                   <ChevronDown />
                 </div>
               </Button>}
+              {/* Sem tamanho escolhido o botão não fica apagado (diagnóstico do funil, 2026-10-27: parecia desativado):
+                  ele abre a escolha de tamanho. Só fica desativado com o tamanho escolhido e esgotado. */}
               <Button
-                onClick={handleAddToCart}
-                disabled={!inStock || !variant}
+                onClick={variant ? handleAddToCart : open}
+                disabled={!!variant && !inStock}
                 className="w-full"
                 isLoading={isAdding}
                 data-testid="mobile-cart-button"

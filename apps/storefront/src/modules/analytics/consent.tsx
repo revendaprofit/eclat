@@ -75,23 +75,24 @@ export function CookieBanner() {
 
   if (!show) return null
 
+  // Faixa compacta no TOPO (diagnóstico do funil, 2026-10-27): embaixo ela cobria o preço e o botão de compra
+  // da barra fixa do celular na primeira visita.
   return (
-    <div className="fixed inset-x-0 bottom-0 z-[60] p-4">
-      <div className="mx-auto max-w-3xl bg-eclat-grafite text-eclat-luz rounded-lg shadow-xl p-5 flex flex-col small:flex-row items-start small:items-center gap-4">
-        <p className="text-sm text-eclat-luz/85 flex-1">
-          Usamos cookies para melhorar sua experiência e medir nossas campanhas. Você pode
-          aceitar ou recusar. Saiba mais na nossa Política de Privacidade.
+    <div className="fixed inset-x-0 top-0 z-[60] p-2" data-testid="cookie-banner">
+      <div className="mx-auto max-w-3xl bg-eclat-grafite text-eclat-luz rounded-md shadow-lg px-3 py-2 flex items-center gap-3">
+        <p className="text-xs leading-snug text-eclat-luz/85 flex-1">
+          Usamos cookies para melhorar sua experiência e medir nossas campanhas. Veja a Política de Privacidade.
         </p>
-        <div className="flex gap-3 shrink-0">
+        <div className="flex gap-2 shrink-0">
           <button
             onClick={() => choose(false)}
-            className="text-xs uppercase tracking-widest px-4 py-2.5 border border-eclat-luz/40 hover:border-eclat-luz transition-colors"
+            className="text-[11px] uppercase tracking-widest px-3 py-2 border border-eclat-luz/40 hover:border-eclat-luz transition-colors"
           >
             Recusar
           </button>
           <button
             onClick={() => choose(true)}
-            className="text-xs uppercase tracking-widest px-5 py-2.5 bg-eclat-terracota text-eclat-luz hover:bg-eclat-terracota-claro transition-colors"
+            className="text-[11px] uppercase tracking-widest px-3 py-2 bg-eclat-terracota text-eclat-luz hover:bg-eclat-terracota-claro transition-colors"
           >
             Aceitar
           </button>
