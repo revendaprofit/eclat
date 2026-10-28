@@ -3,10 +3,16 @@
 // e delega a apresentação — parceiras precisam da seleção da PÁGINA via `useProductSelection`
 // (hook), então viram um client component (`Parceira`); curados são só links, reaproveitam o
 // `CardConjunto` da vitrine (Task 3). Sem parceiras e sem curados → `null` (nada a mostrar).
+//
+// Curados vêm ANTES das parceiras (diagnóstico do funil, 2026-10-27): o curado é o look da peça
+// (ex.: Short Orvalho → Conjunto Orvalho, o look do anúncio), e a parceira com o mesmo par sai de
+// `parceiras` (ruling V6), então o "Complete o conjunto" mostrava só a outra coleção.
 import type { HttpTypes } from "@medusajs/types"
 import type { ColorMap } from "@lib/util/colors"
 import { getConjuntosDoProduto } from "@lib/data/conjuntos"
+import { getCondicoesDaLoja } from "@lib/data/condicoes"
 import { MAX_PARCEIRAS, descricaoRegra } from "@lib/util/conjuntos"
+import { frasePresente, reais } from "@lib/util/condicoes"
 import CardConjunto from "@modules/conjuntos/components/card-conjunto"
 import Parceira from "./parceira"
 
@@ -22,15 +28,35 @@ export default async function CompleteSet({
   countryCode: string
   colorMap: ColorMap
 }) {
-  const { parceiras, regra, curados } = await getConjuntosDoProduto(product.id, countryCode)
+  const [{ parceiras, regra, curados }, loja] = await Promise.all([
+    getConjuntosDoProduto(product.id, countryCode),
+    getCondicoesDaLoja(),
+  ])
   if (!parceiras.length && !curados.length) return null
 
   const parceirasLimitadas = parceiras.slice(0, MAX_PARCEIRAS)
 
   return (
     <div className="content-container my-16 small:my-24" data-testid="complete-set">
+      {curados.length > 0 && (
+        <section className={parceirasLimitadas.length > 0 ? "mb-16" : undefined} data-testid="complete-set-curados">
+          <h2 className="font-serif text-2xl text-eclat-grafite">Looks com essa peça</h2>
+          {loja.presente && (
+            <p className="mt-1 text-sm text-eclat-grafite/70" data-testid="complete-set-presente">
+              {frasePresente(loja.presente, (c) => reais(c, { curto: true }))}
+            </p>
+          )}
+          <ul className="mt-6 grid grid-cols-2 small:grid-cols-3 medium:grid-cols-4 gap-x-6 gap-y-8">
+            {curados.map((c) => (
+              <li key={c.handle}>
+                <CardConjunto card={c} listName="Complete o conjunto" />
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
       {parceirasLimitadas.length > 0 && (
-        <section className="mb-16" data-testid="complete-set-parceiras">
+        <section data-testid="complete-set-parceiras">
           <h2 className="font-serif text-2xl text-eclat-grafite">Complete o conjunto</h2>
           {regra && (
             <p className="mt-1 text-sm text-eclat-grafite/70" data-testid="complete-set-regra">
@@ -41,18 +67,6 @@ export default async function CompleteSet({
             {parceirasLimitadas.map((parceira) => (
               <li key={parceira.id}>
                 <Parceira parceira={parceira} countryCode={countryCode} />
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-      {curados.length > 0 && (
-        <section data-testid="complete-set-curados">
-          <h2 className="font-serif text-2xl text-eclat-grafite mb-6">Looks com essa peça</h2>
-          <ul className="grid grid-cols-2 small:grid-cols-3 medium:grid-cols-4 gap-x-6 gap-y-8">
-            {curados.map((c) => (
-              <li key={c.handle}>
-                <CardConjunto card={c} listName="Complete o conjunto" />
               </li>
             ))}
           </ul>

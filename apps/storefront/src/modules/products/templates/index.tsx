@@ -29,6 +29,7 @@ import { getBaseURL } from "@lib/util/env"
 import { getColorMap } from "@lib/data/colors"
 import { ProductSelectionProvider } from "@modules/products/components/product-selection"
 import CompleteSet from "@modules/products/components/complete-set"
+import ProvaDoProduto from "@modules/products/components/prova-do-produto"
 import { BreadcrumbJsonLd } from "@modules/seo/jsonld"
 import { getDeepestCategoryChain } from "@lib/data/category-path"
 import { getMeasureMap } from "@lib/data/measurements"
@@ -127,6 +128,7 @@ const ProductTemplate = async ({
             </div>
             <div className="flex flex-col w-full pt-6 small:pt-0 gap-y-8">
               <ProductHeader product={product} />
+              <ProvaDoProduto product={product} />
               <div className="flex flex-col gap-y-8">
                 <ProductOnboardingCta />
                 <Suspense
