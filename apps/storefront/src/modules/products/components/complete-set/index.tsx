@@ -10,9 +10,7 @@
 import type { HttpTypes } from "@medusajs/types"
 import type { ColorMap } from "@lib/util/colors"
 import { getConjuntosDoProduto } from "@lib/data/conjuntos"
-import { getCondicoesDaLoja } from "@lib/data/condicoes"
 import { MAX_PARCEIRAS, descricaoRegra } from "@lib/util/conjuntos"
-import { frasePresente, reais } from "@lib/util/condicoes"
 import CardConjunto from "@modules/conjuntos/components/card-conjunto"
 import Parceira from "./parceira"
 
@@ -28,10 +26,7 @@ export default async function CompleteSet({
   countryCode: string
   colorMap: ColorMap
 }) {
-  const [{ parceiras, regra, curados }, loja] = await Promise.all([
-    getConjuntosDoProduto(product.id, countryCode),
-    getCondicoesDaLoja(),
-  ])
+  const { parceiras, regra, curados } = await getConjuntosDoProduto(product.id, countryCode)
   if (!parceiras.length && !curados.length) return null
 
   const parceirasLimitadas = parceiras.slice(0, MAX_PARCEIRAS)
@@ -41,11 +36,6 @@ export default async function CompleteSet({
       {curados.length > 0 && (
         <section className={parceirasLimitadas.length > 0 ? "mb-16" : undefined} data-testid="complete-set-curados">
           <h2 className="font-serif text-2xl text-eclat-grafite">Looks com essa peça</h2>
-          {loja.presente && (
-            <p className="mt-1 text-sm text-eclat-grafite/70" data-testid="complete-set-presente">
-              {frasePresente(loja.presente, (c) => reais(c, { curto: true }))}
-            </p>
-          )}
           <ul className="mt-6 grid grid-cols-2 small:grid-cols-3 medium:grid-cols-4 gap-x-6 gap-y-8">
             {curados.map((c) => (
               <li key={c.handle}>
