@@ -42,6 +42,25 @@ export function progressoFreteGratis(base: number, uf: string | null | undefined
   return { piso, falta, atingiu: falta === 0, percentual: Math.min(100, Math.floor((base / piso) * 100)) }
 }
 
+/**
+ * Destaque do frete na página do produto, ANTES do preço (sócia, 27/10/2026; diagnóstico do funil: "frete no fim").
+ * Com a peça acima do piso de MG, a frase principal é "Frete grátis em Minas Gerais"; abaixo, "a partir de R$ X".
+ * A segunda linha fala do resto do Brasil (metade a partir de `metade_brasil`). Sem regras, nada.
+ */
+export function destaqueDoFrete(precoCentavos: number, regras: RegrasDeFrete | null, fmt: (c: number) => string): { titulo: string; detalhe: string | null } | null {
+  if (!regras) return null
+  const mg = regras.piso_mg
+  const metade = regras.metade_brasil ?? 0
+  const titulo = mg <= 0 || precoCentavos >= mg ? "Frete grátis em Minas Gerais" : `Frete grátis em Minas Gerais a partir de ${fmt(mg)}`
+  const detalhe =
+    metade > 0
+      ? `Demais estados: frete pela metade a partir de ${fmt(metade)}${regras.piso_brasil > 0 ? ` e grátis a partir de ${fmt(regras.piso_brasil)}` : ""}.`
+      : regras.piso_brasil > 0
+        ? `Demais estados: frete grátis a partir de ${fmt(regras.piso_brasil)}.`
+        : null
+  return { titulo, detalhe }
+}
+
 export function textoPrazo(p?: { min: number; max: number }): string | null {
   if (!p) return null
   if (p.min === p.max) return `Chega em ${p.max} ${p.max === 1 ? "dia útil" : "dias úteis"}`

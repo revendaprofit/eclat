@@ -24,6 +24,7 @@ import { emCentavos, type Condicoes } from "@lib/util/condicoes"
 import type { RegrasDeFrete } from "@lib/util/frete"
 import { getProductPrice } from "@lib/util/get-product-price"
 import FretePrazo from "../frete-prazo"
+import FreteDestaque from "../frete-destaque"
 
 type ProductActionsProps = {
   product: HttpTypes.StoreProduct
@@ -108,6 +109,8 @@ export default function ProductActions({ product, colorMap, disabled, measureTab
           <Divider />
         </div>
       )}
+      {/* Frete em destaque ANTES do preço (sócia, 27/10; diagnóstico do funil: o frete só aparecia no fim). */}
+      <FreteDestaque precoCentavos={precoCentavos} regras={regrasFrete} />
       <ProductPrice product={product} variant={selectedVariant ?? undefined} condicoes={condicoes} />
       <Button
         onClick={handleAddToCart}

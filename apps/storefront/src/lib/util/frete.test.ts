@@ -1,7 +1,22 @@
 import { describe, expect, it } from "vitest"
-import { baseDoCarrinho, casasDoValor, progressoFreteGratis, servicoDaOpcao, textoPrazo } from "./frete"
+import { baseDoCarrinho, casasDoValor, destaqueDoFrete, progressoFreteGratis, servicoDaOpcao, textoPrazo } from "./frete"
 
 const REGRAS = { piso_mg: 49900, piso_brasil: 59900 }
+
+describe("destaqueDoFrete (antes do preço na PDP, 27/10)", () => {
+  const fmt = (c: number) => `R$ ${(c / 100).toFixed(0)}`
+  const novas = { piso_mg: 12900, piso_brasil: 59900, metade_brasil: 25000 }
+  it("peça acima do piso de MG: frete grátis em Minas, e o resto do Brasil pela metade", () => {
+    expect(destaqueDoFrete(15900, novas, fmt)).toEqual({ titulo: "Frete grátis em Minas Gerais", detalhe: "Demais estados: frete pela metade a partir de R$ 250 e grátis a partir de R$ 599." })
+  })
+  it("peça abaixo do piso (meia): diz a partir de quanto", () => {
+    expect(destaqueDoFrete(3490, novas, fmt)?.titulo).toBe("Frete grátis em Minas Gerais a partir de R$ 129")
+  })
+  it("sem a regra da metade, só o piso do Brasil; sem regras, nada", () => {
+    expect(destaqueDoFrete(15900, REGRAS, fmt)).toEqual({ titulo: "Frete grátis em Minas Gerais a partir de R$ 499", detalhe: "Demais estados: frete grátis a partir de R$ 599." })
+    expect(destaqueDoFrete(15900, null, fmt)).toBeNull()
+  })
+})
 
 describe("frete na vitrine", () => {
   it("desconto do Pix (PIX5) não reduz a base do frete grátis", () => {
