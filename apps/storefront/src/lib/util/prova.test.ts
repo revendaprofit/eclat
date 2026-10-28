@@ -7,6 +7,7 @@ describe("lerProva", () => {
     texto: "Silicone na barra da perna.",
     frase: "Treinei o dia inteiro sem puxar o short.",
     autora: "Paty, cliente Éclat",
+    chamada: "Não sobe no burpee",
   }
 
   it("aceita JSON em texto (metadata do Medusa) ou objeto", () => {
@@ -15,11 +16,15 @@ describe("lerProva", () => {
   })
 
   it("só o título já basta; espaços saem", () => {
-    expect(lerProva({ titulo: "  Não sobe  " })).toEqual({ titulo: "Não sobe", texto: null, frase: null, autora: null })
+    expect(lerProva({ titulo: "  Não sobe  " })).toEqual({ titulo: "Não sobe", texto: null, frase: null, autora: null, chamada: null })
+  })
+
+  it("chamada longa demais (mais de 40 letras) não entra", () => {
+    expect(lerProva({ titulo: "Não sobe", chamada: "x".repeat(41) })?.chamada).toBeNull()
   })
 
   it("frase sem autora não entra", () => {
-    expect(lerProva({ titulo: "Não sobe", frase: "Amei" })).toEqual({ titulo: "Não sobe", texto: null, frase: null, autora: null })
+    expect(lerProva({ titulo: "Não sobe", frase: "Amei" })).toEqual({ titulo: "Não sobe", texto: null, frase: null, autora: null, chamada: null })
   })
 
   it("sem título, JSON inválido, lista ou vazio → nada", () => {

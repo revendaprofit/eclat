@@ -77,28 +77,25 @@ export function CookieBanner() {
 
   if (!show) return null
 
-  // Faixa compacta no TOPO (diagnóstico do funil, 2026-10-27): embaixo ela cobria o preço e o botão de compra
-  // da barra fixa do celular na primeira visita.
+  // UMA linha no fluxo da página, ACIMA do menu (28/10, pedido da sessão de anúncios): não é fixa, então não cobre
+  // logo, menu, sacola nem a barra de compra, e some ao rolar. Antes: fixa embaixo (cobria a barra de compra) e
+  // depois fixa no topo (cobria o logo e a sacola). Consent Mode igual: nada carrega antes da escolha.
   return (
-    <div className="fixed inset-x-0 top-0 z-[60] p-2" data-testid="cookie-banner">
-      <div className="mx-auto max-w-3xl bg-eclat-grafite text-eclat-luz rounded-md shadow-lg px-3 py-2 flex items-center gap-3">
-        <p className="text-xs leading-snug text-eclat-luz/85 flex-1">
-          Usamos cookies para melhorar sua experiência e medir nossas campanhas. Veja a Política de Privacidade.
-        </p>
-        <div className="flex gap-2 shrink-0">
-          <button
-            onClick={() => choose(false)}
-            className="text-[11px] uppercase tracking-widest px-3 py-2 border border-eclat-luz/40 hover:border-eclat-luz transition-colors"
-          >
-            Recusar
-          </button>
-          <button
-            onClick={() => choose(true)}
-            className="text-[11px] uppercase tracking-widest px-3 py-2 bg-eclat-terracota text-eclat-luz hover:bg-eclat-terracota-claro transition-colors"
-          >
-            Aceitar
-          </button>
-        </div>
+    <div className="bg-eclat-grafite text-eclat-luz" data-testid="cookie-banner">
+      <div className="content-container flex items-center gap-2 py-1.5">
+        <p className="flex-1 min-w-0 truncate text-[11px] text-eclat-luz/80">Usamos cookies para medir nossas campanhas.</p>
+        <button
+          onClick={() => choose(false)}
+          className="shrink-0 text-[10px] uppercase tracking-widest px-2 py-1 text-eclat-luz/80 hover:text-eclat-luz"
+        >
+          Recusar
+        </button>
+        <button
+          onClick={() => choose(true)}
+          className="shrink-0 text-[10px] uppercase tracking-widest px-2.5 py-1 bg-eclat-terracota text-eclat-luz hover:bg-eclat-terracota-claro"
+        >
+          Aceitar
+        </button>
       </div>
     </div>
   )

@@ -3,7 +3,6 @@ import { Button, clx } from "@modules/common/components/ui"
 import React, { Fragment, useMemo } from "react"
 
 import useToggleState from "@lib/hooks/use-toggle-state"
-import ChevronDown from "@modules/common/icons/chevron-down"
 import X from "@modules/common/icons/x"
 
 import { getProductPrice } from "@lib/util/get-product-price"
@@ -113,38 +112,32 @@ const MobileActions: React.FC<MobileActionsProps> = ({
                 <div></div>
               )}
             </div>
-            <div className={clx("grid grid-cols-2 w-full gap-x-4", {
-              "!grid-cols-1": isSimple
-            })}>
-              {!isSimple && <Button
+            {/* UM botão só (28/10, pedido da sessão de anúncios): antes eram dois parecidos lado a lado ("Escolher
+                opções" e "Escolha o tamanho"). Sem tamanho, o botão abre a escolha; com tamanho, põe na sacola.
+                Trocar o tamanho escolhido fica num link discreto. Só desativa com o tamanho esgotado. */}
+            {!isSimple && variant && (
+              <button
+                type="button"
                 onClick={open}
-                variant="secondary"
-                className="w-full"
+                className="-mt-1 text-small-regular text-ui-fg-subtle underline underline-offset-2"
                 data-testid="mobile-actions-button"
               >
-                <div className="flex items-center justify-between w-full">
-                  <span>
-                    {variant ? variantLabel(product, variant) : "Escolher opções"}
-                  </span>
-                  <ChevronDown />
-                </div>
-              </Button>}
-              {/* Sem tamanho escolhido o botão não fica apagado (diagnóstico do funil, 2026-10-27: parecia desativado):
-                  ele abre a escolha de tamanho. Só fica desativado com o tamanho escolhido e esgotado. */}
-              <Button
-                onClick={variant ? handleAddToCart : open}
-                disabled={!!variant && !inStock}
-                className="w-full"
-                isLoading={isAdding}
-                data-testid="mobile-cart-button"
-              >
-                {!variant
-                  ? rotuloSelecaoIncompleta(product, options)
-                  : !inStock
-                  ? "Esgotado"
-                  : "Adicionar à sacola"}
-              </Button>
-            </div>
+                {variantLabel(product, variant)} · trocar
+              </button>
+            )}
+            <Button
+              onClick={variant ? handleAddToCart : open}
+              disabled={!!variant && !inStock}
+              className="w-full"
+              isLoading={isAdding}
+              data-testid="mobile-cart-button"
+            >
+              {!variant
+                ? rotuloSelecaoIncompleta(product, options)
+                : !inStock
+                ? "Esgotado"
+                : "Adicionar à sacola"}
+            </Button>
             {/* "Comprar agora" (2026-10-10): só com tamanho escolhido e em estoque, para a barra não crescer à toa. */}
             {variant && inStock && handleComprarAgora && (
               <Button onClick={handleComprarAgora} variant="secondary" className="w-full" data-testid="mobile-comprar-agora">

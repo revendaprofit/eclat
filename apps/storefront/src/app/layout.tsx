@@ -85,8 +85,9 @@ export default async function RootLayout(props: { children: React.ReactNode }) {
         <GtmBody gtmId={marketing?.gtm_id} />
         <OrganizationJsonLd />
         <WebSiteJsonLd />
-        <main className="relative">{props.children}</main>
+        {/* Faixa de cookies ANTES do conteúdo, no fluxo (não fixa): uma linha acima do menu, não cobre nada. */}
         <CookieBanner />
+        <main className="relative">{props.children}</main>
         <PwaRegister />
       </body>
     </html>

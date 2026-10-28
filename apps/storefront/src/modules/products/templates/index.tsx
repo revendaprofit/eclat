@@ -30,6 +30,7 @@ import { getColorMap } from "@lib/data/colors"
 import { ProductSelectionProvider } from "@modules/products/components/product-selection"
 import CompleteSet from "@modules/products/components/complete-set"
 import ProvaDoProduto from "@modules/products/components/prova-do-produto"
+import { lerProva } from "@lib/util/prova"
 import { BreadcrumbJsonLd } from "@modules/seo/jsonld"
 import { getDeepestCategoryChain } from "@lib/data/category-path"
 import { getMeasureMap } from "@lib/data/measurements"
@@ -124,6 +125,7 @@ const ProductTemplate = async ({
                 productHandle={product.handle ?? undefined}
                 youtubeId={youtubeId}
                 videos={videos}
+                chamada={lerProva(product.metadata?.prova)?.chamada}
               />
             </div>
             <div className="flex flex-col w-full pt-6 small:pt-0 gap-y-8">

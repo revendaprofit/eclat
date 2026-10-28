@@ -19,6 +19,14 @@ fd = importlib.import_module("fotos-detalhe")   # env, Medusa
 APPLY = "--apply" in sys.argv
 
 PROVAS = {
+    # `chamada` = frase curta por cima da 1ª mídia (28/10, pedido da sessão de anúncios com o ok da Camila).
+    "short-orvalho": {
+        "titulo": "Não sobe no treino",
+        "texto": "Silicone na barra da perna segura o short no lugar: no agachamento, no afundo e no burpee.",
+        "frase": "Bom dia pra quem treinou hoje o dia inteiro sem ter que puxar short que não tava embolado de mim.",
+        "autora": "Paty, cliente Éclat",
+        "chamada": "Não sobe no burpee",
+    },
     "macaquinho-solaris": {
         "titulo": "Fica no lugar, até nos pulos",
         "texto": "Todo forrado e com silicone na barra da perna: não sobe e não enrola no treino.",

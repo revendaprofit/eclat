@@ -21,6 +21,7 @@ export default function PersonaGallery({
   productHandle,
   youtubeId,
   videos,
+  chamada,
 }: {
   images: HttpTypes.StoreProductImage[]
   personaMedia: PersonaMedia[]
@@ -28,6 +29,8 @@ export default function PersonaGallery({
   productHandle?: string
   youtubeId?: string | null
   videos?: ProductVideos
+  // frase curta por cima da 1ª mídia (product.metadata.prova.chamada), em HTML: não pesa e não queima no vídeo
+  chamada?: string | null
 }) {
   const [personaId, setPersonaId] = useState<string | undefined>(undefined)
 
@@ -47,6 +50,14 @@ export default function PersonaGallery({
 
   return (
     <div className="relative">
+      {chamada && (
+        <p
+          className="pointer-events-none absolute left-3 top-3 z-10 max-w-[70%] rounded-sm bg-eclat-terracota/85 px-3 py-1.5 font-serif text-lg leading-tight text-eclat-luz shadow-sm small:text-xl"
+          data-testid="chamada-da-peca"
+        >
+          {chamada}
+        </p>
+      )}
       {hasPersonaPhotos ? (
         <ImageGallery
           images={personaImages}
