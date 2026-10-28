@@ -58,6 +58,9 @@ BALOES = [
      "Super aprovado! Não sobe, não enrola, macaquinho que garante sucesso no seu treino."),
 ]
 THAIS = ("thais-conjunto-", ["top-aurora", "short-aurora"])
+# Ordem da lista = ordem na home (os 8 primeiros prints) e dentro de cada peça: a prova mais forte na frente.
+PRIMEIROS = ["samara-short-nao-sobe-", "audio-short-", "melka-pulos-forrado-", "andrea-bojo-", "balao-gabriel-camiseta-",
+             "balao-fabi-tecido-", "impactada-", "luana-aurora-macaquinho-"]
 
 # Modelos tirados dos prints reais: WhatsApp (fundo com desenhos de um print da Luana, balão branco com bico,
 # letra escura) e Instagram (fundo branco, balão cinza). Sem hora, sem barra de áudio: só o que a fonte tem.
@@ -124,6 +127,11 @@ def main():
         existente = next((t for t in itens if (t.get("author"), t.get("quote")) == (autora, fala)), None)
         if existente: existente.update(img); continue
         itens.append({"quote": fala, "author": autora, "origem": origem, "tipo": "print", "produtos": pecas, **img})
+
+    def chave(t):
+        url = t.get("image_url") or ""
+        return next((i for i, k in enumerate(PRIMEIROS) if k in url), len(PRIMEIROS))
+    itens.sort(key=chave)   # sort estável: o resto fica na ordem de antes
 
     por_peca = {}
     for t in itens:

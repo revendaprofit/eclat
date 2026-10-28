@@ -103,6 +103,10 @@ export default async function Home(props: {
 
       <VitrineAbas region={region} countryCode={countryCode} />
 
+      {/* Depoimentos logo depois da vitrine (diagnóstico do funil, 2026-10-27): prova social perto do topo,
+          não no fim da página. */}
+      {isVisible(testimonials) && <Testimonials content={testimonials} />}
+
       {isVisible(universos) && <Universos content={universos} />}
 
       {isVisible(banner) && <EditorialBanner content={banner} />}
@@ -114,8 +118,6 @@ export default async function Home(props: {
       {isVisible(momentos) && <BannerMomentos content={momentos} />}
 
       {isVisible(clube) && <ClubeEclat content={clube} />}
-
-      {isVisible(testimonials) && <Testimonials content={testimonials} />}
 
       {isVisible(fundadora) && <Fundadora content={fundadora} />}
 
