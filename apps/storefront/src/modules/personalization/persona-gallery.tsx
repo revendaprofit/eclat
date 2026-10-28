@@ -6,7 +6,7 @@ import VariantGallery from "@modules/products/components/variant-gallery"
 import { getPrefs, onPrefsChange } from "./prefs"
 import type { PersonaMedia } from "@lib/data/personas"
 import type { HttpTypes } from "@medusajs/types"
-import { resolveVideoSource, type ProductVideos } from "@lib/util/product-video"
+import { resolveVideoFim, resolveVideoSource, type ProductVideos } from "@lib/util/product-video"
 
 // Galeria da PDP com troca por persona ("Minha ÉCLAT").
 // SSR/HTML canônico = imagens padrão do produto (SEO intacto).
@@ -65,6 +65,7 @@ export default function PersonaGallery({
           productHandle={productHandle}
           // fotos da persona não têm cor: vale o vídeo "geral" (1º cadastrado) ou o YouTube
           video={resolveVideoSource(videos ?? {}, youtubeId, null)}
+          videoFim={resolveVideoFim(videos ?? {}, null)}
         />
       ) : (
         <VariantGallery

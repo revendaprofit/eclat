@@ -63,7 +63,9 @@ export type GalleryItem =
 // metadata.videos (Cockpit → Ficha técnica): JSON cor → URL do MP4 ou cor → {src, poster}.
 // Chave normalizada como as cores do catálogo (normalizeColorName). Os vídeos das peças da
 // Lumière já estão em site/hero/giro/ (banner interativo, 2026-09-14) — a PDP reaproveita.
-export type ProductVideo = { src: string; poster: string | null }
+// `fim` (28/10, sócia): 2º vídeo da cor, no FIM da galeria. Entra como capa com play e só baixa quando a cliente toca
+// (nada de dois vídeos baixando ao abrir a página). Formato: cor → {src, poster, fim: {src, poster}}.
+export type ProductVideo = { src: string; poster: string | null; fim?: { src: string; poster: string | null } | null }
 export type ProductVideos = Record<string, ProductVideo>
 
 const isHttp = (v: unknown): v is string => typeof v === "string" && /^https?:\/\//.test(v.trim())
@@ -87,7 +89,11 @@ export function parseProductVideos(meta: Record<string, unknown> | null | undefi
     if (isHttp(v)) out[key] = { src: v.trim(), poster: null }
     else if (v && typeof v === "object") {
       const o = v as { src?: unknown; poster?: unknown }
-      if (isHttp(o.src)) out[key] = { src: o.src.trim(), poster: isHttp(o.poster) ? o.poster.trim() : null }
+      if (isHttp(o.src)) {
+        const f = (v as { fim?: unknown }).fim as { src?: unknown; poster?: unknown } | null | undefined
+        const fim = f && typeof f === "object" && isHttp(f.src) ? { src: f.src.trim(), poster: isHttp(f.poster) ? f.poster.trim() : null } : null
+        out[key] = { src: o.src.trim(), poster: isHttp(o.poster) ? o.poster.trim() : null, ...(fim ? { fim } : {}) }
+      }
     }
   }
   return out
@@ -113,17 +119,25 @@ export function resolveVideoSource(
   return youtubeId ? { kind: "youtube", id: youtubeId } : null
 }
 
+// 2º vídeo da cor (fim da galeria). Mesma regra de cor do principal; sem `fim` → null.
+export function resolveVideoFim(videos: ProductVideos, color: string | null | undefined): VideoSource | null {
+  const fim = videoForColor(videos, color)?.fim
+  return fim ? { kind: "mp4", src: fim.src, poster: fim.poster } : null
+}
+
 // Vídeo entra como 1º item, grande e tocando sozinho (sem som), como na página da Versiani Swim
 // (pedido da sócia, 2026-10-11). Era o 2º (hero = foto); mude aqui para voltar.
 export const VIDEO_POSITION = 0
 
 export function buildGalleryItems(
   images: { id: string; url?: string | null }[],
-  video: VideoSource | null | undefined
+  video: VideoSource | null | undefined,
+  videoFim?: VideoSource | null
 ): GalleryItem[] {
   const items: GalleryItem[] = images
     .filter((i) => !!i.url)
     .map((i) => ({ kind: "image" as const, id: i.id, url: i.url as string }))
+  if (videoFim && videoFim.kind === "mp4") items.push({ kind: "video", id: `video-fim-${videoFim.src}`, source: videoFim })
   if (!video) return items
   // id entra no listKey/DOM da galeria: MP4 usa a URL, então trocar de cor troca o slide.
   const id = video.kind === "youtube" ? `video-${video.id}` : `video-${video.src}`

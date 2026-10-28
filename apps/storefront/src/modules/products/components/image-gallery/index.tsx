@@ -13,6 +13,8 @@ type ImageGalleryProps = {
   productHandle?: string
   // vídeo já resolvido para a cor em exibição (resolveVideoSource): MP4 próprio ou YouTube
   video?: VideoSource | null
+  // 2º vídeo da cor, no fim (capa + play; só baixa ao tocar)
+  videoFim?: VideoSource | null
 }
 
 // Celular: carrossel horizontal com scroll-snap, uma foto por vez, arrastando, bolinhas embaixo.
@@ -20,11 +22,11 @@ type ImageGalleryProps = {
 // pela página, sem setas — a mesma lista de itens, só o CSS muda (sem duplicar imagens no HTML).
 // Item de vídeo (quando `video` existe) entra como slide no meio das fotos —
 // buildGalleryItems decide a posição (2º item, LCP intacto no hero).
-const ImageGallery = ({ images, productTitle, productHandle, video }: ImageGalleryProps) => {
+const ImageGallery = ({ images, productTitle, productHandle, video, videoFim }: ImageGalleryProps) => {
   const trackRef = useRef<HTMLDivElement>(null)
   const animRef = useRef(0)
   const [active, setActive] = useState(0)
-  const items = buildGalleryItems(images, video)
+  const items = buildGalleryItems(images, video, videoFim)
 
   // Vai para o slide `i` animando o scroll da faixa (o IntersectionObserver abaixo atualiza
   // `active`). Animação própria (rAF, ~260 ms) em vez de `scrollTo({ behavior: "smooth" })`:

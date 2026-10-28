@@ -3,6 +3,7 @@ import {
   buildGalleryItems,
   parseProductVideos,
   parseYoutubeId,
+  resolveVideoFim,
   resolveVideoSource,
   videoForColor,
   youtubeEmbedUrl,
@@ -127,5 +128,33 @@ describe("resolveVideoSource", () => {
   it("sem MP4 para a cor cai no YouTube; sem nada → null", () => {
     expect(resolveVideoSource(videos, "p5hcJujKDEc", "Rosa")).toEqual(YT)
     expect(resolveVideoSource({}, null, null)).toBeNull()
+  })
+})
+
+describe("vídeo do fim da galeria (2º vídeo da cor)", () => {
+  const meta = {
+    videos: JSON.stringify({
+      Grafitti: {
+        src: "https://x.supabase.co/v/paty.mp4",
+        poster: "https://x.supabase.co/v/paty.jpg",
+        fim: { src: "https://x.supabase.co/v/cos.mp4", poster: "https://x.supabase.co/v/cos.jpg" },
+      },
+      Telha: { src: "https://x.supabase.co/v/telha.mp4" },
+    }),
+  }
+  it("lê o `fim` e entrega só na cor que tem", () => {
+    const v = parseProductVideos(meta)
+    expect(resolveVideoFim(v, "Grafitti")).toEqual({ kind: "mp4", src: "https://x.supabase.co/v/cos.mp4", poster: "https://x.supabase.co/v/cos.jpg" })
+    expect(resolveVideoFim(v, "Telha")).toBeNull()
+  })
+  it("entra no FIM da galeria; o principal continua em 1º", () => {
+    const v = parseProductVideos(meta)
+    const itens = buildGalleryItems([{ id: "a", url: "https://x/a.jpg" }, { id: "b", url: "https://x/b.jpg" }], resolveVideoSource(v, null, "Grafitti"), resolveVideoFim(v, "Grafitti"))
+    expect(itens.map((i) => i.kind)).toEqual(["video", "image", "image", "video"])
+    expect(itens[3].id).toBe("video-fim-https://x.supabase.co/v/cos.mp4")
+  })
+  it("`fim` sem src válido é ignorado", () => {
+    const v = parseProductVideos({ videos: { Grafitti: { src: "https://x/p.mp4", fim: { src: "nada" } } } })
+    expect(v.grafitti?.fim ?? v.Grafitti?.fim).toBeUndefined()
   })
 })

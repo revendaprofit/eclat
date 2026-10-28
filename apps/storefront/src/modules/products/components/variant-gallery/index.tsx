@@ -3,7 +3,7 @@
 import type { HttpTypes } from "@medusajs/types"
 import ImageGallery from "@modules/products/components/image-gallery"
 import { corDaGaleria, galeriaDaCor, MAX_FOTOS_GALERIA } from "@lib/util/pdp-variants"
-import { resolveVideoSource, type ProductVideos } from "@lib/util/product-video"
+import { resolveVideoFim, resolveVideoSource, type ProductVideos } from "@lib/util/product-video"
 import { useMemo } from "react"
 import { useProductSelection } from "../product-selection"
 
@@ -35,12 +35,14 @@ export default function VariantGallery({
     return daCor.length ? daCor : ssrImages.slice(0, MAX_FOTOS_GALERIA)
   }, [product, color, ssrImages])
   const video = useMemo(() => resolveVideoSource(videos ?? {}, youtubeId, corGaleria), [videos, youtubeId, corGaleria])
+  const videoFim = useMemo(() => resolveVideoFim(videos ?? {}, corGaleria), [videos, corGaleria])
   return (
     <ImageGallery
       images={images}
       productTitle={productTitle}
       productHandle={productHandle}
       video={video}
+      videoFim={videoFim}
     />
   )
 }
