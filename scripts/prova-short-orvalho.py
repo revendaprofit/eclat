@@ -77,7 +77,9 @@ def main():
 
     videos = meta.get("videos") or {}
     if isinstance(videos, str): videos = json.loads(videos)
-    videos[COR] = {"src": url_video, "poster": url_poster}
+    # Mantém o 2º vídeo da cor (`fim`, scripts/video-fim.py): só o principal troca.
+    antes = videos.get(COR) if isinstance(videos.get(COR), dict) else {}
+    videos[COR] = dict(antes, src=url_video, poster=url_poster)
     # metadata inteira (mesmo cuidado do seed-videos-pdp.py): as outras chaves (faq, funcionalidades...) ficam.
     # A prova já gravada (com a chamada, scripts/prova-pecas.py) fica; PROVA daqui só entra se não houver nenhuma.
     novo = dict(meta, videos=json.dumps(videos, ensure_ascii=False), prova=meta.get("prova") or json.dumps(PROVA, ensure_ascii=False))
