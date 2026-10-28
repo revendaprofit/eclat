@@ -14,6 +14,7 @@ Arquivos (já prontos, na pasta raiz): brand-assets/detalhes-pecas/short-orvalho
 Uso:
   python -B scripts/prova-short-orvalho.py            # simulação: confere os arquivos e mostra o que gravaria
   python -B scripts/prova-short-orvalho.py --apply    # grava em PRODUÇÃO (só com "pode aplicar" da sócia)
+  ... --versao v2                                     # escolhe a versão do vídeo (padrão: v3)
 Antes de gravar, salva backup de metadata.videos, metadata.prova e da galeria em brand-assets/.
 """
 import hashlib, io, json, os, sys, time
@@ -44,12 +45,15 @@ def destino(pasta, base, data, ext):
 
 def main():
     if hasattr(sys.stdout, "reconfigure"): sys.stdout.reconfigure(encoding="utf-8")
-    # v2 (28/10, sessão de anúncios): mesmo trecho, com redução de ruído e nitidez, 720x1080, 1,26 MB. Nome novo = sem cache velho.
-    video, poster, silicone = ler("paty-burpee-pdp-v2.mp4"), ler("paty-burpee-pdp-v2-poster.jpg"), ler("silicone-barra-short.jpg")
+    # Versão do vídeo (--versao v3): v2 e v3 vieram da sessão de anúncios em 28/10 (v3 = melhorada por IA, 1,12 MB).
+    # Cada versão sobe com nome novo, para não ficar presa no cache de 1 ano.
+    versao = sys.argv[sys.argv.index("--versao") + 1] if "--versao" in sys.argv else "v3"
+    video, poster = ler("paty-burpee-pdp-%s.mp4" % versao), ler("paty-burpee-pdp-%s-poster.jpg" % versao)
+    silicone = ler("silicone-barra-short.jpg")
     if len(video) > 1.3 * 1024 * 1024: raise SystemExit("vídeo acima de 1,3 MB: regra do site leve (scripts/midia-leve.py)")
     arquivos = [
-        (destino("videos-pdp", "orvalho-grafitti-paty-burpee-v2", video, "mp4"), video, "video/mp4"),
-        (destino("videos-pdp", "orvalho-grafitti-paty-burpee-v2", poster, "jpg"), poster, "image/jpeg"),
+        (destino("videos-pdp", "orvalho-grafitti-paty-burpee-" + versao, video, "mp4"), video, "video/mp4"),
+        (destino("videos-pdp", "orvalho-grafitti-paty-burpee-" + versao, poster, "jpg"), poster, "image/jpeg"),
         (destino("detalhes-pecas/%s" % HANDLE, "grafitti-silicone", silicone, "jpg"), silicone, "image/jpeg"),
     ]
     for dest, data, _ in arquivos: print("subiria site/%s (%d KB)" % (dest, len(data) // 1024))
