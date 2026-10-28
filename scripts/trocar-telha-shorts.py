@@ -50,7 +50,11 @@ def main():
         por_url = {i["url"]: i["id"] for i in p["images"]}
         novas = [todas[n] for n in lst]
         corpo = [{"id": i["id"], "url": i["url"]} for i in outras] + [({"id": por_url[u], "url": u} if u in por_url else {"url": u}) for u in novas]
-        api.post("/admin/products/%s" % p["id"], {"images": corpo})
+        corpo_post = {"images": corpo}
+        # Miniatura (card da vitrine): se era uma foto Telha que saiu deste produto, vira a nova capa Telha dele.
+        thumb = (p.get("thumbnail") or "").rsplit("/", 1)[-1].rsplit(".", 1)[0]
+        if thumb.startswith("telha-") and thumb not in lst: corpo_post["thumbnail"] = novas[0]
+        api.post("/admin/products/%s" % p["id"], corpo_post)
         prod = api.get("/admin/products/%s?fields=id,*images,*variants,*variants.options" % p["id"])["product"]
         ids = {i["url"]: i["id"] for i in prod["images"]}
         vids = [v["id"] for v in prod["variants"] if any(o.get("value") == COR for o in v.get("options") or [])]
