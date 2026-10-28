@@ -44,10 +44,12 @@ def destino(pasta, base, data, ext):
 
 def main():
     if hasattr(sys.stdout, "reconfigure"): sys.stdout.reconfigure(encoding="utf-8")
-    video, poster, silicone = ler("paty-burpee-pdp.mp4"), ler("paty-burpee-pdp-poster.jpg"), ler("silicone-barra-short.jpg")
+    # v2 (28/10, sessão de anúncios): mesmo trecho, com redução de ruído e nitidez, 720x1080, 1,26 MB. Nome novo = sem cache velho.
+    video, poster, silicone = ler("paty-burpee-pdp-v2.mp4"), ler("paty-burpee-pdp-v2-poster.jpg"), ler("silicone-barra-short.jpg")
+    if len(video) > 1.3 * 1024 * 1024: raise SystemExit("vídeo acima de 1,3 MB: regra do site leve (scripts/midia-leve.py)")
     arquivos = [
-        (destino("videos-pdp", "orvalho-grafitti-paty-burpee", video, "mp4"), video, "video/mp4"),
-        (destino("videos-pdp", "orvalho-grafitti-paty-burpee", poster, "jpg"), poster, "image/jpeg"),
+        (destino("videos-pdp", "orvalho-grafitti-paty-burpee-v2", video, "mp4"), video, "video/mp4"),
+        (destino("videos-pdp", "orvalho-grafitti-paty-burpee-v2", poster, "jpg"), poster, "image/jpeg"),
         (destino("detalhes-pecas/%s" % HANDLE, "grafitti-silicone", silicone, "jpg"), silicone, "image/jpeg"),
     ]
     for dest, data, _ in arquivos: print("subiria site/%s (%d KB)" % (dest, len(data) // 1024))
@@ -73,7 +75,8 @@ def main():
     if isinstance(videos, str): videos = json.loads(videos)
     videos[COR] = {"src": url_video, "poster": url_poster}
     # metadata inteira (mesmo cuidado do seed-videos-pdp.py): as outras chaves (faq, funcionalidades...) ficam.
-    novo = dict(meta, videos=json.dumps(videos, ensure_ascii=False), prova=json.dumps(PROVA, ensure_ascii=False))
+    # A prova já gravada (com a chamada, scripts/prova-pecas.py) fica; PROVA daqui só entra se não houver nenhuma.
+    novo = dict(meta, videos=json.dumps(videos, ensure_ascii=False), prova=meta.get("prova") or json.dumps(PROVA, ensure_ascii=False))
     api.post("/admin/products/%s" % p["id"], {"metadata": novo})
 
     # Silicone como 2ª foto da cor: logo depois da 1ª foto da Grafitti (a capa). Rodar de novo não duplica.
