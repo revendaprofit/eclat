@@ -31,6 +31,8 @@ function setConsent(granted: boolean) {
   ;(w.gtag ?? gtagLike)("consent", "update", consent)
   // Evento próprio para acionadores do GTM (ex.: carregar o Pixel após o aceite).
   push({ event: "consent_update", ...consent })
+  // Clarity (modules/analytics/clarity.tsx) só carrega depois do aceite.
+  if (granted) (w as unknown as { __eclatClarity?: () => void }).__eclatClarity?.()
 }
 
 // Consent default: PRECISA rodar antes do snippet do GTM. Script inline puro

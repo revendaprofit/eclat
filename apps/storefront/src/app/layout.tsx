@@ -4,6 +4,7 @@ import { Playfair_Display, Inter } from "next/font/google"
 import { getSiteContent } from "@lib/data/site-content"
 import { GtmHead, GtmBody } from "@modules/analytics/gtm"
 import { ConsentDefault, CookieBanner } from "@modules/analytics/consent"
+import { ClarityScript } from "@modules/analytics/clarity"
 import { Marketing } from "@modules/analytics/config"
 import PwaRegister from "@modules/common/components/pwa-register"
 import { OrganizationJsonLd, WebSiteJsonLd } from "@modules/seo/jsonld"
@@ -80,6 +81,7 @@ export default async function RootLayout(props: { children: React.ReactNode }) {
       <body className="bg-eclat-luz text-eclat-grafite antialiased font-sans">
         <ConsentDefault />
         <GtmHead gtmId={marketing?.gtm_id} />
+        <ClarityScript />
         <GtmBody gtmId={marketing?.gtm_id} />
         <OrganizationJsonLd />
         <WebSiteJsonLd />
