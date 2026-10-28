@@ -4,5 +4,5 @@ import { parametrosDoAmbiente } from "../../../../modules/superfrete/parametros"
 
 export const GET = async (_req: MedusaRequest, res: MedusaResponse) => {
   const p = parametrosDoAmbiente()
-  res.json({ piso_mg: p.pisoMg, piso_brasil: p.pisoBrasil })
+  res.json({ piso_mg: p.pisoMg, piso_brasil: p.pisoBrasil, metade_brasil: p.metadeBrasil })
 }

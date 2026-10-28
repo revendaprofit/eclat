@@ -20,7 +20,7 @@ import { obterCotador, type Cotador } from "./cotador"
 import { paraValorMedusa } from "./dinheiro"
 import { cabeNoMiniEnvios, montarPacote, type Pacote } from "./embalagem"
 import { parametrosDoAmbiente } from "./parametros"
-import { aplicarFreteGratis, ID_SUPERFRETE, normalizaUf, precosDeVitrine, SERVICOS, type Parametros, type Precos, type Servico } from "./preco"
+import { aplicarFreteGratis, aplicarMetadeBrasil, ID_SUPERFRETE, normalizaUf, precosDeVitrine, SERVICOS, type Parametros, type Precos, type Servico } from "./preco"
 
 export type OpcoesSuperfrete = {
   cotador?: Cotador
@@ -75,7 +75,10 @@ export default class SuperfreteProviderService extends AbstractFulfillmentProvid
     const parametros = this.opcoes_.parametros ?? parametrosDoAmbiente()
 
     const normais = await this.precosNormais_(cep, pacote, parametros)
-    const finais = aplicarFreteGratis(normais, await this.base_(context), normalizaUf(context.shipping_address?.province), parametros)
+    const base = await this.base_(context)
+    const uf = normalizaUf(context.shipping_address?.province)
+    // 27/10: fora de MG, metade a partir de R$ 250; depois, o frete grátis por piso (MG: uma peça; Brasil: piso).
+    const finais = aplicarFreteGratis(aplicarMetadeBrasil(normais, base, uf, parametros), base, uf, parametros)
     const centavos = finais[servico]
     if (typeof centavos !== "number") {
       throw new MedusaError(MedusaError.Types.NOT_ALLOWED, `${NOMES[servico]} não está disponível para este pedido.`)

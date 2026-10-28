@@ -1,7 +1,7 @@
-import { aplicarFreteGratis, normalizaUf, pisoPara, precosDeVitrine, precosNormais, semDominadas } from "../preco"
+import { aplicarFreteGratis, aplicarMetadeBrasil, normalizaUf, pisoPara, precosDeVitrine, precosNormais, semDominadas } from "../preco"
 import { parametrosDoAmbiente } from "../parametros"
 
-const P = { margem: 200, pisoMg: 49900, pisoBrasil: 59900, reservaPac: 2490 }
+const P = { margem: 200, pisoMg: 49900, pisoBrasil: 59900, reservaPac: 2490, metadeBrasil: 25000 }
 
 describe("regra de preço do frete", () => {
   it("preço normal = cotação + margem, arredondado para ,90", () => {
@@ -47,9 +47,25 @@ describe("regra de preço do frete", () => {
   })
 })
 
+describe("frete pela metade fora de MG (sócia, 27/10/2026)", () => {
+  it("a partir de R$ 250 fora de MG, todas as opções saem pela metade", () => {
+    expect(aplicarMetadeBrasil({ pac: 2490, sedex: 3290 }, 25000, "SP", P)).toEqual({ pac: 1245, sedex: 1645 })
+    expect(aplicarMetadeBrasil({ pac: 2490, sedex: 3290 }, 31800, "", P)).toEqual({ pac: 1245, sedex: 1645 })
+  })
+  it("abaixo de R$ 250, em MG ou com a regra desligada, nada muda", () => {
+    expect(aplicarMetadeBrasil({ pac: 2490 }, 24999, "SP", P)).toEqual({ pac: 2490 })
+    expect(aplicarMetadeBrasil({ pac: 2490 }, 30000, "MG", P)).toEqual({ pac: 2490 })
+    expect(aplicarMetadeBrasil({ pac: 2490 }, 30000, "SP", { ...P, metadeBrasil: 0 })).toEqual({ pac: 2490 })
+  })
+  it("metade e depois o frete grátis do Brasil: acima do piso a mais barata zera e as outras cobram a diferença da metade", () => {
+    const metade = aplicarMetadeBrasil({ pac: 2490, sedex: 3290 }, 60000, "SP", P)
+    expect(aplicarFreteGratis(metade, 60000, "SP", P)).toEqual({ pac: 0, sedex: 400 })
+  })
+})
+
 describe("parâmetros do ambiente", () => {
-  // Padrão de MG: R$ 499 na spec, R$ 399 desde 2026-10-10 (sócia). P (R$ 499) continua valendo nos cálculos acima.
-  const PADRAO = { ...P, pisoMg: 39900 }
+  // Padrão de MG: R$ 499 na spec, R$ 399 em 10/10, R$ 129 (uma peça) desde 27/10 (sócia). P (R$ 499) continua nos cálculos acima.
+  const PADRAO = { ...P, pisoMg: 12900, metadeBrasil: 25000 }
 
   it("usa os padrões da spec quando não há env", () => {
     expect(parametrosDoAmbiente({})).toEqual(PADRAO)
@@ -60,6 +76,7 @@ describe("parâmetros do ambiente", () => {
       ...PADRAO,
       margem: 300,
     })
+    expect(parametrosDoAmbiente({ FRETE_METADE_BRASIL_CENTAVOS: "0" }).metadeBrasil).toBe(0)
   })
 })
 
@@ -86,7 +103,7 @@ describe("opção dominada", () => {
   })
 
   it("precosDeVitrine aplica margem, ,90 e tira a dominada (cotação real de BH em 2026-09-18)", () => {
-    const P = { margem: 200, pisoMg: 49900, pisoBrasil: 59900, reservaPac: 2490 }
+    const P = { margem: 200, pisoMg: 49900, pisoBrasil: 59900, reservaPac: 2490, metadeBrasil: 25000 }
     expect(
       precosDeVitrine(
         [

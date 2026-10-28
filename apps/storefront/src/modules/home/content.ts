@@ -165,7 +165,7 @@ export const HOME_DEFAULTS = {
     eyebrow: "Clube Éclat",
     title: "A cada 3 compras, um mega presente e um colecionável das Auroras.",
     text:
-      "Vale para compras a partir de R$ 400. A primeira traz a experiência ÉCLAT e a meia de presente; o unboxing marcando a ÉCLAT vale um voucher de 10% off; a terceira compra vem com o mega presente e o colecionável.",
+      "Vale para compras a partir de R$ 400. A primeira traz a experiência ÉCLAT e o frete por nossa conta em Minas; o unboxing marcando a ÉCLAT vale um voucher de 10% off; a terceira compra vem com o mega presente e o colecionável.",
     cta_label: "Quero entrar no Clube",
   } as Clube,
   instagram: {

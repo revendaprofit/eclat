@@ -4,7 +4,8 @@ import { arredonda90 } from "./dinheiro"
 export type Servico = "mini" | "pac" | "sedex"
 export const SERVICOS: Servico[] = ["mini", "pac", "sedex"]
 export const ID_SUPERFRETE: Record<Servico, number> = { mini: 17, pac: 1, sedex: 2 }
-export type Parametros = { margem: number; pisoMg: number; pisoBrasil: number; reservaPac: number }
+// metadeBrasil (sócia, 27/10/2026): fora de MG, a partir desta base o frete sai pela metade; 0 desliga.
+export type Parametros = { margem: number; pisoMg: number; pisoBrasil: number; reservaPac: number; metadeBrasil: number }
 export type Precos = Partial<Record<Servico, number>>
 
 export function normalizaUf(provincia?: string | null): string {
@@ -35,6 +36,21 @@ export function aplicarFreteGratis(normais: Precos, base: number, uf: string, p:
   const menor = Math.min(...disponiveis.map((s) => normais[s] as number))
   const finais: Precos = {}
   for (const s of disponiveis) finais[s] = Math.max(0, (normais[s] as number) - menor)
+  return finais
+}
+
+/**
+ * Sócia, 27/10/2026: fora de MG, atingida a base `metadeBrasil`, todas as opções saem pela metade (centavo
+ * arredondado). MG não entra aqui: lá o frete fica grátis a partir de uma peça (pisoMg). Aplicar ANTES do
+ * frete grátis, que continua valendo acima do piso do Brasil.
+ */
+export function aplicarMetadeBrasil(normais: Precos, base: number, uf: string, p: Parametros): Precos {
+  if (uf === "MG" || p.metadeBrasil <= 0 || base < p.metadeBrasil) return { ...normais }
+  const finais: Precos = {}
+  for (const s of SERVICOS) {
+    const v = normais[s]
+    if (typeof v === "number") finais[s] = Math.round(v / 2)
+  }
   return finais
 }
 

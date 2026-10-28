@@ -2,7 +2,8 @@
 // A conta que VALE é a do backend (modules/superfrete/preco.ts); aqui é só exibição.
 import { ehCodigoPix } from "./condicoes"
 
-export type RegrasDeFrete = { piso_mg: number; piso_brasil: number }
+// metade_brasil (27/10): fora de MG, frete pela metade a partir desta base (0/ausente = sem a regra).
+export type RegrasDeFrete = { piso_mg: number; piso_brasil: number; metade_brasil?: number }
 export type ServicoDeFrete = "mini" | "pac" | "sedex"
 export type Prazos = Partial<Record<ServicoDeFrete, { min: number; max: number }>>
 

@@ -79,16 +79,25 @@ function formatarPercentual(p: number): string {
   return `${Number.isInteger(p) ? p : p.toLocaleString("pt-BR")}%`
 }
 
-/** Pisos em centavos (rota /store/frete/regras) → "Frete grátis a partir de R$ 399 em MG e R$ 599 nos demais estados". */
+/**
+ * Pisos em centavos (rota /store/frete/regras) → "Frete grátis a partir de R$ 399 em MG e R$ 599 nos demais estados".
+ * Com `metade_brasil` (27/10): "Frete grátis em MG a partir de R$ 129 · pela metade no Brasil a partir de R$ 250".
+ */
 export function fraseFreteGratis(
-  pisos: { piso_mg: number; piso_brasil: number } | null,
+  pisos: { piso_mg: number; piso_brasil: number; metade_brasil?: number } | null,
   fmt: Formatar,
   opcoes: { curta?: boolean } = {}
 ): string | null {
   if (!pisos) return null
   const mg = pisos.piso_mg
   const br = pisos.piso_brasil
+  const metade = pisos.metade_brasil ?? 0
   if (br <= 0 && mg <= 0) return "Frete grátis para todo o Brasil"
+  if (metade > 0 && mg > 0) {
+    return opcoes.curta
+      ? `Frete grátis em MG (${fmt(mg)}+) · metade no Brasil (${fmt(metade)}+)`
+      : `Frete grátis em MG a partir de ${fmt(mg)} · pela metade no Brasil a partir de ${fmt(metade)}`
+  }
   if (mg === br) return `Frete grátis a partir de ${fmt(br)}`
   // curta: cabe numa linha da barra do topo no celular (375 px)
   if (opcoes.curta) return `Frete grátis: ${fmt(mg)} em MG, ${fmt(br)} no Brasil`
@@ -116,7 +125,7 @@ export function frasesDaBarra(args: {
   condicoes: Condicoes
   cupom: { codigo: string; percentual: number } | null
   presente?: { id: string; minimo_centavos: number } | null
-  pisos: { piso_mg: number; piso_brasil: number } | null
+  pisos: { piso_mg: number; piso_brasil: number; metade_brasil?: number } | null
   fmt: Formatar
 }): string[] {
   const { condicoes, cupom, presente, pisos, fmt } = args

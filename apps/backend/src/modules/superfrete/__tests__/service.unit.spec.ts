@@ -1,7 +1,7 @@
 import SuperfreteProviderService from "../service"
 import { ErroSuperfrete, type Cotacao } from "../cliente"
 
-const P = { margem: 200, pisoMg: 49900, pisoBrasil: 59900, reservaPac: 2490 }
+const P = { margem: 200, pisoMg: 49900, pisoBrasil: 59900, reservaPac: 2490, metadeBrasil: 0 }
 const logger = { warn: jest.fn(), error: jest.fn(), info: jest.fn() }
 
 const COTACOES: Cotacao[] = [

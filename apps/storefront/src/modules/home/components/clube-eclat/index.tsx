@@ -7,11 +7,12 @@ import { Clube, HOME_DEFAULTS } from "@modules/home/content"
 // com a frase-gatilho — é o que cria o lead no Cockpit (lib/data/prevenda.ts).
 const PASSOS = [
   // Texto dos três passos definido pela sócia em 10/10/2026 e alinhado com o link da bio em 14/10/2026: NÃO existe
-  // voucher na 1ª compra — o presente é a meia (a partir de R$ 250); o voucher de 10% vem do unboxing marcando a ÉCLAT.
+  // voucher na 1ª compra; o voucher de 10% vem do unboxing marcando a ÉCLAT. 27/10: a meia de presente saiu
+  // ("não gerou valor, marca desconhecida"); o benefício da 1ª compra é o frete (grátis em MG, metade no Brasil).
   {
     n: "1",
     titulo: "Primeira compra",
-    texto: "Você recebe a experiência ÉCLAT: conhece nossa história, nossos conceitos e nossa qualidade. A partir de R$ 250, ganha uma meia Éclat de presente, no tamanho e na cor que escolher.",
+    texto: "Você recebe a experiência ÉCLAT: conhece nossa história, nossos conceitos e nossa qualidade. Em Minas, o frete é por nossa conta a partir de uma peça; no resto do Brasil, sai pela metade a partir de R$ 250.",
   },
   { n: "2", titulo: "Segunda compra", texto: "Receba sua primeira compra, faça o unboxing marcando a ÉCLAT e ganhe um voucher de 10% off para a próxima. Dentro do Clube, você fica sabendo de tudo antes e participa das decisões da marca." },
   { n: "3", titulo: "Terceira compra", texto: "Um mega presente para te motivar a continuar treinando e um colecionável das Auroras. Vale para compras a partir de R$ 400." },

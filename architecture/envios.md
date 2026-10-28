@@ -236,3 +236,11 @@ Pedido da sócia depois do pedido #28: a cliente respondeu "Amei!!" ao rastreio 
   pedido de avaliação (`architecture/avaliacao.md`) — são automações distintas.
 - Testes: `lib/__tests__/convite-clube.unit.spec.ts`, `superfrete-avisos.unit.spec.ts`. Não testado em execução:
   `GET /group/participants` da Evolution (forma da resposta aceita `{participants:[{id}]}` e `[{id}]`).
+
+## Frete por estado, versão de 27/10/2026 (sócia)
+- **MG**: frete grátis a partir de **R$ 129** em peças (uma peça; a meia sozinha não ganha). `FRETE_GRATIS_MG_CENTAVOS=12900`.
+- **Demais estados**: a partir de **R$ 250** o frete sai **pela metade** (`aplicarMetadeBrasil` em `modules/superfrete/preco.ts`,
+  `FRETE_METADE_BRASIL_CENTAVOS=25000`, 0 desliga) e continua grátis a partir do piso do Brasil (R$ 599). A metade é
+  aplicada antes do frete grátis.
+- `/store/frete/regras` devolve `metade_brasil`; a barra da sacola e a barra do topo (`condicoes.ts`) falam das duas regras.
+- O presente por faixa (meia) foi desligado no mesmo dia (`site_content.brindes.ativo=false`): o benefício da 1ª compra é o frete.

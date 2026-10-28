@@ -69,6 +69,9 @@ describe("frete grátis", () => {
     expect(fraseFreteGratis({ piso_mg: 0, piso_brasil: 0 }, fmt)).toBe("Frete grátis para todo o Brasil")
     expect(fraseFreteGratis(null, fmt)).toBeNull()
     expect(fraseFreteGratis({ piso_mg: 49900, piso_brasil: 59900 }, fmt, { curta: true })).toBe("Frete grátis: R$ 499,00 em MG, R$ 599,00 no Brasil")
+    // 27/10: MG grátis a partir de uma peça, Brasil pela metade a partir de R$ 250
+    expect(fraseFreteGratis({ piso_mg: 12900, piso_brasil: 59900, metade_brasil: 25000 }, fmt)).toBe("Frete grátis em MG a partir de R$ 129,00 · pela metade no Brasil a partir de R$ 250,00")
+    expect(fraseFreteGratis({ piso_mg: 12900, piso_brasil: 59900, metade_brasil: 25000 }, fmt, { curta: true })).toBe("Frete grátis em MG (R$ 129,00+) · metade no Brasil (R$ 250,00+)")
   })
 })
 
