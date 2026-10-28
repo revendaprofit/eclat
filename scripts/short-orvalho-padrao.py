@@ -31,7 +31,8 @@ NOVOS = {   # nome no site → arquivo local
     "grafitti-cos": os.path.join(BA, "detalhes-internos-2026-10-28", "IMG_7774.jpg"),
     "telha-costas": os.path.join(BA, "short-orvalho-padrao", "telha-costas.jpg"),
     "telha-frente": os.path.join(BA, "short-orvalho-padrao", "telha-frente.jpg"),
-    "telha-silicone": os.path.join(BA, "short-orvalho-prova", "silicone-barra-short.jpg"),
+    # 28/10: silicone em tecido Telha (quadro do vídeo do macaquinho telha IMG_7780; mesmo silicone dos shorts)
+    "telha-silicone": os.path.join(BA, "detalhes-internos-2026-10-28", "silicone-barra-telha.jpg"),
 }
 # Ordem por cor; "=nome" = foto que já está no produto (pelo início do nome do arquivo).
 ORDEM = {
