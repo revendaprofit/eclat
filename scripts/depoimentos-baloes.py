@@ -6,7 +6,8 @@ Cada balão é uma fala REAL, tirada de áudio, vídeo, story ou mensagem (fonte
 pessoa real e sem sobrenome. Quem é embaixadora ou parceira (ganhou a peça) aparece marcada no campo `origem`.
 Não há fala inventada nem nome trocado: depoimento falso é propaganda enganosa (CDC art. 37) e fere a regra da marca.
 
-O balão é só o desenho da fala (fundo e balão no tom do WhatsApp), sem hora nem ícones inventados.
+O balão segue o modelo do print real do canal de onde a fala veio (WhatsApp ou Instagram), sem hora nem barra de
+áudio inventadas. Rodar de novo troca a imagem do item que já existe.
 Saída: brand-assets/depoimentos-site/baloes/<id>.jpg, subidas em site/depoimentos/ e acrescentadas no FIM de
 site_content "home.testimonials" (a home continua igual). Rodar de novo não duplica. Também marca o print da Thais
 no conjunto Aurora telha (top e short Aurora), confirmado pela sócia em 27/10.
@@ -49,24 +50,43 @@ BALOES = [
 ]
 THAIS = ("thais-conjunto-", ["top-aurora", "short-aurora"])
 
-FUNDO, BALAO, TEXTO = (239, 234, 226), (255, 255, 255), (32, 33, 36)
+# Modelos tirados dos prints reais: WhatsApp (fundo com desenhos de um print da Luana, balão branco com bico,
+# letra escura) e Instagram (fundo branco, balão cinza). Sem hora, sem barra de áudio: só o que a fonte tem.
+FUNDO_WA = os.path.join(PROJ, "brand-assets", "depoimentos-site", "baloes", "fundo-whatsapp.png")
 
 def fonte(tam):
     for f in ("C:/Windows/Fonts/segoeui.ttf", "/System/Library/Fonts/SFNS.ttf", "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"):
         if os.path.exists(f): return ImageFont.truetype(f, tam)
     return ImageFont.load_default()
 
-def balao(fala):
-    fn = fonte(42); linhas = textwrap.wrap("“%s”" % fala, 34); lh = 58
-    larg = max(fn.getlength(l) for l in linhas)
-    bw, bh = int(larg) + 72, len(linhas) * lh + 60
-    W, H = 900, bh + 60
-    im = Image.new("RGB", (W, H), FUNDO); d = ImageDraw.Draw(im)
-    d.rounded_rectangle((30, 30, 30 + bw, 30 + bh), 32, fill=BALAO)
-    d.polygon([(30, 30), (30 + 34, 30), (12, 22)], fill=BALAO)  # bico do balão
-    y = 30 + 28
-    for l in linhas: d.text((30 + 36, y), l, font=fn, fill=TEXTO); y += lh
+def ladrilho(W, H):
+    t = Image.open(FUNDO_WA).convert("RGB"); im = Image.new("RGB", (W, H))
+    for y in range(0, H, t.height):
+        for x in range(0, W, t.width):
+            v = t.transpose(Image.FLIP_LEFT_RIGHT) if (x // t.width + y // t.height) % 2 else t
+            im.paste(v, (x, y))
     return im
+
+def balao(fala, origem):
+    whats = origem.startswith("WhatsApp"); audio = "áudio" in origem
+    fn, fp = fonte(50), fonte(38)
+    linhas = textwrap.wrap(("“%s”" % fala) if audio else fala, 30); lh = 66
+    larg = max([fn.getlength(l) for l in linhas] + ([fp.getlength("Áudio transcrito")] if audio else []))
+    topo = 58 if audio else 0
+    bw, bh = int(larg) + 80, topo + len(linhas) * lh + 52
+    W, H = 1170, bh + 70
+    if whats:
+        im = ladrilho(W, H); cor, raio = (255, 255, 255), 36
+    else:
+        im = Image.new("RGB", (W, H), (255, 255, 255)); cor, raio = (239, 239, 239), 46
+    d = ImageDraw.Draw(im); x0, y0 = 40, 35
+    d.rounded_rectangle((x0, y0, x0 + bw, y0 + bh), raio, fill=cor)
+    if whats: d.polygon([(x0, y0), (x0 + 40, y0), (x0 - 16, y0 - 2)], fill=cor)  # bico, como no print
+    y = y0 + 26
+    if audio: d.text((x0 + 40, y), "Áudio transcrito", font=fp, fill=(102, 119, 129)); y += topo
+    for l in linhas: d.text((x0 + 40, y), l, font=fn, fill=(17, 27, 33)); y += lh
+    im = im.crop((0, 0, min(W, x0 + bw + 80), H))
+    return im.resize((900, round(im.height * 900 / im.width)), Image.LANCZOS) if im.width > 900 else im
 
 def env_local():
     e = {}
@@ -85,16 +105,16 @@ def main():
 
     for t in itens:
         if THAIS[0] in (t.get("image_url") or ""): t["produtos"] = sorted(set(t.get("produtos") or []) | set(THAIS[1]))
-    ja = {(t.get("author"), t.get("quote")) for t in itens}
     uploads = []
     for ident, autora, origem, pecas, fala in BALOES:
-        im = balao(fala); b = io.BytesIO(); im.save(b, "JPEG", quality=88); data = b.getvalue()
+        im = balao(fala, origem); b = io.BytesIO(); im.save(b, "JPEG", quality=88); data = b.getvalue()
         im.save(os.path.join(SAIDA, ident + ".jpg"), quality=88)
         dest = "depoimentos/balao-%s-%s.jpg" % (ident, hashlib.md5(data).hexdigest()[:8])
         uploads.append((dest, data))
-        if (autora, fala) not in ja:
-            itens.append({"quote": fala, "author": autora, "origem": origem, "tipo": "print", "produtos": pecas,
-                          "image_url": "%s/storage/v1/object/public/site/%s" % (url, dest), "image_width": im.width, "image_height": im.height})
+        img = {"image_url": "%s/storage/v1/object/public/site/%s" % (url, dest), "image_width": im.width, "image_height": im.height}
+        existente = next((t for t in itens if (t.get("author"), t.get("quote")) == (autora, fala)), None)
+        if existente: existente.update(img); continue
+        itens.append({"quote": fala, "author": autora, "origem": origem, "tipo": "print", "produtos": pecas, **img})
 
     por_peca = {}
     for t in itens:
