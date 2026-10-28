@@ -123,7 +123,7 @@ def main():
     print("itens: %d → %d · balões em %s" % (len(antes["items"]), len(itens), SAIDA))
     if not APPLY: print("modo: SIMULAÇÃO (use --apply)"); return
 
-    backup = os.path.join(PROJ, "brand-assets", "backup-site-content-testimonials-%s-antes-baloes.json" % datetime.date.today())
+    backup = os.path.join(PROJ, "brand-assets", "backup-site-content-testimonials-%s-antes-baloes.json" % datetime.datetime.now().strftime("%Y-%m-%d-%H%M"))
     with io.open(backup, "w", encoding="utf-8") as f: json.dump({"key": CHAVE, "value": antes}, f, ensure_ascii=False, indent=1)
     for dest, data in uploads:
         up = requests.post("%s/storage/v1/object/site/%s" % (url, dest), headers=dict(H, **{"Content-Type": "image/jpeg", "x-upsert": "true", "cache-control": "max-age=31536000"}), data=data, timeout=120)
