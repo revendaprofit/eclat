@@ -47,6 +47,15 @@ BALOES = [
      "Isso sim é pré-treino! Amei cada detalhe."),
     ("du-retorno", "Du", "Instagram · " + EMB, ["top-aurora", "short-aurora"],
      "Que seja o primeiro de muitos nesse retorno."),
+    # Falas que entraram só em texto (scripts/depoimentos-por-peca.py): ganham o balão do canal de origem.
+    ("alayse-camiseta", "Alayse", "WhatsApp", ["camiseta-raglan-dry"],
+     "Que pacote lindo, cheiro maravilhoso, que sensação boa, o tecido da camiseta é perfeito."),
+    ("samara-aprovado", "Samara", "Instagram", ["short-orvalho", "top-orvalho"],
+     "APROVADO! Extremamente confortável, esse e os próximos."),
+    ("alana-arraso", "Alana", "Instagram", ["macaquinho-solaris"],
+     "Esse macaquinho é um arraso!! Super firme!!"),
+    ("pollianna-nao-sobe", "Pollianna", "Instagram", ["macaquinho-solaris"],
+     "Super aprovado! Não sobe, não enrola, macaquinho que garante sucesso no seu treino."),
 ]
 THAIS = ("thais-conjunto-", ["top-aurora", "short-aurora"])
 
