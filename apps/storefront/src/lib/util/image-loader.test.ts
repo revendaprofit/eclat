@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import loader, { urlDaImagem } from "./image-loader"
+import loader, { midiaDoSite, urlDaImagem } from "./image-loader"
 
 const BASE = "https://abc123.supabase.co/storage/v1/object/public/site/"
 const PRODUTO = BASE + "products/camiseta-raglan-dry/telha-01-7342967b.jpg"
@@ -61,5 +61,17 @@ describe("outras origens", () => {
       expect(urlDaImagem({ src: "https://img.youtube.com/vi/abc/hqdefault.jpg", width: 640 }, modo)).toBe("https://img.youtube.com/vi/abc/hqdefault.jpg")
       expect(urlDaImagem({ src: falso, width: 640 }, modo)).toBe(falso)
     }
+  })
+})
+
+describe("midiaDoSite", () => {
+  it("troca vídeo e capa do Storage pelo /midia do site", () => {
+    expect(midiaDoSite("https://abc.supabase.co/storage/v1/object/public/site/videos-pdp/x-leve-1234abcd.mp4")).toBe("/midia/videos-pdp/x-leve-1234abcd.mp4")
+  })
+  it("deixa o resto como está", () => {
+    expect(midiaDoSite("/brand/mark.png")).toBe("/brand/mark.png")
+    expect(midiaDoSite("https://abc.supabase.co/storage/v1/object/public/outro/a.mp4")).toBe("https://abc.supabase.co/storage/v1/object/public/outro/a.mp4")
+    expect(midiaDoSite(null)).toBeNull()
+    expect(midiaDoSite(undefined)).toBeUndefined()
   })
 })

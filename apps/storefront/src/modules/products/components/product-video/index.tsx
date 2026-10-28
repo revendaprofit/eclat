@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react"
 import Image from "next/image"
 import { youtubeEmbedUrl, youtubeThumbUrl, type VideoSource } from "@lib/util/product-video"
+import { midiaDoSite } from "@lib/util/image-loader"
 
 // Item de vídeo da galeria da PDP. "Facade": mostra só a capa e carrega o player apenas ao
 // clique — zero bytes de vídeo no carregamento da página.
@@ -81,8 +82,8 @@ export default function ProductVideo({ source, productTitle, productHandle, auto
       <div className="absolute inset-0 overflow-hidden rounded-rounded" style={{ background: FUNDO }}>
         <video
           ref={autoRef}
-          src={source.src}
-          poster={source.poster ?? undefined}
+          src={midiaDoSite(source.src)}
+          poster={midiaDoSite(source.poster) ?? undefined}
           autoPlay
           muted
           loop
@@ -109,8 +110,8 @@ export default function ProductVideo({ source, productTitle, productHandle, auto
           />
         ) : (
           <video
-            src={source.src}
-            poster={source.poster ?? undefined}
+            src={midiaDoSite(source.src)}
+            poster={midiaDoSite(source.poster) ?? undefined}
             autoPlay
             muted
             loop

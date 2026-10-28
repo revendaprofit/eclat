@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import type { HeroPeca, HeroTextos } from "@lib/util/hero-media"
+import { midiaDoSite } from "@lib/util/image-loader"
 
 // Banner interativo do celular (arte "Lumière em Movimento" do dono, 2026-09-14): céu do amanhecer com
 // logo/textos/botão e, abaixo, o palco com a modelo girando 360°. Arrastar na horizontal leva o vídeo
@@ -258,8 +259,8 @@ export default function HeroInterativo({
                 <video
                   key={i}
                   ref={videos[i]}
-                  src={peca && carregar ? peca.video : undefined}
-                  poster={peca?.poster}
+                  src={peca && carregar ? midiaDoSite(peca.video) : undefined}
+                  poster={midiaDoSite(peca?.poster)}
                   muted
                   loop
                   playsInline

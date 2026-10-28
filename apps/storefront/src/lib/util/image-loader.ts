@@ -43,6 +43,14 @@ export function urlDaImagem({ src, width, quality }: Entrada, modo: ModoImagens)
   return largura ? base.replace(/\.jpg$/, `.w${largura}.jpg`) : base
 }
 
+/** Vídeo ou capa do Storage pela origem do site (/midia/...), como as fotos: no 4G evita abrir outra conexão
+ * (DNS + TLS de *.supabase.co). Qualquer outro endereço passa sem mexer. (diagnóstico do funil, 2026-10-27) */
+export function midiaDoSite<T extends string | null | undefined>(src: T): T {
+  if (!src || !MESMA_ORIGEM || !HOST_SUPABASE.test(src)) return src
+  const i = src.indexOf(PUBLICO + "site/")
+  return (i === -1 ? src : `/midia/${src.slice(i + PUBLICO.length + "site/".length)}`) as T
+}
+
 const MODO: ModoImagens = process.env.NEXT_PUBLIC_IMAGENS_MODO === "supabase" ? "supabase" : "direto"
 
 export default function eclatImageLoader(entrada: Entrada): string {

@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { midiaDoSite } from "@lib/util/image-loader"
 
 // Vídeo de fundo do banner da home. A capa (primeiro quadro do vídeo) aparece de imediato; o vídeo
 // só é montado no navegador quando: a tela bate com `media` (o vídeo do desktop nunca é baixado
@@ -39,12 +40,12 @@ export default function HeroVideo({
     <div className={"absolute inset-0 overflow-hidden bg-[#09090d] " + (className ?? "")} aria-hidden>
       {poster && (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={poster} alt="" className="absolute inset-0 h-full w-full object-cover" />
+        <img src={midiaDoSite(poster)} alt="" className="absolute inset-0 h-full w-full object-cover" />
       )}
       {montar && (
         <video
-          src={video}
-          poster={poster ?? undefined}
+          src={midiaDoSite(video)}
+          poster={midiaDoSite(poster) ?? undefined}
           autoPlay
           muted
           loop

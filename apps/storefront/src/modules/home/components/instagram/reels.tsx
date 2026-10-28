@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import type { InstagramReel } from "@modules/home/content"
+import { midiaDoSite } from "@lib/util/image-loader"
 
 // Cards de reels "em movimento" (referência bechose.com.br, pedido da sócia em 2026-10-10): vídeo curto
 // em loop, sem som, com botão de som por card; legenda por cima e um botão por card — "Ver no Instagram"
@@ -44,8 +45,8 @@ function Card({ reel, handle, index }: { reel: InstagramReel; handle: string; in
     <article className="group relative aspect-[9/16] overflow-hidden rounded-xl bg-eclat-grafite text-eclat-luz">
       <video
         ref={video}
-        src={reel.video_url}
-        poster={reel.poster_url}
+        src={midiaDoSite(reel.video_url)}
+        poster={midiaDoSite(reel.poster_url)}
         muted={mudo}
         loop
         playsInline
