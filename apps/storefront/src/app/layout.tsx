@@ -81,7 +81,7 @@ export default async function RootLayout(props: { children: React.ReactNode }) {
       <body className="bg-eclat-luz text-eclat-grafite antialiased font-sans">
         <ConsentDefault />
         <GtmHead gtmId={marketing?.gtm_id} />
-        <ClarityScript />
+        <ClarityScript clarityId={marketing?.clarity_id} />
         <GtmBody gtmId={marketing?.gtm_id} />
         <OrganizationJsonLd />
         <WebSiteJsonLd />

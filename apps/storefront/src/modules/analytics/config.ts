@@ -5,6 +5,7 @@ export type Marketing = {
   ga4_id?: string // G-XXXXXXX (informativo / uso server-side opcional)
   meta_pixel_id?: string // usado pela CAPI server-side
   google_ads_id?: string // AW-XXXXXXX (informativo)
+  clarity_id?: string // projeto do Microsoft Clarity (mapa de calor), ex.: z4koxbrry7
   gsc_verification?: string // conteúdo da meta google-site-verification
   meta_domain_verification?: string // conteúdo da meta facebook-domain-verification (BM → Domínios)
 }
