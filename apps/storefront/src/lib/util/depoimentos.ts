@@ -19,6 +19,7 @@ export function depoimentosReais(items: unknown): Testimonial[] {
         quote: typeof o.quote === "string" ? o.quote.trim() : "",
         author: typeof o.author === "string" ? o.author.trim() : "",
         tipo: o.tipo === "foto" ? ("foto" as const) : ("print" as const),
+        ...(typeof o.cidade === "string" && o.cidade.trim() ? { cidade: o.cidade.trim() } : {}),
         ...(typeof o.origem === "string" && o.origem.trim() ? { origem: o.origem.trim() } : {}),
         // print real da mensagem ou foto da cliente (só do Storage do site)
         ...(image_url

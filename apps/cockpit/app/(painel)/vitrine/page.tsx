@@ -54,7 +54,7 @@ type Banner = {
 type BenefitItem = { title: string; text?: string }
 type Beneficios = { visible?: boolean; heading?: string; items?: BenefitItem[] }
 type News = { visible?: boolean; title?: string; text?: string; button_label?: string }
-type Depoimento = { quote: string; author?: string; origem?: string; image_url?: string; image_width?: number; image_height?: number; tipo?: "print" | "foto"; produtos?: string[] }
+type Depoimento = { quote: string; author?: string; cidade?: string; origem?: string; image_url?: string; image_width?: number; image_height?: number; tipo?: "print" | "foto"; produtos?: string[] }
 type ProdutoVitrine = { id: string; title: string; handle: string }
 type Depoimentos = { visible?: boolean; heading?: string; items?: Depoimento[] }
 type FaqItem = { q: string; a: string }
@@ -646,10 +646,14 @@ export default function VitrinePage() {
                   <label className={label}>{it.tipo === "foto" ? "Frase (opcional)" : "Texto da mensagem"}</label>
                   <textarea value={it.quote} onChange={(e) => setDep(i, { quote: e.target.value })} rows={2} className={input + " resize-y"} />
                 </div>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-3 gap-2">
                   <div>
                     <label className={label}>Nome</label>
                     <input value={it.author || ""} onChange={(e) => setDep(i, { author: e.target.value })} className={input} placeholder="Luana" />
+                  </div>
+                  <div>
+                    <label className={label}>Cidade (opcional)</label>
+                    <input value={it.cidade || ""} onChange={(e) => setDep(i, { cidade: e.target.value || undefined })} className={input} placeholder="Betim/MG" />
                   </div>
                   <div>
                     <label className={label}>Origem</label>

@@ -49,7 +49,7 @@ export type Newsletter = {
 // card mostra o print e a frase vira o alt; sem print, o card de texto de antes (sócia, 2026-10-11: "a imagem do
 // Whats com a msg fica mais real e confiável"). `image_width`/`image_height` evitam salto de layout.
 // `tipo` "foto" = foto da cliente com o look (sócia, 2026-10-23); `produtos` = handles das peças (faixa "Quem já veste" na PDP).
-export type Testimonial = { quote: string; author?: string; origem?: string; image_url?: string; image_width?: number; image_height?: number; tipo?: "print" | "foto"; produtos?: string[] } // origem: "WhatsApp", "Instagram"
+export type Testimonial = { quote: string; author?: string; cidade?: string; origem?: string; image_url?: string; image_width?: number; image_height?: number; tipo?: "print" | "foto"; produtos?: string[] } // origem: "WhatsApp", "Instagram"
 export type Testimonials = {
   visible?: boolean
   heading?: string

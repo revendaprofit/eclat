@@ -26,3 +26,33 @@ export function lerProva(valor: unknown): Prova | null {
   const chamada = limpo(o.chamada)
   return { titulo, texto: limpo(o.texto), frase: frase && autora ? frase : null, autora, chamada: chamada && chamada.length <= 40 ? chamada : null }
 }
+
+export type FraseDaProva = { frase: string; autora: string }
+export const MAX_FRASES_PROVA = 5
+
+/**
+ * Frases que giram abaixo do nome (sócia, 29/10/2026): a frase da prova primeiro, depois as falas dos depoimentos
+ * marcados para a peça (só texto, nunca foto), sem repetir, até 5. Autora = primeiro nome + cidade quando houver
+ * ("Luana, Betim/MG"): a cidade deixa a prova mais real para quem compra de perto.
+ */
+export function frasesDaProva(
+  prova: Prova | null,
+  depoimentos: { quote: string; author?: string; cidade?: string; tipo?: "print" | "foto" }[]
+): FraseDaProva[] {
+  const out: FraseDaProva[] = []
+  const vistas = new Set<string>()
+  const chave = (s: string) => s.toLowerCase().replace(/[^a-z0-9à-ú]+/gi, " ").trim()
+  const add = (frase: string | null | undefined, autora: string | null | undefined) => {
+    if (!frase || !autora || out.length >= MAX_FRASES_PROVA) return
+    const k = chave(frase)
+    if (!k || vistas.has(k)) return
+    vistas.add(k)
+    out.push({ frase: frase.trim(), autora: autora.trim() })
+  }
+  if (prova) add(prova.frase, prova.autora)
+  for (const t of depoimentos) {
+    if (t.tipo === "foto" || !t.quote || !t.author) continue
+    add(t.quote, t.cidade ? `${t.author}, ${t.cidade}` : t.author)
+  }
+  return out
+}
