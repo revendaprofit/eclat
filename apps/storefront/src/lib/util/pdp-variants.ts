@@ -75,7 +75,8 @@ export function imagesForColor(product: Product, color: string | null): HttpType
 }
 
 // Teto de fotos da galeria (dono, 14/09/2026): no máximo 6 fotos por produto e cor, mais o vídeo.
-export const MAX_FOTOS_GALERIA = 6
+// 6 → 8 em 29/10/2026 (sócia): padrão da galeria = capa, lado, costas, costas de corpo inteiro, outdoor e 2 detalhes com legenda.
+export const MAX_FOTOS_GALERIA = 8
 
 // Cor cujas fotos a galeria mostra: a escolhida; sem escolha (entrada sem ?cor=, menu, busca, link
 // compartilhado), a 1ª cor do produto com fotos próprias — nunca todas as fotos de todas as cores.
