@@ -34,6 +34,7 @@ export type EstadoDoFrete = {
   tracking_number?: string
   tracking_url?: string
   label_url?: string
+  custo_centavos?: number // o que a etiqueta custou (centavos) — DRE "Frete pago à transportadora"
   em: string // ISO
 }
 
@@ -85,15 +86,17 @@ export function lerEstadoDoFrete(metadata: unknown): EstadoDoFrete | null {
   if (typeof o.tracking_number === "string") estado.tracking_number = o.tracking_number
   if (typeof o.tracking_url === "string") estado.tracking_url = o.tracking_url
   if (typeof o.label_url === "string") estado.label_url = o.label_url
+  if (typeof o.custo_centavos === "number") estado.custo_centavos = o.custo_centavos
   return estado
 }
 
-function labelDoEstado(estado: { superfrete_id?: string; tracking_number?: string; tracking_url?: string; label_url?: string }): CarrierLabel {
+function labelDoEstado(estado: { superfrete_id?: string; tracking_number?: string; tracking_url?: string; label_url?: string; custo_centavos?: number }): CarrierLabel {
   return {
     tracking_number: estado.tracking_number ?? "",
     tracking_url: estado.tracking_url ?? "",
     label_url: estado.label_url ?? "",
     carrier_order_id: estado.superfrete_id ?? "",
+    ...(typeof estado.custo_centavos === "number" ? { custo_centavos: estado.custo_centavos } : {}),
   }
 }
 
@@ -105,6 +108,7 @@ async function salvarPaga(deps: Deps, agora: () => Date, id: string, label: Carr
     tracking_number: label.tracking_number,
     tracking_url: label.tracking_url,
     label_url: label.label_url,
+    ...(typeof label.custo_centavos === "number" ? { custo_centavos: label.custo_centavos } : {}),
     em: agora().toISOString(),
   })
 }

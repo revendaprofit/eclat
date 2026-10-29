@@ -34,9 +34,18 @@ export async function GET(req: Request) {
     let frete = 0
     let cogs = 0
     let itensSemCusto = 0
+    // Frete pago à transportadora (sócia, 29/10): o custo real da etiqueta (metadata.frete.custo_centavos) sai do
+    // resultado; "Frete recebido" é o que a cliente pagou. Etiqueta paga sem custo gravado = conta para o aviso.
+    let fretePago = 0
+    let etiquetasSemCusto = 0
     for (const o of orders) {
       receita += reais2cent(o.item_subtotal)
       frete += reais2cent(o.shipping_total)
+      const f = o.metadata?.frete
+      if (f?.status === "paga") {
+        if (typeof f.custo_centavos === "number") fretePago += f.custo_centavos
+        else etiquetasSemCusto++
+      }
       for (const it of o.items ?? []) {
         const c = it.variant_id ? custoMap[it.variant_id] : undefined
         if (c == null) itensSemCusto += it.quantity
@@ -108,7 +117,7 @@ export async function GET(req: Request) {
     const taxasTotal = taxas.total_centavos + taxasForaSite
 
     const lucro_bruto = receita - cogs
-    const resultado = receita + frete - cogs - taxasTotal - despesas - marketingCreators - usoProprio
+    const resultado = receita + frete - fretePago - cogs - taxasTotal - despesas - marketingCreators - usoProprio
     const margem_bruta = receita > 0 ? lucro_bruto / receita : 0
 
     return NextResponse.json({
@@ -118,6 +127,8 @@ export async function GET(req: Request) {
       vendas_fora_site: vendasForaSite,
       receita_fora_site: receitaForaSite,
       frete,
+      frete_pago: fretePago,
+      etiquetas_sem_custo: etiquetasSemCusto,
       cogs,
       lucro_bruto,
       margem_bruta,

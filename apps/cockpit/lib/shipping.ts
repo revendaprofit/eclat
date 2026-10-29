@@ -21,6 +21,8 @@ export type CarrierLabel = {
   // cancelar a etiqueta depois (POST /api/v0/order/cancel) e para conferir o status antes de comprar
   // de novo numa retentativa (ver lib/etiqueta-segura.ts).
   carrier_order_id: string
+  // Custo real da etiqueta (centavos), pago à SuperFrete (sócia, 29/10: o frete que a empresa paga entra no DRE).
+  custo_centavos?: number
 }
 
 // Exportada para a rota de despacho recusar ANTES de qualquer efeito (conferência, nota) com o mesmo texto.
@@ -58,10 +60,17 @@ type RespostaSuperFrete = {
   id?: string
   status?: string
   tracking?: string
+  price?: number | string | null
   print?: { url?: string }
   purchase?: {
-    orders?: { id?: string; tracking?: string; print?: { url?: string } }[]
+    orders?: { id?: string; tracking?: string; price?: number | string | null; print?: { url?: string } }[]
   }
+}
+
+/** Preço da SuperFrete (reais, número ou texto) → centavos; undefined quando não veio. */
+export function centavosDoPreco(v: unknown): number | undefined {
+  const n = typeof v === "string" ? Number(v.replace(",", ".")) : typeof v === "number" ? v : NaN
+  return Number.isFinite(n) && n >= 0 ? Math.round(n * 100) : undefined
 }
 
 async function requisitar(path: string, init: RequestInit): Promise<RespostaSuperFrete> {
@@ -117,11 +126,13 @@ export async function carrierPagarFrete(id: string): Promise<CarrierLabel> {
   // Rastreio real ou vazio — NUNCA o id do frete: o id não rastreia nada nos Correios/transportadora,
   // e um `carrier_order_id` já carrega o id pra quem precisar dele (cancelamento, consulta).
   const rastreio = String(emitida?.tracking ?? "")
+  const custo = centavosDoPreco(emitida?.price)
   return {
     tracking_number: rastreio,
     tracking_url: rastreio ? `https://rastreamento.correios.com.br/app/index.php?objetos=${rastreio}` : "",
     label_url: String(emitida?.print?.url ?? ""),
     carrier_order_id: id,
+    ...(custo !== undefined ? { custo_centavos: custo } : {}),
   }
 }
 
@@ -139,6 +150,7 @@ export async function carrierConsultarFrete(id: string): Promise<{ status: strin
   if (!STATUS_COM_ETIQUETA.has(status)) return { status, label: null }
   // Idem carrierPagarFrete: rastreio real ou vazio, nunca o id do frete.
   const rastreio = String(info?.tracking ?? "")
+  const custo = centavosDoPreco(info?.price)
   return {
     status,
     label: {
@@ -146,6 +158,14 @@ export async function carrierConsultarFrete(id: string): Promise<{ status: strin
       tracking_url: rastreio ? `https://rastreamento.correios.com.br/app/index.php?objetos=${rastreio}` : "",
       label_url: String(info?.print?.url ?? ""),
       carrier_order_id: id,
+      ...(custo !== undefined ? { custo_centavos: custo } : {}),
     },
   }
+}
+
+/** Custo (centavos) de uma etiqueta já criada, pelo GET /api/v0/order/info/{id}. Não gasta saldo. */
+export async function carrierCustoDoFrete(id: string): Promise<{ status: string; custo_centavos: number | undefined }> {
+  if (!carrierConfigured()) throw new CarrierNotConfigured()
+  const info = await get(`/api/v0/order/info/${id}`)
+  return { status: String(info?.status ?? ""), custo_centavos: centavosDoPreco(info?.price) }
 }

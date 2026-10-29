@@ -244,3 +244,12 @@ Pedido da sócia depois do pedido #28: a cliente respondeu "Amei!!" ao rastreio 
   aplicada antes do frete grátis.
 - `/store/frete/regras` devolve `metade_brasil`; a barra da sacola e a barra do topo (`condicoes.ts`) falam das duas regras.
 - O presente por faixa (meia) foi desligado no mesmo dia (`site_content.brindes.ativo=false`): o benefício da 1ª compra é o frete.
+
+## Custo da etiqueta no financeiro (sócia, 2026-10-29)
+- Ao pagar a etiqueta (ou ao confirmá-la pela consulta), o Cockpit grava `metadata.frete.custo_centavos` com o `price`
+  que a SuperFrete devolve (`centavosDoPreco` em `lib/shipping.ts`; `salvarPaga` em `lib/etiqueta-segura.ts`).
+- DRE (`/api/finance/dre`): linha **"(−) Frete pago à transportadora"** = soma desse custo nos pedidos do período;
+  "(+) Frete recebido" segue sendo o que a cliente pagou. A diferença é o subsídio do frete grátis/metade.
+- Etiqueta paga sem custo gravado (compradas antes de 29/10) aparece como aviso no Financeiro com o botão
+  **"Buscar na SuperFrete"** (`POST /api/finance/frete-custos`: só `GET order/info`, não gasta saldo).
+- Fora disso (envio pago à mão, entrega por aplicativo): lançar como despesa, categoria 4 · Embalagem/experiência.

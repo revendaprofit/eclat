@@ -8,6 +8,8 @@ type Dre = {
   vendas_fora_site?: number
   receita_fora_site?: number
   frete: number
+  frete_pago?: number
+  etiquetas_sem_custo?: number
   cogs: number
   lucro_bruto: number
   margem_bruta: number
@@ -59,6 +61,7 @@ export default function FinanceiroPage() {
   const [fRec] = useState("")
   const [salvando, setSalvando] = useState(false)
   const [gerenciarCat, setGerenciarCat] = useState(false)
+  const [buscandoCustos, setBuscandoCustos] = useState(false)
 
   const carregarCategorias = useCallback(async () => {
     const r = await fetch("/api/finance/categories", { cache: "no-store" })
@@ -84,6 +87,24 @@ export default function FinanceiroPage() {
       setLoading(false)
     }
   }, [de, ate])
+
+  // Frete pago à transportadora (29/10): etiqueta paga sem custo gravado → busca o preço na SuperFrete e recarrega.
+  const buscarCustosDasEtiquetas = useCallback(async () => {
+    setBuscandoCustos(true)
+    setErro(null)
+    try {
+      const r = await fetch("/api/finance/frete-custos", { method: "POST" })
+      const j = await r.json()
+      if (!r.ok) throw new Error(j.error || `HTTP ${r.status}`)
+      const falhas = (j.resultado ?? []).filter((x: { erro?: string }) => x.erro)
+      if (falhas.length) setErro(`Sem custo para ${falhas.length} etiqueta(s): ${falhas.map((x: { display_id: number; erro?: string }) => `#${x.display_id} (${x.erro})`).join("; ")}`)
+      await carregarDespesas()
+    } catch (e) {
+      setErro((e as Error).message)
+    } finally {
+      setBuscandoCustos(false)
+    }
+  }, [carregarDespesas])
 
   useEffect(() => {
     carregarCategorias()
@@ -190,6 +211,13 @@ export default function FinanceiroPage() {
               <span>{brl(dre.lucro_bruto)} <span className="text-meta text-eclat-texto-3">({(dre.margem_bruta * 100).toFixed(1)}%)</span></span>
             </div>
             <div className="flex justify-between mt-1"><span className="text-eclat-texto-2">(+) Frete recebido</span><span>{brl(dre.frete)}</span></div>
+            <div className="flex justify-between" data-testid="dre-frete-pago"><span className="text-eclat-texto-2">(−) Frete pago à transportadora</span><span className="text-red-700">−{brl(dre.frete_pago ?? 0)}</span></div>
+            {(dre.etiquetas_sem_custo ?? 0) > 0 && (
+              <div className="flex justify-between items-center text-meta text-eclat-texto-3">
+                <span>· {dre.etiquetas_sem_custo} etiqueta(s) paga(s) sem custo registrado</span>
+                <button type="button" onClick={buscarCustosDasEtiquetas} disabled={buscandoCustos} className="px-2 py-0.5 rounded border border-eclat-pedra/50 bg-white hover:bg-eclat-areia/40 disabled:opacity-50">{buscandoCustos ? "Buscando…" : "Buscar na SuperFrete"}</button>
+              </div>
+            )}
             <div className="flex justify-between" data-testid="dre-taxas-pagamento"><span className="text-eclat-texto-2">(−) Taxas de pagamento</span><span className="text-red-700">−{brl(dre.taxas_pagamento ?? 0)}</span></div>
             {(dre.taxas_fora_site ?? 0) > 0 && (
               <div className="flex justify-between text-meta text-eclat-texto-3"><span>· sendo maquininha (vendas fora do site)</span><span>−{brl(dre.taxas_fora_site ?? 0)}</span></div>

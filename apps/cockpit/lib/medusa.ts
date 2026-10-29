@@ -614,8 +614,10 @@ export const CAMPOS_DE_PAGAMENTO =
 
 // Pedidos do período com os campos necessários ao DRE (receita, frete, itens p/ COGS, tarifa).
 export type DreOrder = {
+  id: string
   display_id: number
   status: string
+  metadata?: { frete?: { status?: string; superfrete_id?: string; custo_centavos?: number } | null } | null
   payment_status: string
   item_subtotal: number
   shipping_total: number
@@ -629,7 +631,7 @@ export async function medusaOrdersForDre(de: string, ate: string): Promise<DreOr
   params.set("created_at[$lte]", `${ate}T23:59:59`)
   params.set(
     "fields",
-    "display_id,status,payment_status,item_subtotal,shipping_total,created_at,items.variant_id,items.quantity,items.detail.quantity," +
+    "id,display_id,status,payment_status,item_subtotal,shipping_total,created_at,metadata,items.variant_id,items.quantity,items.detail.quantity," +
       CAMPOS_DE_PAGAMENTO
   )
   const r = await medusaAdmin(`/admin/orders?${params.toString()}`)
