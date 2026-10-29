@@ -56,3 +56,4 @@ Thumbs.db
 **/.DS_Store
 # artefato de build do tsc (gera ruído no git status)
 *.tsbuildinfo
+produtos.json
