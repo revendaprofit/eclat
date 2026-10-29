@@ -82,9 +82,9 @@ describe("galeria: cor padrão e teto de fotos", () => {
     expect(corDaGaleria(unica, null)).toBeNull()
     expect(galeriaDaCor(unica, null).map((i) => i.url)).toEqual(["a.jpg", "b.jpg"])
   })
-  it("no máximo 6 fotos", () => {
+  it("no máximo 8 fotos", () => {
     const muitas = { ...P, images: Array.from({ length: 9 }, (_, i) => ({ id: `m${i}`, url: `m${i}.jpg` })) } as unknown as HttpTypes.StoreProduct
-    expect(galeriaDaCor(muitas, "Licor")).toHaveLength(6)
+    expect(galeriaDaCor(muitas, "Licor")).toHaveLength(8)
     expect(galeriaDaCor(muitas, "Licor", 3).map((i) => i.url)).toEqual(["m0.jpg", "m1.jpg", "m2.jpg"])
   })
 })
