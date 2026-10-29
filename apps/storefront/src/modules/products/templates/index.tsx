@@ -175,11 +175,12 @@ const ProductTemplate = async ({
           </Suspense>
         </div>
       </ProductSelectionProvider>
+      {/* "Quem já veste" logo abaixo das fotos (sócia, 29/10): a prova de cliente vale mais do que "é para você se". */}
+      <PdpTestimonials product={product} />
       {/* Faixas de borda a borda alternando os tons da marca (areia, luz, blush claro), pedido do
           dono (2026-09-13): cada seção cuida do próprio fundo e some inteira quando não tem dados. */}
       <QuemE product={product} />
       <DetalhesQueFazemDiferenca />
-      <PdpTestimonials product={product} />
       <section className="bg-eclat-blush-claro/60 py-12 small:py-16" data-testid="pdp-faixa-faq">
         <div className="content-container max-w-4xl flex flex-col gap-y-10">
           {/* Selos 7/30 dias/WhatsApp: agora no bloco "Compra segura", junto do botão (2026-09-30). */}
