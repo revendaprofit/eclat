@@ -125,9 +125,9 @@ export function resolveVideoFim(videos: ProductVideos, color: string | null | un
   return fim ? { kind: "mp4", src: fim.src, poster: fim.poster } : null
 }
 
-// Vídeo entra como 1º item, grande e tocando sozinho (sem som), como na página da Versiani Swim
-// (pedido da sócia, 2026-10-11). Era o 2º (hero = foto); mude aqui para voltar.
-export const VIDEO_POSITION = 0
+// Ordem da galeria (sócia, 2026-10-30): capa frontal → vídeo apresentando a peça → costas → lado → vídeo dos
+// detalhes (`fim`). O vídeo principal volta a ser o 2º item (de 2026-10-11 a 2026-10-29 foi o 1º, como na Versiani).
+export const VIDEO_POSITION = 1
 
 export function buildGalleryItems(
   images: { id: string; url?: string | null }[],

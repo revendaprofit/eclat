@@ -100,8 +100,8 @@ const ImageGallery = ({ images, productTitle, productHandle, video, videoFim }: 
         data-testid="image-gallery"
       >
         {items.map((item, idx) => {
-          // Computador (2026-10-11, referência versianiswim.com.br): o 1º item (vídeo, quando há; senão a
-          // 1ª foto) ocupa a largura toda da coluna; os demais seguem em 2 colunas.
+          // Computador (2026-10-11, referência versianiswim.com.br): o 1º item ocupa a largura toda da coluna;
+          // os demais seguem em 2 colunas. Desde 2026-10-30 o 1º item é a capa (o vídeo é o 2º).
           const grande = idx === 0 ? " small:col-span-2" : ""
           if (item.kind === "video") {
             return (

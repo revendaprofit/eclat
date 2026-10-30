@@ -61,14 +61,17 @@ describe("buildGalleryItems", () => {
       { kind: "image", id: "b", url: "https://x/b.jpg" },
     ])
   })
-  it("com vídeo do YouTube insere como 1º item (vídeo grande, como na Versiani — 2026-10-11)", () => {
+  it("com vídeo do YouTube insere como 2º item, depois da capa (ordem da sócia, 2026-10-30)", () => {
     const items = buildGalleryItems(imgs, YT)
-    expect(items.map((i) => i.kind)).toEqual(["video", "image", "image"])
-    expect(items[0]).toEqual({ kind: "video", id: "video-p5hcJujKDEc", source: YT })
+    expect(items.map((i) => i.kind)).toEqual(["image", "video", "image"])
+    expect(items[1]).toEqual({ kind: "video", id: "video-p5hcJujKDEc", source: YT })
   })
   it("com MP4 o id do slide vem do arquivo (troca de cor = slide novo)", () => {
     const items = buildGalleryItems(imgs, MP4)
-    expect(items[0]).toEqual({ kind: "video", id: "video-https://s/x/orvalho-telha.mp4", source: MP4 })
+    expect(items[1]).toEqual({ kind: "video", id: "video-https://s/x/orvalho-telha.mp4", source: MP4 })
+  })
+  it("produto com uma foto só: capa e depois o vídeo", () => {
+    expect(buildGalleryItems([imgs[0]], YT).map((i) => i.kind)).toEqual(["image", "video"])
   })
   it("produto sem fotos: vídeo vira o único item", () => {
     expect(buildGalleryItems([], YT)).toEqual([{ kind: "video", id: "video-p5hcJujKDEc", source: YT }])
@@ -147,10 +150,10 @@ describe("vídeo do fim da galeria (2º vídeo da cor)", () => {
     expect(resolveVideoFim(v, "Grafitti")).toEqual({ kind: "mp4", src: "https://x.supabase.co/v/cos.mp4", poster: "https://x.supabase.co/v/cos.jpg" })
     expect(resolveVideoFim(v, "Telha")).toBeNull()
   })
-  it("entra no FIM da galeria; o principal continua em 1º", () => {
+  it("entra no FIM da galeria; o principal continua em 2º, depois da capa", () => {
     const v = parseProductVideos(meta)
     const itens = buildGalleryItems([{ id: "a", url: "https://x/a.jpg" }, { id: "b", url: "https://x/b.jpg" }], resolveVideoSource(v, null, "Grafitti"), resolveVideoFim(v, "Grafitti"))
-    expect(itens.map((i) => i.kind)).toEqual(["video", "image", "image", "video"])
+    expect(itens.map((i) => i.kind)).toEqual(["image", "video", "image", "video"])
     expect(itens[3].id).toBe("video-fim-https://x.supabase.co/v/cos.mp4")
   })
   it("`fim` sem src válido é ignorado", () => {
