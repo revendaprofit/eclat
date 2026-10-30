@@ -32,6 +32,16 @@ export default function ProductVideo({ source, productTitle, productHandle, auto
   // fotos e textos. Agora a capa aparece na hora e o vídeo só começa a baixar depois do `load` da página
   // (ou de 4 s, o que vier antes) — e segue tocando sozinho, mudo, como antes.
   const [baixar, setBaixar] = useState(false)
+  // Som (sócia, 30/10: "o vídeo está sem áudio"): o vídeo que toca sozinho precisa nascer mudo (regra dos navegadores),
+  // então ganha um botão de som; o vídeo aberto pelo toque ("Ver vídeo") toca com som e controles.
+  const [comSom, setComSom] = useState(false)
+  const alternarSom = () => {
+    const v = autoRef.current
+    if (!v) return
+    v.muted = comSom
+    setComSom(!comSom)
+    if (!comSom) v.play().catch(() => {})
+  }
   useEffect(() => {
     if (!autoplay || source.kind !== "mp4") return
     if (document.readyState === "complete") {
@@ -111,6 +121,20 @@ export default function ProductVideo({ source, productTitle, productHandle, auto
           data-testid="product-video-mp4"
           data-baixando={baixar ? "sim" : "nao"}
         />
+        <button
+          type="button"
+          onClick={alternarSom}
+          aria-label={comSom ? "Desligar o som" : "Ligar o som"}
+          aria-pressed={comSom}
+          className="absolute bottom-3 right-3 z-10 flex items-center gap-1.5 rounded-full bg-white/90 text-eclat-grafite text-[11px] font-semibold uppercase tracking-wider px-3 py-1.5 shadow hover:bg-white"
+          data-testid="product-video-som"
+        >
+          <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" fill="currentColor">
+            <path d="M3 9v6h4l5 4V5L7 9H3z" />
+            {comSom ? <path d="M16.5 12a4.5 4.5 0 0 0-2.5-4v8a4.5 4.5 0 0 0 2.5-4zm2.5 0a7 7 0 0 1-5 6.7v-2.1a5 5 0 0 0 0-9.2V5.3A7 7 0 0 1 19 12z" /> : <path d="M19 6.4 17.6 5 15 7.6 12.4 5 11 6.4 13.6 9 11 11.6 12.4 13 15 10.4 17.6 13 19 11.6 16.4 9z" />}
+          </svg>
+          {comSom ? "Som ligado" : "Ligar som"}
+        </button>
       </div>
     )
   }
@@ -131,8 +155,7 @@ export default function ProductVideo({ source, productTitle, productHandle, auto
             src={midiaDoSite(source.src)}
             poster={midiaDoSite(source.poster) ?? undefined}
             autoPlay
-            muted
-            loop
+            controls
             playsInline
             preload="auto"
             aria-label={title}
