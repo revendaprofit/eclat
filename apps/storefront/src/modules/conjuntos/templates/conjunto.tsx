@@ -9,6 +9,7 @@ import ConjuntoBuilder from "@modules/conjuntos/components/conjunto-builder"
 import InformacoesConjunto from "@modules/conjuntos/components/informacoes-conjunto"
 import { getCondicoes } from "@lib/data/condicoes"
 import { formatarReais, fraseEconomia } from "@lib/util/conjuntos"
+import { complementoEconomiaPix, reais } from "@lib/util/condicoes"
 
 // `view_item` do conjunto (spec §7.2): os "items" são as PEÇAS, não uma linha "conjunto" — não
 // existe SKU de conjunto no catálogo. `value` é o total com benefício (o que a cliente paga).
@@ -44,6 +45,8 @@ export default async function ConjuntoTemplate({
   const base = getBaseURL()
   const url = `${base}/${countryCode}/conjuntos/${card.handle}`
   const economia = fraseEconomia(card.precoCheio, card.precoComBeneficio)
+  // "e mais R$ 14,95 pagando no Pix" (sócia, 30/10): a economia do Pix entra junto com a do conjunto
+  const pix = complementoEconomiaPix(card.precoComBeneficio, condicoes, (c) => reais(c))
 
   return (
     <div className="content-container py-6" data-testid="conjunto-container">
@@ -75,7 +78,7 @@ export default async function ConjuntoTemplate({
       <p className="text-sm text-eclat-grafite/80 mt-1 mb-6" data-testid="conjunto-promessa">
         {card.pecas.map((p) => p.title).join(" + ")} por{" "}
         <strong className="text-eclat-terracota font-medium">{formatarReais(card.precoComBeneficio)}</strong>
-        {economia ? ` — ${economia.charAt(0).toLowerCase()}${economia.slice(1)}.` : "."}
+        {economia ? ` — ${economia.charAt(0).toLowerCase()}${economia.slice(1)}${pix ? ` ${pix}` : ""}.` : pix ? ` — ${pix.replace(/^e mais /, "você economiza ")}.` : "."}
       </p>
       <ConjuntoBuilder card={card} produtos={produtos} colorMap={colorMap} countryCode={countryCode} corInicial={corInicial} condicoes={condicoes} />
       <InformacoesConjunto produtos={produtos} />

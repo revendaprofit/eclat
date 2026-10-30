@@ -102,3 +102,15 @@ describe("frasesDaBarra", () => {
     expect(frasesDaBarra({ condicoes: CONDICOES_PADRAO, cupom: null, pisos: null, fmt })).toEqual(["Até 4x no cartão"])
   })
 })
+
+import { complementoEconomiaPix, economiaPixEmCentavos, reais as fmtReais } from "./condicoes"
+
+describe("economia no Pix (conjunto, 30/10/2026)", () => {
+  it("quanto a cliente deixa de pagar no Pix e a frase que complementa a economia do conjunto", () => {
+    const c = { ...CONDICOES_PADRAO, pix_percentual: 5 }
+    expect(economiaPixEmCentavos(29900, c)).toBe(1495)
+    expect(complementoEconomiaPix(29900, c, (v) => fmtReais(v))).toBe(`e mais ${fmtReais(1495)} pagando no Pix`)
+    expect(economiaPixEmCentavos(29900, { ...CONDICOES_PADRAO, pix_percentual: 0 })).toBe(0)
+    expect(complementoEconomiaPix(29900, { ...CONDICOES_PADRAO, pix_percentual: 0 }, (v) => fmtReais(v))).toBeNull()
+  })
+})

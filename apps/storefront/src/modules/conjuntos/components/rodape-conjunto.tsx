@@ -2,7 +2,7 @@
 
 import { Button } from "@modules/common/components/ui"
 import { descricaoRegra, formatarReais, fraseEconomia, type RegraStore } from "@lib/util/conjuntos"
-import { CONDICOES_PADRAO, fraseCartao, linhaParcelamento, linhaPix, reais, type Condicoes } from "@lib/util/condicoes"
+import { CONDICOES_PADRAO, economiaPixEmCentavos, fraseCartao, linhaParcelamento, linhaPix, reais, type Condicoes } from "@lib/util/condicoes"
 
 // Rodapé de compra do conjunto (spec §7.2, ruling 4): preço cheio riscado + total com benefício,
 // texto da regra e o botão "Adicionar o conjunto". Fixo (rodapé) no mobile, painel lateral
@@ -38,6 +38,7 @@ export default function RodapeConjunto({
   condicoes?: Condicoes
 }) {
   const pix = linhaPix(precoComBeneficio, condicoes, (c) => reais(c))
+  const economiaPix = economiaPixEmCentavos(precoComBeneficio, condicoes)
   const parcela = linhaParcelamento(precoComBeneficio, condicoes, (c) => reais(c))
   const irParaPendente = () => {
     if (!pendente) return
@@ -64,6 +65,7 @@ export default function RodapeConjunto({
       {pix && (
         <p className="text-sm font-medium text-eclat-terracota" data-testid="rodape-conjunto-pix">
           {pix}
+          {economiaPix > 0 && <span className="font-normal text-eclat-grafite/70"> · economia de {reais(economiaPix)}</span>}
         </p>
       )}
       <p className="text-[11px] text-eclat-grafite/60" data-testid="rodape-conjunto-pagamento">

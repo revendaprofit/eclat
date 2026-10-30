@@ -65,6 +65,18 @@ export function linhaPix(precoCentavos: number, c: Condicoes, fmt: Formatar): st
   return `${fmt(pixEmCentavos(precoCentavos, c.pix_percentual))} no Pix`
 }
 
+/** Quanto a cliente deixa de pagar escolhendo o Pix, em centavos (0 sem desconto no Pix). */
+export function economiaPixEmCentavos(precoCentavos: number, c: Condicoes): number {
+  if (!(c.pix_percentual > 0) || !(precoCentavos > 0)) return 0
+  return precoCentavos - pixEmCentavos(precoCentavos, c.pix_percentual)
+}
+
+/** "e mais R$ 14,95 pagando no Pix" — complemento da frase de economia do conjunto (sócia, 30/10/2026). */
+export function complementoEconomiaPix(precoCentavos: number, c: Condicoes, fmt: Formatar): string | null {
+  const e = economiaPixEmCentavos(precoCentavos, c)
+  return e > 0 ? `e mais ${fmt(e)} pagando no Pix` : null
+}
+
 /** Como falar do cartão sem prometer o que não existe. */
 export function fraseCartao(c: Condicoes): string {
   if (c.parcelas < 2) return "Cartão de crédito"
