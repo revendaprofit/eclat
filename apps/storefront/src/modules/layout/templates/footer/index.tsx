@@ -110,6 +110,24 @@ export default async function Footer() {
   return (
     <footer className="w-full bg-eclat-grafite text-eclat-luz">
       <div className="content-container py-14 small:py-20">
+        {/* Clube Éclat em destaque (sócia, 29/10): a entrada no grupo é o que mais importa — vem antes das colunas,
+            do pagamento e dos selos. */}
+        <div className="mb-12 flex flex-col small:flex-row items-start small:items-center justify-between gap-6 rounded-xl border border-eclat-terracota/60 bg-eclat-luz/5 p-6 small:p-8" data-testid="rodape-clube">
+          <div className="flex flex-col gap-2">
+            <span className="text-[11px] uppercase tracking-[0.25em] text-eclat-terracota-claro">Grupo no WhatsApp</span>
+            <p className="font-serif text-3xl small:text-4xl leading-tight">Entre no Clube Éclat</p>
+            <p className="max-w-xl text-sm small:text-base text-eclat-luz/75">Lançamentos antes de todo mundo, condições só do grupo e voz nas decisões da marca. A cada 3 compras a partir de R$ 400, um mega presente e um colecionável das Auroras.</p>
+          </div>
+          <a
+            href={linkClube}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex shrink-0 items-center gap-2 bg-eclat-terracota text-eclat-luz uppercase tracking-widest text-sm px-8 py-4 hover:bg-eclat-terracota-claro transition-colors"
+          >
+            <Icone d={ICONE_WHATSAPP} className="h-5 w-5" />
+            Quero entrar
+          </a>
+        </div>
         <div className="grid grid-cols-1 small:grid-cols-[1.3fr_1fr_1fr_1fr] gap-0 small:gap-12">
           {/* marca + contato */}
           <div className="flex flex-col gap-6 pb-10 small:pb-0">
@@ -156,23 +174,6 @@ export default async function Footer() {
           </div>
           <Grupo titulo="Institucional" links={institucional} />
           <Grupo titulo="Políticas" links={politicas} />
-        </div>
-
-        {/* Clube */}
-        <div className="mt-12 flex flex-col small:flex-row items-start small:items-center justify-between gap-4 border border-eclat-luz/15 p-6">
-          <div>
-            <p className="font-serif text-2xl">Clube Éclat</p>
-            <p className="text-sm text-eclat-luz/70">A cada 3 compras a partir de R$ 400, um mega presente e um colecionável das Auroras. Lançamentos antes de todo mundo e condições só do grupo.</p>
-          </div>
-          <a
-            href={linkClube}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 bg-eclat-terracota text-eclat-luz uppercase tracking-widest text-xs px-6 py-3 hover:bg-eclat-terracota-claro transition-colors"
-          >
-            <Icone d={ICONE_WHATSAPP} className="h-4 w-4" />
-            Quero entrar
-          </a>
         </div>
 
         {/* Pagamento e segurança (referência bechose.com.br; sócia, 2026-10-11: bandeiras e selos passam
