@@ -131,14 +131,14 @@ describe("conjuntoDisponivel", () => {
 describe("montarCardPar", () => {
   const regra: RegraStore = { tipo_desconto: "menor_peca_percentual", valor: 20 }
   const top = produto("prod_top", "Top Aura", "top.jpg", [variante("v1", "M", "Verde Exército", 189)])
-  const legging = produto("prod_leg", "Legging Vértice", "leg.jpg", [variante("v2", "M", "Verde Exército", 259)])
+  const legging = produto("prod_leg", "Legging Aura", "leg.jpg", [variante("v2", "M", "Verde Exército", 259)])
   const par: ParStore = { handle: "top-aura--legging-vertice", categoria_a: "tops", categoria_b: "leggings", product_ids: ["prod_top", "prod_leg"] }
 
   it("monta nome, fotos e preços do par", () => {
     const produtos = new Map([[top.id, top], [legging.id, legging]])
     const card = montarCardPar(par, "col_1", regra, produtos)
     expect(card).not.toBeNull()
-    expect(card!.nome).toBe("Top Aura + Legging Vértice")
+    expect(card!.nome).toBe("Top Aura + Legging Aura")
     expect(card!.pecas.map((p) => p.thumbnail)).toEqual(["top.jpg", "leg.jpg"])
     expect(card!.precoCheio).toBe(44800)
     expect(card!.precoComBeneficio).toBe(41020)
@@ -164,7 +164,7 @@ describe("montarCardPar", () => {
 describe("montarCardCurado", () => {
   const regra: RegraStore = { tipo_desconto: "total_valor", valor: 4500 }
   const top = produto("prod_top", "Top Aura", "top.jpg", [variante("v1", "M", "Verde Exército", 189)])
-  const legging = produto("prod_leg", "Legging Vértice", "leg.jpg", [variante("v2", "M", "Verde Exército", 259)])
+  const legging = produto("prod_leg", "Legging Aura", "leg.jpg", [variante("v2", "M", "Verde Exército", 259)])
   const produtos = new Map([[top.id, top], [legging.id, legging]])
 
   it("usa a capa do cadastro quando existe", () => {
@@ -343,5 +343,27 @@ describe("totalDoConjunto", () => {
   it("peça sem precoMin (null) e sem seleção conta como 0", () => {
     const semPreco: PecaCard[] = [{ id: "p3", handle: "x", title: "X", thumbnail: null, precoMin: null }]
     expect(totalDoConjunto([null], semPreco, regra)).toEqual({ cheio: 0, comBeneficio: 0, economia: 0 })
+  })
+})
+
+import { modeloDaPeca, pecasDoMesmoModelo } from "./conjuntos"
+
+describe("pares só do mesmo modelo (sócia, 30/10/2026)", () => {
+  it("tira o tipo da peça do título e compara o modelo", () => {
+    expect(modeloDaPeca("Top Aurora")).toBe(modeloDaPeca("Short Aurora"))
+    expect(modeloDaPeca("Top Orvalho")).not.toBe(modeloDaPeca("Short Aurora"))
+    expect(pecasDoMesmoModelo(["Top Aurora", "Short Aurora"])).toBe(true)
+    expect(pecasDoMesmoModelo(["Top Orvalho", "Short Aurora"])).toBe(false)
+    expect(pecasDoMesmoModelo(["Macaquinho Solaris"])).toBe(true)
+  })
+})
+
+describe("montarCardPar — modelos diferentes (sócia, 30/10/2026)", () => {
+  it("par de modelos diferentes (Top Orvalho + Short Aurora) não vira card", () => {
+    const top = { id: "p1", title: "Top Orvalho", handle: "top-orvalho", thumbnail: null, variants: [] }
+    const short = { id: "p2", title: "Short Aurora", handle: "short-aurora", thumbnail: null, variants: [] }
+    const produtos = new Map<string, unknown>([["p1", top], ["p2", short]]) as Parameters<typeof montarCardPar>[3]
+    const card = montarCardPar({ handle: "x", product_ids: ["p1", "p2"] } as Parameters<typeof montarCardPar>[0], "col", { tipo_desconto: "total_valor", valor: 1900 } as Parameters<typeof montarCardPar>[2], produtos)
+    expect(card).toBeNull()
   })
 })

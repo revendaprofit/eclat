@@ -170,6 +170,17 @@ function montarCard(
 
 // Par de coleção: sem capa própria (ParStore não tem `capa_url`) — nome é a junção dos títulos
 // das peças ("Top Aura + Legging Vértice"). Peça esgotada ou produto ausente do mapa → null.
+// "Top Aurora" → "aurora": o nome do modelo sem o tipo da peça. Pares de coleção só entre peças do MESMO modelo
+// (sócia, 30/10/2026: "não existe conjunto Aurora com Orvalho, o top é o mesmo que o short").
+const TIPOS_DE_PECA = /^(top|short|shorts|macaquinho|macacao|macacão|legging|calca|calça|camiseta|regata|cropped|jaqueta|saia)\s+/i
+export function modeloDaPeca(titulo: string | null | undefined): string {
+  return normalizeColorName((titulo ?? "").trim().replace(TIPOS_DE_PECA, ""))
+}
+export function pecasDoMesmoModelo(titulos: (string | null | undefined)[]): boolean {
+  const modelos = new Set(titulos.map(modeloDaPeca).filter(Boolean))
+  return modelos.size <= 1
+}
+
 export function montarCardPar(
   par: ParStore,
   colecaoId: string,
@@ -177,6 +188,7 @@ export function montarCardPar(
   produtos: Map<string, HttpTypes.StoreProduct>
 ): CardConjunto | null {
   if (par.product_ids.some((id) => !produtos.has(id))) return null
+  if (!pecasDoMesmoModelo(par.product_ids.map((id) => produtos.get(id)!.title))) return null
   const nome = par.product_ids.map((id) => produtos.get(id)!.title ?? "").join(" + ")
   return montarCard("colecao", par.handle, nome, null, par.product_ids, regra, colecaoId, produtos)
 }

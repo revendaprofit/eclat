@@ -13,6 +13,9 @@ import BannerMomentos from "@modules/home/components/banner-momentos"
 import Universos from "@modules/home/components/universos"
 import Fundadora from "@modules/home/components/fundadora"
 import Instagram from "@modules/home/components/instagram"
+import AvisoFrete from "@modules/home/components/aviso-frete"
+import { getCondicoesDaLoja } from "@lib/data/condicoes"
+import { fraseFreteGratis, reais } from "@lib/util/condicoes"
 import { listCollections } from "@lib/data/collections"
 import { getRegion } from "@lib/data/regions"
 import { getSiteContent } from "@lib/data/site-content"
@@ -83,6 +86,10 @@ export default async function Home(props: {
     return null
   }
 
+  // Aviso de frete na capa (sócia, 30/10): a mesma frase da barra do topo, num cartão discreto no pé da tela.
+  const { pisos } = await getCondicoesDaLoja()
+  const fraseFrete = fraseFreteGratis(pisos, (c) => reais(c, { curto: true }))
+
   return (
     <>
       <Hero
@@ -94,6 +101,7 @@ export default async function Home(props: {
       />
 
       <FaixaCondicoes />
+      <AvisoFrete titulo="Envio para todo o Brasil" texto={fraseFrete} />
 
       {/* Home de 2026-10-10 (sócia, referência bechose.com.br): metade da altura de antes. Ordem:
           capa → condições → categorias (stories) → vitrine com abas → Conjuntos → vitrine por cor →

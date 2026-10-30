@@ -15,6 +15,8 @@ import ProductActionsWrapper from "./product-actions-wrapper"
 import CompraSegura from "@modules/products/components/compra-segura"
 import { getCondicoesDaLoja } from "@lib/data/condicoes"
 import { getRegrasDeFrete } from "@lib/data/frete"
+import { getProductPrice } from "@lib/util/get-product-price"
+import FreteDestaque from "@modules/products/components/frete-destaque"
 import QuemE from "@modules/products/components/quem-e"
 import PdpTestimonials from "@modules/products/components/pdp-testimonials"
 import DetalhesQueFazemDiferenca from "@modules/common/components/detalhes"
@@ -129,6 +131,9 @@ const ProductTemplate = async ({
               />
             </div>
             <div className="flex flex-col w-full pt-6 small:pt-0 gap-y-8">
+              {/* Frete em destaque no TOPO da coluna, antes do título (sócia, 30/10: "para facilitar a compra").
+                  Preço de referência = a variante mais barata; o bloco de compra recalcula o prazo por variante. */}
+              <FreteDestaque precoCentavos={Math.round((getProductPrice({ product }).cheapestPrice?.calculated_price_number ?? 0) * 100)} regras={regrasFrete} />
               <ProductHeader product={product} />
               <ProvaDoProduto product={product} />
               <div className="flex flex-col gap-y-8">
