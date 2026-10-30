@@ -28,13 +28,31 @@ const FUNDO = "#242328"
 export default function ProductVideo({ source, productTitle, productHandle, autoplay }: Props) {
   const [playing, setPlaying] = useState(false)
   const autoRef = useRef<HTMLVideoElement>(null)
+  // Peso no 4G (sócia, 29/10): o MP4 de apresentação (2–3 MB) era a primeira coisa a baixar e segurava
+  // fotos e textos. Agora a capa aparece na hora e o vídeo só começa a baixar depois do `load` da página
+  // (ou de 4 s, o que vier antes) — e segue tocando sozinho, mudo, como antes.
+  const [baixar, setBaixar] = useState(false)
+  useEffect(() => {
+    if (!autoplay || source.kind !== "mp4") return
+    if (document.readyState === "complete") {
+      setBaixar(true)
+      return
+    }
+    const ok = () => setBaixar(true)
+    window.addEventListener("load", ok)
+    const t = window.setTimeout(ok, 4000)
+    return () => {
+      window.removeEventListener("load", ok)
+      window.clearTimeout(t)
+    }
+  }, [autoplay, source])
   // O React não escreve o atributo `muted` no HTML do servidor, e sem ele o navegador bloqueia o
   // autoplay: garante mudo e dá o play depois da hidratação (visto em produção em 2026-10-11).
   // Toca só enquanto está na tela (IntersectionObserver, como os reels da home) e retoma quando a
   // aba volta a ficar visível — aba aberta em segundo plano chega pausada.
   useEffect(() => {
     const v = autoRef.current
-    if (!v) return
+    if (!v || !baixar) return
     v.muted = true
     let naTela = true
     const tocar = () => {
@@ -55,7 +73,7 @@ export default function ProductVideo({ source, productTitle, productHandle, auto
       io.disconnect()
       document.removeEventListener("visibilitychange", tocar)
     }
-  }, [source])
+  }, [source, baixar])
   const title = productTitle ? `Vídeo — ${productTitle}` : "Vídeo do produto"
   const isMp4 = source.kind === "mp4"
   const poster = source.kind === "youtube" ? youtubeThumbUrl(source.id) : source.poster
@@ -82,16 +100,16 @@ export default function ProductVideo({ source, productTitle, productHandle, auto
       <div className="absolute inset-0 overflow-hidden rounded-rounded" style={{ background: FUNDO }}>
         <video
           ref={autoRef}
-          src={midiaDoSite(source.src)}
+          src={baixar ? midiaDoSite(source.src) : undefined}
           poster={midiaDoSite(source.poster) ?? undefined}
-          autoPlay
           muted
           loop
           playsInline
-          preload="auto"
+          preload={baixar ? "auto" : "none"}
           aria-label={title}
           className="absolute inset-0 h-full w-full object-contain"
           data-testid="product-video-mp4"
+          data-baixando={baixar ? "sim" : "nao"}
         />
       </div>
     )

@@ -39,16 +39,27 @@ describe("heroInterativo", () => {
 describe("heroTelas", () => {
   it("sem vídeo: imagens do modo antigo (mobile cai no desktop e vice-versa)", () => {
     expect(heroTelas({ banner_mobile_url: "m.jpg", banner_desktop_url: "d.jpg" })).toEqual({
-      mobile: { tipo: "imagem", src: "m.jpg" },
-      desktop: { tipo: "imagem", src: "d.jpg" },
+      mobile: { tipo: "imagem", src: "m.jpg", largura: null, altura: null },
+      desktop: { tipo: "imagem", src: "d.jpg", largura: null, altura: null },
     })
-    expect(heroTelas({ banner_desktop_url: "d.jpg" }).mobile).toEqual({ tipo: "imagem", src: "d.jpg" })
-    expect(heroTelas({ image_url: "legado.jpg" }).desktop).toEqual({ tipo: "imagem", src: "legado.jpg" })
+    expect(heroTelas({ banner_desktop_url: "d.jpg" }).mobile).toEqual({ tipo: "imagem", src: "d.jpg", largura: null, altura: null })
+    expect(heroTelas({ image_url: "legado.jpg" }).desktop).toEqual({ tipo: "imagem", src: "legado.jpg", largura: null, altura: null })
+  })
+
+  it("medidas do banner (px) viajam com a imagem da própria tela; banner emprestado da outra tela sai sem medidas", () => {
+    const c = { banner_mobile_url: "m.jpg", banner_mobile_largura: 1080, banner_mobile_altura: 1350, banner_desktop_url: "d.jpg", banner_desktop_largura: 1920, banner_desktop_altura: 860 }
+    expect(heroTelas(c)).toEqual({
+      mobile: { tipo: "imagem", src: "m.jpg", largura: 1080, altura: 1350 },
+      desktop: { tipo: "imagem", src: "d.jpg", largura: 1920, altura: 860 },
+    })
+    expect(heroTelas({ banner_desktop_url: "d.jpg", banner_desktop_largura: 1920, banner_desktop_altura: 860 }).mobile).toEqual({ tipo: "imagem", src: "d.jpg", largura: 1920, altura: 860 })
+    // medida inválida (zero, texto, fração) é ignorada
+    expect(heroTelas({ banner_mobile_url: "m.jpg", banner_mobile_largura: 0, banner_mobile_altura: "1350" as unknown as number }).mobile).toEqual({ tipo: "imagem", src: "m.jpg", largura: null, altura: null })
   })
   it("vídeo só no desktop: desktop vídeo, mobile continua com a imagem", () => {
     const t = heroTelas({ banner_mobile_url: "m.jpg", banner_desktop_url: "d.jpg", video_desktop_url: "d.mp4", video_poster_desktop_url: "d-capa.jpg" })
     expect(t.desktop).toEqual({ tipo: "video", video: "d.mp4", poster: "d-capa.jpg" })
-    expect(t.mobile).toEqual({ tipo: "imagem", src: "m.jpg" })
+    expect(t.mobile).toEqual({ tipo: "imagem", src: "m.jpg", largura: null, altura: null })
   })
   it("vídeo nas duas telas; capa ausente vira null; espaços são ignorados", () => {
     const t = heroTelas({ video_mobile_url: " m.mp4 ", video_desktop_url: "d.mp4", video_poster_desktop_url: "  " })

@@ -3,7 +3,9 @@
 Gera as versões leves das fotos de produto (custo zero: são arquivos comuns no Supabase Storage).
 
 A vitrine, no modo "direto" do loader (apps/storefront/src/lib/util/image-loader.ts), pede
-`<foto>.w480.jpg` ou `<foto>.w960.jpg` para toda foto `site/products/<handle>/<nome>-<hash8>.jpg`.
+`<foto>.w480.jpg` ou `<foto>.w960.jpg` para toda foto `site/products/<handle>/<nome>-<hash8>.jpg`
+(e `detalhes-pecas/<handle>/`, `hero/`, `banners/<pasta>/`, `categorias/`, `depoimentos/` — imagens da home
+subidas por script com hash no nome; desde 2026-10-30, peso no 4G).
 Este script garante que essas duas versões existem ao lado de cada original. A foto inteira é só
 redimensionada (nunca recortada). Rode depois de QUALQUER cadastro/troca de foto de produto — foto com
 hash no nome e sem variante aparece quebrada nos cards.
@@ -28,7 +30,8 @@ APPLY = "--apply" in sys.argv
 REFAZER = "--refazer" in sys.argv
 LARGURAS = [480, 960]        # as mesmas de LARGURAS_VARIANTES no image-loader.ts
 JPEG_Q = 80
-COM_VARIANTES = re.compile(r"/site/((?:products|detalhes-pecas)/[^/?]+/[^/?]+-[0-9a-f]{8})\.jpg$")   # a mesma regra do loader (detalhes-pecas desde 2026-10-10)
+COM_VARIANTES = re.compile(r"/site/((?:(?:products|detalhes-pecas|banners)/[^/?]+|hero|categorias|depoimentos)/[^/?]+-[0-9a-f]{8})\.jpg$")   # a mesma regra do loader
+PASTAS_HOME = ["hero", "banners", "categorias", "depoimentos"]   # listadas direto no Storage (não passam pelo Medusa)
 
 
 def env_cockpit():
@@ -52,8 +55,21 @@ def main():
     SH = {"apikey": k, "Authorization": "Bearer " + k}
 
     prods = requests.get(BASE + "/admin/products?limit=200&fields=handle,thumbnail,images.url", headers=H, timeout=60).json()["products"]
-    urls = sorted({u for p in prods for u in [p.get("thumbnail")] + [i["url"] for i in p.get("images") or []] if u and COM_VARIANTES.search(u.split("?")[0])})
-    print("modo: %s | fotos de produto com hash: %d" % ("APLICAR" if APPLY else "SIMULAÇÃO", len(urls)))
+    urls = {u for p in prods for u in [p.get("thumbnail")] + [i["url"] for i in p.get("images") or []] if u and COM_VARIANTES.search(u.split("?")[0])}
+    # imagens da home: tudo que está nas pastas (inclui subpastas de banners/)
+    def listar(prefixo):
+        r = requests.post("%s/storage/v1/object/list/site" % sb, headers=dict(SH, **{"Content-Type": "application/json"}), json={"prefix": prefixo, "limit": 1000}, timeout=60)
+        r.raise_for_status()
+        for o in r.json():
+            nome = o.get("name") or ""
+            if o.get("id"): yield "%s/%s" % (prefixo, nome)
+            else: yield from listar("%s/%s" % (prefixo, nome))       # pasta
+    for pasta in PASTAS_HOME:
+        for caminho in listar(pasta):
+            u = "%s/storage/v1/object/public/site/%s" % (sb, caminho)
+            if COM_VARIANTES.search(u): urls.add(u)
+    urls = sorted(urls)
+    print("modo: %s | imagens com hash (produtos + home): %d" % ("APLICAR" if APPLY else "SIMULAÇÃO", len(urls)))
 
     feitas = faltam = 0; antes = depois = 0
     for u in urls:

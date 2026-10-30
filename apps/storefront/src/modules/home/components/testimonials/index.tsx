@@ -1,12 +1,14 @@
 import Image from "next/image"
 import { HOME_DEFAULTS, Testimonials as TestimonialsType } from "@modules/home/content"
 import { depoimentosReais, somentePrints } from "@lib/util/depoimentos"
+import CarrosselAuto from "./carrossel-auto"
 
 // Provas sociais — editável no Cockpit (site_content home.testimonials).
 // 2026-10-11 (sócia): o print real da mensagem "fica mais real e confiável" — cada card é o print do
 // WhatsApp/Instagram (dados pessoais escondidos antes de subir, scripts na sessão de 11/10), numa moldura
 // igual à das categorias (linha terracota + filete dourado). A frase vira o alt. Sem print, card de texto.
-// Computador: mosaico em 4 colunas estreitas (alturas diferentes); celular: rolagem lateral com encaixe.
+// Faixa que vai passando sozinha nas duas telas (sócia, 29/10): celular 1 card e meio por vez, computador 4
+// por vez; um card a cada 4 s, para ao tocar (carrossel-auto.tsx). Antes o computador era um mosaico fixo.
 export default function Testimonials({ content, max, compacto }: { content?: TestimonialsType | null; max?: number; compacto?: boolean }) {
   // Até 8 na home (sócia, 2026-10-11: "está muito grande"); a PDP passa 6.
   // Fotos de cliente com o look ficam só na faixa da peça (PDP); aqui, prints e falas.
@@ -21,9 +23,9 @@ export default function Testimonials({ content, max, compacto }: { content?: Tes
         {heading && <h2 className="font-serif text-3xl small:text-4xl text-eclat-grafite">{heading}</h2>}
         {subheading && <p className="text-sm small:text-base text-eclat-grafite/65 max-w-md text-balance">{subheading}</p>}
       </div>
-      <ul className="flex gap-4 overflow-x-auto no-scrollbar snap-x snap-mandatory -mx-4 px-4 small:mx-auto small:px-0 small:block small:columns-4 small:gap-4 small:max-w-5xl">
+      <CarrosselAuto rotulo="Depoimentos de clientes" className="flex items-start gap-4 overflow-x-auto no-scrollbar snap-x snap-mandatory -mx-4 px-4 small:mx-auto small:px-0 small:max-w-5xl">
         {items.map((t, i) => (
-          <li key={i} className="snap-start shrink-0 w-[72%] xsmall:w-[48%] small:w-auto small:break-inside-avoid small:mb-4">
+          <li key={i} className="snap-start shrink-0 w-[72%] xsmall:w-[48%] small:w-[calc(25%-12px)]">
             <figure className="flex flex-col gap-3">
               <div className="border border-eclat-terracota outline outline-1 outline-offset-[3px] outline-[#C9A24C] bg-eclat-luz p-[4px]">
                 {t.image_url ? (
@@ -50,7 +52,7 @@ export default function Testimonials({ content, max, compacto }: { content?: Tes
             </figure>
           </li>
         ))}
-      </ul>
+      </CarrosselAuto>
     </section>
   )
 }

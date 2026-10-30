@@ -1,6 +1,7 @@
 import Image from "next/image"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import { heroInterativo, heroTelas, heroTextos, type HeroPecaInput, type HeroTela, type HeroTextos } from "@lib/util/hero-media"
+import { LARGURAS_VARIANTES, midiaDoSite, urlDaImagem } from "@lib/util/image-loader"
 import HeroInterativo from "./hero-interativo"
 import HeroVideo from "./hero-video"
 
@@ -9,6 +10,11 @@ export type HeroContent = {
   // Banner em imagem (modo principal) — proporção preservada, clicável
   banner_mobile_url?: string
   banner_desktop_url?: string
+  // medidas do arquivo em px (gravadas junto com a URL): reservam a altura do banner antes de ele chegar
+  banner_mobile_largura?: number
+  banner_mobile_altura?: number
+  banner_desktop_largura?: number
+  banner_desktop_altura?: number
   banner_href?: string
   // Banner em VÍDEO (vence a imagem na tela em que existir): vídeo gerado da arte SEM texto +
   // capa = primeiro quadro; o texto abaixo é desenhado pelo site por cima (2026-09-14)
@@ -53,8 +59,27 @@ const SOMBRA = { textShadow: "0 2px 16px rgba(10, 8, 12, 0.55)" }
 function HeroTelaView({ tela, variante, textos }: { tela: HeroTela; variante: "mobile" | "desktop"; textos: HeroTextos }) {
   if (tela.tipo === "nenhum") return null
   if (tela.tipo === "imagem") {
-    // eslint-disable-next-line @next/next/no-img-element
-    return <img src={tela.src} alt="use.ÉCLAT" className="block w-full h-auto" />
+    // Peso no 4G (29/10): o banner é a maior imagem da home. Sai pela origem do site (/midia), com as
+    // versões leves (.w480/.w960, quando o arquivo tem hash no nome — scripts/gerar-variantes-fotos.py)
+    // no srcset para o celular escolher a menor que cobre a tela, e com width/height para reservar o
+    // espaço (h-auto mantém a proporção real depois de carregar). fetchpriority=high: é o LCP da home.
+    const src = midiaDoSite(tela.src)
+    const [w480, w960] = LARGURAS_VARIANTES
+    const leve = urlDaImagem({ src: tela.src, width: w480 }, "direto")
+    const srcSet = leve !== src ? [leve + " " + w480 + "w", urlDaImagem({ src: tela.src, width: w960 }, "direto") + " " + w960 + "w", src + " " + (tela.largura ?? 1920) + "w"].join(", ") : undefined
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={src}
+        srcSet={srcSet}
+        sizes="100vw"
+        width={tela.largura ?? undefined}
+        height={tela.altura ?? undefined}
+        alt="use.ÉCLAT"
+        fetchPriority="high"
+        className="block w-full h-auto"
+      />
+    )
   }
   const desktop = variante === "desktop"
   const Titulo = desktop ? "h1" : "p"

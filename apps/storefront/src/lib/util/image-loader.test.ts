@@ -18,14 +18,23 @@ describe("modo direto (padrão, custo zero)", () => {
     expect(urlDaImagem({ src: capa, width: 384 }, "direto")).toBe(M(capa).replace(".jpg", ".w480.jpg"))
     expect(urlDaImagem({ src: capa, width: 828 }, "direto")).toBe(M(capa).replace(".jpg", ".w960.jpg"))
   })
+  it("imagens da home subidas por script (hero, banners/<pasta>, categorias, depoimentos) usam as variantes", () => {
+    for (const c of ["hero/lumiere-mobile-banner-v2-fd28a2b0.jpg", "banners/universos/fitness-0f804018.jpg", "categorias/tops-d6e39708.jpg", "depoimentos/samara-short-nao-sobe-ee4311fc.jpg"]) {
+      const u = BASE + c
+      expect(urlDaImagem({ src: u, width: 384 }, "direto")).toBe(M(u).replace(".jpg", ".w480.jpg"))
+    }
+    // upload do Cockpit (raiz, carimbo + sufixo curto) e banner sem hash seguem no original
+    expect(urlDaImagem({ src: BASE + "1761780000000-ab12cd.jpg", width: 384 }, "direto")).toBe(M(BASE + "1761780000000-ab12cd.jpg"))
+    expect(urlDaImagem({ src: BASE + "banners/editorial-licor.jpg", width: 384 }, "direto")).toBe(M(BASE + "banners/editorial-licor.jpg"))
+  })
+
   it("acima da maior variante sai o original", () => {
     expect(urlDaImagem({ src: PRODUTO, width: 1200 }, "direto")).toBe(M(PRODUTO))
   })
   it("imagem sem variante garantida (upload do Cockpit, banner, categoria) sai no original, sem query", () => {
     expect(urlDaImagem({ src: COCKPIT + "?v=2", width: 640 }, "direto")).toBe(M(COCKPIT))
-    expect(urlDaImagem({ src: BASE + "banners/conjuntos/editorial-conjuntos-duplo-7fab6443.jpg", width: 640 }, "direto")).toBe(
-      "/midia/banners/conjuntos/editorial-conjuntos-duplo-7fab6443.jpg"
-    )
+    // banner sem hash no nome (não passou pelos scripts) segue no original; com hash, desde 30/10, usa as variantes
+    expect(urlDaImagem({ src: BASE + "banners/editorial-licor.jpg", width: 640 }, "direto")).toBe("/midia/banners/editorial-licor.jpg")
     expect(urlDaImagem({ src: BASE + "products/meia/foto-sem-hash.jpg", width: 640 }, "direto")).toBe("/midia/products/meia/foto-sem-hash.jpg")
   })
   it("o loader exportado usa o modo direto quando a variável não está definida", () => {

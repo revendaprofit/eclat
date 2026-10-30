@@ -5,6 +5,12 @@
 export type HeroMediaInput = {
   banner_mobile_url?: string | null
   banner_desktop_url?: string | null
+  // medidas do arquivo (px): reservam o espaço do banner antes de a imagem chegar — sem elas a página
+  // inteira saltava ~500 px no celular quando o banner carregava (Lighthouse 29/10, CLS 0,59)
+  banner_mobile_largura?: number | null
+  banner_mobile_altura?: number | null
+  banner_desktop_largura?: number | null
+  banner_desktop_altura?: number | null
   image_url?: string | null
   video_mobile_url?: string | null
   video_poster_mobile_url?: string | null
@@ -14,16 +20,26 @@ export type HeroMediaInput = {
 
 export type HeroTela =
   | { tipo: "video"; video: string; poster: string | null }
-  | { tipo: "imagem"; src: string }
+  | { tipo: "imagem"; src: string; largura: number | null; altura: number | null }
   | { tipo: "nenhum" }
 
 const str = (v: unknown): string | null => (typeof v === "string" && v.trim() ? v.trim() : null)
+const px = (v: unknown): number | null => (typeof v === "number" && Number.isInteger(v) && v > 0 ? v : null)
 
 export function heroTelas(c: HeroMediaInput): { mobile: HeroTela; desktop: HeroTela } {
-  const imgMobile = str(c.banner_mobile_url) ?? str(c.image_url) ?? str(c.banner_desktop_url)
-  const imgDesktop = str(c.banner_desktop_url) ?? str(c.banner_mobile_url) ?? str(c.image_url)
+  // as medidas só valem para o arquivo da própria tela; banner emprestado da outra tela sai sem medidas
+  const mob = str(c.banner_mobile_url)
+  const desk = str(c.banner_desktop_url)
+  const imgMobile = mob ?? str(c.image_url) ?? desk
+  const imgDesktop = desk ?? mob ?? str(c.image_url)
+  const medidas = (img: string): { largura: number | null; altura: number | null } =>
+    img === mob
+      ? { largura: px(c.banner_mobile_largura), altura: px(c.banner_mobile_altura) }
+      : img === desk
+        ? { largura: px(c.banner_desktop_largura), altura: px(c.banner_desktop_altura) }
+        : { largura: null, altura: null }
   const tela = (video: string | null, poster: string | null, img: string | null): HeroTela =>
-    video ? { tipo: "video", video, poster } : img ? { tipo: "imagem", src: img } : { tipo: "nenhum" }
+    video ? { tipo: "video", video, poster } : img ? { tipo: "imagem", src: img, ...medidas(img) } : { tipo: "nenhum" }
   return {
     mobile: tela(str(c.video_mobile_url), str(c.video_poster_mobile_url), imgMobile),
     desktop: tela(str(c.video_desktop_url), str(c.video_poster_desktop_url), imgDesktop),
