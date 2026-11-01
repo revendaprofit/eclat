@@ -1,5 +1,6 @@
 "use client"
 
+import { LIMITE_POR_VARIANTE } from "@lib/util/limites"
 import { Table, Text, clx } from "@modules/common/components/ui"
 import { updateLineItem } from "@lib/data/cart"
 import { HttpTypes } from "@medusajs/types"
@@ -43,9 +44,8 @@ const Item = ({ item, type = "full", currencyCode, etiqueta }: ItemProps) => {
       })
   }
 
-  // TODO: Update this to grab the actual max inventory
-  const maxQtyFromInventory = 10
-  const maxQuantity = item.variant?.manage_inventory ? 10 : maxQtyFromInventory
+  // Teto por tamanho (sócia, 01/11/2026): o backend recusa acima de LIMITE_POR_VARIANTE; o seletor nem oferece.
+  const maxQuantity = LIMITE_POR_VARIANTE
   // Presente (R$ 0): uma unidade só, sem seletor; tirar pela lixeira ou pelo quadro do presente.
   const presente = ehLinhaDePresente(item)
 
@@ -106,7 +106,7 @@ const Item = ({ item, type = "full", currencyCode, etiqueta }: ItemProps) => {
               {/* TODO: Update this with the v2 way of managing inventory */}
               {Array.from(
                 {
-                  length: Math.min(maxQuantity, 10),
+                  length: maxQuantity,
                 },
                 (_, i) => (
                   <option value={i + 1} key={i}>

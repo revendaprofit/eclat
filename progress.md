@@ -537,7 +537,7 @@ PRÓXIMO (usuário, guiado): Railway (Postgres + serviço do repo, root /, vars,
   6. Deploy via Railway CLI (`railway up` da raiz; GitHub integration estava com incidente). SSH precisou de chave (ssh-keygen) + registro.
 - Pós-deploy (via railway ssh, dentro de .medusa/server): admin `gestor@eclat.local` (senha provisória <senha-definida-no-deploy> — TROCAR depois);
   seed `npx medusa exec ./src/scripts/seed-eclat.js` (.js em prod!) → Brasil/BRL + 8 cat + 2 col + 4 produtos + estoque.
-- Publishable key criada via Admin API + vinculada ao sales channel: pk_4062109543120c19e78f92cc7fcd44ce3ceb243c1754fd8b23dc5b51052fafaa (pk NÃO é segredo).
+- Publishable key criada via Admin API + vinculada ao sales channel: pk_… (valor só na Vercel; removido do git em 01/11/2026) (pk NÃO é segredo).
 - Store API validada: regions=Brasil/BRL, products count=4.
 - Vars Railway: DATABASE_URL (ref Postgres), JWT/COOKIE/MFA, *CORS (=backend URL por ora), MEDUSA_BACKEND_URL, SUPABASE_*, EVOLUTION_*, NPM_CONFIG_PRODUCTION, DISABLE_ADMIN.
 

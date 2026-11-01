@@ -226,7 +226,7 @@ DATABASE_URL=postgres://postgres:postgres@localhost:55432/eclat_dev DISABLE_ADMI
 
 # Storefront (repo raiz, outro terminal)
 COMING_SOON_BYPASS=1 NEXT_PUBLIC_MEDUSA_BACKEND_URL=http://localhost:9000 \
-  NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY=pk_dc1a9895a7d6f710d9bb44c83baa5582e20574268baa1aa897d68bc8e9ca7d1a \
+  NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY=pk_…  # valor só na Vercel/.env (removido do git em 01/11/2026) \
   npm run dev --workspace=apps/storefront
 # porta 8000
 ```

@@ -43,6 +43,8 @@ export default function ProductActions({ product, colorMap, disabled, measureTab
   const { selection, setValue, selectedVariant, isComplete } = useProductSelection()
   const [isAdding, setIsAdding] = useState(false)
   const [comprando, setComprando] = useState(false)
+  // Recusa do servidor ao adicionar (ex.: teto de unidades por tamanho, 01/11/2026): mostra o motivo, não quebra a tela.
+  const [aviso, setAviso] = useState<string | null>(null)
   const router = useRouter()
   const [notifyFor, setNotifyFor] = useState<{ variantId: string; label: string } | null>(null)
   const countryCode = useParams().countryCode as string
@@ -60,9 +62,12 @@ export default function ProductActions({ product, colorMap, disabled, measureTab
   const handleAddToCart = async () => {
     if (!selectedVariant?.id) return null
     setIsAdding(true)
+    setAviso(null)
     try {
       await addToCart({ variantId: selectedVariant.id, quantity: 1, countryCode })
       pushEcommerceEvent("add_to_cart", variantToAddToCart(product, selectedVariant, 1))
+    } catch (e) {
+      setAviso(e instanceof Error && e.message ? e.message : "Não foi possível adicionar agora. Tente de novo.")
     } finally {
       setIsAdding(false)
     }
@@ -72,11 +77,13 @@ export default function ProductActions({ product, colorMap, disabled, measureTab
   const handleComprarAgora = async () => {
     if (!selectedVariant?.id) return null
     setComprando(true)
+    setAviso(null)
     try {
       await addToCart({ variantId: selectedVariant.id, quantity: 1, countryCode })
       pushEcommerceEvent("add_to_cart", variantToAddToCart(product, selectedVariant, 1))
       router.push(`/${countryCode}/checkout?step=address`)
-    } catch {
+    } catch (e) {
+      setAviso(e instanceof Error && e.message ? e.message : "Não foi possível adicionar agora. Tente de novo.")
       setComprando(false)
     }
   }
@@ -133,6 +140,11 @@ export default function ProductActions({ product, colorMap, disabled, measureTab
         </Button>
       )}
       <FretePrazo variantId={varianteParaFrete} precoCentavos={precoCentavos} regras={regrasFrete} />
+      {aviso && (
+        <p role="alert" className="text-sm text-eclat-terracota" data-testid="aviso-sacola">
+          {aviso}
+        </p>
+      )}
       {notify && <NotifyMe key={notify.variantId} productId={product.handle ?? product.id} variantLabel={notify.label} />}
       <MobileActions
         product={product}
