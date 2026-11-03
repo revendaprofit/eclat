@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { ENVELOPES, envelopesPermitidos, lerConfigEnvelopes, lerEnvelopeId } from "./envelopes"
+import { ENVELOPES, envelopesPermitidos, lerConfigEnvelopes, lerEnvelopeId, validadeDoVisto } from "./envelopes"
 
 describe("lerConfigEnvelopes", () => {
   it("liga só com modo envelopes e cupom válido", () => {
@@ -14,6 +14,10 @@ describe("lerConfigEnvelopes", () => {
 })
 
 describe("envelopes", () => {
+  it("quem fechou vê de novo em 7 dias; quem escolheu não vê mais", () => {
+    expect(validadeDoVisto(false)).toBe(7 * 24 * 60 * 60)
+    expect(validadeDoVisto(true)).toBe(365 * 24 * 60 * 60)
+  })
   it("são os três escolhidos pela sócia", () => {
     expect(ENVELOPES.map((e) => e.id)).toEqual(["voucher", "consultoria", "presente"])
   })

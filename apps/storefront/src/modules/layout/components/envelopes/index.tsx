@@ -3,15 +3,15 @@
 import { useEffect, useState } from "react"
 import { usePathname } from "next/navigation"
 import { escolherEnvelope } from "@lib/data/boas-vindas"
-import { CHAVE_CUPOM_GUARDADO, COOKIE_AVISO, mascararCelular } from "@lib/util/boas-vindas"
-import { ENVELOPES, MENSAGEM_CONSULTORIA, TEXTO_ACEITE_ENVELOPE, envelopesPermitidos, type Envelope } from "@lib/util/envelopes"
+import { CHAVE_CUPOM_GUARDADO, mascararCelular } from "@lib/util/boas-vindas"
+import { COOKIE_ENVELOPES_VISTO, ENVELOPES, MENSAGEM_CONSULTORIA, TEXTO_ACEITE_ENVELOPE, envelopesPermitidos, validadeDoVisto, type Envelope } from "@lib/util/envelopes"
 import { CHAVE_SACOLA, lerEstadoSacola } from "@lib/util/sacola-guardada"
 import { pushEcommerceEvent } from "@modules/analytics/push"
 
 const ESPERA_MS = 8000
 const temCookie = (nome: string) => document.cookie.split("; ").some((c) => c.startsWith(`${nome}=`))
-const marcarVisto = () => {
-  document.cookie = `${COOKIE_AVISO}=1;path=/;max-age=${60 * 60 * 24 * 60}`
+const marcarVisto = (escolheu: boolean) => {
+  document.cookie = `${COOKIE_ENVELOPES_VISTO}=1;path=/;max-age=${validadeDoVisto(escolheu)}`
 }
 // Quem já guardou a sacola já deixou o WhatsApp: não pede de novo.
 const jaDeixouContato = () => {
@@ -48,7 +48,7 @@ export default function Envelopes({ whatsappMarca }: { whatsappMarca: string }) 
   const [copiado, setCopiado] = useState(false)
 
   useEffect(() => {
-    if (aberto || !envelopesPermitidos(pathname) || temCookie(COOKIE_AVISO) || jaDeixouContato()) return
+    if (aberto || !envelopesPermitidos(pathname) || temCookie(COOKIE_ENVELOPES_VISTO) || jaDeixouContato()) return
     let id: ReturnType<typeof setTimeout>
     const tentar = () => {
       // Só depois de rolar uma tela (sinal de interesse): nunca em cima de quem acabou de chegar do anúncio.
@@ -66,7 +66,7 @@ export default function Envelopes({ whatsappMarca }: { whatsappMarca: string }) 
   if (!aberto) return null
 
   const fechar = () => {
-    marcarVisto()
+    if (!pronto) marcarVisto(false)
     setAberto(false)
   }
 
@@ -78,7 +78,7 @@ export default function Envelopes({ whatsappMarca }: { whatsappMarca: string }) 
     const r = await escolherEnvelope({ whatsapp, envelope: escolha.id, site }).catch(() => ({ erro: "Não deu certo agora. Tente de novo." }))
     setEnviando(false)
     if ("erro" in r) return setErro(r.erro)
-    marcarVisto()
+    marcarVisto(true)
     if (r.cupom) {
       setCupom(r.cupom)
       try {

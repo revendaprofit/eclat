@@ -14,6 +14,14 @@ export const ENVELOPES: Envelope[] = [
 
 export const COOKIE_ENVELOPE = "eclat_envelope"
 
+// Cookie próprio (sócia, 03/11: 60 dias era muito). Quem fechou vê de novo em 7 dias; quem escolheu não vê mais.
+// O cookie do aviso antigo (eclat_bv) não conta: quem fechou aquele aviso ainda não conheceu os envelopes.
+export const COOKIE_ENVELOPES_VISTO = "eclat_envelopes_visto"
+
+export function validadeDoVisto(escolheu: boolean): number {
+  return 60 * 60 * 24 * (escolheu ? 365 : 7)
+}
+
 export const TEXTO_ACEITE_ENVELOPE = "Ao continuar, aceito receber novidades e ofertas da ÉCLAT pelo WhatsApp. Posso sair quando quiser."
 
 export const MENSAGEM_CONSULTORIA = "Oi! Escolhi a consultoria no site da ÉCLAT e quero ajuda para escolher o melhor look."
