@@ -1,4 +1,4 @@
-import Image from "next/image"
+import ImagemPerto from "@modules/common/components/imagem-perto"
 import { HOME_DEFAULTS, Testimonials as TestimonialsType } from "@modules/home/content"
 import { depoimentosReais, somentePrints } from "@lib/util/depoimentos"
 import CarrosselAuto from "./carrossel-auto"
@@ -29,7 +29,7 @@ export default function Testimonials({ content, max, compacto }: { content?: Tes
             <figure className="flex flex-col gap-3">
               <div className="border border-eclat-terracota outline outline-1 outline-offset-[3px] outline-[#C9A24C] bg-eclat-luz p-[4px]">
                 {t.image_url ? (
-                  <Image
+                  <ImagemPerto
                     src={t.image_url}
                     alt={`${t.author}: ${t.quote}`}
                     width={t.image_width || 900}

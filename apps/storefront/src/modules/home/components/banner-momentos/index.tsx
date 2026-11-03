@@ -1,4 +1,4 @@
-import Image from "next/image"
+import ImagemPerto from "@modules/common/components/imagem-perto"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import { HOME_DEFAULTS, type BannerMomentos as BannerMomentosType } from "@modules/home/content"
 
@@ -14,8 +14,8 @@ export default function BannerMomentos({ content }: { content?: BannerMomentosTy
   return (
     <section className="relative w-full overflow-hidden bg-eclat-grafite text-eclat-luz" data-testid="banner-momentos">
       <div className="relative aspect-[4/5] small:aspect-[12/5] w-full">
-        <Image src={mobile} alt={c.title || "use.ÉCLAT"} fill priority={false} sizes="100vw" quality={82} className="object-cover small:hidden" />
-        <Image src={c.image_url} alt={c.title || "use.ÉCLAT"} fill priority={false} sizes="100vw" quality={82} className="hidden small:block object-cover" />
+        <ImagemPerto src={mobile} alt={c.title || "use.ÉCLAT"} fill sizes="100vw" quality={82} className="object-cover small:hidden" />
+        <ImagemPerto src={c.image_url} alt={c.title || "use.ÉCLAT"} fill sizes="100vw" quality={82} className="hidden small:block object-cover" />
         <div className="absolute inset-0 bg-gradient-to-t from-eclat-grafite/85 via-eclat-grafite/30 to-transparent" />
         <div className="absolute inset-0 flex items-end">
           <div className="content-container w-full pb-10 small:pb-12">

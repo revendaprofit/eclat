@@ -22,5 +22,6 @@ export default function ImagemPerto({ alt, ...props }: ImageProps) {
   const caixa: React.CSSProperties = props.fill
     ? { position: "absolute", inset: 0 }
     : { display: "block", width: "100%", aspectRatio: `${props.width} / ${props.height}` }
-  return <span ref={ref} style={caixa} />
+  // Herda a classe da foto: a versão escondida por CSS (a do computador, no celular) nunca entra na fila.
+  return <span ref={ref} className={props.className} style={caixa} />
 }

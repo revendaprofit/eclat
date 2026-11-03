@@ -1,4 +1,4 @@
-import Image from "next/image"
+import ImagemPerto from "@modules/common/components/imagem-perto"
 import { HOME_DEFAULTS, type Fundadora as FundadoraType } from "@modules/home/content"
 
 // "Conheça a fundadora" (referência versianiswim.com.br, pedido da sócia em 2026-10-11): foto 3:4 à
@@ -14,7 +14,7 @@ export default function Fundadora({ content }: { content?: FundadoraType | null 
       <div className="grid grid-cols-1 small:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] gap-8 small:gap-16 items-center">
         <div className="relative aspect-[3/4] w-full max-w-md mx-auto small:max-w-none border border-eclat-terracota outline outline-1 outline-offset-[3px] outline-[#C9A24C] bg-eclat-luz p-[4px]">
           <div className="relative h-full w-full overflow-hidden">
-            <Image src={c.image_url} alt={c.name || "Fundadora da use.ÉCLAT"} fill sizes="(max-width: 1024px) 90vw, 40vw" quality={82} className="object-cover" />
+            <ImagemPerto src={c.image_url} alt={c.name || "Fundadora da use.ÉCLAT"} fill sizes="(max-width: 1024px) 90vw, 40vw" quality={82} className="object-cover" />
           </div>
         </div>
         <div className="flex flex-col gap-4 small:gap-5">

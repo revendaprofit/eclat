@@ -30,7 +30,7 @@ function Grade({ entradas, region, listName, prioridade = 0 }: { entradas: Listi
     <ul className="grid grid-cols-2 small:grid-cols-4 gap-x-4 gap-y-10 small:gap-x-6 small:gap-y-12">
       {entradas.map((e, i) => (
         <li key={entryKey(e)}>
-          <ProductPreview product={e.product} cor={e.cor} region={region} listName={listName} prioridade={i < prioridade} />
+          <ProductPreview adiarFoto product={e.product} cor={e.cor} region={region} listName={listName} prioridade={i < prioridade} />
         </li>
       ))}
     </ul>
@@ -68,7 +68,7 @@ export default async function VitrineAbas({ region, countryCode }: { region: Htt
         <ul className="grid grid-cols-2 small:grid-cols-4 gap-x-4 gap-y-10 small:gap-x-6 small:gap-y-12">
           {cardsConjunto.map((c) => (
             <li key={`${c.handle}|${c.cor ?? ""}`}>
-              <CardConjunto card={c} listName="Home · Conjuntos" />
+              <CardConjunto adiarFoto card={c} listName="Home · Conjuntos" />
             </li>
           ))}
         </ul>

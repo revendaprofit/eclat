@@ -1,6 +1,6 @@
 "use client"
 
-import Image from "next/image"
+import ImagemPerto from "@modules/common/components/imagem-perto"
 import { useCallback, useEffect, useRef, useState } from "react"
 
 // Carrossel do banner editorial (pedido da sócia, 2026-09-19): fotos 2:3 INTEIRAS — cada slide tem a
@@ -67,7 +67,7 @@ export default function CarrosselBanner({ fotos, alt }: { fotos: string[]; alt: 
       >
         {fotos.map((src, i) => (
           <div key={src} className="relative h-full w-full shrink-0 snap-start small:w-1/2">
-            <Image
+            <ImagemPerto
               src={src}
               alt={i === 0 ? alt : ""}
               aria-hidden={i > 0}

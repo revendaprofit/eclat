@@ -25,7 +25,7 @@ const nextConfig = {
       { source: "/links", destination: "/links/index.html" },
       // Imagens do site pela MESMA origem (2026-10-11, sócia: fotos não carregavam no celular). O
       // navegador do celular deixa de abrir DNS + TLS para *.supabase.co e reaproveita a conexão da
-      // página; a Vercel repassa e guarda no cache da borda (Cache-Control vem do Storage, 1 ano).
+      // página; a Vercel só repassa: não guarda (03/11: o Storage responde com Set-Cookie); o cache é o do próprio Storage.
       // O loader (src/lib/util/image-loader.ts) troca a URL pública do Storage por /midia/<caminho>.
       // (2026-10-11: a Vercel não recebeu o aviso do commit 61b305e e pulou o commit vazio como "não afetado";
       // este comentário existe só para o deploy seguinte enxergar mudança em apps/storefront.)
@@ -36,13 +36,7 @@ const nextConfig = {
     return [
       {
         source: "/midia/:path*",
-        // 03/11: projeto antigo, a Vercel não guardava estas fotos (X-Vercel-Cache: MISS sempre) sem o aviso abaixo.
-        // Na borda vale 1 dia, renovando em segundo plano: arquivo trocado com o mesmo nome não fica preso por 1 ano.
-        headers: [
-          { key: "Cache-Control", value: "public, max-age=31536000, immutable" },
-          { key: "x-vercel-enable-rewrite-caching", value: "1" },
-          { key: "CDN-Cache-Control", value: "public, max-age=86400, stale-while-revalidate=604800" },
-        ],
+        headers: [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }],
       },
     ]
   },

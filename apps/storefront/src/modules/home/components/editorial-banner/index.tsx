@@ -1,4 +1,4 @@
-import Image from "next/image"
+import ImagemPerto from "@modules/common/components/imagem-perto"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import CarrosselBanner from "./carrossel"
 import {
@@ -32,7 +32,7 @@ export default function EditorialBanner({
           {carrossel ? (
             <CarrosselBanner fotos={fotos} alt={c.title || "use.ÉCLAT"} />
           ) : c.image_url ? (
-            <Image
+            <ImagemPerto
               src={c.image_url}
               alt={c.title || "use.ÉCLAT"}
               fill

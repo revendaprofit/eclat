@@ -1,4 +1,4 @@
-import Image from "next/image"
+import ImagemPerto from "@modules/common/components/imagem-perto"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import { HOME_DEFAULTS, type Universos as UniversosType } from "@modules/home/content"
 
@@ -19,7 +19,7 @@ export default function Universos({ content }: { content?: UniversosType | null 
           const emBreve = !i.href
           const miolo = (
             <>
-              <Image
+              <ImagemPerto
                 src={i.image_url as string}
                 alt={i.title as string}
                 fill

@@ -1,4 +1,4 @@
-import Image from "next/image"
+import ImagemPerto from "@modules/common/components/imagem-perto"
 import { HOME_DEFAULTS, Instagram as InstagramType } from "@modules/home/content"
 import { fotosInstagram, limparHandle, linkPerfilInstagram } from "@lib/util/instagram"
 import Reels from "./reels"
@@ -66,7 +66,7 @@ export default function Instagram({ content }: { content?: InstagramType | null 
               aria-label={`Ver no Instagram @${handle} (${i + 1})`}
               className="group relative block aspect-square overflow-hidden bg-eclat-areia/40"
             >
-              <Image
+              <ImagemPerto
                 src={f.image_url}
                 alt=""
                 fill

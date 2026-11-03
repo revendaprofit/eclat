@@ -13,6 +13,7 @@ export default async function ProductPreview({
   formaConjunto,
   cor,
   prioridade,
+  adiarFoto,
 }: {
   product: HttpTypes.StoreProduct
   isFeatured?: boolean
@@ -23,6 +24,8 @@ export default async function ProductPreview({
   cor?: string | null
   // capa com prioridade de carregamento (primeiros cards da home)
   prioridade?: boolean
+  // card fora da primeira tela: a foto só baixa quando a cliente chega perto
+  adiarFoto?: boolean
 }) {
   const [colorMap, condicoes] = await Promise.all([getColorMap(), getCondicoes()])
   const countryCode = region.countries?.[0]?.iso_2 ?? "br"
@@ -35,6 +38,7 @@ export default async function ProductPreview({
       initialColor={cor ?? null}
       condicoes={condicoes}
       prioridade={prioridade}
+      adiarFoto={adiarFoto}
     />
   )
 }

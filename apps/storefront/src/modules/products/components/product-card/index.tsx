@@ -1,6 +1,7 @@
 "use client"
 
 import Image from "next/image"
+import ImagemPerto from "@modules/common/components/imagem-perto"
 import { useState } from "react"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import { Text, clx } from "@modules/common/components/ui"
@@ -29,9 +30,12 @@ function indiceInicial(data: ProductCardData, initialColor: string | null): numb
 
 // `prioridade`: capa carrega já (eager + preload) — primeiros cards da home no celular (sócia, 2026-10-11: fotos
 // demoravam a aparecer ao abrir o site).
-export default function ProductCard({ data, countryCode, listName, aspect = "portrait", initialColor = null, condicoes, prioridade }: { data: ProductCardData; countryCode: string; listName?: string; aspect?: "portrait" | "featured"; initialColor?: string | null; condicoes?: Condicoes; prioridade?: boolean }) {
+export default function ProductCard({ data, countryCode, listName, aspect = "portrait", initialColor = null, condicoes, prioridade, adiarFoto }: { adiarFoto?: boolean; data: ProductCardData; countryCode: string; listName?: string; aspect?: "portrait" | "featured"; initialColor?: string | null; condicoes?: Condicoes; prioridade?: boolean }) {
   const [active, setActive] = useState(() => indiceInicial(data, initialColor))
   const [sheet, setSheet] = useState(false)
+  // 2ª foto só existe para o mouse (03/11, 4G): o celular baixava duas fotos por card e nunca via a segunda.
+  const [comMouse, setComMouse] = useState(false)
+  const FotoCapa = adiarFoto && !prioridade ? ImagemPerto : Image
   const color = data.colors[active] ?? data.colors[0]
   const [img1, img2] = color?.images.length ? color.images : data.images
   const badge = badgeFor(data, active)
@@ -50,14 +54,14 @@ export default function ProductCard({ data, countryCode, listName, aspect = "por
   // A faixa de adição rápida fica FORA do link (botão dentro de <a> é HTML inválido):
   // o link cobre a imagem por baixo, a faixa fica por cima como irmã posicionada.
   return (
-    <div className="group relative" data-testid="product-wrapper">
+    <div className="group relative" data-testid="product-wrapper" onMouseEnter={() => setComMouse(true)}>
       <div className={clx("relative w-full overflow-hidden rounded-large bg-ui-bg-subtle", aspectClass)}>
         <LocalizedClientLink href={href} onClick={() => pushSelectItem(data, listName, color?.name || undefined)} className="absolute inset-0 block" aria-label={data.title}>
           <Badge badge={badge} percent={data.price?.percentage_diff} />
           {img1 ? (
-            <Image src={img1} alt={`${data.title} — ${color?.name || "use.ÉCLAT"}`} fill quality={80} priority={!!prioridade} sizes="(max-width: 576px) 50vw, (max-width: 1024px) 33vw, 25vw" className={clx("object-cover object-center transition-opacity duration-300", img2 && "small:group-hover:opacity-0")} draggable={false} />
+            <FotoCapa src={img1} alt={`${data.title} — ${color?.name || "use.ÉCLAT"}`} fill quality={80} priority={!!prioridade} sizes="(max-width: 576px) 50vw, (max-width: 1024px) 33vw, 25vw" className={clx("object-cover object-center transition-opacity duration-300", img2 && "small:group-hover:opacity-0")} draggable={false} />
           ) : null}
-          {img2 && <Image src={img2} alt="" aria-hidden fill quality={80} sizes="(max-width: 576px) 50vw, (max-width: 1024px) 33vw, 25vw" className="object-cover object-center opacity-0 transition-opacity duration-300 small:group-hover:opacity-100" draggable={false} />}
+          {img2 && comMouse && <Image src={img2} alt="" aria-hidden fill quality={80} sizes="(max-width: 576px) 50vw, (max-width: 1024px) 33vw, 25vw" className="object-cover object-center opacity-0 transition-opacity duration-300 small:group-hover:opacity-100" draggable={false} />}
         </LocalizedClientLink>
         {color && color.available && <QuickAdd data={data} color={color} countryCode={countryCode} open={sheet} onClose={() => setSheet(false)} />}
       </div>
