@@ -15,6 +15,8 @@ import {
   getCacheTag,
   getCartId,
   getContatoGuardado,
+  getEnvelopeGuardado,
+  setEnvelopeGuardado,
   removeCartId,
   setCartId,
   setContatoGuardado,
@@ -37,6 +39,7 @@ import {
   type Contato,
 } from "@lib/util/contato-checkout"
 import { TEXTO_ACEITE_SACOLA } from "@lib/util/sacola-guardada"
+import { lerEnvelopeId, type EnvelopeId } from "@lib/util/envelopes"
 
 /**
  * Retrieves a cart by its ID. If no ID is provided, it will use the cart ID from the cookies.
@@ -96,8 +99,14 @@ export async function getOrSetCart(countryCode: string) {
     const locale = await getLocale()
     // Quem já deixou o contato (aviso de boas-vindas ou checkout anterior) não vira "Só sacola".
     const contato = contatoParaCarrinho({}, lerContatoDoCookie(await getContatoGuardado())) ?? {}
+    const envelope = lerEnvelopeId(await getEnvelopeGuardado())
     const cartResp = await sdk.store.cart.create(
-      { region_id: region.id, locale: locale || undefined, ...contato },
+      {
+        region_id: region.id,
+        locale: locale || undefined,
+        ...contato,
+        ...(envelope ? { metadata: { ...(contato.metadata ?? {}), envelope } } : {}),
+      },
       {},
       headers
     )
@@ -427,6 +436,14 @@ export async function guardarContato(contato: Partial<Contato>) {
   } catch {
     // silencioso de propósito
   }
+}
+
+/** Envelope escolhido: fica no cookie e no carrinho atual. Vira order.metadata.envelope, que o Cockpit mostra no pedido. */
+export async function guardarEnvelope(envelope: EnvelopeId) {
+  await setEnvelopeGuardado(envelope)
+  const cartId = await getCartId()
+  const cart = cartId ? await retrieveCart(cartId, "id,metadata") : null
+  if (cart) await updateCart({ metadata: { ...(cart.metadata ?? {}), envelope } })
 }
 
 /** O cartão "Guardar a sacola" só pergunta a quem tem peça na sacola e ainda não deixou WhatsApp. */

@@ -48,7 +48,9 @@ export default function GuardarSacola() {
       // Sacola vazia não tem o que guardar, e quem já deixou contato (aviso de boas-vindas, checkout) não responde de novo.
       if (!(await sacolaPrecisaDeContato().catch(() => false))) return
       window.clearTimeout(timer)
-      timer = window.setTimeout(() => setAberto(true), ESPERA_MS)
+      timer = window.setTimeout(() => {
+        if (!document.querySelector('[data-testid="envelopes"]')) setAberto(true)
+      }, ESPERA_MS)
     }
     window.addEventListener(EVENTO_SACOLA, oferecer)
     if (ehPaginaDaSacola(pathname)) oferecer()

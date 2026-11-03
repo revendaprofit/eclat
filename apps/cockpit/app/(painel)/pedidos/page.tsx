@@ -1,5 +1,6 @@
 "use client"
 
+import { textoDoEnvelope } from "@/lib/envelope"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { enderecoEmLinha } from "@/lib/endereco"
 import { ehCupomDeAniversario } from "@/lib/aniversario"
@@ -437,6 +438,12 @@ export default function PedidosPage() {
                 {/* Itens */}
                 <section>
                   <h4 className="text-meta uppercase tracking-wider text-eclat-texto-3 mb-2">Itens</h4>
+                  {/* Envelope escolhido no site (sócia, 03/11): o presente precisa ir na caixa, e a consultoria pede contato. */}
+                  {textoDoEnvelope(det.metadata?.envelope) && (
+                    <p className="mb-2 rounded-md bg-eclat-terracota px-3 py-2 text-corpo text-white" data-testid="pedido-envelope">
+                      {textoDoEnvelope(det.metadata?.envelope)}
+                    </p>
+                  )}
                   <div className="border border-eclat-pedra/30 rounded-md overflow-hidden">
                     <table className="w-full text-corpo">
                       <tbody>

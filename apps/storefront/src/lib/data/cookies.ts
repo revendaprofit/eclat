@@ -1,6 +1,7 @@
 import "server-only"
 import { cookies as nextCookies } from "next/headers"
 import { COOKIE_CONTATO } from "@lib/util/contato-checkout"
+import { COOKIE_ENVELOPE } from "@lib/util/envelopes"
 
 export const getAuthHeaders = async (): Promise<
   { authorization: string } | Record<string, never>
@@ -94,6 +95,23 @@ export const removeCartId = async () => {
 export const getContatoGuardado = async (): Promise<string | undefined> => {
   const cookies = await nextCookies()
   return cookies.get(COOKIE_CONTATO)?.value
+}
+
+// Envelope escolhido: o carrinho criado depois da escolha também nasce com ele.
+export const getEnvelopeGuardado = async (): Promise<string | undefined> => {
+  const cookies = await nextCookies()
+  return cookies.get(COOKIE_ENVELOPE)?.value
+}
+
+export const setEnvelopeGuardado = async (valor: string) => {
+  const cookies = await nextCookies()
+  cookies.set(COOKIE_ENVELOPE, valor, {
+    maxAge: 60 * 60 * 24 * 60,
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+  })
 }
 
 export const setContatoGuardado = async (valor: string) => {
