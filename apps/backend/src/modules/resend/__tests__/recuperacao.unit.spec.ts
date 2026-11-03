@@ -30,6 +30,8 @@ describe("e-mail de recuperação", () => {
     expect(e.html).not.toContain("javascript:")
   })
   it("sem nome e sem cupom continua legível", () => {
+    const semCupom = recuperacao({ ...base, gatilho: "lead_site", cupom: "" })
+    expect(semCupom.subject + semCupom.html).not.toMatch(/10%|desconto|cupom/i)
     const e = recuperacao({ ...base, primeiroNome: null, cupom: null })
     expect(e.html).toContain("Suas peças continuam separadas")
     expect(e.html).not.toContain("cupom")

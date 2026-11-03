@@ -45,15 +45,24 @@ function textos(d: DadosRecuperacaoEmail): Texto {
           botao: "Ver a coleção",
           previa: presente,
         }
+      // Sem cupom ligado, nada de prometer desconto (03/11: o BEMVINDA10 estava desligado e o texto seguia oferecendo 10%).
+      if (!cupom)
+        return {
+          assunto: "As peças mais pedidas da ÉCLAT",
+          titulo: `${nome}que bom ter você por aqui`,
+          paragrafos: ["Você deixou seu contato no nosso site para saber das novidades da ÉCLAT.", "Separamos a coleção para você ver com calma."],
+          botao: "Ver a coleção",
+          previa: "A coleção da ÉCLAT para você ver com calma.",
+        }
       return {
-        assunto: cupom ? `Seu cupom ${cupom} está esperando por você` : "Seu desconto está esperando por você",
+        assunto: `Seu cupom ${cupom} está esperando por você`,
         titulo: `${nome}seus 10% estão guardados`,
         paragrafos: [
           "Você deixou seu contato no nosso site para ganhar desconto na primeira compra.",
-          cupom ? `Seu cupom é ${cupom}. É só usar na finalização do pedido.` : "O desconto entra na finalização do pedido.",
+          `Seu cupom é ${cupom}. É só usar na finalização do pedido.`,
         ],
         botao: "Ver a coleção",
-        previa: cupom ? `Use ${cupom} e ganhe 10% na primeira compra.` : "10% na primeira compra.",
+        previa: `Use ${cupom} e ganhe 10% na primeira compra.`,
       }
     default:
       return {

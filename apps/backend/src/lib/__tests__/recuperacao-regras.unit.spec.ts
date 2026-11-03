@@ -96,6 +96,12 @@ describe("textos", () => {
     expect(t).toContain("BEMVINDA10")
     expect(t).toContain("https://www.useeclat.com.br/br/cart")
   })
+  it("sem cupom e sem presente, nenhuma mensagem promete desconto", () => {
+    for (const gatilho of ["carrinho", "lead_site", "anuncio"] as const) {
+      expect(textoOferta({ gatilho, dados: {}, cupom: "", link: "L" })).not.toMatch(/10%|cupom|desconto/i)
+    }
+  })
+
   it("com o presente ligado, a oferta fala da meia e NÃO cita cupom (BEMVINDA10 saiu em 2026-09-30)", () => {
     const presente = "Nas compras a partir de R$ 250 em peças, você ganha uma meia Éclat de presente."
     const carrinho = textoOferta({ gatilho: "carrinho", dados: {}, cupom: "BEMVINDA10", presente, link: "L" })

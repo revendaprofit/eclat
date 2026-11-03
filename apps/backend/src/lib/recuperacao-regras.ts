@@ -167,7 +167,9 @@ export function textoOferta(p: {
       return `Vi que o Pix do seu pedido (${resumoItens(p.dados.itens)}) expirou antes do pagamento. Aconteceu alguma coisa? É só voltar na sacola que o site gera um Pix novo na hora: ${p.link} Se preferir, te ajudo por aqui 😊`
     case "lead_site":
       if (presente) return `Você deixou seu contato no nosso site 😊${comCupom} Quer que eu te indique as peças mais pedidas? Dá uma olhada: ${p.link}`
-      return `Você deixou seu contato no nosso site pra ganhar 10% na primeira compra 😊${cupom ? ` Seu cupom é ${cupom}.` : ""} Quer que eu te indique as peças mais pedidas? Dá uma olhada: ${p.link}`
+      // Sem cupom ligado, nada de prometer desconto (03/11: o BEMVINDA10 estava desligado e o texto seguia oferecendo 10%).
+      if (!cupom) return `Você deixou seu contato no nosso site 😊 Quer que eu te indique as peças mais pedidas? Dá uma olhada: ${p.link}`
+      return `Você deixou seu contato no nosso site pra ganhar 10% na primeira compra 😊 Seu cupom é ${cupom}. Quer que eu te indique as peças mais pedidas? Dá uma olhada: ${p.link}`
     case "anuncio":
       return `Se quiser, te ajudo a escolher tamanho e cor por aqui mesmo.${comCupom} As peças estão todas aqui: ${p.link}`
   }
