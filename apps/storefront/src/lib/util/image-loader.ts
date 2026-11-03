@@ -19,7 +19,7 @@ const PUBLICO = "/storage/v1/object/public/"
 const RENDER = "/storage/v1/render/image/public/"
 const HOST_SUPABASE = /^https:\/\/[a-z0-9-]+\.supabase\.co\//
 // Só estas têm variantes garantidas: fotos de produto com o hash de 8 dígitos que os scripts põem no nome.
-const COM_VARIANTES = /\/site\/(?:(?:products|detalhes-pecas|banners)\/[^/?]+|hero|categorias|depoimentos)\/[^/?]+-[0-9a-f]{8}\.jpg$/
+const COM_VARIANTES = /\/site\/(?:(?:products|detalhes-pecas|banners)\/[^/?]+|hero|categorias|depoimentos|conjuntos)\/[^/?]+-[0-9a-f]{8}\.jpg$/
 export const LARGURAS_VARIANTES = [480, 960] as const
 
 const MESMA_ORIGEM = process.env.NEXT_PUBLIC_IMAGENS_ORIGEM !== "storage"

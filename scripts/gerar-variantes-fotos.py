@@ -30,8 +30,8 @@ APPLY = "--apply" in sys.argv
 REFAZER = "--refazer" in sys.argv
 LARGURAS = [480, 960]        # as mesmas de LARGURAS_VARIANTES no image-loader.ts
 JPEG_Q = 80
-COM_VARIANTES = re.compile(r"/site/((?:(?:products|detalhes-pecas|banners)/[^/?]+|hero|categorias|depoimentos)/[^/?]+-[0-9a-f]{8})\.jpg$")   # a mesma regra do loader
-PASTAS_HOME = ["hero", "banners", "categorias", "depoimentos"]   # listadas direto no Storage (não passam pelo Medusa)
+COM_VARIANTES = re.compile(r"/site/((?:(?:products|detalhes-pecas|banners)/[^/?]+|hero|categorias|depoimentos|conjuntos)/[^/?]+-[0-9a-f]{8})\.jpg$")   # a mesma regra do loader
+PASTAS_HOME = ["hero", "banners", "categorias", "depoimentos", "conjuntos"]   # listadas direto no Storage (não passam pelo Medusa)
 
 
 def env_cockpit():

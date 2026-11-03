@@ -56,6 +56,30 @@ const DEFAULTS = {
 // mobile 1080 px — convertidas em vw para escalar junto com o vídeo, com mínimos legíveis.
 const SOMBRA = { textShadow: "0 2px 16px rgba(10, 8, 12, 0.55)" }
 
+// Versões leves de um banner para o srcset (mesma regra do HeroTelaView).
+function srcSetDoBanner(tela: Extract<HeroTela, { tipo: "imagem" }>) {
+  const src = midiaDoSite(tela.src)
+  const [w480, w960] = LARGURAS_VARIANTES
+  const leve = urlDaImagem({ src: tela.src, width: w480 }, "direto")
+  const srcSet = leve !== src ? [leve + " " + w480 + "w", urlDaImagem({ src: tela.src, width: w960 }, "direto") + " " + w960 + "w", src + " " + (tela.largura ?? 1920) + "w"].join(", ") : undefined
+  return { src, srcSet }
+}
+
+// Banner único (03/11): com duas <img> (uma escondida por CSS) o celular baixava também o banner do computador, com
+// prioridade alta, disputando a fila com a imagem principal. Com <picture> o navegador baixa só o da tela.
+// O corte de 1024 px é o mesmo do `small:` do Tailwind.
+function BannerPicture({ mobile, desktop }: { mobile: Extract<HeroTela, { tipo: "imagem" }>; desktop: Extract<HeroTela, { tipo: "imagem" }> }) {
+  const m = srcSetDoBanner(mobile)
+  const d = srcSetDoBanner(desktop)
+  return (
+    <picture>
+      <source media="(min-width: 1024px)" srcSet={d.srcSet ?? d.src} sizes="100vw" width={desktop.largura ?? undefined} height={desktop.altura ?? undefined} />
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={m.src} srcSet={m.srcSet} sizes="100vw" width={mobile.largura ?? undefined} height={mobile.altura ?? undefined} alt="use.ÉCLAT" fetchPriority="high" className="block w-full h-auto" />
+    </picture>
+  )
+}
+
 function HeroTelaView({ tela, variante, textos }: { tela: HeroTela; variante: "mobile" | "desktop"; textos: HeroTextos }) {
   if (tela.tipo === "nenhum") return null
   if (tela.tipo === "imagem") {
@@ -63,10 +87,7 @@ function HeroTelaView({ tela, variante, textos }: { tela: HeroTela; variante: "m
     // versões leves (.w480/.w960, quando o arquivo tem hash no nome — scripts/gerar-variantes-fotos.py)
     // no srcset para o celular escolher a menor que cobre a tela, e com width/height para reservar o
     // espaço (h-auto mantém a proporção real depois de carregar). fetchpriority=high: é o LCP da home.
-    const src = midiaDoSite(tela.src)
-    const [w480, w960] = LARGURAS_VARIANTES
-    const leve = urlDaImagem({ src: tela.src, width: w480 }, "direto")
-    const srcSet = leve !== src ? [leve + " " + w480 + "w", urlDaImagem({ src: tela.src, width: w960 }, "direto") + " " + w960 + "w", src + " " + (tela.largura ?? 1920) + "w"].join(", ") : undefined
+    const { src, srcSet } = srcSetDoBanner(tela)
     return (
       // eslint-disable-next-line @next/next/no-img-element
       <img
@@ -159,6 +180,15 @@ const Hero = ({
   if (interativo || telas.mobile.tipo !== "nenhum" || telas.desktop.tipo !== "nenhum") {
     const textos = heroTextos(c)
     const rotulo = `${textos.eyebrow}: ${textos.cta}`
+    if (!interativo && telas.mobile.tipo === "imagem" && telas.desktop.tipo === "imagem") {
+      return (
+        <section className="w-full border-b border-eclat-pedra/40">
+          <LocalizedClientLink href={bannerHref} aria-label={rotulo} className="block">
+            <BannerPicture mobile={telas.mobile} desktop={telas.desktop} />
+          </LocalizedClientLink>
+        </section>
+      )
+    }
     return (
       <section className="w-full border-b border-eclat-pedra/40">
         {interativo ? (

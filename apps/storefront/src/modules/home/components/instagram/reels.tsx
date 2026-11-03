@@ -23,9 +23,24 @@ export default function Reels({ reels, handle }: { reels: InstagramReel[]; handl
 function Card({ reel, handle, index }: { reel: InstagramReel; handle: string; index: number }) {
   const video = useRef<HTMLVideoElement>(null)
   const [mudo, setMudo] = useState(true)
+  // 03/11: vídeo e capa só entram quando o card está a até 400 px da tela. Antes, os reels (no fim da home) baixavam
+  // cerca de 375 KB de vídeo e 260 KB de capas na abertura da página, disputando a fila com o banner.
+  const [perto, setPerto] = useState(false)
   useEffect(() => {
     const v = video.current
     if (!v) return
+    const io = new IntersectionObserver(
+      ([e]) => {
+        if (e.isIntersecting) setPerto(true)
+      },
+      { rootMargin: "400px 0px" }
+    )
+    io.observe(v)
+    return () => io.disconnect()
+  }, [])
+  useEffect(() => {
+    const v = video.current
+    if (!v || !perto) return
     const io = new IntersectionObserver(
       ([e]) => {
         if (e.isIntersecting) v.play().catch(() => {})
@@ -35,7 +50,7 @@ function Card({ reel, handle, index }: { reel: InstagramReel; handle: string; in
     )
     io.observe(v)
     return () => io.disconnect()
-  }, [])
+  }, [perto])
 
   const interno = !!reel.href && reel.href.startsWith("/")
   const rotulo = reel.cta_label || (interno ? "Comprar o look" : "Ver no Instagram")
@@ -45,8 +60,8 @@ function Card({ reel, handle, index }: { reel: InstagramReel; handle: string; in
     <article className="group relative aspect-[9/16] overflow-hidden rounded-xl bg-eclat-grafite text-eclat-luz">
       <video
         ref={video}
-        src={midiaDoSite(reel.video_url)}
-        poster={midiaDoSite(reel.poster_url)}
+        src={perto ? midiaDoSite(reel.video_url) : undefined}
+        poster={perto ? midiaDoSite(reel.poster_url) : undefined}
         muted={mudo}
         loop
         playsInline

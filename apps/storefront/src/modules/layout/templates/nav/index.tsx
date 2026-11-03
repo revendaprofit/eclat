@@ -46,8 +46,8 @@ export default async function Nav() {
               data-testid="nav-store-link"
               aria-label="use.ÉCLAT — página inicial"
             >
-              <Image src="/brand/mark.png" alt="" width={27} height={36} priority className="h-9 w-auto" />
-              <Image src="/brand/wordmark.png" alt="use.ÉCLAT" width={75} height={24} priority className="h-[22px] w-auto" />
+              <Image src="/brand/mark-nav.png" alt="" width={27} height={36} loading="eager" className="h-9 w-auto" />
+              <Image src="/brand/wordmark-nav.png" alt="use.ÉCLAT" width={75} height={24} loading="eager" className="h-[22px] w-auto" />
             </LocalizedClientLink>
           </div>
 
