@@ -1,5 +1,6 @@
 "use client"
 
+import { avisarSacolaAdicionada } from "@lib/util/sacola-guardada"
 import { useCallback, useState } from "react"
 import type { HttpTypes } from "@medusajs/types"
 import type { ColorMap } from "@lib/util/colors"
@@ -107,6 +108,7 @@ export default function ConjuntoBuilder({
         addToCart({ variantId: s.variantId, quantity: 1, countryCode, metadata: s.metadata })
       )
       setProgresso(r.progresso)
+      if (r.adicionadosAgora.length) avisarSacolaAdicionada()
       // Tracking só do que ENTROU agora — o que já estava na sacola de uma tentativa anterior não
       // é re-adicionado nem re-reportado.
       for (const adicionado of r.adicionadosAgora) {

@@ -15,6 +15,7 @@ import { getPrevenda } from "@lib/data/prevenda"
 import Wizard from "@modules/personalization/wizard-adiado"
 import FreeShippingPriceNudge from "@modules/shipping/components/free-shipping-price-nudge"
 import ToastHost from "@modules/common/components/toast"
+import GuardarSacola from "@modules/cart/components/guardar-sacola/adiado"
 
 export const metadata: Metadata = {
   metadataBase: new URL(getBaseURL()),
@@ -54,6 +55,7 @@ export default async function PageLayout(props: { children: React.ReactNode }) {
       <BoasVindas />
       {personasLigadas && personas.length > 0 && <Wizard personas={personas} />}
       <ToastHost />
+      <GuardarSacola />
     </>
   )
 }

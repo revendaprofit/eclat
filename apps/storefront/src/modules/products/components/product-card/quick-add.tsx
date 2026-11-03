@@ -1,5 +1,6 @@
 "use client"
 
+import { avisarSacolaAdicionada } from "@lib/util/sacola-guardada"
 import { useState } from "react"
 import { addToCart } from "@lib/data/cart"
 import type { CardColor, ProductCardData } from "@lib/util/product-card-data"
@@ -27,6 +28,7 @@ export default function QuickAdd({ data, color, countryCode, open, onClose }: { 
     try {
       await addToCart({ variantId: v.id, quantity: 1, countryCode })
       pushAddToCart(data, v, color.name)
+      avisarSacolaAdicionada()
       if (isMobile()) showToast({ message: `${data.title} ${v.size ?? ""} adicionado à sacola`, action: { label: "Ver sacola", href: "/cart" } })
       onClose()
     } catch {

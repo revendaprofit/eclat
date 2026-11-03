@@ -30,10 +30,13 @@ import { codigosParaPagamento } from "@lib/util/carrinho-conjunto"
 import {
   contatoParaCarrinho,
   lerContatoDoCookie,
+  normalizarWhatsapp,
   serializarContato,
   validarContato,
+  whatsappValido,
   type Contato,
 } from "@lib/util/contato-checkout"
+import { TEXTO_ACEITE_SACOLA } from "@lib/util/sacola-guardada"
 
 /**
  * Retrieves a cart by its ID. If no ID is provided, it will use the cart ID from the cookies.
@@ -424,6 +427,37 @@ export async function guardarContato(contato: Partial<Contato>) {
   } catch {
     // silencioso de propósito
   }
+}
+
+/** O cartão "Guardar a sacola" só pergunta a quem tem peça na sacola e ainda não deixou WhatsApp. */
+export async function sacolaPrecisaDeContato(): Promise<boolean> {
+  const cartId = await getCartId()
+  if (!cartId) return false
+  const cart = await retrieveCart(cartId, "id,metadata,items.id")
+  return !!cart?.items?.length && !cart.metadata?.whatsapp
+}
+
+/**
+ * Cartão "Guardar a sacola" (sócia, 03/11): grava o WhatsApp no carrinho, com o aceite, e a recuperação automática
+ * passa a alcançar esta cliente. Sem carrinho, fica no cookie e o próximo carrinho já nasce com o contato.
+ */
+export async function guardarSacola(whatsapp: string): Promise<{ ok: true } | { erro: string }> {
+  const numero = normalizarWhatsapp(whatsapp)
+  if (!whatsappValido(numero)) return { erro: "Confira o WhatsApp: DDD + número de celular, 11 dígitos." }
+  await setContatoGuardado(serializarContato({ whatsapp: numero }))
+  const cartId = await getCartId()
+  const cart = cartId ? await retrieveCart(cartId, "id,metadata") : null
+  if (cart) {
+    await updateCart({
+      metadata: {
+        ...(cart.metadata ?? {}),
+        whatsapp: numero,
+        whatsapp_aceite_em: new Date().toISOString(),
+        whatsapp_aceite_texto: TEXTO_ACEITE_SACOLA,
+      },
+    })
+  }
+  return { ok: true }
 }
 
 /** 1º passo do checkout: só WhatsApp + e-mail, gravados no carrinho na hora (diagnóstico 2026-09-25). */

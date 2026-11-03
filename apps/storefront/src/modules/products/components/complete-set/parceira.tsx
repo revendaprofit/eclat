@@ -1,5 +1,6 @@
 "use client"
 
+import { avisarSacolaAdicionada } from "@lib/util/sacola-guardada"
 import { useMemo, useState } from "react"
 import ImagemPerto from "@modules/common/components/imagem-perto"
 import type { HttpTypes } from "@medusajs/types"
@@ -86,6 +87,7 @@ export default function Parceira({
         addToCart({ variantId: s.variantId, quantity: 1, countryCode, metadata: s.metadata })
       )
       setProgresso(r.progresso)
+      if (r.adicionadosAgora.length) avisarSacolaAdicionada()
       // Tracking só do que ENTROU agora — o que já estava na sacola não é re-adicionado nem
       // re-reportado.
       for (const adicionado of r.adicionadosAgora) {

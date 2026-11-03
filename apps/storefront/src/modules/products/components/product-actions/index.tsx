@@ -1,5 +1,6 @@
 "use client"
 
+import { avisarSacolaAdicionada } from "@lib/util/sacola-guardada"
 import { addToCart } from "@lib/data/cart"
 import { useIntersection } from "@lib/hooks/use-in-view"
 import { HttpTypes } from "@medusajs/types"
@@ -66,6 +67,7 @@ export default function ProductActions({ product, colorMap, disabled, measureTab
     try {
       await addToCart({ variantId: selectedVariant.id, quantity: 1, countryCode })
       pushEcommerceEvent("add_to_cart", variantToAddToCart(product, selectedVariant, 1))
+      avisarSacolaAdicionada()
     } catch (e) {
       setAviso(e instanceof Error && e.message ? e.message : "Não foi possível adicionar agora. Tente de novo.")
     } finally {
