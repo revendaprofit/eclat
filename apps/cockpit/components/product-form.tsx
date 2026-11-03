@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
+import { reduzirImagem } from "@/lib/reduzir-imagem"
 import { categoryPath, isAccessoryHandle, validateProductOptions } from "@/lib/catalog-rules"
 import ColorImages from "@/components/color-images"
 import ConjuntoProdutoPanel from "@/components/conjunto-produto-panel"
@@ -190,7 +191,7 @@ export default function ProductForm({
     setEnviandoImg(true)
     try {
       const fd = new FormData()
-      fd.append("file", file)
+      fd.append("file", await reduzirImagem(file))
       const r = await fetch("/api/uploads", { method: "POST", body: fd })
       const d = await r.json()
       if (!r.ok) throw new Error(d.error || "Falha no upload")

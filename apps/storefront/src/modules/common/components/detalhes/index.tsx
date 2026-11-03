@@ -1,4 +1,4 @@
-import Image from "next/image"
+import ImagemPerto from "@modules/common/components/imagem-perto"
 import { getSiteContent } from "@lib/data/site-content"
 
 // "Detalhes que fazem a diferença" (referência beatco.com.br, aprovada pelo dono em 2026-09-30): fotos de perto
@@ -23,7 +23,7 @@ export default async function DetalhesQueFazemDiferenca({ className = "" }: { cl
           {items.map((d) => (
             <li key={d.image_url} className="snap-start shrink-0 w-[72%] xsmall:w-[45%] small:w-[calc((100%-3rem)/4)]">
               <div className="relative aspect-[4/5] overflow-hidden bg-eclat-areia/40">
-                <Image
+                <ImagemPerto
                   src={d.image_url}
                   alt={d.title}
                   fill

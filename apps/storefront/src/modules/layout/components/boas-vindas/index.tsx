@@ -1,6 +1,6 @@
 import { getSiteContent } from "@lib/data/site-content"
 import { lerConfigBoasVindas } from "@lib/util/boas-vindas"
-import AvisoBoasVindas from "./aviso"
+import AvisoBoasVindas from "./aviso-adiado"
 import { lerPresenteDaBarra } from "@lib/util/condicoes"
 
 // Aviso de boas-vindas: ligado/desligado pelo Cockpit (site_content "boas_vindas"). O código do

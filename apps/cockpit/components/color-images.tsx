@@ -1,6 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useState } from "react"
+import { reduzirImagem } from "@/lib/reduzir-imagem"
 import type { GroupedImages } from "@/lib/color-images"
 
 type Img = { id: string; url: string }
@@ -101,7 +102,7 @@ export default function ColorImages({ productId }: { productId: string }) {
       const urls: string[] = []
       for (const file of Array.from(files)) {
         const fd = new FormData()
-        fd.append("file", file)
+        fd.append("file", await reduzirImagem(file))
         const r = await fetch("/api/uploads", { method: "POST", body: fd })
         const d = await r.json()
         if (!r.ok) throw new Error(d.error || "Falha no upload")

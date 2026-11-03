@@ -12,7 +12,7 @@ import Nav from "@modules/layout/templates/nav"
 import PrevendaBar from "@modules/layout/components/prevenda-bar"
 import BarraCondicoes from "@modules/layout/components/barra-condicoes"
 import { getPrevenda } from "@lib/data/prevenda"
-import Wizard from "@modules/personalization/wizard"
+import Wizard from "@modules/personalization/wizard-adiado"
 import FreeShippingPriceNudge from "@modules/shipping/components/free-shipping-price-nudge"
 import ToastHost from "@modules/common/components/toast"
 

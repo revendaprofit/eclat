@@ -23,7 +23,8 @@ const LocalizedClientLink = ({
   const { countryCode } = useParams()
 
   return (
-    <Link href={`/${countryCode}${href}`} {...props}>
+    // prefetch desligado (03/11, 4G): cada link visível na tela baixava outra página no meio do carregamento.
+    <Link href={`/${countryCode}${href}`} prefetch={false} {...props}>
       {children}
     </Link>
   )

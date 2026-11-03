@@ -1,6 +1,7 @@
 "use client"
 
 import Image from "next/image"
+import ImagemPerto from "@modules/common/components/imagem-perto"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import { formatarReais, hrefConjunto, type CardConjunto as CardConjuntoData } from "@lib/util/conjuntos"
 import { pushEcommerceEvent } from "@modules/analytics/push"
@@ -32,10 +33,14 @@ const SIZES_FOTO_CARD = "(max-width: 576px) 60vw, (max-width: 1024px) 40vw, 30vw
 export default function CardConjunto({
   card,
   listName,
+  adiarFoto,
 }: {
   card: CardConjuntoData
   listName: string
+  // Card abaixo da primeira tela (página de produto): a foto só baixa quando a cliente chega perto.
+  adiarFoto?: boolean
 }) {
+  const Foto = adiarFoto ? ImagemPerto : Image
   const fotos = card.capa
     ? [card.capa]
     : card.pecas.slice(0, 2).map((p) => p.thumbnail)
@@ -56,7 +61,7 @@ export default function CardConjunto({
             {fotos.map((src, i) =>
               src ? (
                 <div key={i} className="relative h-full">
-                  <Image
+                  <Foto
                     src={src}
                     alt={i === 0 ? `Conjunto ${card.nome}${card.cor ? ` ${card.cor}` : ""} — use.ÉCLAT` : ""}
                     aria-hidden={i > 0}
@@ -73,7 +78,7 @@ export default function CardConjunto({
             )}
           </div>
         ) : fotos[0] ? (
-          <Image
+          <Foto
             src={fotos[0]}
             alt={`${card.nome} — use.ÉCLAT`}
             fill

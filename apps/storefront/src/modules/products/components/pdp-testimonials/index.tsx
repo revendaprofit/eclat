@@ -1,4 +1,4 @@
-import Image from "next/image"
+import ImagemPerto from "@modules/common/components/imagem-perto"
 import { HttpTypes } from "@medusajs/types"
 import { getSiteContent } from "@lib/data/site-content"
 import type { Testimonials as TestimonialsType } from "@modules/home/content"
@@ -29,10 +29,10 @@ export default async function PdpTestimonials({ product }: { product: HttpTypes.
                 <div className="border border-eclat-terracota outline outline-1 outline-offset-[3px] outline-[#C9A24C] bg-eclat-luz p-[4px]">
                   {t.tipo === "foto" && t.image_url ? (
                     <div className="relative aspect-[2/3] w-full overflow-hidden">
-                      <Image src={t.image_url} alt={`${t.author} com ${product.title}`} fill sizes="(max-width: 1024px) 72vw, 256px" quality={80} className="object-cover" />
+                      <ImagemPerto src={t.image_url} alt={`${t.author} com ${product.title}`} fill sizes="(max-width: 1024px) 72vw, 256px" quality={80} className="object-cover" />
                     </div>
                   ) : t.image_url ? (
-                    <Image
+                    <ImagemPerto
                       src={t.image_url}
                       alt={`${t.author}: ${t.quote}`}
                       width={t.image_width || 900}

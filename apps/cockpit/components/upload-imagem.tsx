@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { reduzirImagem } from "@/lib/reduzir-imagem"
 
 // Upload genérico de imagem via /api/site-upload — usado na Vitrine e em Conjuntos curados.
 export default function UploadImagem({
@@ -17,7 +18,7 @@ export default function UploadImagem({
     setErro(null)
     try {
       const fd = new FormData()
-      fd.append("file", file)
+      fd.append("file", await reduzirImagem(file))
       const r = await fetch("/api/site-upload", { method: "POST", body: fd })
       const d = await r.json()
       if (!r.ok) throw new Error(d.error || "Falha no upload")

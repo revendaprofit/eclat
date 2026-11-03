@@ -9,6 +9,10 @@ export async function POST(req: Request) {
   if (!(file instanceof File)) {
     return NextResponse.json({ error: "arquivo não enviado" }, { status: 400 })
   }
+  // Trava de peso (03/11): a tela já reduz a foto antes de enviar; o que chega grande aqui é o que ela não conseguiu abrir.
+  if (file.type.startsWith("image/") && file.size > 2 * 1024 * 1024) {
+    return NextResponse.json({ error: "Foto acima de 2 MB. Salve em JPG e envie de novo." }, { status: 413 })
+  }
   try {
     const token = await medusaAdminToken()
     const fd = new FormData()

@@ -1,6 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useState } from "react"
+import { reduzirImagem } from "@/lib/reduzir-imagem"
 
 // Vitrine → Cores. Fonte única de nome canônico + hex + foto do tecido (site_content.cores).
 type Entry = { hex: string | null; swatch_url?: string | null }
@@ -79,7 +80,7 @@ export default function CoresEditor() {
   }
   async function upload(id: string, file: File) {
     const fd = new FormData()
-    fd.append("file", file)
+    fd.append("file", await reduzirImagem(file))
     const r = await fetch("/api/site-upload", { method: "POST", body: fd })
     const d = await r.json()
     if (!r.ok) return alert(d.error || "Falha no upload")

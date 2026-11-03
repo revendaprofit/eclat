@@ -1,7 +1,7 @@
 "use client"
 
 import { useMemo, useState } from "react"
-import Image from "next/image"
+import ImagemPerto from "@modules/common/components/imagem-perto"
 import type { HttpTypes } from "@medusajs/types"
 import { addToCart } from "@lib/data/cart"
 import { pushEcommerceEvent } from "@modules/analytics/push"
@@ -119,7 +119,7 @@ export default function Parceira({
         className="block relative w-full aspect-[9/16] overflow-hidden rounded-large bg-eclat-areia/40"
       >
         {imagem && (
-          <Image
+          <ImagemPerto
             src={imagem}
             alt={parceira.title ?? ""}
             fill

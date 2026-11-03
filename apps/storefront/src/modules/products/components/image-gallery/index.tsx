@@ -31,6 +31,13 @@ const ImageGallery = ({ images, productTitle, productHandle, video, videoFim }: 
   // Esc/X/toque fora fecha. Só fotos (os vídeos têm o próprio play).
   const fotos = items.filter((i): i is Extract<GalleryItem, { kind: "image" }> => i.kind === "image")
   const [ampliada, setAmpliada] = useState<number | null>(null)
+  // Velocidade no 4G (03/11): as outras fotos e a capa do vídeo só entram na fila depois que a foto principal chega.
+  // Antes baixavam junto com ela. Os 5 s abaixo são o limite, se a foto principal demorar demais.
+  const [resto, setResto] = useState(items[0]?.kind !== "image")
+  useEffect(() => {
+    const t = window.setTimeout(() => setResto(true), 5000)
+    return () => window.clearTimeout(t)
+  }, [])
   useEffect(() => {
     if (ampliada === null) return
     const tecla = (e: KeyboardEvent) => {
@@ -122,6 +129,9 @@ const ImageGallery = ({ images, productTitle, productHandle, video, videoFim }: 
           // Computador (2026-10-11, referência versianiswim.com.br): o 1º item ocupa a largura toda da coluna;
           // os demais seguem em 2 colunas. Desde 2026-10-30 o 1º item é a capa (o vídeo é o 2º).
           const grande = idx === 0 ? " small:col-span-2" : ""
+          if (idx > 0 && !resto) {
+            return <Container key={item.id} className={"relative aspect-[2/3] w-full shrink-0 snap-center overflow-hidden bg-ui-bg-subtle small:shrink" + grande} id={item.id} />
+          }
           if (item.kind === "video") {
             return (
               <Container
@@ -142,7 +152,7 @@ const ImageGallery = ({ images, productTitle, productHandle, video, videoFim }: 
                   pode consumir uma das duas prioridades. Sem vídeo o HTML sai idêntico ao de antes
                   desta feature (só a 1ª foto com fetchpriority=high desde 03/11: a 2ª disputava a fila com a principal). */}
               <button type="button" onClick={() => setAmpliada(fotoN - 1)} aria-label={`Ampliar foto ${fotoN}`} className="absolute inset-0 block h-full w-full cursor-zoom-in" data-testid="ampliar-foto">
-                <Image src={item.url} priority={fotoN === 1} className="absolute inset-0 rounded-rounded" alt={alt} fill quality={80}
+                <Image src={item.url} priority={fotoN === 1} onLoad={fotoN === 1 ? () => setResto(true) : undefined} className="absolute inset-0 rounded-rounded" alt={alt} fill quality={80}
                   sizes={idx === 0 ? "(max-width: 1024px) 100vw, 720px" : "(max-width: 1024px) 100vw, 360px"} style={{ objectFit: "cover" }} />
               </button>
             </Container>

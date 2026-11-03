@@ -39,7 +39,7 @@ export default async function CompleteSet({
           <ul className="mt-6 grid grid-cols-2 small:grid-cols-3 medium:grid-cols-4 gap-x-6 gap-y-8">
             {curados.map((c) => (
               <li key={c.handle}>
-                <CardConjunto card={c} listName="Complete o conjunto" />
+                <CardConjunto card={c} listName="Complete o conjunto" adiarFoto />
               </li>
             ))}
           </ul>

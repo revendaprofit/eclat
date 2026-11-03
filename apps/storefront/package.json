@@ -9,7 +9,7 @@
   ],
   "scripts": {
     "dev": "next dev --turbopack -p 8000",
-    "build": "next build",
+    "build": "next build && node scripts/verificar-peso.mjs",
     "start": "next start -p 8000",
     "lint": "eslint .",
     "analyze": "ANALYZE=true next build",

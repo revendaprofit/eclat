@@ -36,7 +36,13 @@ const nextConfig = {
     return [
       {
         source: "/midia/:path*",
-        headers: [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }],
+        // 03/11: projeto antigo, a Vercel não guardava estas fotos (X-Vercel-Cache: MISS sempre) sem o aviso abaixo.
+        // Na borda vale 1 dia, renovando em segundo plano: arquivo trocado com o mesmo nome não fica preso por 1 ano.
+        headers: [
+          { key: "Cache-Control", value: "public, max-age=31536000, immutable" },
+          { key: "x-vercel-enable-rewrite-caching", value: "1" },
+          { key: "CDN-Cache-Control", value: "public, max-age=86400, stale-while-revalidate=604800" },
+        ],
       },
     ]
   },
