@@ -21,8 +21,9 @@ const jaDeixouContato = () => {
     return false
   }
 }
-// Um cartão por vez: cookies, frete e sacola têm a vez antes.
-const outroCartaoAberto = () => !temCookie("eclat_consent") || !!document.querySelector('[data-testid="aviso-frete"],[data-testid="guardar-sacola"]')
+// Um cartão por vez: frete e sacola têm a vez antes. O aviso de cookies não conta: fica em uma linha no topo, sem disputar
+// o espaço, e muita gente o ignora (03/11: quem ignorava nunca via os envelopes).
+const outroCartaoAberto = () => !!document.querySelector('[data-testid="aviso-frete"],[data-testid="guardar-sacola"]')
 
 function DesenhoEnvelope({ aberto }: { aberto: boolean }) {
   return (
