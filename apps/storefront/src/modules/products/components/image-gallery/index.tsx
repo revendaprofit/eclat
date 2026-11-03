@@ -145,13 +145,15 @@ const ImageGallery = ({ images, productTitle, productHandle, video, videoFim }: 
             )
           }
           fotoN += 1
+          // Fixa o número desta foto: `fotoN` segue contando e, no clique, já valeria o total (abria sempre a última).
+          const indiceFoto = fotoN - 1
           const alt = productTitle ? `${productTitle} — use.ÉCLAT — foto ${fotoN}` : `Foto ${fotoN} do produto`
           return (
             <Container key={item.id} className={"relative aspect-[2/3] w-full shrink-0 snap-center overflow-hidden bg-ui-bg-subtle small:shrink" + grande} id={item.id}>
               {/* follow-up #2: `priority` conta FOTOS, não itens da galeria — o slide de vídeo não
                   pode consumir uma das duas prioridades. Sem vídeo o HTML sai idêntico ao de antes
                   desta feature (só a 1ª foto com fetchpriority=high desde 03/11: a 2ª disputava a fila com a principal). */}
-              <button type="button" onClick={() => setAmpliada(fotoN - 1)} aria-label={`Ampliar foto ${fotoN}`} className="absolute inset-0 block h-full w-full cursor-zoom-in" data-testid="ampliar-foto">
+              <button type="button" onClick={() => setAmpliada(indiceFoto)} aria-label={`Ampliar foto ${fotoN}`} className="absolute inset-0 block h-full w-full cursor-zoom-in" data-testid="ampliar-foto">
                 <Image src={item.url} priority={fotoN === 1} onLoad={fotoN === 1 ? () => setResto(true) : undefined} className="absolute inset-0 rounded-rounded" alt={alt} fill quality={80}
                   sizes={idx === 0 ? "(max-width: 1024px) 100vw, 720px" : "(max-width: 1024px) 100vw, 360px"} style={{ objectFit: "cover" }} />
               </button>
