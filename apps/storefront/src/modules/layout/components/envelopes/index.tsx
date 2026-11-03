@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import { usePathname } from "next/navigation"
 import { escolherEnvelope } from "@lib/data/boas-vindas"
 import { CHAVE_CUPOM_GUARDADO, mascararCelular } from "@lib/util/boas-vindas"
-import { COOKIE_ENVELOPES_VISTO, ENVELOPES, MENSAGEM_CONSULTORIA, TEXTO_ACEITE_ENVELOPE, envelopesPermitidos, validadeDoVisto, type Envelope } from "@lib/util/envelopes"
+import { COOKIE_ENVELOPES_VISTO, ENVELOPES, EVENTO_ENVELOPES_ABRIU, MENSAGEM_CONSULTORIA, TEXTO_ACEITE_ENVELOPE, envelopesPermitidos, validadeDoVisto, type Envelope } from "@lib/util/envelopes"
 import { CHAVE_SACOLA, lerEstadoSacola } from "@lib/util/sacola-guardada"
 import { pushEcommerceEvent } from "@modules/analytics/push"
 
@@ -21,9 +21,8 @@ const jaDeixouContato = () => {
     return false
   }
 }
-// Um cartão por vez: frete e sacola têm a vez antes. O aviso de cookies não conta: fica em uma linha no topo, sem disputar
-// o espaço, e muita gente o ignora (03/11: quem ignorava nunca via os envelopes).
-const outroCartaoAberto = () => !!document.querySelector('[data-testid="aviso-frete"],[data-testid="guardar-sacola"]')
+// Um cartão por vez: a sacola tem a vez. O aviso de frete cede o lugar: quem não o fechava nunca via os envelopes (03/11).
+const outroCartaoAberto = () => !!document.querySelector('[data-testid="guardar-sacola"]')
 
 function DesenhoEnvelope({ aberto }: { aberto: boolean }) {
   return (
@@ -53,7 +52,10 @@ export default function Envelopes({ whatsappMarca }: { whatsappMarca: string }) 
     const tentar = () => {
       // Só depois de rolar uma tela (sinal de interesse): nunca em cima de quem acabou de chegar do anúncio.
       if (outroCartaoAberto() || window.scrollY < window.innerHeight) id = setTimeout(tentar, 2000)
-      else setAberto(true)
+      else {
+        window.dispatchEvent(new Event(EVENTO_ENVELOPES_ABRIU))
+        setAberto(true)
+      }
     }
     id = setTimeout(tentar, ESPERA_MS)
     return () => clearTimeout(id)

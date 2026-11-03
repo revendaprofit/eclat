@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { EVENTO_ENVELOPES_ABRIU } from "@lib/util/envelopes"
 
 // Aviso de frete na capa (sócia, 30/10/2026: "crie na capa do site um pop-up desse aviso"). Cartão discreto no pé da
 // tela, não uma janela que cobre a página: o Google penaliza interstício que esconde o conteúdo no celular e a
@@ -20,6 +21,12 @@ export default function AvisoFrete({ titulo, texto }: { titulo: string; texto: s
     const t = window.setTimeout(() => setAberto(true), 2500)
     return () => window.clearTimeout(t)
   }, [texto])
+  // Os envelopes abrem no mesmo lugar: o aviso sai para não ficar um cartão por cima do outro.
+  useEffect(() => {
+    const sair = () => setAberto(false)
+    window.addEventListener(EVENTO_ENVELOPES_ABRIU, sair)
+    return () => window.removeEventListener(EVENTO_ENVELOPES_ABRIU, sair)
+  }, [])
   if (!texto || !aberto) return null
   const fechar = () => {
     setAberto(false)

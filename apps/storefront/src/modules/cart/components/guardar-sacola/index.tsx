@@ -16,6 +16,7 @@ import {
 import { pushEcommerceEvent } from "@modules/analytics/push"
 
 const ESPERA_MS = 1200 // deixa o "adicionado" aparecer antes de pedir qualquer coisa
+const ESPERA_NA_SACOLA_MS = 8000 // na sacola o cartão ocupa o espaço do CEP e do cupom: dá tempo de ela usar
 
 const lerEstado = () => {
   try {
@@ -48,9 +49,15 @@ export default function GuardarSacola() {
       // Sacola vazia não tem o que guardar, e quem já deixou contato (aviso de boas-vindas, checkout) não responde de novo.
       if (!(await sacolaPrecisaDeContato().catch(() => false))) return
       window.clearTimeout(timer)
-      timer = window.setTimeout(() => {
+      const abrir = () => {
+        // Nunca abre em cima de quem está digitando (CEP, cupom).
+        if (document.activeElement instanceof HTMLInputElement) {
+          timer = window.setTimeout(abrir, 3000)
+          return
+        }
         if (!document.querySelector('[data-testid="envelopes"]')) setAberto(true)
-      }, ESPERA_MS)
+      }
+      timer = window.setTimeout(abrir, ehPaginaDaSacola(window.location.pathname) ? ESPERA_NA_SACOLA_MS : ESPERA_MS)
     }
     window.addEventListener(EVENTO_SACOLA, oferecer)
     if (ehPaginaDaSacola(pathname)) oferecer()

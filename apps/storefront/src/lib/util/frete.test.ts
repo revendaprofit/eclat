@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { baseDoCarrinho, casasDoValor, destaqueDoFrete, progressoFreteGratis, servicoDaOpcao, textoPrazo } from "./frete"
+import { baseDoCarrinho, casasDoValor, destaqueDoFrete, mostraFaltaDoFrete, progressoFreteGratis, servicoDaOpcao, textoPrazo } from "./frete"
 
 const REGRAS = { piso_mg: 49900, piso_brasil: 59900 }
 
@@ -15,6 +15,16 @@ describe("destaqueDoFrete (antes do preço na PDP, 27/10)", () => {
   it("sem a regra da metade, só o piso do Brasil; sem regras, nada", () => {
     expect(destaqueDoFrete(15900, REGRAS, fmt)).toEqual({ titulo: "Frete grátis em Minas Gerais a partir de R$ 499", detalhe: "Demais estados: frete grátis a partir de R$ 599." })
     expect(destaqueDoFrete(15900, null, fmt)).toBeNull()
+  })
+})
+
+describe("valor que falta para o frete grátis (03/11)", () => {
+  it("só aparece com CEP de fora de MG", () => {
+    expect(mostraFaltaDoFrete(null)).toBe(false)
+    expect(mostraFaltaDoFrete("")).toBe(false)
+    expect(mostraFaltaDoFrete("MG")).toBe(false)
+    expect(mostraFaltaDoFrete("br-mg")).toBe(false)
+    expect(mostraFaltaDoFrete("SP")).toBe(true)
   })
 })
 

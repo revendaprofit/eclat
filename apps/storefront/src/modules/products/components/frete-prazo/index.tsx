@@ -3,7 +3,7 @@
 import { useRef, useState } from "react"
 import { cotarFreteDaPeca, type CotacaoDaPeca } from "@lib/data/frete"
 import { normalizarCep } from "@lib/util/cep"
-import { casasDoValor, progressoFreteGratis, textoPrazo, type RegrasDeFrete } from "@lib/util/frete"
+import { casasDoValor, mostraFaltaDoFrete, progressoFreteGratis, textoPrazo, type RegrasDeFrete } from "@lib/util/frete"
 import { convertToLocale } from "@lib/util/money"
 
 const NOME: Record<string, string> = { mini: "Mini Envios", pac: "PAC", sedex: "SEDEX" }
@@ -91,7 +91,7 @@ export default function FretePrazo({ variantId, precoCentavos, regras }: { varia
           ) : (
             <p className="text-xs text-eclat-grafite/70">O valor exato aparece no checkout, depois do endereço.</p>
           )}
-          {regua && (
+          {regua && (regua.atingiu || mostraFaltaDoFrete(resultado.uf)) && (
             <div className="mt-1" data-testid="pdp-frete-gratis">
               <div className="h-1.5 w-full rounded-full bg-eclat-pedra/40">
                 <div className="h-1.5 rounded-full bg-eclat-terracota" style={{ width: `${regua.percentual}%` }} />

@@ -43,6 +43,15 @@ export function progressoFreteGratis(base: number, uf: string | null | undefined
 }
 
 /**
+ * Valor que falta para o frete grátis só depois do CEP e só fora de MG (sócia, 03/11): antes do CEP a sacola dizia
+ * "Faltam R$ 440" com o piso do Brasil para a cliente de BH, que já tem frete grátis com uma peça.
+ */
+export function mostraFaltaDoFrete(uf: string | null | undefined): boolean {
+  const sigla = (uf ?? "").trim().toUpperCase().replace(/^BR-/, "")
+  return !!sigla && sigla !== "MG"
+}
+
+/**
  * Destaque do frete na página do produto, ANTES do preço (sócia, 27/10/2026; diagnóstico do funil: "frete no fim").
  * Com a peça acima do piso de MG, a frase principal é "Frete grátis em Minas Gerais"; abaixo, "a partir de R$ X".
  * A segunda linha fala do resto do Brasil (metade a partir de `metade_brasil`). Sem regras, nada.

@@ -13,6 +13,7 @@ export const ENVELOPES: Envelope[] = [
 ]
 
 export const COOKIE_ENVELOPE = "eclat_envelope"
+export const EVENTO_ENVELOPES_ABRIU = "eclat:envelopes-abriu"
 
 // Cookie próprio (sócia, 03/11: 60 dias era muito). Quem fechou vê de novo em 7 dias; quem escolheu não vê mais.
 // O cookie do aviso antigo (eclat_bv) não conta: quem fechou aquele aviso ainda não conheceu os envelopes.
