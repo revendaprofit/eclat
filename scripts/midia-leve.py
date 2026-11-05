@@ -5,8 +5,10 @@ erro no 4G"). Diagnóstico do funil: o vídeo que abria a página do anúncio ti
 
 O que faz, em tudo que está EM USO (vídeos das peças em product.metadata.videos e vídeos/capas da home em
 site_content: hero, home.instagram, home.manifesto, home.detalhes):
-  - vídeo acima de LIMITE_VIDEO: refaz em até 720 px de largura, sem som, H.264 com início rápido, mirando ~1 MB;
+  - vídeo acima de LIMITE_VIDEO: refaz em até 720 px de largura, H.264 com início rápido, mirando ~1 MB; o som fica,
+    em AAC 48 kbps (o site tem o botão "Ligar som" desde 29/10);
   - capa (jpg/png) acima de LIMITE_FOTO: refaz em até 720 px, JPEG 82.
+Os banners da capa (hero/) ficam de fora: exceção aprovada pela sócia.
 Sobe com nome novo (`-leve-<hash>`), troca o endereço onde ele aparece e guarda backup em brand-assets/.
 Rodar de novo só mexe no que ainda estiver pesado.
 
@@ -28,6 +30,7 @@ fd = importlib.import_module("fotos-detalhe")   # env, Medusa
 APPLY = "--apply" in sys.argv
 LIMITE_VIDEO = int(1.3 * 1024 * 1024)
 ALVO_VIDEO = int(1.0 * 1024 * 1024)
+KBPS_SOM = 48
 LIMITE_FOTO = 160 * 1024
 CHAVES_SC = ["hero", "home.instagram", "home.manifesto", "home.detalhes"]
 PUBLICO = "/storage/v1/object/public/site/"
@@ -44,11 +47,11 @@ def video_leve(data, pasta):
     ent = os.path.join(pasta, "ent.mp4"); sai = os.path.join(pasta, "sai.mp4")
     open(ent, "wb").write(data)
     dur = max(1.0, duracao(ent))
-    kbps = int(ALVO_VIDEO * 8 / dur / 1000 * 0.95)
+    kbps = int(ALVO_VIDEO * 8 / dur / 1000 * 0.95) - KBPS_SOM
     for tentativa in range(3):
-        subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", ent, "-an", "-vf", "scale='min(720,iw)':-2,format=yuv420p",
+        subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", ent, "-vf", "scale='min(720,iw)':-2,format=yuv420p",
                         "-c:v", "libx264", "-preset", "slow", "-crf", "27", "-maxrate", "%dk" % kbps, "-bufsize", "%dk" % (kbps * 2),
-                        "-movflags", "+faststart", sai], check=True)
+                        "-c:a", "aac", "-b:a", "%dk" % KBPS_SOM, "-movflags", "+faststart", sai], check=True)
         nova = open(sai, "rb").read()
         if len(nova) <= LIMITE_VIDEO: return nova
         kbps = int(kbps * 0.75)
@@ -80,6 +83,7 @@ def main():
     troca, uploads, total_antes, total_depois = {}, [], 0, 0
     with tempfile.TemporaryDirectory() as pasta:
         for url in sorted(em_uso):
+            if caminho(url).startswith("hero/"): continue
             ext = url.rsplit(".", 1)[1].lower(); video = ext in ("mp4", "mov", "webm")
             tam = int(requests.head(url, timeout=60).headers.get("content-length") or 0)
             if tam <= (LIMITE_VIDEO if video else LIMITE_FOTO): continue

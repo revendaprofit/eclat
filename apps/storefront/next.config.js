@@ -15,6 +15,13 @@ const SUPABASE_URL = (process.env.NEXT_PUBLIC_SUPABASE_URL || "https://hqphayoyu
  */
 const nextConfig = {
   reactStrictMode: true,
+  async redirects() {
+    return [
+      // A página de conjuntos é a categoria; /conjuntos sozinho dava 404 (só existe /conjuntos/<handle>), e mensagens
+      // antigas apontam para ele (sócia, 2026-11-04). Mantém utm e demais parâmetros.
+      { source: "/:countryCode/conjuntos", destination: "/:countryCode/categories/conjuntos", permanent: false },
+    ]
+  },
   async rewrites() {
     return [
       // Catálogo digital da coleção: página estática em public/catalogo/index.html.
